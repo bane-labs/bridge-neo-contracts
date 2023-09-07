@@ -1,6 +1,7 @@
 package network.bane;
 
 import io.neow3j.contract.GasToken;
+import io.neow3j.contract.NeoToken;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
@@ -14,6 +15,7 @@ import io.neow3j.transaction.TransactionBuilder;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
+import io.neow3j.types.NeoVMStateType;
 import io.neow3j.wallet.Account;
 import network.bane.util.TestHelper;
 import org.junit.jupiter.api.BeforeAll;
@@ -27,6 +29,8 @@ import java.util.List;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static io.neow3j.utils.Numeric.reverseHexString;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -72,6 +76,7 @@ public class FungibleTokenBridgeContractTest {
     @Test
     public void testDepositGas() throws Throwable {
         BigInteger amount = gasToken.toFractions(new BigDecimal("42"));
+        assertThat(gasToken.getBalanceOf(alice), greaterThan(amount));
         TransactionBuilder b = gasToken.transfer(
                 alice,
                 contract.getScriptHash(),
@@ -110,6 +115,57 @@ public class FungibleTokenBridgeContractTest {
         assertThat(new Hash160(reverseHexString(event2State.get(1).getHexString())), is(alice.getScriptHash()));
         assertThat(new Hash160(reverseHexString(event2State.get(2).getHexString())), is(evmRecipientHash));
         assertThat(event2State.get(3).getInteger(), is(amount));
+    }
+
+    @Test
+    public void testDepositNeo_shouldFail() throws Throwable {
+        neow3j.allowTransmissionOnFault();
+
+        NeoToken neoToken = new NeoToken(neow3j);
+        BigInteger amount = BigInteger.TEN;
+        assertThat(neoToken.getBalanceOf(alice), greaterThan(amount));
+        TransactionBuilder b = neoToken.transfer(
+                alice,
+                contract.getScriptHash(),
+                amount,
+                ContractParameter.hash160(evmRecipientHash));
+        Transaction tx = b.sign();
+        NeoSendRawTransaction response = tx.send();
+        Hash256 txHash = response.getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+
+        NeoApplicationLog log = neow3j.getApplicationLog(txHash).send().getApplicationLog();
+        List<NeoApplicationLog.Execution> execs = log.getExecutions();
+        assertThat(execs, hasSize(1));
+        assertThat(execs.get(0).getState(), is(NeoVMStateType.FAULT));
+        assertThat(execs.get(0).getException(), containsString("ABORT is executed"));
+
+        neow3j.preventTransmissionOnFault();
+    }
+
+    @Test
+    public void testDeposit_invalidDataHash160() throws Throwable {
+        neow3j.allowTransmissionOnFault();
+
+        BigInteger amount = gasToken.toFractions(new BigDecimal("12.2"));
+        assertThat(gasToken.getBalanceOf(alice), greaterThan(amount));
+        TransactionBuilder b = gasToken.transfer(
+                alice,
+                contract.getScriptHash(),
+                amount,
+                ContractParameter.string(evmRecipient));
+        Transaction tx = b.sign();
+        NeoSendRawTransaction response = tx.send();
+        Hash256 txHash = response.getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+
+        NeoApplicationLog log = neow3j.getApplicationLog(txHash).send().getApplicationLog();
+        List<NeoApplicationLog.Execution> execs = log.getExecutions();
+        assertThat(execs, hasSize(1));
+        assertThat(execs.get(0).getState(), is(NeoVMStateType.FAULT));
+        assertThat(execs.get(0).getException(), containsString("ABORT is executed"));
+
+        neow3j.preventTransmissionOnFault();
     }
 
 }

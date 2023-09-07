@@ -22,7 +22,10 @@ public class FungibleTokenBridgeContract {
         Hash160 callingScriptHash = Runtime.getCallingScriptHash();
         checkCallingScriptHash(callingScriptHash);
 
-        assert Hash160.isValid(data);
+        if (!Hash160.isValid(data)) {
+            Helper.abort();
+        }
+
         Hash160 to = (Hash160) data;
 
         onDeposit.fire(callingScriptHash, from, to, amount);
