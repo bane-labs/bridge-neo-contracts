@@ -3,7 +3,7 @@ plugins {
     id 'io.neow3j.gradle-plugin' version '3.20.2'
 }
 
-group 'com.axlabs'
+group 'network.bane'
 version '1.0-SNAPSHOT'
 
 sourceCompatibility = 1.8
@@ -36,5 +36,5 @@ tasks.withType(Test) {
 }
 
 neow3jCompiler {
-    className = "com.axlabs.boilerplate.HelloWorldSmartContract"
+    className = "network.bane.FungibleTokenBridgeContract"
 }
