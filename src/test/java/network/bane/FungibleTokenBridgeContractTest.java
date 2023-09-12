@@ -29,6 +29,7 @@ import java.util.List;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static io.neow3j.utils.Numeric.reverseHexString;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.any;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
@@ -71,17 +72,27 @@ public class FungibleTokenBridgeContractTest {
 
         evmRecipient = "0x1eC3A51B9137e5588A402fA15c422B72C0d7b533";
         evmRecipientHash = new Hash160(evmRecipient);
+
+        Hash160 scriptHash = Account.create().getScriptHash();
+        System.out.println(scriptHash);
     }
 
     @Test
     public void testDepositGas() throws Throwable {
         BigInteger amount = gasToken.toFractions(new BigDecimal("42"));
+        BigInteger gasLimit = BigInteger.valueOf(42_000);
+        ContractParameter data = ContractParameter.array(
+                ContractParameter.hash160(evmRecipientHash),
+                ContractParameter.integer(42_000),
+                null);
+
         assertThat(gasToken.getBalanceOf(alice), greaterThan(amount));
+
         TransactionBuilder b = gasToken.transfer(
                 alice,
                 contract.getScriptHash(),
                 amount,
-                ContractParameter.hash160(evmRecipientHash));
+                data);
         Transaction tx = b.sign();
         NeoSendRawTransaction response = tx.send();
 
@@ -110,11 +121,12 @@ public class FungibleTokenBridgeContractTest {
         assertThat(event2.getEventName(), is("OnDeposit"));
 
         List<StackItem> event2State = event2.getState().getList();
-        assertThat(event2State, hasSize(4));
+        assertThat(event2State, hasSize(5));
         assertThat(new Hash160(reverseHexString(event2State.get(0).getHexString())), is(GasToken.SCRIPT_HASH));
         assertThat(new Hash160(reverseHexString(event2State.get(1).getHexString())), is(alice.getScriptHash()));
         assertThat(new Hash160(reverseHexString(event2State.get(2).getHexString())), is(evmRecipientHash));
         assertThat(event2State.get(3).getInteger(), is(amount));
+        assertThat(event2State.get(4).getInteger(), is(gasLimit));
     }
 
     @Test
