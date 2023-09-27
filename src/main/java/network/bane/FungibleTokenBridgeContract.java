@@ -46,7 +46,7 @@ public class FungibleTokenBridgeContract {
     // region deploy and update
 
     @OnDeployment
-    public static void _deploy(Object data, boolean isUpdate) throws Exception {
+    public static void _deploy(Object data, boolean isUpdate) {
         if (!isUpdate) {
 //            assert data != null;
 //            Hash160 managementContractHash = (Hash160) data;
@@ -58,12 +58,6 @@ public class FungibleTokenBridgeContract {
             baseMap.put(key_locked, 0);
             baseMap.put(key_bridgeManagement, dummyScriptHash_management);
             initializeGasTokenBridge();
-        } else {
-            onlyLocked();
-
-            if ((boolean) data) {
-                unlockBridge();
-            }
         }
     }
 
@@ -191,17 +185,17 @@ public class FungibleTokenBridgeContract {
     // endregion
     // region lock contract
 
-    public static void lockBridge() throws Exception {
-        onlyUnlocked();
-        onlySecurityCouncil();
-        new StorageMap(ctx, prefix_base).put(key_locked, 1);
-    }
-
-    public static void unlockBridge() throws Exception {
-        onlyLocked();
-        onlySecurityCouncil();
-        new StorageMap(ctx, prefix_base).put(key_locked, 0);
-    }
+//    public static void lockBridge() throws Exception {
+//        onlyUnlocked();
+//        onlySecurityCouncil();
+//        new StorageMap(ctx, prefix_base).put(key_locked, 1);
+//    }
+//
+//    public static void unlockBridge() throws Exception {
+//        onlyLocked();
+//        onlySecurityCouncil();
+//        new StorageMap(ctx, prefix_base).put(key_locked, 0);
+//    }
 
     private static void onlyUnlocked() {
         if (isLocked()) {
@@ -223,25 +217,14 @@ public class FungibleTokenBridgeContract {
     // region restrictions / modifiers
 
     private static void onlyOwner() throws Exception {
-        if (!checkWitness(getBridgeManagement().getOwner())) {
+        if (!checkWitness(getBridgeManagement().owner())) {
             // todo: abort or throw exception?
             throw new Exception("No authorization");
         }
     }
 
     private static void onlyRelayer() throws Exception {
-        if (!checkWitness(getBridgeManagement().getRelayer())) {
-            // todo: abort or throw exception?
-            throw new Exception("No authorization");
-        }
-    }
-
-    private static void onlySecurityCouncil() throws Exception {
-        // bridge owners should be enabled to overrule security council
-        if (!checkWitness(getBridgeManagement().getSecurityCouncil())) {
-            if (checkWitness(getBridgeManagement().getOwner())) {
-                return;
-            }
+        if (!checkWitness(getBridgeManagement().relayer())) {
             // todo: abort or throw exception?
             throw new Exception("No authorization");
         }

@@ -9,8 +9,7 @@ public class BridgeManagement extends ContractInterface {
         super(contractHash);
     }
 
-    public native Hash160 getOwner();
-    public native Hash160 getRelayer();
-    public native Hash160 getSecurityCouncil();
+    public native Hash160 owner();
+    public native Hash160 relayer();
 
 }
