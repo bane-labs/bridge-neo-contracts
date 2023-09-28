@@ -6,7 +6,6 @@ import io.neow3j.devpack.Helper;
 import io.neow3j.devpack.Runtime;
 import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
-import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
 import io.neow3j.devpack.annotations.ManifestExtra;
 import io.neow3j.devpack.annotations.OnDeployment;
@@ -23,9 +22,6 @@ import static io.neow3j.devpack.Account.createMultiSigAccount;
 public class BridgeManagementContract {
 
     private static final StorageContext ctx = Storage.getStorageContext();
-    private static final StorageContext ctx_readOnly = Storage.getReadOnlyContext();
-
-    private static final int prefix_baseMap = 0xf0;
 
     private static final byte key_owner = 0x10;
     private static final byte key_relayer = 0x20;
@@ -37,7 +33,10 @@ public class BridgeManagementContract {
 
     // region events
 
+    @DisplayName("SetOwner")
     public static Event1Arg<Hash160> onOwnerSet;
+
+    @DisplayName("SetRelayer")
     public static Event1Arg<Hash160> onRelayerSet;
 
     // endregion
@@ -47,29 +46,20 @@ public class BridgeManagementContract {
     public static void _deploy(Object data, boolean isUpdate) {
         if (!isUpdate) {
             ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
-            initOwners(deploymentData.owners);
-            initRelayers(deploymentData.relayers);
+            initOwner(deploymentData.owners);
+            initRelayer(deploymentData.relayers);
         }
     }
 
-    // endregion
-    // region init
-
-    private static void initOwners(ECPoint[] owners) {
-        assert owners.length == owners_count;
-        for (ECPoint owner : owners) {
-            assert ECPoint.isValid(owner);
-        }
+    private static void initOwner(ECPoint[] owners) {
+        checkValidMultiSigProperties(owners, owners_count);
         Hash160 owner = createMultiSigAccount(owner_threshold, owners);
         internalSetOwner(owner);
         onOwnerSet.fire(owner);
     }
 
-    private static void initRelayers(ECPoint[] relayers) {
-        assert relayers.length == relayers_count;
-        for (ECPoint relayer : relayers) {
-            assert ECPoint.isValid(relayer);
-        }
+    private static void initRelayer(ECPoint[] relayers) {
+        checkValidMultiSigProperties(relayers, relayers_count);
         Hash160 relayer = createMultiSigAccount(relayer_threshold, relayers);
         internalSetRelayer(relayer);
         onRelayerSet.fire(relayer);
@@ -78,12 +68,37 @@ public class BridgeManagementContract {
     // endregion
     // region setters
 
-    private static void internalSetOwner(Hash160 owner) {
-        new StorageMap(ctx, prefix_baseMap).put(key_owner, owner);
+    public static void setRelayer(ECPoint[] relayers) {
+        onlyOwner();
+        checkValidMultiSigProperties(relayers, relayers_count);
+
+        Hash160 relayer = createMultiSigAccount(relayer_threshold, relayers);
+        internalSetRelayer(relayer);
+        onRelayerSet.fire(relayer);
     }
 
-    private static void internalSetRelayer(Hash160 multiSigAccount) {
-        new StorageMap(ctx, prefix_baseMap).put(key_relayer, multiSigAccount);
+    public static void setOwner(ECPoint[] owners) {
+        onlyOwner();
+        checkValidMultiSigProperties(owners, owners_count);
+
+        Hash160 owner = createMultiSigAccount(owner_threshold, owners);
+        internalSetOwner(owner);
+        onOwnerSet.fire(owner);
+    }
+
+    private static void checkValidMultiSigProperties(ECPoint[] pubKeys, int count) {
+        assert pubKeys.length == count;
+        for (ECPoint pubKey : pubKeys) {
+            assert ECPoint.isValid(pubKey);
+        }
+    }
+
+    private static void internalSetOwner(Hash160 owner) {
+        Storage.put(ctx, key_owner, owner);
+    }
+
+    private static void internalSetRelayer(Hash160 relayer) {
+        Storage.put(ctx, key_relayer, relayer);
     }
 
     // endregion
@@ -91,18 +106,18 @@ public class BridgeManagementContract {
 
     @Safe
     public static Hash160 owner() {
-        return new StorageMap(ctx_readOnly, prefix_baseMap).getHash160(key_owner);
+        return Storage.getHash160(ctx, key_owner);
     }
 
     @Safe
     public static Hash160 relayer() {
-        return new StorageMap(ctx_readOnly, prefix_baseMap).getHash160(key_relayer);
+        return Storage.getHash160(ctx, key_relayer);
     }
 
     // endregion
     // region restrictions
 
-    public static void onlyOwner() {
+    private static void onlyOwner() {
         if (!Runtime.checkWitness(owner())) {
             Helper.abort();
         }
