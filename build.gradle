@@ -36,5 +36,5 @@ tasks.withType(Test) {
 }
 
 neow3jCompiler {
-    className = "network.bane.FungibleTokenBridgeContract"
+    className = "network.bane.BridgeContract"
 }
