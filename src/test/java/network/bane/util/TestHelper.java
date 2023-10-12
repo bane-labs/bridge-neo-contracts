@@ -2,15 +2,20 @@ package network.bane.util;
 
 import io.neow3j.crypto.ECKeyPair;
 import io.neow3j.crypto.ECKeyPair.ECPublicKey;
+import io.neow3j.protocol.Neow3j;
+import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
+import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
 
 import java.util.List;
 
+import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.publicKey;
+import static java.util.Arrays.asList;
 
 public class TestHelper {
 
@@ -21,8 +26,11 @@ public class TestHelper {
     public static final String DENISE = "NerDv9t8exrQRrP11jjvZKXzSXvTnmfDTo";
     public static final String EVE = "NZ539Rd57v5NEtAdkHyFGaWj1uGt2DecUL";
     public static final String FLORIAN = "NRy5bp81kScYFZHLfMBXuubFfRyboVyu7G";
+    public static final String GABRIEL = "Ne9bqEY829xTM5gUxiaZQ9SuvvyE7dAvC3";
+    public static final String HENRY = "NUWnAzbtHRGaBJWvMag9BR5fo6hG4so87Y";
+    public static final String ISABELLA = "NQ71wQ2GJbQhQr9Je66YVPmAwckkMGRu74";
 
-    public static final Account owner = Account.create();
+    public static final Account owner = Account.fromWIF("KxmdmDryNcxiAjk4QTVgei11251NxJhZmN25q5H3QYrwfJJ1Tyrs");
     public static final ECPublicKey ownerPubKey = owner.getECKeyPair().getPublicKey();
     public static final Hash160 ownerScriptHash = owner.getScriptHash();
 
@@ -51,6 +59,17 @@ public class TestHelper {
     public static final Account validator7 = Account.fromWIF("L5kcMEa2zFagyEF9TnVGi3Y5uP4NeCaEnQyZGo93wiv8aAAPTVWk");
     public static final ECPublicKey validator7PubKey = validator7.getECKeyPair().getPublicKey();
     public static final Hash160 validator7ScriptHash = validator7.getScriptHash();
+
+    public static final List<ECPublicKey> defaultValidators = asList(
+            validator1PubKey,
+            validator2PubKey,
+            validator3PubKey,
+            validator4PubKey,
+            validator5PubKey,
+            validator6PubKey,
+            validator7PubKey
+    );
+    public static int defaultValidatorThreshold = 5;
 
     public static final Account account1 = Account.fromWIF("L49FvTGZTdSJbck687Kg9wrjBzQBJ1asnvKWqcvJ2sJcyP9U9rbJ");
     public static final Account account2 = Account.fromWIF("KwPnYQg2VFMq2Jn62DTVKYCg7TGdzFWvsfKkzKYgPi2LSJcxEW7D");
@@ -94,6 +113,19 @@ public class TestHelper {
                 ),
                 integer(threshold)
         );
+    }
+
+    public static void setDefaultValidators(Management management, Neow3j neow3j) throws Throwable {
+        NeoSendRawTransaction response =
+                management.invokeFunction("setValidators", array(defaultValidators), integer(5))
+                        .signers(calledByEntry(owner))
+                        .sign()
+                        .send();
+        waitUntilTransactionIsExecuted(response, neow3j);
+    }
+
+    public static void waitUntilTransactionIsExecuted(NeoSendRawTransaction response, Neow3j neow3j) {
+        Await.waitUntilTransactionIsExecuted(response.getSendRawTransaction().getHash(), neow3j);
     }
 
 }

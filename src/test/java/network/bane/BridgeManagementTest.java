@@ -10,6 +10,7 @@ import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
+import io.neow3j.types.ContractParameter;
 import io.neow3j.wallet.Account;
 import network.bane.util.Management;
 import network.bane.util.TestHelper;
@@ -18,19 +19,25 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
+import static io.neow3j.types.ContractParameter.array;
+import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.publicKey;
 import static io.neow3j.types.StackItemType.ARRAY;
 import static io.neow3j.types.StackItemType.BYTE_STRING;
 import static io.neow3j.types.StackItemType.INTEGER;
 import static java.util.Arrays.asList;
+import static network.bane.util.TestHelper.defaultValidatorThreshold;
+import static network.bane.util.TestHelper.defaultValidators;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.ownerPubKey;
 import static network.bane.util.TestHelper.prepareManagementDeployParameter;
 import static network.bane.util.TestHelper.relayerPubKey;
+import static network.bane.util.TestHelper.setDefaultValidators;
 import static network.bane.util.TestHelper.validator1PubKey;
 import static network.bane.util.TestHelper.validator2PubKey;
 import static network.bane.util.TestHelper.validator3PubKey;
@@ -40,6 +47,7 @@ import static network.bane.util.TestHelper.validator6PubKey;
 import static network.bane.util.TestHelper.validator7PubKey;
 import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -59,6 +67,18 @@ public class BridgeManagementTest {
     private static ECPublicKey bobPubKey;
     private static Account charlie;
     private static ECPublicKey charliePubKey;
+    private static Account denise;
+    private static ECPublicKey denisePubKey;
+    private static Account eve;
+    private static ECPublicKey evePubKey;
+    private static Account florian;
+    private static ECPublicKey florianPubKey;
+    private static Account gabriel;
+    private static ECPublicKey gabrielPubKey;
+    private static Account henry;
+    private static ECPublicKey henryPubKey;
+    private static Account isabella;
+    private static ECPublicKey isabellaPubKey;
 
     @RegisterExtension
     public static final ContractTestExtension ext = new ContractTestExtension();
@@ -71,10 +91,22 @@ public class BridgeManagementTest {
         alice = ext.getAccount(TestHelper.ALICE);
         bob = ext.getAccount(TestHelper.BOB);
         charlie = ext.getAccount(TestHelper.CHARLIE);
+        denise = ext.getAccount(TestHelper.DENISE);
+        eve = ext.getAccount(TestHelper.EVE);
+        florian = ext.getAccount(TestHelper.FLORIAN);
+        gabriel = ext.getAccount(TestHelper.GABRIEL);
+        henry = ext.getAccount(TestHelper.HENRY);
+        isabella = ext.getAccount(TestHelper.ISABELLA);
 
         alicePubKey = alice.getECKeyPair().getPublicKey();
         bobPubKey = bob.getECKeyPair().getPublicKey();
         charliePubKey = charlie.getECKeyPair().getPublicKey();
+        denisePubKey = denise.getECKeyPair().getPublicKey();
+        evePubKey = eve.getECKeyPair().getPublicKey();
+        florianPubKey = florian.getECKeyPair().getPublicKey();
+        gabrielPubKey = gabriel.getECKeyPair().getPublicKey();
+        henryPubKey = henry.getECKeyPair().getPublicKey();
+        isabellaPubKey = isabella.getECKeyPair().getPublicKey();
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -220,6 +252,121 @@ public class BridgeManagementTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("setRelayer", publicKey(charliePubKey)).signers(calledByEntry(alice)).sign());
         assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+    }
+
+    @Test
+    public void testSetValidators() throws Throwable {
+        assertThat(management.validators(), hasSize(defaultValidators.size()));
+        assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
+        assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
+
+        NeoSendRawTransaction response = management.invokeFunction("setValidators",
+                        array(
+                                publicKey(alicePubKey),
+                                publicKey(bobPubKey),
+                                publicKey(charliePubKey),
+                                publicKey(denisePubKey),
+                                publicKey(evePubKey)
+                        ),
+                        integer(3)
+                )
+                .signers(calledByEntry(owner))
+                .sign()
+                .send();
+        assertFalse(response.hasError());
+        waitUntilTransactionIsExecuted(response, neow3j);
+
+        assertThat(management.validators(),
+                containsInAnyOrder(alicePubKey, bobPubKey, charliePubKey, denisePubKey, evePubKey));
+        assertThat(management.validatorThreshold(), is(3));
+
+        setDefaultValidators(management, neow3j);
+        assertThat(management.validators(), hasSize(defaultValidators.size()));
+        assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
+        assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
+    }
+
+    @Test
+    public void testSetValidators_unauthorized() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setValidators", array(publicKey(alicePubKey)), integer(1))
+                        .signers(calledByEntry(alice))
+                        .sign()
+        );
+        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+    }
+
+    @Test
+    public void testSetValidators_invalidThreshold() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setValidators",
+                                array(publicKey(charliePubKey), publicKey(denisePubKey)), integer(1))
+                        .signers(calledByEntry(alice))
+                        .sign());
+        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+    }
+
+    @Test
+    public void testSetValidators_moreThanMax() throws IOException {
+        List<ContractParameter> newValidators = new ArrayList<>();
+        for (int i = 0; i <= 21; i++) {
+            newValidators.add(publicKey(Account.create().getECKeyPair().getPublicKey()));
+        }
+        assertThat(newValidators, hasSize(22));
+
+        assertThat(management.validators(), hasSize(defaultValidators.size()));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setValidators", array(newValidators), integer(5))
+                        .signers(calledByEntry(alice)).sign());
+        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+    }
+
+    @Test
+    public void testSetValidators_exactlyMax() throws Throwable {
+        List<ContractParameter> newValidators = new ArrayList<>();
+        for (int i = 0; i < 21; i++) {
+            newValidators.add(publicKey(Account.create().getECKeyPair().getPublicKey()));
+        }
+        assertThat(newValidators, hasSize(21));
+
+        assertThat(management.validators(), hasSize(7));
+        NeoSendRawTransaction response = management.invokeFunction("setValidators", array(newValidators), integer(10))
+                .signers(calledByEntry(owner)).sign().send();
+        assertFalse(response.hasError());
+        waitUntilTransactionIsExecuted(response, neow3j);
+        assertThat(management.validators(), hasSize(21));
+        assertThat(management.validatorThreshold(), is(10));
+
+        // reverse set validators
+        setDefaultValidators(management, neow3j);
+        assertThat(management.validators(), hasSize(defaultValidators.size()));
+        assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
+        assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
+    }
+
+    @Test
+    public void testSetValidators_sameValidatorMultipleTimesInParams() throws Throwable {
+        assertThat(management.validators(), hasSize(defaultValidators.size()));
+        assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
+        assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
+
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setValidators",
+                                array(
+                                        publicKey(alicePubKey),
+                                        publicKey(bobPubKey),
+                                        publicKey(charliePubKey),
+                                        publicKey(alicePubKey)
+                                ),
+                                integer(3))
+                        .signers(calledByEntry(owner))
+                        .sign()
+                        .send());
+        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+
+        setDefaultValidators(management, neow3j);
+        assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
+        assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
     }
 
     // endregion

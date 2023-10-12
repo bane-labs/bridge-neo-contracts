@@ -27,8 +27,8 @@ public class Management extends SmartContract {
     public List<ECKeyPair.ECPublicKey> validators() throws IOException {
         return callInvokeFunction("validators")
                 .getInvocationResult()
-                .getFirstStackItem().getList()
-                .get(0).getList()
+                .getFirstStackItem()
+                .getList()
                 .stream()
                 .map(StackItem::getByteArray)
                 .map(ECKeyPair.ECPublicKey::new)

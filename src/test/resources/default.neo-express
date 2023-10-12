@@ -141,6 +141,57 @@
       ]
     },
     {
+      "name": "Gabriel",
+      "accounts": [
+        {
+          "private-key": "fa322bc187dee8f76993c86a707171919d6ff4c9d44843b054111fcbd44e2d9b",
+          "script-hash": "Ne9bqEY829xTM5gUxiaZQ9SuvvyE7dAvC3",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c2103f9bfebd646f3d72bc973433f3f07fc03f8ce5d88ba8021df8d447a02bf2866974156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Henry",
+      "accounts": [
+        {
+          "private-key": "7de5d14147091ceb3a06efeddcc315baccf13caf2cd189a8a35244a947aca2b1",
+          "script-hash": "NUWnAzbtHRGaBJWvMag9BR5fo6hG4so87Y",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c210365536e7f54544f4c4e3b063967c11adeffb94227a134b61220b440917eb096d54156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Isabella",
+      "accounts": [
+        {
+          "private-key": "bd600a2fac91fe44bb6777110dd43014eae7cc8b2d8038238a27071357ad3ff8",
+          "script-hash": "NQ71wQ2GJbQhQr9Je66YVPmAwckkMGRu74",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c210204251d0d964cac0e70bcbb6f11e91ef6f0f952c13a44053785fdc83fb2f296704156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "owner",
       "accounts": [
         {
