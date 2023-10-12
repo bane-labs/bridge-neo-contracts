@@ -1,43 +1,53 @@
 package network.bane;
 
+import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
-import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.Helper;
+import io.neow3j.devpack.Iterator;
+import io.neow3j.devpack.List;
 import io.neow3j.devpack.Runtime;
 import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
+import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
 import io.neow3j.devpack.annotations.ManifestExtra;
 import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.Safe;
+import io.neow3j.devpack.constants.FindOptions;
 import io.neow3j.devpack.events.Event1Arg;
+import io.neow3j.devpack.events.Event2Args;
 import network.bane.structs.ManagementDeploymentData;
-
-import static io.neow3j.devpack.Account.createMultiSigAccount;
 
 @DisplayName("BridgeManagement")
 @ManifestExtra(key = "author", value = "BaneLabs")
-@ManifestExtra(key = "description", value = "Contract for managing ownership and rights for interacting with the " +
-        "bridge contract.")
+@ManifestExtra(
+        key = "description",
+        value = "Contract for managing ownership and rights for interacting with the bridge contract."
+)
 public class BridgeManagementContract {
 
     private static final StorageContext ctx = Storage.getStorageContext();
 
-    private static final byte key_owner = 0x10;
-    private static final byte key_relayer = 0x20;
+    private static final int prefix_base = 0xf0;
+    private static final StorageMap baseMap = new StorageMap(ctx, prefix_base);
 
-    private static final int owners_count = 7;
-    private static final int owner_threshold = 5;
-    private static final int relayers_count = 7;
-    private static final int relayer_threshold = 5;
+    private static final int key_owner = 0x00;
+    private static final int key_relayer = 0x01;
+    private static final int key_validator_threshold = 0x02;
+
+    private static final int prefix_validator = 0xf1;
+    private static final StorageMap validatorMap = new StorageMap(ctx, prefix_validator);
 
     // region events
 
     @DisplayName("SetOwner")
-    public static Event1Arg<Hash160> onOwnerSet;
+    public static Event1Arg<ECPoint> onOwnerSet;
 
     @DisplayName("SetRelayer")
-    public static Event1Arg<Hash160> onRelayerSet;
+    public static Event1Arg<ECPoint> onRelayerSet;
+
+    @DisplayName("SetValidator")
+    public static Event2Args<List<ECPoint>, Integer> onValidatorsSet;
 
     // endregion
     // region deployment
@@ -46,72 +56,77 @@ public class BridgeManagementContract {
     public static void _deploy(Object data, boolean isUpdate) {
         if (!isUpdate) {
             ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
-            initOwner(deploymentData.owners);
-            initRelayer(deploymentData.relayers);
+            assert ECPoint.isValid(deploymentData.owner);
+            assert ECPoint.isValid(deploymentData.relayer);
+            List<ECPoint> validators = deploymentData.validators;
+            assert deploymentData.validatorThreshold >= validators.size();
+
+            for (int i = 0; i < validators.size(); i++) {
+                ECPoint validator = validators.get(i);
+                assert ECPoint.isValid(validator);
+                validatorMap.put(validator, true);
+            }
         }
-    }
-
-    private static void initOwner(ECPoint[] owners) {
-        checkValidMultiSigProperties(owners, owners_count);
-        Hash160 owner = createMultiSigAccount(owner_threshold, owners);
-        internalSetOwner(owner);
-        onOwnerSet.fire(owner);
-    }
-
-    private static void initRelayer(ECPoint[] relayers) {
-        checkValidMultiSigProperties(relayers, relayers_count);
-        Hash160 relayer = createMultiSigAccount(relayer_threshold, relayers);
-        internalSetRelayer(relayer);
-        onRelayerSet.fire(relayer);
     }
 
     // endregion
     // region setters
 
-    public static void setRelayer(ECPoint[] relayers) {
+    public static void setOwner(ECPoint owner) {
         onlyOwner();
-        checkValidMultiSigProperties(relayers, relayers_count);
-
-        Hash160 relayer = createMultiSigAccount(relayer_threshold, relayers);
-        internalSetRelayer(relayer);
-        onRelayerSet.fire(relayer);
-    }
-
-    public static void setOwner(ECPoint[] owners) {
-        onlyOwner();
-        checkValidMultiSigProperties(owners, owners_count);
-
-        Hash160 owner = createMultiSigAccount(owner_threshold, owners);
-        internalSetOwner(owner);
+        baseMap.put(key_owner, owner);
         onOwnerSet.fire(owner);
     }
 
-    private static void checkValidMultiSigProperties(ECPoint[] pubKeys, int count) {
-        assert pubKeys.length == count;
-        for (ECPoint pubKey : pubKeys) {
-            assert ECPoint.isValid(pubKey);
+    public static void setRelayer(ECPoint relayer) {
+        onlyOwner();
+        baseMap.put(key_relayer, relayer);
+        onRelayerSet.fire(relayer);
+    }
+
+    public static void setValidators(List<ECPoint> validators, int threshold) {
+        onlyOwner();
+        assert validators.size() >= threshold;
+        Iterator<ByteString> it = validatorMap.find(FindOptions.KeysOnly);
+        while (it.next()) {
+            ByteString key = it.get();
+            validatorMap.delete(key);
         }
-    }
-
-    private static void internalSetOwner(Hash160 owner) {
-        Storage.put(ctx, key_owner, owner);
-    }
-
-    private static void internalSetRelayer(Hash160 relayer) {
-        Storage.put(ctx, key_relayer, relayer);
+        for (int i = 0; i < validators.size(); i++) {
+            ECPoint validator = validators.get(i);
+            assert ECPoint.isValid(validator);
+            validatorMap.put(validator, true);
+        }
+        baseMap.put(key_validator_threshold, threshold);
+        onValidatorsSet.fire(validators, threshold);
     }
 
     // endregion
     // region getters
 
     @Safe
-    public static Hash160 owner() {
-        return Storage.getHash160(ctx, key_owner);
+    public static ECPoint owner() {
+        return baseMap.getECPoint(key_owner);
     }
 
     @Safe
-    public static Hash160 relayer() {
-        return Storage.getHash160(ctx, key_relayer);
+    public static ECPoint relayer() {
+        return baseMap.getECPoint(key_relayer);
+    }
+
+    @Safe
+    public static List<ECPoint> validators() {
+        Iterator<ByteString> it = validatorMap.find(FindOptions.KeysOnly);
+        List<ECPoint> validators = new List<>();
+        while (it.next()) {
+            validators.add(new ECPoint(it.get()));
+        }
+        return validators;
+    }
+
+    @Safe
+    public static int validatorThreshold() {
+        return baseMap.getInt(key_validator_threshold);
     }
 
     // endregion
@@ -119,12 +134,6 @@ public class BridgeManagementContract {
 
     private static void onlyOwner() {
         if (!Runtime.checkWitness(owner())) {
-            Helper.abort();
-        }
-    }
-
-    private static void onlyRelayer() {
-        if (!Runtime.checkWitness(relayer())) {
             Helper.abort();
         }
     }
