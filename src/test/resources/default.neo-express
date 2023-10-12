@@ -139,6 +139,159 @@
           }
         }
       ]
+    },
+    {
+      "name": "owner",
+      "accounts": [
+        {
+          "private-key": "2e429c063e62ff4dd96008f1679adcaacc25f5c39d73930393d7ad149bc7016e",
+          "script-hash": "NVcvzyBDBQeRH6PQgbfvwwRtsgPkERY28R",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c2103e25a1ca7b7d12399a257e280d6b392b676478a3aae4224c28ff5c0977fab6eb04156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "relayer",
+      "accounts": [
+        {
+          "private-key": "fd9e213346f7cc5e3b5e970411b58ab5a362c4bf76172a134c5671d5bacd83ab",
+          "script-hash": "NLKknmrDvbEUQXyJk5DA4jnCuLmchHcrZY",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c21027749dca0b6d3147a16544835af6963357d8d2f351e94e65a8fcc29d4531a56504156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "validator1",
+      "accounts": [
+        {
+          "private-key": "cd381c02557c4aceda4cc63a294c7b49057973ba23fd7bee16250557a855ed53",
+          "script-hash": "NRuzYjM6VBxZUc3uvrya6dEST4mJ9zfiqo",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c21024f6adc1dc3b2130d9df08ec46d6e1befd07cfbdd4289558f7658fce1d6d621354156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "validator2",
+      "accounts": [
+        {
+          "private-key": "5737d4d4074cb8beb9e9990142c1e0dbb4bb84a42d9b9f1074114909ed19c193",
+          "script-hash": "NLapNa41oqLCzN2S5cbTbdTJsDetpAR9pr",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c2103bc8b31f4f1d109b03e34d921650206ad35764a924e06e8cc21f2de496e38cf764156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "validator3",
+      "accounts": [
+        {
+          "private-key": "6c9a75a69f42dd1ca1bba47b2278181830301bbed41f612cf3b3828a9dbc9645",
+          "script-hash": "NSVsdj7i6G8LGYGTeXsjvWcKuxNRWnME84",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c2102e242d36c276abe00a133cd5b6365a2f6d5d683f6dbb4f4b74203bea016e8b0b84156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "validator4",
+      "accounts": [
+        {
+          "private-key": "473615d631452399e9391bdc1ab4d7141c5d2b2240e9e60d4c0e08d0f0e77516",
+          "script-hash": "NTb85y2jKhDTgUUN14VfCLwyGBz8Wi8Dxu",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c2102ec244a6d51e80e02edbe5d6288b4edddeb894b28b53540a3394103a97e7332b64156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "validator5",
+      "accounts": [
+        {
+          "private-key": "288b45edaf6543886ca8158c91c5f650fc05d33dca0e24d1f0f147fa17d1fdb5",
+          "script-hash": "Ngwt9adpGp52CV6G8oR4kiiRWoR4UhizDJ",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c210345bb05bc767b1452b969f02d80f7809eec13105c5516fd6046a549796d14c1c94156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "validator6",
+      "accounts": [
+        {
+          "private-key": "50a8d340ac132ea67f67a867b8f1e15f42ffbcf27746cc43eeeeef68ce65dc4f",
+          "script-hash": "NNmY63nMC3P73SQN9zcid87kbRLuJsNeTo",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c210223986f0e003aea491a77779579e8ae18f7a205edc1b39637f765282a0829dd344156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "validator7",
+      "accounts": [
+        {
+          "private-key": "fe9851801bcbdc299c3d44b8161814be3c4d1dc3467f09506e1f92cbe78cf9da",
+          "script-hash": "NSYthzvechfz91inxrVdmnBCqtJxVWjJmv",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c210371585bcaa250876d9badbe068710c2431162b89c0cefd3d178ccce69d684ba044156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
     }
   ],
   "settings": {

@@ -1,14 +1,17 @@
 package network.bane;
 
-import io.neow3j.contract.SmartContract;
+import io.neow3j.crypto.ECKeyPair.ECPublicKey;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.InvocationResult;
+import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
+import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.wallet.Account;
+import network.bane.util.Management;
 import network.bane.util.TestHelper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -18,10 +21,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static io.neow3j.transaction.AccountSigner.calledByEntry;
+import static io.neow3j.types.ContractParameter.publicKey;
 import static io.neow3j.types.StackItemType.ARRAY;
 import static io.neow3j.types.StackItemType.BYTE_STRING;
 import static io.neow3j.types.StackItemType.INTEGER;
 import static java.util.Arrays.asList;
+import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.ownerPubKey;
 import static network.bane.util.TestHelper.prepareManagementDeployParameter;
 import static network.bane.util.TestHelper.relayerPubKey;
@@ -32,28 +38,43 @@ import static network.bane.util.TestHelper.validator4PubKey;
 import static network.bane.util.TestHelper.validator5PubKey;
 import static network.bane.util.TestHelper.validator6PubKey;
 import static network.bane.util.TestHelper.validator7PubKey;
+import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ContractTest(blockTime = 1, contracts = BridgeManagementContract.class, batchFile = "setup.batch")
 public class BridgeManagementTest {
 
-    private static SmartContract management;
+    private static Management management;
     private static Neow3j neow3j;
 
     private static Account alice;
+    private static ECPublicKey alicePubKey;
+    private static Account bob;
+    private static ECPublicKey bobPubKey;
+    private static Account charlie;
+    private static ECPublicKey charliePubKey;
 
     @RegisterExtension
     public static final ContractTestExtension ext = new ContractTestExtension();
 
     @BeforeAll
     public static void setUp() throws Exception {
-        management = ext.getDeployedContract(BridgeManagementContract.class);
         neow3j = ext.getNeow3j();
+        management = new Management(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
 
         alice = ext.getAccount(TestHelper.ALICE);
+        bob = ext.getAccount(TestHelper.BOB);
+        charlie = ext.getAccount(TestHelper.CHARLIE);
+
+        alicePubKey = alice.getECKeyPair().getPublicKey();
+        bobPubKey = bob.getECKeyPair().getPublicKey();
+        charliePubKey = charlie.getECKeyPair().getPublicKey();
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -125,6 +146,80 @@ public class BridgeManagementTest {
         assertTrue(validatorList.contains(validator5PubKey.getEncodedCompressedHex()));
         assertTrue(validatorList.contains(validator6PubKey.getEncodedCompressedHex()));
         assertTrue(validatorList.contains(validator7PubKey.getEncodedCompressedHex()));
+    }
+
+    // endregion
+    // region setters
+
+    @Test
+    public void testSetOwner() throws Throwable {
+        assertThat(management.owner(), is(ownerPubKey));
+
+        NeoSendRawTransaction response = management.invokeFunction("setOwner", publicKey(alicePubKey))
+                .signers(calledByEntry(owner))
+                .sign()
+                .send();
+        assertFalse(response.hasError());
+        waitUntilTransactionIsExecuted(response, neow3j);
+
+        assertThat(management.owner(), is(alicePubKey));
+
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setOwner", publicKey(bobPubKey))
+                        .signers(calledByEntry(owner))
+                        .sign()
+        );
+        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+
+        // reverse set owner
+        response = management.invokeFunction("setOwner", publicKey(ownerPubKey))
+                .signers(calledByEntry(alice))
+                .sign()
+                .send();
+        assertFalse(response.hasError());
+        waitUntilTransactionIsExecuted(response, neow3j);
+
+        assertThat(management.owner(), is(ownerPubKey));
+    }
+
+    @Test
+    public void testSetOwner_unauthorized() throws IOException {
+        assertThat(management.owner(), is(ownerPubKey));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setOwner", publicKey(ownerPubKey)).signers(calledByEntry(alice)).sign());
+        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+    }
+
+    @Test
+    public void testSetRelayer() throws Throwable {
+        assertThat(management.relayer(), is(relayerPubKey));
+
+        NeoSendRawTransaction response = management.invokeFunction("setRelayer", publicKey(bobPubKey))
+                .signers(calledByEntry(owner))
+                .sign()
+                .send();
+        assertFalse(response.hasError());
+        waitUntilTransactionIsExecuted(response, neow3j);
+
+        assertThat(management.relayer(), is(bobPubKey));
+
+        // reverse set owner
+        response = management.invokeFunction("setRelayer", publicKey(relayerPubKey))
+                .signers(calledByEntry(owner))
+                .sign()
+                .send();
+        assertFalse(response.hasError());
+        waitUntilTransactionIsExecuted(response, neow3j);
+
+        assertThat(management.relayer(), is(relayerPubKey));
+    }
+
+    @Test
+    public void testSetRelayer_unauthorized() throws IOException {
+        assertThat(management.relayer(), is(relayerPubKey));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setRelayer", publicKey(charliePubKey)).signers(calledByEntry(alice)).sign());
+        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
     }
 
     // endregion

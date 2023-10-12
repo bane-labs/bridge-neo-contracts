@@ -10,3 +10,24 @@ transfer 10000 GAS genesis Eve
 transfer 1000 NEO genesis Eve
 transfer 10000 GAS genesis Florian
 transfer 1000 NEO genesis Florian
+
+transfer 10000 GAS genesis owner
+transfer 1000 NEO genesis owner
+
+transfer 10000 GAS genesis relayer
+transfer 1000 NEO genesis relayer
+
+transfer 10000 GAS genesis validator1
+transfer 1000 NEO genesis validator1
+transfer 10000 GAS genesis validator2
+transfer 1000 NEO genesis validator2
+transfer 10000 GAS genesis validator3
+transfer 1000 NEO genesis validator3
+transfer 10000 GAS genesis validator4
+transfer 1000 NEO genesis validator4
+transfer 10000 GAS genesis validator5
+transfer 1000 NEO genesis validator5
+transfer 10000 GAS genesis validator6
+transfer 1000 NEO genesis validator6
+transfer 10000 GAS genesis validator7
+transfer 1000 NEO genesis validator7
