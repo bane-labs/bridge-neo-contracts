@@ -28,15 +28,17 @@ public class BridgeManagementContract {
 
     private static final StorageContext ctx = Storage.getStorageContext();
 
-    private static final int prefix_base = 0xf0;
+    private static final byte prefix_base = 0x0a;
     private static final StorageMap baseMap = new StorageMap(ctx, prefix_base);
 
     private static final int key_owner = 0x00;
     private static final int key_relayer = 0x01;
     private static final int key_validator_threshold = 0x02;
 
-    private static final int prefix_validator = 0xf1;
+    private static final byte prefix_validator = 0x0b;
     private static final StorageMap validatorMap = new StorageMap(ctx, prefix_validator);
+
+    private static final int const_max_validators = 21;
 
     // region events
 
@@ -53,15 +55,21 @@ public class BridgeManagementContract {
     // region deployment
 
     @OnDeployment
-    public static void _deploy(Object data, boolean isUpdate) {
+    public static void deploy(Object data, boolean isUpdate) {
         if (!isUpdate) {
             ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
             assert ECPoint.isValid(deploymentData.owner);
             assert ECPoint.isValid(deploymentData.relayer);
             List<ECPoint> validators = deploymentData.validators;
-            assert deploymentData.validatorThreshold >= validators.size();
+            int validatorSize = validators.size();
+            assert validatorSize <= const_max_validators;
+            assert validatorSize >= deploymentData.validatorThreshold;
 
-            for (int i = 0; i < validators.size(); i++) {
+            baseMap.put(key_owner, deploymentData.owner);
+            baseMap.put(key_relayer, deploymentData.relayer);
+            baseMap.put(key_validator_threshold, deploymentData.validatorThreshold);
+
+            for (int i = 0; i < validatorSize; i++) {
                 ECPoint validator = validators.get(i);
                 assert ECPoint.isValid(validator);
                 validatorMap.put(validator, true);
@@ -87,7 +95,7 @@ public class BridgeManagementContract {
     public static void setValidators(List<ECPoint> validators, int threshold) {
         onlyOwner();
         assert validators.size() >= threshold;
-        Iterator<ByteString> it = validatorMap.find(FindOptions.KeysOnly);
+        Iterator<ByteString> it = validatorMap.find(FindOptions.RemovePrefix | FindOptions.KeysOnly);
         while (it.next()) {
             ByteString key = it.get();
             validatorMap.delete(key);
@@ -116,7 +124,7 @@ public class BridgeManagementContract {
 
     @Safe
     public static List<ECPoint> validators() {
-        Iterator<ByteString> it = validatorMap.find(FindOptions.KeysOnly);
+        Iterator<ByteString> it = validatorMap.find(FindOptions.RemovePrefix | FindOptions.KeysOnly);
         List<ECPoint> validators = new List<>();
         while (it.next()) {
             validators.add(new ECPoint(it.get()));
