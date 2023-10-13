@@ -4,11 +4,15 @@ import io.neow3j.crypto.ECKeyPair.ECPublicKey;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.InvocationResult;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
+import io.neow3j.protocol.core.response.Notification;
+import io.neow3j.protocol.core.stackitem.ArrayStackItem;
+import io.neow3j.protocol.core.stackitem.ByteStringStackItem;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
+import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.wallet.Account;
@@ -49,6 +53,7 @@ import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -131,6 +136,19 @@ public class BridgeManagementTest {
         return config;
     }
 
+    // region test manifest
+
+    @Test
+    public void testManifestMethods() throws IOException {
+        assertThat(management.getManifest().getName(), is("BridgeManagement"));
+        assertThat(management.getManifest().getAbi().getMethods(), hasSize(9));
+        assertThat(management.getManifest().getAbi().getEvents(), hasSize(3));
+        assertThat(management.getManifest().getSupportedStandards(), hasSize(0));
+        assertThat(management.getManifest().getPermissions(), hasSize(0));
+        assertThat(management.getManifest().getTrusts(), hasSize(0));
+        assertThat(management.getManifest().getGroups(), hasSize(0));
+    }
+
     // region test deployment
 
     @Test
@@ -187,12 +205,20 @@ public class BridgeManagementTest {
     public void testSetOwner() throws Throwable {
         assertThat(management.owner(), is(ownerPubKey));
 
-        NeoSendRawTransaction response = management.invokeFunction("setOwner", publicKey(alicePubKey))
+        Transaction tx = management.invokeFunction("setOwner", publicKey(alicePubKey))
                 .signers(calledByEntry(owner))
-                .sign()
-                .send();
+                .sign();
+        NeoSendRawTransaction response = tx.send();
         assertFalse(response.hasError());
         waitUntilTransactionIsExecuted(response, neow3j);
+
+        Notification expected = new Notification(
+                management.getScriptHash(),
+                "SetOwner",
+                new ArrayStackItem(asList(new ByteStringStackItem(alicePubKey.toArray())))
+        );
+        assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
+        assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
 
         assertThat(management.owner(), is(alicePubKey));
 
@@ -218,7 +244,10 @@ public class BridgeManagementTest {
     public void testSetOwner_unauthorized() throws IOException {
         assertThat(management.owner(), is(ownerPubKey));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setOwner", publicKey(ownerPubKey)).signers(calledByEntry(alice)).sign());
+                () -> management.invokeFunction("setOwner", publicKey(ownerPubKey))
+                        .signers(calledByEntry(alice))
+                        .sign()
+        );
         assertThat(thrown.getMessage(), containsString("ABORT is executed."));
     }
 
@@ -226,12 +255,20 @@ public class BridgeManagementTest {
     public void testSetRelayer() throws Throwable {
         assertThat(management.relayer(), is(relayerPubKey));
 
-        NeoSendRawTransaction response = management.invokeFunction("setRelayer", publicKey(bobPubKey))
+        Transaction tx = management.invokeFunction("setRelayer", publicKey(bobPubKey))
                 .signers(calledByEntry(owner))
-                .sign()
-                .send();
+                .sign();
+        NeoSendRawTransaction response = tx.send();
         assertFalse(response.hasError());
         waitUntilTransactionIsExecuted(response, neow3j);
+
+        Notification expected = new Notification(
+                management.getScriptHash(),
+                "SetRelayer",
+                new ArrayStackItem(asList(new ByteStringStackItem(bobPubKey.toArray())))
+        );
+        assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
+        assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
 
         assertThat(management.relayer(), is(bobPubKey));
 
@@ -250,7 +287,10 @@ public class BridgeManagementTest {
     public void testSetRelayer_unauthorized() throws IOException {
         assertThat(management.relayer(), is(relayerPubKey));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setRelayer", publicKey(charliePubKey)).signers(calledByEntry(alice)).sign());
+                () -> management.invokeFunction("setRelayer", publicKey(charliePubKey))
+                        .signers(calledByEntry(alice))
+                        .sign()
+        );
         assertThat(thrown.getMessage(), containsString("ABORT is executed."));
     }
 
@@ -260,7 +300,7 @@ public class BridgeManagementTest {
         assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
         assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
 
-        NeoSendRawTransaction response = management.invokeFunction("setValidators",
+        Transaction tx = management.invokeFunction("setValidators",
                         array(
                                 publicKey(alicePubKey),
                                 publicKey(bobPubKey),
@@ -271,10 +311,29 @@ public class BridgeManagementTest {
                         integer(3)
                 )
                 .signers(calledByEntry(owner))
-                .sign()
-                .send();
+                .sign();
+        NeoSendRawTransaction response = tx.send();
         assertFalse(response.hasError());
         waitUntilTransactionIsExecuted(response, neow3j);
+
+        assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
+        Notification notification = tx.getApplicationLog().getFirstExecution().getFirstNotification();
+        assertThat(notification.getEventName(), is("SetValidators"));
+        assertThat(notification.getContract(), is(management.getScriptHash()));
+        List<StackItem> stateList = notification.getState().getList();
+        assertThat(stateList, hasSize(2));
+        assertThat(stateList.get(0).getType(), is(ARRAY));
+        assertThat(stateList.get(0).getList(), hasSize(5));
+        assertThat(stateList.get(0).getList().stream().map(StackItem::getHexString).collect(Collectors.toList()),
+                contains(
+                        alicePubKey.getEncodedCompressedHex(),
+                        bobPubKey.getEncodedCompressedHex(),
+                        charliePubKey.getEncodedCompressedHex(),
+                        denisePubKey.getEncodedCompressedHex(),
+                        evePubKey.getEncodedCompressedHex()
+                ));
+        assertThat(stateList.get(1).getType(), is(INTEGER));
+        assertThat(stateList.get(1).getInteger().intValue(), is(3));
 
         assertThat(management.validators(),
                 containsInAnyOrder(alicePubKey, bobPubKey, charliePubKey, denisePubKey, evePubKey));
@@ -302,7 +361,8 @@ public class BridgeManagementTest {
                 () -> management.invokeFunction("setValidators",
                                 array(publicKey(charliePubKey), publicKey(denisePubKey)), integer(1))
                         .signers(calledByEntry(alice))
-                        .sign());
+                        .sign()
+        );
         assertThat(thrown.getMessage(), containsString("ABORT is executed."));
     }
 
@@ -317,7 +377,9 @@ public class BridgeManagementTest {
         assertThat(management.validators(), hasSize(defaultValidators.size()));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("setValidators", array(newValidators), integer(5))
-                        .signers(calledByEntry(alice)).sign());
+                        .signers(calledByEntry(alice))
+                        .sign()
+        );
         assertThat(thrown.getMessage(), containsString("ABORT is executed."));
     }
 
@@ -361,12 +423,8 @@ public class BridgeManagementTest {
                                 integer(3))
                         .signers(calledByEntry(owner))
                         .sign()
-                        .send());
-        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
-
-        setDefaultValidators(management, neow3j);
-        assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
-        assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
+        );
+        assertThat(thrown.getMessage(), containsString("ASSERT is executed with false result."));
     }
 
     // endregion

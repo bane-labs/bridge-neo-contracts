@@ -5,6 +5,7 @@ import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Helper;
 import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
+import io.neow3j.devpack.Map;
 import io.neow3j.devpack.Runtime;
 import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
@@ -48,7 +49,7 @@ public class BridgeManagementContract {
     @DisplayName("SetRelayer")
     public static Event1Arg<ECPoint> onRelayerSet;
 
-    @DisplayName("SetValidator")
+    @DisplayName("SetValidators")
     public static Event2Args<List<ECPoint>, Integer> onValidatorsSet;
 
     // endregion
@@ -94,6 +95,7 @@ public class BridgeManagementContract {
 
     public static void setValidators(List<ECPoint> validators, int threshold) {
         onlyOwner();
+        assert !hasDuplicates(validators);
         assert validators.size() >= threshold;
         Iterator<ByteString> it = validatorMap.find(FindOptions.RemovePrefix | FindOptions.KeysOnly);
         while (it.next()) {
@@ -107,6 +109,14 @@ public class BridgeManagementContract {
         }
         baseMap.put(key_validator_threshold, threshold);
         onValidatorsSet.fire(validators, threshold);
+    }
+
+    private static boolean hasDuplicates(List<ECPoint> validators) {
+        Map<ECPoint, Boolean> map = new Map<>();
+        for (int i = 0; i < validators.size(); i++) {
+            map.put(validators.get(i), true);
+        }
+        return map.keys().length != validators.size();
     }
 
     // endregion
