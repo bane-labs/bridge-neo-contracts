@@ -91,6 +91,7 @@ public class BridgeManagementTest {
     @BeforeAll
     public static void setUp() throws Exception {
         neow3j = ext.getNeow3j();
+
         management = new Management(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
 
         alice = ext.getAccount(TestHelper.ALICE);
@@ -136,7 +137,7 @@ public class BridgeManagementTest {
         return config;
     }
 
-    // region test manifest
+    // region manifest
 
     @Test
     public void testManifestMethods() throws IOException {
@@ -149,7 +150,8 @@ public class BridgeManagementTest {
         assertThat(management.getManifest().getGroups(), hasSize(0));
     }
 
-    // region test deployment
+    // endregion
+    // region deployment
 
     @Test
     public void testDeployOwnerCorrect() throws IOException {
