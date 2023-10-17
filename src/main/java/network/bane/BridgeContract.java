@@ -41,12 +41,11 @@ public class BridgeContract {
     private static final byte prefix_base = 0x0a;
     private static final StorageMap baseMap = new StorageMap(ctx, prefix_base);
 
-    private static final int key_bridgeManagement = 0x00;
-
-//    private static final int key_locked = 0x01;
+    private static final int key_bridgeManagement = 0x01;
     private static final int key_deposit_price = 0x02;
     private static final int key_deposit_min = 0x03;
     private static final int key_deposit_max = 0x04;
+    //    private static final int key_locked = 0x05;
 
     private static final int key_deposit_root = 0x10;
     private static final int key_deposit_nonce = 0x11;
@@ -114,12 +113,10 @@ public class BridgeContract {
     @OnNEP17Payment
     public static void deposit(Hash160 from, int amount, Object data) {
         if (Runtime.getCallingScriptHash() != new GasToken().getHash()) {
-            Helper.abort();
-            //Helper.abort("Only GAS is accepted.");
+            Helper.abort("Only GAS is accepted.");
         }
         Hash160 to = (Hash160) data;
-        assert Hash160.isValid(to);
-        //assert Hash160.isValid(to) : "Provided data has invalid format.";
+        assert Hash160.isValid(to) : "Provided data has invalid format.";
 
         int nonce = newNonce();
         ByteString depositHash = hashDepositOrWithdrawal(nonce, to, amount);
@@ -129,14 +126,7 @@ public class BridgeContract {
     }
 
     private static ByteString hashDepositOrWithdrawal(int nonce, Hash160 to, int amount) {
-        byte[] concatenatedData =
-                concat(
-                        concat(
-                                toByteArray(nonce),
-                                to.toByteString()
-                        ),
-                        toByteArray(amount)
-                );
+        byte[] concatenatedData = concat(concat(toByteArray(nonce), to.toByteString()), amount);
         return new CryptoLib().sha256(new ByteString(concatenatedData));
     }
 
@@ -180,17 +170,16 @@ public class BridgeContract {
     // Todo: Verify withdrawal
     public static void withdraw(List<MerkleProof> proofs, Map<ECPoint, ByteString> signatures) {
         if (!checkWitness(getRelayer())) {
-            Helper.abort();
-//            Helper.abort("Only relayer is allowed to initiate withdrawal.");
+            Helper.abort("Only the relayer can call this method.");
         }
-        assert proofs.size() <= const_max_proofs_per_withdrawal;
-        assert areValid(proofs);
+        assert proofs.size() <= const_max_proofs_per_withdrawal : "Too many proofs provided.";
+        assert areValid(proofs) : "Invalid proofs provided.";
 
         int startNonce = proofs.get(0).nonce;
-        assert startNonce == currentNonce() + 1;
-        assert subsequentNonces(proofs, startNonce);
+        assert startNonce == currentNonce() + 1 : "Provided first nonce is not the next one.";
+        assert subsequentNonces(proofs, startNonce) : "Provided proofs are not subsequent.";
 
-        assert verifyValidatorSignatures(signatures, proofs);
+        assert verifyValidatorSignatures(signatures, proofs) : "Invalid validator signatures provided.";
 
         verifyProofsAndTransfer(proofs);
         baseMap.put(key_withdrawal_nonce, proofs.get(proofs.size() - 1).nonce);
@@ -203,14 +192,13 @@ public class BridgeContract {
                 Hash160 to = merkleProof.recipient;
                 if (!isContract(to)) {
                     int amount = merkleProof.amount;
-                    assert new GasToken().transfer(Runtime.getExecutingScriptHash(), to, amount, null);
+                    assert new GasToken().transfer(Runtime.getExecutingScriptHash(), to, amount, null) : "Transfer failed.";
                     onWithdrawal.fire(merkleProof.nonce, to, amount);
                 }
                 // In case the recipient is a contract, no funds are sent. However, the Merkle Tree computation must
                 // withstand.
             } else {
-                // If a proof verification failed, the transaction is aborted.
-                Helper.abort();
+                Helper.abort("Invalid proof provided.");
             }
         }
 
@@ -232,7 +220,7 @@ public class BridgeContract {
     private static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, List<MerkleProof> proofs) {
         List<ECPoint> validators = getValidators();
         int threshold = getValidatorThreshold();
-        assert signatures.keys().length >= threshold;
+        assert signatures.keys().length >= threshold : "Not enough signatures provided.";
 
         ByteString rootsHashed = concatRootsAndSha256(proofs);
         int covered = 0;
