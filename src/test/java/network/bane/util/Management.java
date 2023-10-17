@@ -1,6 +1,5 @@
 package network.bane.util;
 
-import io.neow3j.contract.SmartContract;
 import io.neow3j.crypto.ECKeyPair;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.stackitem.StackItem;
@@ -10,7 +9,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class Management extends SmartContract {
+public class Management extends SmartContractHelper {
 
     public Management(Hash160 scriptHash, Neow3j neow3j) {
         super(scriptHash, neow3j);
