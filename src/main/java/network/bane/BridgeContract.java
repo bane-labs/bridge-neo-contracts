@@ -299,15 +299,47 @@ public class BridgeContract {
     // region getters
 
     @Safe
-    public static ByteString getDepositRoot() {
-        return baseMap.get(key_deposit_root);
+    public static Hash160 management() {
+        return baseMap.getHash160(key_bridgeManagement);
     }
-
-    // endregion
-    // region bridge management
 
     private static BridgeManagement getManagement() {
         return new BridgeManagement(baseMap.getHash160(key_bridgeManagement));
+    }
+
+    @Safe
+    public static int depositPrice() {
+        return baseMap.getInt(key_deposit_price);
+    }
+
+    @Safe
+    public static int minDeposit() {
+        return baseMap.getInt(key_deposit_min);
+    }
+
+    @Safe
+    public static int maxDeposit() {
+        return baseMap.getInt(key_deposit_max);
+    }
+
+    @Safe
+    public static int maxProofsPerWithdrawal() {
+        return const_max_proofs_per_withdrawal;
+    }
+
+    @Safe
+    public static int depositsProcessed() {
+        return baseMap.getInt(key_deposit_nonce);
+    }
+
+    @Safe
+    public static int withdrawalsProcessed() {
+        return baseMap.getInt(key_withdrawal_nonce);
+    }
+
+    @Safe
+    public static ByteString depositRoot() {
+        return baseMap.get(key_deposit_root);
     }
 
     // endregion
