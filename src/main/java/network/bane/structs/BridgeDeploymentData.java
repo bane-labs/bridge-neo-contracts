@@ -12,9 +12,9 @@ public class BridgeDeploymentData {
 
     public static boolean isValid(BridgeDeploymentData bridgeDeploymentData) {
         return Hash160.isValid(bridgeDeploymentData.bridgeManagementContractHash) &&
-                bridgeDeploymentData.depositPrice <= 0 &&
-                bridgeDeploymentData.minDeposit <= 0 &&
-                bridgeDeploymentData.maxDeposit <= bridgeDeploymentData.minDeposit;
+                bridgeDeploymentData.depositPrice >= 0 &&
+                bridgeDeploymentData.minDeposit >= 0 &&
+                bridgeDeploymentData.maxDeposit >= bridgeDeploymentData.minDeposit;
     }
 
 }
