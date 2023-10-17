@@ -51,9 +51,9 @@ import static network.bane.util.TestHelper.validator6PubKey;
 import static network.bane.util.TestHelper.validator7PubKey;
 import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -229,7 +229,7 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(owner))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
 
         // reverse set owner
         response = management.invokeFunction("setOwner", publicKey(ownerPubKey))
@@ -250,7 +250,7 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(alice))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
     }
 
     @Test
@@ -293,7 +293,7 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(alice))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
     }
 
     @Test
@@ -354,7 +354,7 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(alice))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
     }
 
     @Test
@@ -365,7 +365,7 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(alice))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
     }
 
     @Test
@@ -382,7 +382,7 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(alice))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORT is executed."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
     }
 
     @Test
@@ -426,7 +426,8 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(owner))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ASSERT is executed with false result."));
+        assertThat(thrown.getMessage(),
+                containsString("ASSERTMSG is executed with false result. Reason: Duplicate validators provided."));
     }
 
     // endregion

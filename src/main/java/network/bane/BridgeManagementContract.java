@@ -95,8 +95,8 @@ public class BridgeManagementContract {
 
     public static void setValidators(List<ECPoint> validators, int threshold) {
         onlyOwner();
-        assert !hasDuplicates(validators);
-        assert validators.size() >= threshold;
+        assert !hasDuplicates(validators) : "Duplicate validators provided.";
+        assert validators.size() >= threshold : "Not enough validators.";
         Iterator<ByteString> it = validatorMap.find(FindOptions.RemovePrefix | FindOptions.KeysOnly);
         while (it.next()) {
             ByteString key = it.get();
@@ -104,7 +104,7 @@ public class BridgeManagementContract {
         }
         for (int i = 0; i < validators.size(); i++) {
             ECPoint validator = validators.get(i);
-            assert ECPoint.isValid(validator);
+            assert ECPoint.isValid(validator) : "Invalid validator public key provided.";
             validatorMap.put(validator, true);
         }
         baseMap.put(key_validator_threshold, threshold);
@@ -152,7 +152,7 @@ public class BridgeManagementContract {
 
     private static void onlyOwner() {
         if (!Runtime.checkWitness(owner())) {
-            Helper.abort();
+            Helper.abort("No authorization.");
         }
     }
 
