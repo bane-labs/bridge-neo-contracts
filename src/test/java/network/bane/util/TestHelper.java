@@ -2,20 +2,34 @@ package network.bane.util;
 
 import io.neow3j.crypto.ECKeyPair;
 import io.neow3j.crypto.ECKeyPair.ECPublicKey;
+import io.neow3j.crypto.Hash;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
+import io.neow3j.protocol.core.response.Notification;
+import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
+import io.neow3j.types.Hash256;
 import io.neow3j.utils.Await;
+import io.neow3j.utils.BigIntegers;
 import io.neow3j.wallet.Account;
 
+import java.io.IOException;
+import java.math.BigInteger;
 import java.util.List;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.publicKey;
+import static io.neow3j.utils.ArrayUtils.concatenate;
+import static io.neow3j.utils.Numeric.cleanHexPrefix;
+import static io.neow3j.utils.Numeric.hexStringToByteArray;
+import static io.neow3j.utils.Numeric.prependHexPrefix;
+import static io.neow3j.utils.Numeric.toHexString;
 import static java.util.Arrays.asList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
 public class TestHelper {
 
@@ -71,6 +85,7 @@ public class TestHelper {
     );
     public static int defaultValidatorThreshold = 5;
 
+    public static final Account account0 = Account.fromWIF("Kzczq8Bd3h6ukXs4tgTkGd6jDeETcm18VTx3gS8ZcC5DobB25sGm");
     public static final Account account1 = Account.fromWIF("L49FvTGZTdSJbck687Kg9wrjBzQBJ1asnvKWqcvJ2sJcyP9U9rbJ");
     public static final Account account2 = Account.fromWIF("KwPnYQg2VFMq2Jn62DTVKYCg7TGdzFWvsfKkzKYgPi2LSJcxEW7D");
     public static final Account account3 = Account.fromWIF("KzLcmDDahZdkZPgbwgicjMEASo6qLP5B6TtpvdDT9hd4pgjmSMms");
@@ -126,6 +141,132 @@ public class TestHelper {
 
     public static void waitUntilTransactionIsExecuted(NeoSendRawTransaction response, Neow3j neow3j) {
         Await.waitUntilTransactionIsExecuted(response.getSendRawTransaction().getHash(), neow3j);
+    }
+
+    // region concat and sha256 functions
+
+    public static byte[] concatLeftRight(String leftHex, String rightHex) {
+        return concatenate(hexStringToByteArray(leftHex), hexStringToByteArray(rightHex));
+    }
+
+    public static String sha256Hex(byte[] input) {
+        return toHexString(Hash.sha256(input));
+    }
+
+    public static String sha256HexNoPrefix(byte[] input) {
+        return cleanHexPrefix(sha256Hex(input));
+    }
+
+    public static String concatAndSha256(String leftHex, String rightHex) {
+        return sha256Hex(concatLeftRight(leftHex, rightHex));
+    }
+
+    public static String createDepositHash(BigInteger nonce, Hash160 to, BigInteger amount) {
+        return sha256Hex(concatDepositData(nonce, to, amount));
+    }
+
+    public static String createDepositHashNoPrefix(BigInteger nonce, Hash160 to, BigInteger amount) {
+        return cleanHexPrefix(createDepositHash(nonce, to, amount));
+    }
+
+    private static byte[] concatDepositData(BigInteger nonce, Hash160 recipient, BigInteger amount) {
+        return concatenate(
+                concatenate(BigIntegers.toLittleEndianByteArray(nonce), recipient.toLittleEndianArray()),
+                BigIntegers.toLittleEndianByteArray(amount)
+        );
+    }
+
+    // endregion
+    // region merkle tree building
+
+    public static String buildSubTree(int n, List<String> leaves, int startIndex) {
+        assert powOfTwo(n);
+        List<String> subList = leaves.subList(startIndex, startIndex + n);
+        assert subList.size() == n;
+        return buildSubTree(n, subList);
+    }
+
+    private static String buildSubTree(int n, List<String> leaves) {
+        assert leaves.size() == n;
+        if (n == 2) {
+            return concatAndSha256(leaves.get(0), leaves.get(1));
+        }
+        String left = buildSubTree(n / 2, leaves.subList(0, leaves.size() / 2));// 0-1
+        String right = buildSubTree(n / 2, leaves.subList(leaves.size() / 2, leaves.size()));// 2-3
+        return sha256Hex(concatLeftRight(left, right));
+    }
+
+    private static boolean powOfTwo(int n) {
+        if (n == 1) return false; // technically valid, but in this case we require n > 1
+        while (n % 2 == 0) {
+            n /= 2;
+        }
+        return n == 1;
+    }
+
+    // endregion
+
+    private static List<Notification> getEvents(Hash256 txHash, Neow3j neow3j) throws IOException {
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getNotifications();
+    }
+
+    public static DepositEvent getDepositEvent(Hash256 txHash, Neow3j neow3j) throws IOException {
+        // GasToken Transfer is first notification, OnDeposit is second notification.
+        Notification depositEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution().getNotification(1);
+        assertThat(depositEvent.getEventName(), is("OnDeposit"));
+        List<StackItem> state = depositEvent.getState().getList();
+        BigInteger nonce = state.get(0).getInteger();
+        Hash160 from = Hash160.fromAddress(state.get(1).getAddress());
+        Hash160 to = Hash160.fromAddress(state.get(2).getAddress());
+        BigInteger amount = state.get(3).getInteger();
+        String depositHash = prependHexPrefix(state.get(4).getHexString());
+        String rootHash = prependHexPrefix(state.get(5).getHexString());
+        return new DepositEvent(nonce, from, to, amount, depositHash, rootHash);
+    }
+
+    public static class DepositEvent {
+        public BigInteger nonce;
+        public Hash160 from;
+        public Hash160 to;
+        public BigInteger amount;
+        public String depositHashHex;
+        public String rootHashHex;
+
+        public DepositEvent(BigInteger nonce, Hash160 from, Hash160 to, BigInteger amount, String depositHashHex,
+                String rootHashHex) {
+            this.nonce = nonce;
+            this.from = from;
+            this.to = to;
+            this.amount = amount;
+            this.depositHashHex = depositHashHex;
+            this.rootHashHex = rootHashHex;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof DepositEvent)) return false;
+            DepositEvent that = (DepositEvent) o;
+            return nonce.equals(that.nonce) &&
+                    from.equals(that.from) &&
+                    to.equals(that.to) &&
+                    amount.equals(that.amount) &&
+                    depositHashHex.equals(that.depositHashHex) &&
+                    rootHashHex.equals(that.rootHashHex);
+        }
+
+        @Override
+        public String toString() {
+            return "\nDepositEvent\n" +
+                    "\n  nonce=" + nonce +
+                    "\n  from=" + from +
+                    "\n  to=" + to +
+                    "\n  amount=" + amount +
+                    "\n  depositHash=" + depositHashHex +
+                    "\n  rootHash=" + rootHashHex +
+                    "\n";
+        }
     }
 
 }
