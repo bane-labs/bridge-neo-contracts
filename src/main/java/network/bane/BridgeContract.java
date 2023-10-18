@@ -3,10 +3,8 @@ package network.bane;
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
-import io.neow3j.devpack.Helper;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
-import io.neow3j.devpack.Runtime;
 import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
@@ -25,9 +23,12 @@ import network.bane.interfaces.BridgeManagement;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.MerkleProof;
 
+import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Helper.toByteArray;
 import static io.neow3j.devpack.Runtime.checkWitness;
+import static io.neow3j.devpack.Runtime.getCallingScriptHash;
+import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 
 @DisplayName("BaneBridge")
 @ManifestExtra(key = "author", value = "BaneLabs")
@@ -45,7 +46,8 @@ public class BridgeContract {
     private static final int key_deposit_price = 0x02;
     private static final int key_deposit_min = 0x03;
     private static final int key_deposit_max = 0x04;
-    //    private static final int key_locked = 0x05;
+    private static final int key_max_proofs_per_withdrawal = 0x05;
+    //    private static final int key_locked = 0x06;
 
     private static final int key_deposit_root = 0x10;
     private static final int key_deposit_nonce = 0x11;
@@ -53,7 +55,6 @@ public class BridgeContract {
 
     private static final int key_withdrawal_nonce = 0x21;
 
-    private static final int const_max_proofs_per_withdrawal = 10;
 
     // Used to store incomplete subtree hashes
     private static final byte prefix_deposit_root = 0x0b;
@@ -99,6 +100,7 @@ public class BridgeContract {
             baseMap.put(key_deposit_price, deploymentData.depositPrice);
             baseMap.put(key_deposit_min, deploymentData.minDeposit);
             baseMap.put(key_deposit_max, deploymentData.maxDeposit);
+            baseMap.put(key_max_proofs_per_withdrawal, deploymentData.maxProofsPerWithdrawal);
 
             baseMap.put(key_deposit_nonce, 0);
             baseMap.put(key_deposit_maxIndex, 0);
@@ -108,15 +110,15 @@ public class BridgeContract {
     }
 
     // endregion
-    // region deposit
+    // region public deposit
 
     @OnNEP17Payment
     public static void deposit(Hash160 from, int amount, Object data) {
-        if (Runtime.getCallingScriptHash() != new GasToken().getHash()) {
-            Helper.abort("Only GAS is accepted.");
+        if (getCallingScriptHash() != new GasToken().getHash()) {
+            abort("Only GAS is accepted.");
         }
         Hash160 to = (Hash160) data;
-        assert Hash160.isValid(to) : "Provided data has invalid format.";
+        assert Hash160.isValid(to) : "Invalid recipient data.";
 
         int nonce = newNonce();
         ByteString depositHash = hashDepositOrWithdrawal(nonce, to, amount);
@@ -124,6 +126,9 @@ public class BridgeContract {
         baseMap.put(key_deposit_root, root);
         onDeposit.fire(nonce, from, to, amount, depositHash, root);
     }
+
+    // endregion
+    // region private deposit helpers
 
     private static ByteString hashDepositOrWithdrawal(int nonce, Hash160 to, int amount) {
         byte[] concatenatedData = concat(concat(toByteArray(nonce), to.toByteString()), amount);
@@ -165,14 +170,13 @@ public class BridgeContract {
     }
 
     // endregion
-    // region verify withdrawal
+    // region public withdrawal
 
-    // Todo: Verify withdrawal
     public static void withdraw(List<MerkleProof> proofs, Map<ECPoint, ByteString> signatures) {
-        if (!checkWitness(getRelayer())) {
-            Helper.abort("Only the relayer can call this method.");
+        if (!checkWitness(relayer())) {
+            abort("Only the relayer can call this method.");
         }
-        assert proofs.size() <= const_max_proofs_per_withdrawal : "Too many proofs provided.";
+        assert proofs.size() <= maxProofsPerWithdrawal() : "Too many proofs provided.";
         assert areValid(proofs) : "Invalid proofs provided.";
 
         int startNonce = proofs.get(0).nonce;
@@ -185,6 +189,9 @@ public class BridgeContract {
         baseMap.put(key_withdrawal_nonce, proofs.get(proofs.size() - 1).nonce);
     }
 
+    // endregion
+    // region private withdrawal helpers
+
     private static void verifyProofsAndTransfer(List<MerkleProof> proofs) {
         for (int i = 0; i < proofs.size(); i++) {
             MerkleProof merkleProof = proofs.get(i);
@@ -192,13 +199,13 @@ public class BridgeContract {
                 Hash160 to = merkleProof.recipient;
                 if (!isContract(to)) {
                     int amount = merkleProof.amount;
-                    assert new GasToken().transfer(Runtime.getExecutingScriptHash(), to, amount, null) : "Transfer failed.";
+                    assert new GasToken().transfer(getExecutingScriptHash(), to, amount, null) : "Transfer failed.";
                     onWithdrawal.fire(merkleProof.nonce, to, amount);
                 }
                 // In case the recipient is a contract, no funds are sent. However, the Merkle Tree computation must
                 // withstand.
             } else {
-                Helper.abort("Invalid proof provided.");
+                abort("Invalid proof provided.");
             }
         }
 
@@ -218,21 +225,19 @@ public class BridgeContract {
     }
 
     private static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, List<MerkleProof> proofs) {
-        List<ECPoint> validators = getValidators();
-        int threshold = getValidatorThreshold();
+        List<ECPoint> validators = validators();
+        int threshold = validatorThreshold();
         assert signatures.keys().length >= threshold : "Not enough signatures provided.";
 
-        ByteString rootsHashed = concatRootsAndSha256(proofs);
+        ByteString rootsHashed = concatAndSha256(proofs);
         int covered = 0;
         CryptoLib cryptoLib = new CryptoLib();
         for (int i = 0; i < validators.size(); i++) {
             ECPoint validator = validators.get(i);
             if (signatures.containsKey(validator)) {
-                boolean verified = cryptoLib.verifyWithECDsa(
-                        rootsHashed,
-                        validator,
-                        signatures.get(validator),
-                        NamedCurve.Secp256r1);
+                boolean verified =
+                        cryptoLib.verifyWithECDsa(rootsHashed, validator, signatures.get(validator),
+                                NamedCurve.Secp256r1);
                 if (verified) {
                     covered++;
                 }
@@ -241,7 +246,7 @@ public class BridgeContract {
         return covered >= threshold;
     }
 
-    private static ByteString concatRootsAndSha256(List<MerkleProof> proofs) {
+    private static ByteString concatAndSha256(List<MerkleProof> proofs) {
         byte[] concatRoots = proofs.get(0).root.toByteArray();
         for (int i = 1; i < proofs.size(); i++) {
             concatRoots = concat(concatRoots, proofs.get(i).root);
@@ -272,39 +277,43 @@ public class BridgeContract {
         return true;
     }
 
-    private static ECPoint getRelayer() {
-        return getManagement().relayer();
-    }
-
-    private static ECPoint getOwner() {
-        return getManagement().owner();
-    }
-
-    private static List<ECPoint> getValidators() {
-        return getManagement().validators();
-    }
-
-    private static int getValidatorThreshold() {
-        return getManagement().validatorThreshold();
-    }
-
     // endregion
-    // region helpers
+    // region private general helpers
 
     private static ByteString computeParentHash(ByteString left, ByteString right) {
-        return new CryptoLib().sha256(new ByteString(concat(left.toByteArray(), right)));
+        ByteString leftRight = new ByteString(concat(left.toByteArray(), right));
+        return new CryptoLib().sha256(leftRight);
     }
 
     // endregion
-    // region getters
+    // region private management getters
+
+    private static ECPoint relayer() {
+        return managementContract().relayer();
+    }
+
+    private static ECPoint owner() {
+        return managementContract().owner();
+    }
+
+    private static List<ECPoint> validators() {
+        return managementContract().validators();
+    }
+
+    private static int validatorThreshold() {
+        return managementContract().validatorThreshold();
+    }
+
+    private static BridgeManagement managementContract() {
+        return new BridgeManagement(baseMap.getHash160(key_bridgeManagement));
+    }
+
+    // endregion
+    // region public getters with static value
 
     @Safe
     public static Hash160 management() {
         return baseMap.getHash160(key_bridgeManagement);
-    }
-
-    private static BridgeManagement getManagement() {
-        return new BridgeManagement(baseMap.getHash160(key_bridgeManagement));
     }
 
     @Safe
@@ -324,7 +333,15 @@ public class BridgeContract {
 
     @Safe
     public static int maxProofsPerWithdrawal() {
-        return const_max_proofs_per_withdrawal;
+        return baseMap.getInt(key_max_proofs_per_withdrawal);
+    }
+
+    // endregion
+    // region public getters with dynamic value
+
+    @Safe
+    public static ByteString depositRoot() {
+        return baseMap.get(key_deposit_root);
     }
 
     @Safe
@@ -335,11 +352,6 @@ public class BridgeContract {
     @Safe
     public static int withdrawalsProcessed() {
         return baseMap.getInt(key_withdrawal_nonce);
-    }
-
-    @Safe
-    public static ByteString depositRoot() {
-        return baseMap.get(key_deposit_root);
     }
 
     // endregion
