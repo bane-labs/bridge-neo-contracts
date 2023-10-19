@@ -51,10 +51,9 @@ public class BridgeContract {
 
     private static final int key_deposit_root = 0x10;
     private static final int key_deposit_nonce = 0x11;
-    private static final int key_deposit_maxIndex = 0x12;
+    private static final int key_deposit_maxDepth = 0x12;
 
     private static final int key_withdrawal_nonce = 0x21;
-
 
     // Used to store incomplete subtree hashes
     private static final byte prefix_deposit_root = 0x0b;
@@ -103,7 +102,7 @@ public class BridgeContract {
             baseMap.put(key_max_proofs_per_withdrawal, deploymentData.maxProofsPerWithdrawal);
 
             baseMap.put(key_deposit_nonce, 0);
-            baseMap.put(key_deposit_maxIndex, 0);
+            baseMap.put(key_deposit_maxDepth, 0);
 
             baseMap.put(key_withdrawal_nonce, 0);
         }
@@ -138,19 +137,20 @@ public class BridgeContract {
     private static ByteString updateDepositMerkleTree(ByteString depositHash) {
         StorageMap rootMap = new StorageMap(ctx, prefix_deposit_root);
 
-        int maxIndex = baseMap.getInt(key_deposit_maxIndex);
+        int maxDepth = baseMap.getInt(key_deposit_maxDepth);
         boolean carry = true;
         ByteString right = depositHash;
-        for (int i = 0; i <= maxIndex; i++) {
+        for (int i = 0; i <= maxDepth; i++) {
             ByteString entryAti = rootMap.get(i);
             boolean stored = entryAti != null;
             if (stored) {
                 right = computeParentHash(rootMap.get(i), right);
                 if (carry) {
                     rootMap.delete(i);
-                    if (i == maxIndex) {
-                        baseMap.put(key_deposit_maxIndex, maxIndex + 1);
-                        rootMap.put(maxIndex + 1, right);
+                    if (i == maxDepth) {
+                        int newMaxDepth = maxDepth + 1;
+                        rootMap.put(newMaxDepth, right);
+                        baseMap.put(key_deposit_maxDepth, newMaxDepth);
                     }
                 }
             } else {
