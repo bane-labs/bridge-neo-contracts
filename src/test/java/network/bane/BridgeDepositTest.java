@@ -294,6 +294,7 @@ public class BridgeDepositTest {
     // region accepted deposits
 
     /**
+     * @formatter:off
      * Pre Tree:
      * -
      * Post Tree:
@@ -301,6 +302,7 @@ public class BridgeDepositTest {
      * Post in storage (index -> value):
      * 0 -> d1
      * Post Root: d1
+     * @formatter:on
      */
     @Test
     @Order(11)
@@ -331,16 +333,18 @@ public class BridgeDepositTest {
     }
 
     /**
+     * @formatter:off
      * Pre Tree:
      * d1
      * Post Tree:
-     * d12
-     * /  \
+     *   d12
+     *  /  \
      * d1  d2
      * Post in storage (index -> value):
      * 0 -> -
      * 1 -> d12
      * Post Root: d12
+     * @formatter:on
      */
     @Test
     @Order(12)
@@ -374,18 +378,20 @@ public class BridgeDepositTest {
     }
 
     /**
+     * @formatter:off
      * Pre Tree:
-     * d12
-     * /  \
+     *   d12
+     *  /  \
      * d1  d2
      * Post Tree:
-     * d12
+     *  d12
      * /  \
      * d1  d2  d3
      * Post in storage (index -> value):
      * 0 -> d3
      * 1 -> d12
      * Post Root: d12d3
+     * @formatter:on
      */
     @Test
     @Order(13)
@@ -421,14 +427,15 @@ public class BridgeDepositTest {
     }
 
     /**
+     * @formatter:off
      * Pre Tree:
-     * d12
-     * /  \
+     *   d12
+     *  /  \
      * d1  d2  d3
      * Post Tree:
-     * d1234
-     * /     \
-     * d12     d34
+     *     d1234
+     *    /     \
+     *  d12     d34
      * /  \    /  \
      * d1  d2  d3  d4
      * Post in storage (index -> value):
@@ -436,6 +443,7 @@ public class BridgeDepositTest {
      * 1 -> -
      * 2 -> d1234
      * Post Root: d1234
+     * @formatter:on
      */
     @Test
     @Order(14)
@@ -471,23 +479,25 @@ public class BridgeDepositTest {
     }
 
     /**
+     * @formatter:off
      * Pre Tree:
-     * d1234
-     * /     \
-     * d12     d34
-     * /  \    /  \
+     *      d1234
+     *     /     \
+     *   d12     d34
+     *  /  \    /  \
      * d1  d2  d3  d4
      * Post Tree:
-     * d1234
-     * /     \
-     * d12     d34
-     * /  \    /  \
+     *      d1234
+     *     /     \
+     *   d12     d34
+     *  /  \    /  \
      * d1  d2  d3  d4  d5
      * Post in storage (index -> value):
      * 0 -> d5
      * 1 -> -
      * 2 -> d1234
      * Post Root: d1234d5
+     * @formatter:on
      */
     @Test
     @Order(15)
@@ -522,23 +532,25 @@ public class BridgeDepositTest {
     }
 
     /**
+     * @formatter:off
      * Pre Tree:
-     * d1234
-     * /     \
-     * d12     d34
-     * /  \    /  \
+     *      d1234
+     *     /     \
+     *   d12     d34
+     *  /  \    /  \
      * d1  d2  d3  d4  d5
      * Post Tree:
-     * d1234
-     * /     \
-     * d12     d34     d56
-     * /  \    /  \    /  \
+     *      d1234
+     *     /     \
+     *   d12     d34     d56
+     *  /  \    /  \    /  \
      * d1  d2  d3  d4  d5  d6
      * Post in storage (index -> value):
      * 0 -> -
      * 1 -> d56
      * 2 -> d1234
      * Post Root: d1234d56
+     * @formatter:on
      */
     @Test
     @Order(16)
@@ -575,23 +587,25 @@ public class BridgeDepositTest {
     }
 
     /**
+     * @formatter:off
      * Pre Tree:
-     * d1234
-     * /     \
-     * d12     d34     d56
-     * /  \    /  \    /  \
+     *      d1234
+     *     /     \
+     *   d12     d34     d56
+     *  /  \    /  \    /  \
      * d1  d2  d3  d4  d5  d6
      * Post Tree:
-     * d1234
-     * /     \
-     * d12     d34     d56
-     * /  \    /  \    /  \
+     *      d1234
+     *     /     \
+     *   d12     d34     d56
+     *  /  \    /  \    /  \
      * d1  d2  d3  d4  d5  d6  d7
      * Post in storage (index -> value):
      * 0 -> d7
      * 1 -> d56
      * 2 -> d1234
      * Post Root: d1234(d56d7)
+     * @formatter:on
      */
     @Test
     @Order(17)
@@ -629,18 +643,19 @@ public class BridgeDepositTest {
     }
 
     /**
+     * @formatter:off
      * Pre Tree:
-     * d1234
-     * /     \
-     * d12     d34     d56
-     * /  \    /  \    /  \
+     *      d1234
+     *     /     \
+     *   d12     d34     d56
+     *  /  \    /  \    /  \
      * d1  d2  d3  d4  d5  d6  d7
      * Post Tree:
-     * d12345678
-     * /          \
-     * d1234          d5678
-     * /     \        /     \
-     * d12     d34     d56    d78
+     *          d12345678
+     *         /          \
+     *     d1234          d5678
+     *    /     \        /     \
+     *  d12     d34     d56    d78
      * /  \    /  \    /  \    /  \
      * d1  d2  d3  d4  d5  d6  d7  d8
      * Post in storage (index -> value):
@@ -649,6 +664,7 @@ public class BridgeDepositTest {
      * 2 -> -
      * 3 -> d12345678
      * Post Root: d12345678
+     * @formatter:on
      */
     @Test
     @Order(18)
@@ -686,21 +702,22 @@ public class BridgeDepositTest {
     }
 
     /**
+     * @formatter:off
      * Pre Tree:
-     * d12345678
-     * /          \
-     * d1234          d5678
-     * /     \        /     \
-     * d12     d34     d56    d78
-     * /  \    /  \    /  \    /  \
+     *           d12345678
+     *         /          \
+     *      d1234          d5678
+     *     /     \        /     \
+     *   d12     d34     d56    d78
+     *  /  \    /  \    /  \    /  \
      * d1  d2  d3  d4  d5  d6  d7  d8
      * Post Tree:
-     * d12345678
-     * /          \
-     * d1234          d5678
-     * /     \        /     \
-     * d12     d34     d56    d78
-     * /  \    /  \    /  \    /  \
+     *            d12345678
+     *          /          \
+     *      d1234          d5678
+     *     /     \        /     \
+     *   d12     d34     d56    d78
+     *  /  \    /  \    /  \    /  \
      * d1  d2  d3  d4  d5  d6  d7  d8  d9
      * Post in storage (index -> value):
      * 0 -> d9
@@ -708,6 +725,7 @@ public class BridgeDepositTest {
      * 2 -> -
      * 3 -> d12345678
      * Post Root: d12345678d9
+     * @formatter:on
      */
     @Test
     @Order(19)
