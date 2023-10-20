@@ -43,8 +43,10 @@ import static network.bane.util.TestHelper.concatAndSha256;
 import static network.bane.util.TestHelper.concatLeftRight;
 import static network.bane.util.TestHelper.createDepositHash;
 import static network.bane.util.TestHelper.getDepositEvent;
+import static network.bane.util.TestHelper.getProofFromStorage;
 import static network.bane.util.TestHelper.ownerPubKey;
 import static network.bane.util.TestHelper.prepareManagementDeployParameter;
+import static network.bane.util.TestHelper.printDepositStorage;
 import static network.bane.util.TestHelper.recipient0;
 import static network.bane.util.TestHelper.recipient1;
 import static network.bane.util.TestHelper.recipient2;
@@ -78,6 +80,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class BridgeDepositTest {
 
+    private static final int howManyDepositProofsToPrint = 0;
+
     private static final BigInteger depositPrice = new BigInteger("10000000");
     private static final BigInteger minDeposit = new BigInteger("100000000");
     private static final BigInteger maxDeposit = new BigInteger("1000000000000");
@@ -100,6 +104,8 @@ public class BridgeDepositTest {
     private static Account gabriel;
     private static Account henry;
     private static Account isabella;
+
+    private static List<Integer> printDeposits = new ArrayList<>();
 
     @RegisterExtension
     public static final ContractTestExtension ext = new ContractTestExtension();
@@ -126,6 +132,10 @@ public class BridgeDepositTest {
         gabriel = ext.getAccount(TestHelper.GABRIEL);
         henry = ext.getAccount(TestHelper.HENRY);
         isabella = ext.getAccount(TestHelper.ISABELLA);
+
+        for (int i = 1; i <= howManyDepositProofsToPrint; i++) {
+            printDeposits.add(i);
+        }
     }
 
     // endregion
@@ -183,11 +193,22 @@ public class BridgeDepositTest {
     // region helper
 
     private Hash256 bridgeGas(Account from, Hash160 to, BigInteger amount) throws Throwable {
+        return bridgeGas(from, to, amount, false);
+    }
+
+    private Hash256 bridgeGas(Account from, Hash160 to, BigInteger amount, boolean print) throws Throwable {
+        List<String> proof = new ArrayList<>();
+        if (print) {
+            proof = getProofFromStorage(bridge);
+        }
         NeoSendRawTransaction response = gasToken.transfer(from, bridge.getScriptHash(), amount, hash160(to))
                 .sign()
                 .send();
         Hash256 txHash = response.getSendRawTransaction().getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
+        if (print) {
+            printDepositStorage(bridge, neow3j, txHash, proof);
+        }
         return txHash;
     }
 
@@ -312,7 +333,7 @@ public class BridgeDepositTest {
         BigInteger amount = minDeposit;
         BigInteger nextNonce = new BigInteger("1");
 
-        Hash256 txHash = bridgeGas(from, to, amount);
+        Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(1));
 
         String d1 = createDepositHash(nextNonce, to, amount);
 
@@ -356,7 +377,7 @@ public class BridgeDepositTest {
 
         String depositRootBefore = bridge.depositRoot();
 
-        Hash256 txHash = bridgeGas(from, to, amount);
+        Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(2));
 
         String d2 = createDepositHash(nextNonce, to, amount);
         String d12 = concatAndSha256(depositRootBefore, d2);
@@ -404,7 +425,7 @@ public class BridgeDepositTest {
         assertThat(bridge.findStorage("0x0b"), hasSize(1));
         String d12 = bridge.getStorage("0x0b01");
 
-        Hash256 txHash = bridgeGas(from, to, amount);
+        Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(3));
 
         String d3 = createDepositHash(nextNonce, to, amount);
         String d12d3 = sha256Hex(concatLeftRight(d12, d3));
@@ -457,7 +478,7 @@ public class BridgeDepositTest {
         String d3 = bridge.getStorage("0x0b");
         String d12 = bridge.getStorage("0x0b01");
 
-        Hash256 txHash = bridgeGas(from, to, amount);
+        Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(4));
 
         String depositHashOffChain = createDepositHash(nextNonce, to, amount);
         String d34 = sha256Hex(concatLeftRight(d3, depositHashOffChain));
@@ -510,7 +531,7 @@ public class BridgeDepositTest {
         assertThat(bridge.findStorage("0x0b"), hasSize(1));
         String d1234 = bridge.getStorage("0x0b02");
 
-        Hash256 txHash = bridgeGas(from, to, amount);
+        Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(5));
 
         String d5 = createDepositHash(nextNonce, to, amount);
         String d1234d5 = sha256Hex(concatLeftRight(d1234, d5));
@@ -564,7 +585,7 @@ public class BridgeDepositTest {
         String d5 = bridge.getStorage("0x0b");
         String d1234 = bridge.getStorage("0x0b02");
 
-        Hash256 txHash = bridgeGas(from, to, amount);
+        Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(6));
 
         String d6 = createDepositHash(nextNonce, to, amount);
         String d56 = sha256Hex(concatLeftRight(d5, d6));
@@ -619,7 +640,7 @@ public class BridgeDepositTest {
         String d1234 = bridge.getStorage("0x0b02");
         String d56 = bridge.getStorage("0x0b01");
 
-        Hash256 txHash = bridgeGas(from, to, amount);
+        Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(7));
 
         String d7 = createDepositHash(nextNonce, to, amount);
         String d56d7 = sha256Hex(concatLeftRight(d56, d7));
@@ -679,7 +700,7 @@ public class BridgeDepositTest {
         String d56 = bridge.getStorage("0x0b01");
         String d1234 = bridge.getStorage("0x0b02");
 
-        Hash256 txHash = bridgeGas(from, to, amount);
+        Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(8));
 
         String d8 = createDepositHash(nextNonce, to, amount);
         String d78 = sha256Hex(concatLeftRight(d7, d8));
@@ -738,7 +759,7 @@ public class BridgeDepositTest {
         assertThat(bridge.findStorage("0x0b"), hasSize(1));
         String d12345678 = bridge.getStorage("0x0b03");
 
-        Hash256 txHash = bridgeGas(from, to, amount);
+        Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(9));
 
         String d9 = createDepositHash(nextNonce, to, amount);
         String d12345678d9 = sha256Hex(concatLeftRight(d12345678, d9));
@@ -805,7 +826,7 @@ public class BridgeDepositTest {
         // execute another 42 deposits
         Hash256 txHash = null;
         for (int i = 10; i < 52; i++) {
-            txHash = bridgeGas(from, to, amount);
+            txHash = bridgeGas(from, to, amount, printDeposits.contains(i));
         }
 
         assertThat(bridge.findStorage("0x0b"), hasSize(4));

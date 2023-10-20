@@ -4,6 +4,7 @@ import io.neow3j.crypto.ECKeyPair;
 import io.neow3j.crypto.ECKeyPair.ECPublicKey;
 import io.neow3j.crypto.Hash;
 import io.neow3j.protocol.Neow3j;
+import io.neow3j.protocol.core.response.ContractStorageEntry;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.StackItem;
@@ -11,12 +12,14 @@ import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.utils.Await;
-import io.neow3j.utils.BigIntegers;
 import io.neow3j.wallet.Account;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
@@ -27,6 +30,7 @@ import static io.neow3j.utils.Numeric.cleanHexPrefix;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.prependHexPrefix;
 import static io.neow3j.utils.Numeric.toHexString;
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -169,11 +173,26 @@ public class TestHelper {
         return cleanHexPrefix(createDepositHash(nonce, to, amount));
     }
 
-    private static byte[] concatDepositData(BigInteger nonce, Hash160 recipient, BigInteger amount) {
-        return concatenate(
-                concatenate(BigIntegers.toLittleEndianByteArray(nonce), recipient.toLittleEndianArray()),
-                BigIntegers.toLittleEndianByteArray(amount)
-        );
+    public static byte[] concatDepositData(BigInteger nonce, Hash160 recipient, BigInteger amount) {
+        byte[] noncePadded = toBigEndianByteArrayZeroPadded(nonce, 4);
+        byte[] amountPadded = toBigEndianByteArrayZeroPadded(amount, 8);
+        return concatenate(concatenate(noncePadded, recipient.toArray()), amountPadded);
+    }
+
+    // big-endian modification of io.neow3j.utils.BigIntegers.toLittleEndianByteArrayZeroPadded()
+    public static byte[] toBigEndianByteArrayZeroPadded(BigInteger value, int length) {
+        // BigInteger.toByteArray() returns the two's complement of the number in big-endian order.
+        byte[] bytes = value.toByteArray();
+        if (bytes.length > length) {
+            throw new IllegalArgumentException(format("given integer needs more space (%s bytes) than the given " +
+                    "minimum length (%s bytes).", bytes.length, length));
+        }
+        if (bytes.length < length) {
+            byte[] temp = new byte[length];
+            System.arraycopy(bytes, 0, temp, length - bytes.length, bytes.length);
+            return temp;
+        }
+        return bytes;
     }
 
     // endregion
@@ -215,6 +234,10 @@ public class TestHelper {
         Notification depositEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution().getNotification(1);
         assertThat(depositEvent.getEventName(), is("OnDeposit"));
+        return depositEventFromNotification(depositEvent);
+    }
+
+    private static DepositEvent depositEventFromNotification(Notification depositEvent) {
         List<StackItem> state = depositEvent.getState().getList();
         BigInteger nonce = state.get(0).getInteger();
         Hash160 from = Hash160.fromAddress(state.get(1).getAddress());
@@ -267,6 +290,47 @@ public class TestHelper {
                     "\n  rootHash=" + rootHashHex +
                     "\n";
         }
+    }
+
+    public static void printDepositStorage(Bridge bridge, Neow3j neow3j, Hash256 txHash, List<String> proof) throws IOException {
+        Optional<Notification> onDepositOpt =
+                neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution()
+                        .getNotifications().stream()
+                        .filter(n -> n.getContract().equals(bridge.getScriptHash()) &&
+                                n.getEventName().equals("OnDeposit"))
+                        .findFirst();
+        if (onDepositOpt.isPresent()) {
+            Notification depositNotification = onDepositOpt.get();
+            DepositEvent depositEvent = depositEventFromNotification(depositNotification);
+            BigInteger nonce = depositEvent.nonce;
+            Hash160 to = depositEvent.to;
+            BigInteger amount = depositEvent.amount;
+            String root = depositEvent.rootHashHex;
+            System.out.printf("new DepositProof(" +
+                            "%sn," +
+                            "\"%s\"," +
+                            "%sn," +
+                            "[%s]," +
+                            "\"%s\"" +
+                            ")%n",
+                    nonce, prependHexPrefix(to.toString()), amount, wrapWithQuotesAndJoin(proof), root);
+        }
+    }
+
+    private static String wrapWithQuotesAndJoin(List<String> strings) {
+        String joined = strings.stream().collect(Collectors.joining("\", \"", "\"", "\""));
+        if (joined.length() == 2) {
+            return "";
+        } else {
+            return joined;
+        }
+    }
+
+    public static List<String> getProofFromStorage(Bridge bridge) throws IOException {
+        List<ContractStorageEntry> foundStorageEntries = bridge.findStorage("0x0b");
+        List<String> proof = new ArrayList<>();
+        foundStorageEntries.forEach(e -> proof.add(e.getValueHex()));
+        return proof;
     }
 
 }
