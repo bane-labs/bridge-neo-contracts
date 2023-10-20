@@ -25,6 +25,7 @@ import network.bane.structs.MerkleProof;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Helper.concat;
+import static io.neow3j.devpack.Helper.reverse;
 import static io.neow3j.devpack.Helper.toByteArray;
 import static io.neow3j.devpack.Runtime.checkWitness;
 import static io.neow3j.devpack.Runtime.getCallingScriptHash;
@@ -57,6 +58,10 @@ public class BridgeContract {
 
     // Used to store incomplete subtree hashes
     private static final byte prefix_deposit_root = 0x0b;
+
+    // In order to arrive the same result in EVM as in NeoVM, the nonce and amount need to be padded to 4 and 8 bytes.
+    private static final byte const_nonce_padding_size = 4;
+    private static final byte const_amount_padding_size = 8;
 
     // endregion
     // region events
@@ -130,8 +135,27 @@ public class BridgeContract {
     // region private deposit helpers
 
     private static ByteString hashDepositOrWithdrawal(int nonce, Hash160 to, int amount) {
-        byte[] concatenatedData = concat(concat(toByteArray(nonce), to.toByteString()), amount);
-        return new CryptoLib().sha256(new ByteString(concatenatedData));
+        return new CryptoLib().sha256(concatDepositOrWithdrawal(nonce, to, amount));
+    }
+
+    private static ByteString concatDepositOrWithdrawal(int nonce, Hash160 to, int amount) {
+        byte[] nonceBytes = toByteArray(nonce);
+        reverse(nonceBytes);
+        byte[] noncePadded = padToBytes(nonceBytes, const_nonce_padding_size);
+        byte[] amountBytes = toByteArray(amount);
+        reverse(amountBytes);
+        byte[] amountPadded = padToBytes(amountBytes, const_amount_padding_size);
+        byte[] recipientBytes = to.toByteArray();
+        reverse(recipientBytes);
+        return new ByteString(concat(concat(noncePadded, recipientBytes), amountPadded));
+    }
+
+    private static byte[] padToBytes(byte[] data, int padToSize) {
+        int dataSize = data.length;
+        int toPad = padToSize - dataSize;
+        assert toPad >= 0 : "Data is too long.";
+        byte[] padding = new byte[toPad];
+        return concat(padding, data);
     }
 
     private static ByteString updateDepositMerkleTree(ByteString depositHash) {
