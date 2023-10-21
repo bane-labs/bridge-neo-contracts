@@ -139,15 +139,11 @@ public class BridgeContract {
     }
 
     private static ByteString concatDepositOrWithdrawal(int nonce, Hash160 to, int amount) {
-        byte[] nonceBytes = toByteArray(nonce);
-        reverse(nonceBytes);
-        byte[] noncePadded = padToBytes(nonceBytes, const_nonce_padding_size);
-        byte[] amountBytes = toByteArray(amount);
-        reverse(amountBytes);
-        byte[] amountPadded = padToBytes(amountBytes, const_amount_padding_size);
-        byte[] recipientBytes = to.toByteArray();
-        reverse(recipientBytes);
-        return new ByteString(concat(concat(noncePadded, recipientBytes), amountPadded));
+        byte[] amountP = padToBytes(toByteArray(amount), const_amount_padding_size);
+        byte[] nonceP = padToBytes(toByteArray(nonce), const_nonce_padding_size);
+        byte[] concatenated = concat(concat(amountP, to.toByteString()), nonceP);
+        reverse(concatenated);
+        return new ByteString(concatenated);
     }
 
     private static byte[] padToBytes(byte[] data, int padToSize) {
@@ -155,7 +151,7 @@ public class BridgeContract {
         int toPad = padToSize - dataSize;
         assert toPad >= 0 : "Data is too long.";
         byte[] padding = new byte[toPad];
-        return concat(padding, data);
+        return concat(data, padding);
     }
 
     private static ByteString updateDepositMerkleTree(ByteString depositHash) {
