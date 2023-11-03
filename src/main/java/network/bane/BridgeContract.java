@@ -3,6 +3,7 @@ package network.bane;
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
+import io.neow3j.devpack.Hash256;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
 import io.neow3j.devpack.Storage;
@@ -17,6 +18,7 @@ import io.neow3j.devpack.constants.NamedCurve;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
+import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event3Args;
 import io.neow3j.devpack.events.Event6Args;
 import network.bane.interfaces.BridgeManagement;
@@ -37,11 +39,14 @@ import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 public class BridgeContract {
 
     private static final StorageContext ctx = Storage.getStorageContext();
+    private static final CryptoLib cryptoLib = new CryptoLib();
 
     // region storage keys
 
     private static final byte prefix_base = 0x0a;
     private static final StorageMap baseMap = new StorageMap(ctx, prefix_base);
+    private static final byte prefix_deposit_root = 0x0b; // Used to store incomplete subtree hashes
+    private static final byte prefix_claimable = 0x0c;
 
     private static final int key_bridgeManagement = 0x01;
     private static final int key_deposit_price = 0x02;
@@ -52,16 +57,14 @@ public class BridgeContract {
 
     private static final int key_deposit_root = 0x10;
     private static final int key_deposit_nonce = 0x11;
-    private static final int key_deposit_maxDepth = 0x12;
+    private static final int key_deposit_maxDepth_current = 0x12;
 
+    private static final int key_withdrawal_root = 0x20;
     private static final int key_withdrawal_nonce = 0x21;
 
-    // Used to store incomplete subtree hashes
-    private static final byte prefix_deposit_root = 0x0b;
-
-    // In order to arrive the same result in EVM as in NeoVM, the nonce and amount need to be padded to 4 and 8 bytes.
-    private static final byte const_nonce_padding_size = 4;
-    private static final byte const_amount_padding_size = 8;
+    // In order to arrive the same result in EVM as in NeoVM, the nonce and amount need to be padded to 8 bytes.
+    private static final byte const_nonce_padding_bytes = 8;
+    private static final byte const_amount_padding_bytes = 8;
 
     // endregion
     // region events
@@ -77,7 +80,7 @@ public class BridgeContract {
      * <li>Merkle Root Hash</li>
      * </l>
      */
-    @DisplayName("OnDeposit")
+    @DisplayName("Deposit")
     public static Event6Args<Integer, Hash160, Hash160, Integer, ByteString, ByteString> onDeposit;
 
     /**
@@ -88,8 +91,26 @@ public class BridgeContract {
      * <li>Amount</li>
      * </l>
      */
-    @DisplayName("OnWithdrawal")
+    @DisplayName("Withdrawal")
     public static Event3Args<Integer, Hash160, Integer> onWithdrawal;
+
+    /**
+     * Parameters:
+     * <l>
+     * <li>Claimable Nonce</li>
+     * </l>
+     */
+    @DisplayName("Claimable")
+    public static Event1Arg<Integer> onClaimable;
+
+    /**
+     * Parameters:
+     * <l>
+     * <li>Claimed Nonce</li>
+     * </l>
+     */
+    @DisplayName("Claimed")
+    public static Event1Arg<Integer> onClaimed;
 
     // endregion
     // region deployment
@@ -107,7 +128,7 @@ public class BridgeContract {
             baseMap.put(key_max_proofs_per_withdrawal, deploymentData.maxProofsPerWithdrawal);
 
             baseMap.put(key_deposit_nonce, 0);
-            baseMap.put(key_deposit_maxDepth, 0);
+            baseMap.put(key_deposit_maxDepth_current, 0);
 
             baseMap.put(key_withdrawal_nonce, 0);
         }
@@ -135,12 +156,12 @@ public class BridgeContract {
     // region private deposit helpers
 
     private static ByteString hashDepositOrWithdrawal(int nonce, Hash160 to, int amount) {
-        return new CryptoLib().sha256(concatDepositOrWithdrawal(nonce, to, amount));
+        return cryptoLib.sha256(concatDepositOrWithdrawal(nonce, to, amount));
     }
 
     private static ByteString concatDepositOrWithdrawal(int nonce, Hash160 to, int amount) {
-        byte[] amountP = padToBytes(toByteArray(amount), const_amount_padding_size);
-        byte[] nonceP = padToBytes(toByteArray(nonce), const_nonce_padding_size);
+        byte[] nonceP = padToBytes(toByteArray(nonce), const_nonce_padding_bytes);
+        byte[] amountP = padToBytes(toByteArray(amount), const_amount_padding_bytes);
         byte[] concatenated = concat(concat(amountP, to.toByteString()), nonceP);
         reverse(concatenated);
         return new ByteString(concatenated);
@@ -157,7 +178,7 @@ public class BridgeContract {
     private static ByteString updateDepositMerkleTree(ByteString depositHash) {
         StorageMap rootMap = new StorageMap(ctx, prefix_deposit_root);
 
-        int maxDepth = baseMap.getInt(key_deposit_maxDepth);
+        int maxDepth = baseMap.getInt(key_deposit_maxDepth_current);
         boolean carry = true;
         ByteString right = depositHash;
         for (int i = 0; i <= maxDepth; i++) {
@@ -170,7 +191,7 @@ public class BridgeContract {
                     if (i == maxDepth) {
                         int newMaxDepth = maxDepth + 1;
                         rootMap.put(newMaxDepth, right);
-                        baseMap.put(key_deposit_maxDepth, newMaxDepth);
+                        baseMap.put(key_deposit_maxDepth_current, newMaxDepth);
                     }
                 }
             } else {
@@ -192,86 +213,132 @@ public class BridgeContract {
     // endregion
     // region public withdrawal
 
-    public static void withdraw(List<MerkleProof> proofs, Map<ECPoint, ByteString> signatures) {
+    /**
+     * This function is called by the relayer to execute withdrawals from the contract. The relayer must provide a
+     * list of Merkle proofs that prove that the withdrawals happened under the provided root. The relayer must also
+     * provide the signatures of the validators that are required to sign the root.
+     * <p>
+     * The validators must sign the root together with the nonce of the last withdrawal. This way, the relayer is
+     * forced to include all withdrawals that have not been processed yet, i.e., the withdrawal with the next nonce,
+     * the withdrawal with the last nonce and all withdrawals inbetween.
+     *
+     * @param root       the withdrawal root.
+     * @param lastNonce  the nonce of the last withdrawal.
+     * @param signatures the validator signatures.
+     * @param proofs     the withdrawal proofs.
+     */
+    public static void withdraw(ByteString root, int lastNonce, Map<ECPoint, ByteString> signatures,
+            List<MerkleProof> proofs) {
+
+        // Authorization Check
         if (!checkWitness(relayer())) {
             abort("Only the relayer can call this method.");
         }
-        assert proofs.size() <= maxProofsPerWithdrawal() : "Too many proofs provided.";
+
+        // Input Validation Checks
+        assert Hash256.isValid(root) : "Invalid root provided.";
+        int nrProofs = proofs.size();
+        // Todo: Discuss if maxProofsPerWithdrawal should be enforced. Otherwise, if it's not needed, remove it.
+        assert nrProofs <= maxProofsPerWithdrawal() : "Too many proofs provided.";
+        // Only checks if merkle proof parameters don't have invalid values, e.g., a negative number for amount.
         assert areValid(proofs) : "Invalid proofs provided.";
 
+        // Logical Parameter Checks
         int startNonce = proofs.get(0).nonce;
         assert startNonce == currentNonce() + 1 : "Provided first nonce is not the next one.";
+        assert lastNonce == currentNonce() + nrProofs : "Must provide all proofs that have not been processed under " +
+                "the provided root.";
         assert subsequentNonces(proofs, startNonce) : "Provided proofs are not subsequent.";
 
-        assert verifyValidatorSignatures(signatures, proofs) : "Invalid validator signatures provided.";
+        // Validator Signature Check
+        assert verifyValidatorSignatures(signatures, root, lastNonce) : "Invalid validator signatures provided.";
 
-        verifyProofsAndTransfer(proofs);
-        baseMap.put(key_withdrawal_nonce, proofs.get(proofs.size() - 1).nonce);
+        // Updating Root and Nonce
+        baseMap.put(key_withdrawal_root, root);
+        baseMap.put(key_withdrawal_nonce, proofs.get(nrProofs - 1).nonce);
+
+        // Verify all Proofs and Transfer Funds
+        verifyProofsAndTransfer(root, proofs);
     }
 
     // endregion
     // region private withdrawal helpers
 
-    private static void verifyProofsAndTransfer(List<MerkleProof> proofs) {
+    /**
+     * Iterates through all proofs. Verifies each proof and transfers the funds to the respective recipient.
+     * <p>
+     * If a proof verification fails, the whole withdrawal is aborted.
+     * <p>
+     * If a transfer returns {@code false}, or if the recipient is a contract, the respective nonce is stored in the
+     * claimable storage map. This way, anyone can execute it later by providing the withdrawal data and a proof
+     * against the current root and pay for the execution themselves.
+     *
+     * @param root   the root.
+     * @param proofs the proofs.
+     */
+    private static void verifyProofsAndTransfer(ByteString root, List<MerkleProof> proofs) {
         for (int i = 0; i < proofs.size(); i++) {
             MerkleProof merkleProof = proofs.get(i);
-            if (verify(merkleProof)) {
+            if (verify(root, merkleProof)) {
                 Hash160 to = merkleProof.recipient;
-                if (!isContract(to)) {
+                if (isContract(to)) {
+                    new StorageMap(ctx, prefix_claimable).put(merkleProof.nonce, true);
+                    onClaimable.fire(merkleProof.nonce);
+                } else {
                     int amount = merkleProof.amount;
-                    assert new GasToken().transfer(getExecutingScriptHash(), to, amount, null) : "Transfer failed.";
-                    onWithdrawal.fire(merkleProof.nonce, to, amount);
+                    if (new GasToken().transfer(getExecutingScriptHash(), to, amount, null)) {
+                        onWithdrawal.fire(merkleProof.nonce, to, amount);
+                    } else {
+                        new StorageMap(ctx, prefix_claimable).put(merkleProof.nonce, true);
+                        onClaimable.fire(merkleProof.nonce);
+                    }
                 }
-                // In case the recipient is a contract, no funds are sent. However, the Merkle Tree computation must
-                // withstand.
             } else {
                 abort("Invalid proof provided.");
             }
         }
-
     }
 
-    private static boolean verify(MerkleProof merkleProof) {
-        ByteString right = hashDepositOrWithdrawal(merkleProof.nonce, merkleProof.recipient, merkleProof.amount);
+    private static boolean verify(ByteString root, MerkleProof merkleProof) {
+        int path = merkleProof.path;
+        ByteString parent = hashDepositOrWithdrawal(merkleProof.nonce, merkleProof.recipient, merkleProof.amount);
         List<ByteString> proof = merkleProof.proof;
+        int height = 0;
         for (int i = 0; i < proof.size(); i++) {
-            right = computeParentHash(proof.get(i), right);
+            // If the bit on position `height` is 1, the i-th proof element is the right child of the next parent.
+            if ((path >> height) == 1) {
+                parent = computeParentHash(parent, proof.get(i));
+            } else {
+                parent = computeParentHash(proof.get(i), parent);
+            }
+            height += 1;
         }
-        return right == merkleProof.root;
+        return parent == root;
     }
 
     private static boolean isContract(Hash160 scriptHash) {
         return new ContractManagement().getContract(scriptHash) != null;
     }
 
-    private static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, List<MerkleProof> proofs) {
+    private static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, ByteString root,
+            int lastNonce) {
         List<ECPoint> validators = validators();
         int threshold = validatorThreshold();
         assert signatures.keys().length >= threshold : "Not enough signatures provided.";
 
-        ByteString rootsHashed = concatAndSha256(proofs);
+        ByteString msg = cryptoLib.sha256(new ByteString(concat(root.toByteArray(), lastNonce)));
         int covered = 0;
-        CryptoLib cryptoLib = new CryptoLib();
         for (int i = 0; i < validators.size(); i++) {
             ECPoint validator = validators.get(i);
             if (signatures.containsKey(validator)) {
                 boolean verified =
-                        cryptoLib.verifyWithECDsa(rootsHashed, validator, signatures.get(validator),
-                                NamedCurve.Secp256r1);
+                        cryptoLib.verifyWithECDsa(msg, validator, signatures.get(validator), NamedCurve.Secp256r1);
                 if (verified) {
                     covered++;
                 }
             }
         }
         return covered >= threshold;
-    }
-
-    private static ByteString concatAndSha256(List<MerkleProof> proofs) {
-        byte[] concatRoots = proofs.get(0).root.toByteArray();
-        for (int i = 1; i < proofs.size(); i++) {
-            concatRoots = concat(concatRoots, proofs.get(i).root);
-        }
-        return new CryptoLib().sha256(new ByteString(concatRoots));
     }
 
     // Makes sure the proofs have subsequent nonces.
@@ -298,11 +365,33 @@ public class BridgeContract {
     }
 
     // endregion
+    // region claim
+
+    public static void claim(MerkleProof proof) {
+        StorageMap claimableMap = new StorageMap(ctx, prefix_claimable);
+        int nonce = proof.nonce;
+        if (!claimableMap.getBoolean(nonce)) {
+            abort("No claimable found for the provided nonce.");
+        }
+        if (!verify(depositRoot(), proof)) {
+            abort("Invalid proof provided.");
+        }
+        claimableMap.delete(nonce);
+
+        if (new GasToken().transfer(getExecutingScriptHash(), proof.recipient, proof.amount, null)) {
+            onWithdrawal.fire(nonce, proof.recipient, proof.amount);
+            onClaimed.fire(nonce);
+        } else {
+            abort("Transfer failed.");
+        }
+    }
+
+    // endregion
     // region private general helpers
 
     private static ByteString computeParentHash(ByteString left, ByteString right) {
         ByteString leftRight = new ByteString(concat(left.toByteArray(), right));
-        return new CryptoLib().sha256(leftRight);
+        return cryptoLib.sha256(leftRight);
     }
 
     // endregion
