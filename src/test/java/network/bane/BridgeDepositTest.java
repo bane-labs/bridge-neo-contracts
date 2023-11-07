@@ -3,6 +3,7 @@ package network.bane;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NeoToken;
 import io.neow3j.protocol.Neow3j;
+import io.neow3j.protocol.core.response.ContractStorageEntry;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.exceptions.RpcResponseErrorException;
 import io.neow3j.test.ContractTest;
@@ -13,6 +14,7 @@ import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
+import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 import network.bane.util.Bridge;
 import network.bane.util.Management;
@@ -28,15 +30,19 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import static io.neow3j.crypto.Hash.sha256;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.string;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
+import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.prependHexPrefix;
 import static io.neow3j.utils.Numeric.reverseHexString;
 import static io.neow3j.utils.Numeric.toHexString;
+import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.buildSubTree;
 import static network.bane.util.TestHelper.concatAndSha256;
@@ -71,6 +77,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ContractTest(
         blockTime = 1,
@@ -79,6 +86,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class BridgeDepositTest {
+
+    // If this number is changed, change it in the BridgeDeploymentData as well.
+    private static final int fixedDepth = 32;
 
     private static final int howManyDepositProofsToPrint = 0;
 
@@ -185,8 +195,26 @@ public class BridgeDepositTest {
                 integer(depositPrice),
                 integer(minDeposit),
                 integer(maxDeposit),
-                integer(maxProofsPerWithdrawal)
+                integer(maxProofsPerWithdrawal),
+                array(getZeroHashArray(fixedDepth))
         );
+    }
+
+    public static List<String> getZeroHashArrayHex(int nrHashes) {
+        return getZeroHashArray(nrHashes).stream().map(Numeric::toHexStringNoPrefix).collect(Collectors.toList());
+    }
+
+    public static List<byte[]> getZeroHashArray(int nrHashes) {
+        ArrayList<byte[]> zeroHashes = new ArrayList<>();
+        byte[] zero = Hash256.ZERO.toArray();
+        byte[] bytes = sha256(zero);
+        zeroHashes.add(bytes);
+        int nrLeaves = 2;
+        for (; nrLeaves <= nrHashes; nrLeaves++) {
+            bytes = hexStringToByteArray(concatAndSha256(toHexString(bytes), toHexString(bytes)));
+            zeroHashes.add(bytes);
+        }
+        return zeroHashes;
     }
 
     // endregion
@@ -206,6 +234,8 @@ public class BridgeDepositTest {
                 .send();
         Hash256 txHash = response.getSendRawTransaction().getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
+        System.out.println(
+                neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getGasConsumed());
         if (print) {
             printDepositStorage(bridge, neow3j, txHash, proof);
         }
@@ -246,6 +276,30 @@ public class BridgeDepositTest {
 
         assertThat(bridge.depositsProcessed(), is(BigInteger.ZERO));
         assertThat(bridge.withdrawalsProcessed(), is(BigInteger.ZERO));
+
+        List<ContractStorageEntry> foundStorage = bridge.findStorage("0x0d");
+        assertThat(foundStorage, hasSize(fixedDepth));
+        assertThat(foundStorage.get(0).getKeyHex(), is("0x0d"));
+        assertThat(foundStorage.get(0).getValueHex(),
+                is("0x66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"));
+        assertThat(foundStorage.get(35).getKeyHex(), is("0x0d23"));
+        assertThat(foundStorage.get(35).getValueHex(),
+                is("0x90b9f1812f381113ecd88faa4a03befa2db7675816fa4cc84c3b4b5815c7d03c"));
+
+        boolean lastChecked = false;
+        String childValue;
+        String parentValue;
+        for (int i = 0; i < 35; i++) {
+            childValue = foundStorage.get(i).getValueHex();
+            parentValue = concatAndSha256(childValue, childValue);
+            assertThat(foundStorage.get(i + 1).getValueHex(), is(parentValue));
+            if (i == 34) {
+                assertThat(foundStorage.get(i + 1).getValueHex(),
+                        is("0x90b9f1812f381113ecd88faa4a03befa2db7675816fa4cc84c3b4b5815c7d03c"));
+                lastChecked = true;
+            }
+        }
+        assertTrue(lastChecked);
     }
 
     // endregion
@@ -329,28 +383,35 @@ public class BridgeDepositTest {
     @Order(11)
     public void testRootComputation_1() throws Throwable {
         Account from = alice;
-        Hash160 to = recipient1;
         BigInteger amount = minDeposit;
+        Hash160 to = recipient1;
         BigInteger nextNonce = new BigInteger("1");
 
         Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(1));
 
+        System.out.println(toHexStringNoPrefix(amount));
+        System.out.println(toHexStringNoPrefix(nextNonce));
+        System.out.println(to);
         String d1 = createDepositHash(nextNonce, to, amount);
 
         assertThat(bridge.findStorage("0x0b"), hasSize(1));
         assertThat(bridge.getStorage("0x0b"), is(d1));
+        List<String> zeroHashes = getZeroHashArrayHex(fixedDepth);
+        String parent = concatAndSha256(d1, zeroHashes.get(0));
+        for (int i = 1; i < fixedDepth; i++) {
+            parent = concatAndSha256(parent, zeroHashes.get(i));
+        }
+        assertThat(bridge.getStorage("0x0a10"), is(parent));
 
-        // root after first deposit is the deposit hash itself
-        assertThat(bridge.getStorage("0x0a10"), is(d1));
-        assertThat(bridge.depositRoot(), is(d1));
+        assertThat(bridge.depositRoot(), is(parent));
 
         TestHelper.DepositEvent depositEvent = getDepositEvent(txHash, neow3j);
         assertThat(depositEvent.nonce, is(nextNonce));
-        assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
+        assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.amount, is(amount));
         assertThat(depositEvent.depositHashHex, is(d1));
-        assertThat(depositEvent.rootHashHex, is(d1));
+        assertThat(depositEvent.rootHashHex, is(parent));
     }
 
     /**

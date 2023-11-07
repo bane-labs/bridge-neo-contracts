@@ -1,5 +1,6 @@
 package network.bane.structs;
 
+import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.annotations.Struct;
 
@@ -10,13 +11,15 @@ public class BridgeDeploymentData {
     public int minDeposit;
     public int maxDeposit;
     public int maxProofsPerWithdrawal;
+    public ByteString[] zeroSubTrees;
 
     public static boolean isValid(BridgeDeploymentData bridgeDeploymentData) {
         return Hash160.isValid(bridgeDeploymentData.bridgeManagementContractHash) &&
                 bridgeDeploymentData.depositPrice >= 0 &&
                 bridgeDeploymentData.minDeposit >= 0 &&
                 bridgeDeploymentData.maxDeposit >= bridgeDeploymentData.minDeposit &&
-                bridgeDeploymentData.maxProofsPerWithdrawal >= 0;
+                bridgeDeploymentData.maxProofsPerWithdrawal >= 0 &&
+                bridgeDeploymentData.zeroSubTrees.length == 32;
     }
 
 }

@@ -47,6 +47,7 @@ public class BridgeContract {
     private static final StorageMap baseMap = new StorageMap(ctx, prefix_base);
     private static final byte prefix_deposit_root = 0x0b; // Used to store incomplete subtree hashes
     private static final byte prefix_claimable = 0x0c;
+    private static final byte prefix_zero_hashes = 0x0d;
 
     private static final int key_bridgeManagement = 0x01;
     private static final int key_deposit_price = 0x02;
@@ -65,6 +66,7 @@ public class BridgeContract {
     // In order to arrive the same result in EVM as in NeoVM, the nonce and amount need to be padded to 8 bytes.
     private static final byte const_nonce_padding_bytes = 8;
     private static final byte const_amount_padding_bytes = 8;
+    private static final byte const_fixed_deposit_tree_depth = 32;
 
     // endregion
     // region events
@@ -119,7 +121,7 @@ public class BridgeContract {
     public static void deploy(Object data, boolean isUpdate) {
         if (!isUpdate) {
             BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
-            assert BridgeDeploymentData.isValid(deploymentData);
+            assert BridgeDeploymentData.isValid(deploymentData) : "Invalid deployment data provided";
 
             baseMap.put(key_bridgeManagement, deploymentData.bridgeManagementContractHash);
             baseMap.put(key_deposit_price, deploymentData.depositPrice);
@@ -131,6 +133,9 @@ public class BridgeContract {
             baseMap.put(key_deposit_maxDepth_current, 0);
 
             baseMap.put(key_withdrawal_nonce, 0);
+            for (int i = 0; i < deploymentData.zeroSubTrees.length; i++) {
+                new StorageMap(ctx, prefix_zero_hashes).put(i, deploymentData.zeroSubTrees[i]);
+            }
         }
     }
 
@@ -146,7 +151,7 @@ public class BridgeContract {
         assert Hash160.isValid(to) : "Invalid recipient data.";
 
         int nonce = newNonce();
-        ByteString depositHash = hashDepositOrWithdrawal(nonce, to, amount);
+        ByteString depositHash = hashDepositOrWithdrawal(nonce, amount, to);
         ByteString root = updateDepositMerkleTree(depositHash);
         baseMap.put(key_deposit_root, root);
         onDeposit.fire(nonce, from, to, amount, depositHash, root);
@@ -155,14 +160,14 @@ public class BridgeContract {
     // endregion
     // region private deposit helpers
 
-    private static ByteString hashDepositOrWithdrawal(int nonce, Hash160 to, int amount) {
-        return cryptoLib.sha256(concatDepositOrWithdrawal(nonce, to, amount));
+    private static ByteString hashDepositOrWithdrawal(int nonce, int amount, Hash160 to) {
+        return cryptoLib.sha256(concatDepositOrWithdrawal(nonce, amount, to));
     }
 
-    private static ByteString concatDepositOrWithdrawal(int nonce, Hash160 to, int amount) {
+    private static ByteString concatDepositOrWithdrawal(int nonce, int amount, Hash160 to) {
         byte[] nonceP = padToBytes(toByteArray(nonce), const_nonce_padding_bytes);
         byte[] amountP = padToBytes(toByteArray(amount), const_amount_padding_bytes);
-        byte[] concatenated = concat(concat(amountP, to.toByteString()), nonceP);
+        byte[] concatenated = concat(concat(to.toByteArray(), amountP), nonceP);
         reverse(concatenated);
         return new ByteString(concatenated);
     }
@@ -177,32 +182,54 @@ public class BridgeContract {
 
     private static ByteString updateDepositMerkleTree(ByteString depositHash) {
         StorageMap rootMap = new StorageMap(ctx, prefix_deposit_root);
+        StorageMap zeroHashesMap = new StorageMap(ctx, prefix_zero_hashes);
 
-        int maxDepth = baseMap.getInt(key_deposit_maxDepth_current);
-        boolean carry = true;
-        ByteString right = depositHash;
-        for (int i = 0; i <= maxDepth; i++) {
+        ByteString parent = depositHash;
+        boolean storedNewCompleteSubtree = false;
+        for (int i = 0; i < const_fixed_deposit_tree_depth; i++) {
             ByteString entryAti = rootMap.get(i);
-            boolean stored = entryAti != null;
-            if (stored) {
-                right = computeParentHash(rootMap.get(i), right);
-                if (carry) {
-                    rootMap.delete(i);
-                    if (i == maxDepth) {
-                        int newMaxDepth = maxDepth + 1;
-                        rootMap.put(newMaxDepth, right);
-                        baseMap.put(key_deposit_maxDepth_current, newMaxDepth);
-                    }
+            if (entryAti == null) {
+                if (!storedNewCompleteSubtree) {
+                    rootMap.put(i, parent);
+                    storedNewCompleteSubtree = true;
                 }
+                parent = computeParentHash(parent, zeroHashesMap.get(i));
             } else {
-                if (carry) {
-                    rootMap.put(i, right);
-                }
-                carry = false;
+                parent = computeParentHash(entryAti, parent);
+                rootMap.delete(i);
             }
         }
-        return right;
+        return parent;
     }
+
+//    private static ByteString updateDepositMerkleTree(ByteString depositHash) {
+//        StorageMap rootMap = new StorageMap(ctx, prefix_deposit_root);
+//
+//        int maxDepth = baseMap.getInt(key_deposit_maxDepth_current);
+//        boolean carry = true;
+//        ByteString right = depositHash;
+//        for (int i = 0; i <= maxDepth; i++) {
+//            ByteString entryAti = rootMap.get(i);
+//            boolean stored = entryAti != null;
+//            if (stored) {
+//                right = computeParentHash(rootMap.get(i), right);
+//                if (carry) {
+//                    rootMap.delete(i);
+//                    if (i == maxDepth) {
+//                        int newMaxDepth = maxDepth + 1;
+//                        rootMap.put(newMaxDepth, right);
+//                        baseMap.put(key_deposit_maxDepth_current, newMaxDepth);
+//                    }
+//                }
+//            } else {
+//                if (carry) {
+//                    rootMap.put(i, right);
+//                }
+//                carry = false;
+//            }
+//        }
+//        return right;
+//    }
 
     private static int newNonce() {
         int nextNonce = baseMap.getInt(key_deposit_nonce) + 1;
@@ -301,7 +328,7 @@ public class BridgeContract {
 
     private static boolean verify(ByteString root, MerkleProof merkleProof) {
         int path = merkleProof.path;
-        ByteString parent = hashDepositOrWithdrawal(merkleProof.nonce, merkleProof.recipient, merkleProof.amount);
+        ByteString parent = hashDepositOrWithdrawal(merkleProof.nonce, merkleProof.amount, merkleProof.recipient);
         List<ByteString> proof = merkleProof.proof;
         int height = 0;
         for (int i = 0; i < proof.size(); i++) {
@@ -387,6 +414,40 @@ public class BridgeContract {
     }
 
     // endregion
+    // region refund
+
+    /**
+     * Recovers claimable withdrawals. This method can only be called by a delegated entity.
+     * <p>
+     * Withdrawals will only ever become claimable if a withdrawal fails or the bridge user tried to withdraw funds
+     * to a contract address.
+     *
+     * @param proofs the proofs for the claimable withdrawals to refund.
+     */
+    public static void recoverClaim(List<MerkleProof> proofs, List<Hash160> recipients) {
+        // Todo: specify who is allowed to issue refunds.
+        if (!checkWitness(recoverer())) {
+            abort("Only the recoverer can call this method.");
+        }
+        StorageMap claimableMap = new StorageMap(ctx, prefix_claimable);
+        for (int i = 0; i < proofs.size(); i++) {
+            MerkleProof proof = proofs.get(i);
+            int nonce = proof.nonce;
+            if (claimableMap.getBoolean(nonce)) {
+                claimableMap.delete(nonce);
+                if (verify(withdrawalRoot(), proof)) {
+                    if (!new GasToken().transfer(getExecutingScriptHash(), recipients.get(i), proof.amount, null)) {
+                        // If transfer was not successful, make the withdrawal claimable again.
+                        claimableMap.put(nonce, true);
+                    }
+                } else {
+                    abort("Invalid proof provided.");
+                }
+            }
+        }
+    }
+
+    // endregion
     // region private general helpers
 
     private static ByteString computeParentHash(ByteString left, ByteString right) {
@@ -397,12 +458,16 @@ public class BridgeContract {
     // endregion
     // region private management getters
 
+    private static ECPoint owner() {
+        return managementContract().owner();
+    }
+
     private static ECPoint relayer() {
         return managementContract().relayer();
     }
 
-    private static ECPoint owner() {
-        return managementContract().owner();
+    private static ECPoint recoverer() {
+        return managementContract().recoverer();
     }
 
     private static List<ECPoint> validators() {
@@ -451,11 +516,17 @@ public class BridgeContract {
     @Safe
     public static ByteString depositRoot() {
         return baseMap.get(key_deposit_root);
+
     }
 
     @Safe
     public static int depositsProcessed() {
         return baseMap.getInt(key_deposit_nonce);
+    }
+
+    @Safe
+    public static ByteString withdrawalRoot() {
+        return baseMap.get(key_withdrawal_root);
     }
 
     @Safe

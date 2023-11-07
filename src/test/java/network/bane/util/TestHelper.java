@@ -174,9 +174,9 @@ public class TestHelper {
     }
 
     public static byte[] concatDepositData(BigInteger nonce, Hash160 recipient, BigInteger amount) {
-        byte[] noncePadded = toBigEndianByteArrayZeroPadded(nonce, 4);
+        byte[] noncePadded = toBigEndianByteArrayZeroPadded(nonce, 8);
         byte[] amountPadded = toBigEndianByteArrayZeroPadded(amount, 8);
-        return concatenate(concatenate(noncePadded, recipient.toArray()), amountPadded);
+        return concatenate(concatenate(noncePadded, amountPadded), recipient.toArray());
     }
 
     // big-endian modification of io.neow3j.utils.BigIntegers.toLittleEndianByteArrayZeroPadded()
@@ -210,8 +210,8 @@ public class TestHelper {
         if (n == 2) {
             return concatAndSha256(leaves.get(0), leaves.get(1));
         }
-        String left = buildSubTree(n / 2, leaves.subList(0, leaves.size() / 2));// 0-1
-        String right = buildSubTree(n / 2, leaves.subList(leaves.size() / 2, leaves.size()));// 2-3
+        String left = buildSubTree(n / 2, leaves.subList(0, leaves.size() / 2));
+        String right = buildSubTree(n / 2, leaves.subList(leaves.size() / 2, leaves.size()));
         return sha256Hex(concatLeftRight(left, right));
     }
 
@@ -233,11 +233,11 @@ public class TestHelper {
         // GasToken Transfer is first notification, OnDeposit is second notification.
         Notification depositEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution().getNotification(1);
-        assertThat(depositEvent.getEventName(), is("OnDeposit"));
+        assertThat(depositEvent.getEventName(), is("Deposit"));
         return depositEventFromNotification(depositEvent);
     }
 
-    private static DepositEvent depositEventFromNotification(Notification depositEvent) {
+    public static DepositEvent depositEventFromNotification(Notification depositEvent) {
         List<StackItem> state = depositEvent.getState().getList();
         BigInteger nonce = state.get(0).getInteger();
         Hash160 from = Hash160.fromAddress(state.get(1).getAddress());
@@ -297,7 +297,7 @@ public class TestHelper {
                 neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution()
                         .getNotifications().stream()
                         .filter(n -> n.getContract().equals(bridge.getScriptHash()) &&
-                                n.getEventName().equals("OnDeposit"))
+                                n.getEventName().equals("Deposit"))
                         .findFirst();
         if (onDepositOpt.isPresent()) {
             Notification depositNotification = onDepositOpt.get();
@@ -306,14 +306,14 @@ public class TestHelper {
             Hash160 to = depositEvent.to;
             BigInteger amount = depositEvent.amount;
             String root = depositEvent.rootHashHex;
-            System.out.printf("new DepositProof(" +
-                            "%sn," +
-                            "\"%s\"," +
-                            "%sn," +
-                            "[%s]," +
-                            "\"%s\"" +
-                            ")%n",
-                    nonce, prependHexPrefix(to.toString()), amount, wrapWithQuotesAndJoin(proof), root);
+            System.out.printf("const proof%s = {" +
+                            "nonce:%sn," +
+                            "to:\"%s\"," +
+                            "amount:%sn," +
+                            "proof:[%s]," +
+                            "root:\"%s\"" +
+                            "}%n",
+                    nonce, nonce, prependHexPrefix(to.toString()), amount, wrapWithQuotesAndJoin(proof), root);
         }
     }
 
