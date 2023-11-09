@@ -241,6 +241,8 @@ public class HashTreeBridgeContract {
         ByteString parent = formerWithdrawalRoot;
         for (int i = 0; i < withdrawals.size(); i++) {
             Withdrawal withdrawal = withdrawals.get(i);
+            // Assertion might not be necessary - just another verification
+            assert Withdrawal.isValid(withdrawal) : "Invalid withdrawal provided.";
             ByteString withdrawalHash = hashDepositOrWithdrawal(withdrawal.nonce, withdrawal.amount, withdrawal.to);
             parent = computeNewRoot(parent, withdrawalHash);
         }
