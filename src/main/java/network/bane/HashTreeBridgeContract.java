@@ -82,7 +82,7 @@ public class HashTreeBridgeContract {
      * <li>New Root Hash</li>
      * </l>
      */
-    @DisplayName("OnDeposit")
+    @DisplayName("Deposit")
     public static Event6Args<Integer, Integer, Hash160, Hash160, ByteString, ByteString> onDeposit;
 
     /**
@@ -93,7 +93,7 @@ public class HashTreeBridgeContract {
      * <li>Receiving Address</li>
      * </l>
      */
-    @DisplayName("OnWithdrawal")
+    @DisplayName("Withdrawal")
     public static Event3Args<Integer, Integer, Hash160> onWithdrawal;
 
     /**
