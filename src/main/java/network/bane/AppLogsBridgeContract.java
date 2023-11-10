@@ -263,7 +263,7 @@ public class AppLogsBridgeContract {
         Hash160 from = getExecutingScriptHash();
         for (int i = 0; i < withdrawals.size(); i++) {
             WithdrawalWithProof withdrawal = withdrawals.get(i);
-            if (!verify(withdrawal, newRoot)) {
+            if (!verify(newRoot, withdrawal)) {
                 abort("Invalid proof provided.");
             }
             Hash160 to = withdrawal.to;
@@ -281,7 +281,7 @@ public class AppLogsBridgeContract {
         claimMap.put(withdrawal.nonce, concat(withdrawal.to.toByteArray(), withdrawal.amount));
     }
 
-    private static boolean verify(WithdrawalWithProof withdrawal, ByteString root) {
+    private static boolean verify(ByteString root, WithdrawalWithProof withdrawal) {
         int path = withdrawal.path;
         ByteString parent = hashDepositOrWithdrawal(withdrawal.nonce, withdrawal.amount, withdrawal.to);
         ByteString[] proof = withdrawal.proof;
