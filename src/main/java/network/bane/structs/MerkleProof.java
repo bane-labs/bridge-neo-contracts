@@ -14,9 +14,9 @@ public class MerkleProof {
     public List<ByteString> proof;
 
     public static boolean isValid(MerkleProof merkleProof) {
-        return merkleProof.nonce <= 0 &&
+        return merkleProof.nonce >= 0 &&
                 Hash160.isValid(merkleProof.recipient) &&
-                merkleProof.amount <= 0 &&
+                merkleProof.amount >= 0 &&
                 merkleProof.path != null &&
                 merkleProof.proof != null;
     }
