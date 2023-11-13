@@ -39,6 +39,7 @@ import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 public class HashTreeBridgeContract {
 
     private static final StorageContext ctx = Storage.getStorageContext();
+    private static final CryptoLib cryptoLib = new CryptoLib();
 
     // region storage keys
 
@@ -164,7 +165,7 @@ public class HashTreeBridgeContract {
     // region private deposit helpers
 
     private static ByteString hashDepositOrWithdrawal(int nonce, int amount, Hash160 to) {
-        return new CryptoLib().sha256(concatDepositOrWithdrawal(nonce, amount, to));
+        return cryptoLib.sha256(concatDepositOrWithdrawal(nonce, amount, to));
     }
 
     private static ByteString concatDepositOrWithdrawal(int nonce, int amount, Hash160 to) {
@@ -277,13 +278,13 @@ public class HashTreeBridgeContract {
         int threshold = validatorThreshold();
         assert signatures.keys().length >= threshold : "Not enough signatures provided.";
 
+        ByteString msg = cryptoLib.sha256(root);
         int covered = 0;
-        CryptoLib cryptoLib = new CryptoLib();
         for (int i = 0; i < validators.size(); i++) {
             ECPoint validator = validators.get(i);
             if (signatures.containsKey(validator)) {
                 boolean verified =
-                        cryptoLib.verifyWithECDsa(root, validator, signatures.get(validator), NamedCurve.Secp256r1);
+                        cryptoLib.verifyWithECDsa(msg, validator, signatures.get(validator), NamedCurve.Secp256r1);
                 if (verified) {
                     covered++;
                 }
@@ -320,7 +321,7 @@ public class HashTreeBridgeContract {
 
     private static ByteString computeNewRoot(ByteString left, ByteString right) {
         ByteString leftRight = new ByteString(concat(left.toByteArray(), right));
-        return new CryptoLib().sha256(leftRight);
+        return cryptoLib.sha256(leftRight);
     }
 
     // endregion
