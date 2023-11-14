@@ -145,12 +145,15 @@ public class AppLogsBridgeContract {
     // region public deposit
 
     @OnNEP17Payment
-    public static void deposit(Hash160 from, int amount, Object data) {
+    public static void onNep17Payment(Hash160 from, int amount, Object data) {
         if (getCallingScriptHash() != new GasToken().getHash()) {
             abort("Only GAS is accepted.");
         }
         Hash160 to = (Hash160) data;
         assert Hash160.isValid(to) : "Invalid recipient data.";
+
+        assert amount >= minDeposit() : "Deposit amount is too low.";
+        assert amount < maxDeposit() : "Deposit amount is too high.";
 
         int nonce = newNonce();
 
