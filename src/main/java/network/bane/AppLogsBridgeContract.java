@@ -291,7 +291,7 @@ public class AppLogsBridgeContract {
         int height = 0;
         for (ByteString proofEntry : proof) {
             // If the bit on position `height` is 1, the i-th proof element is the right child of the next parent.
-            if ((path >> height) & 0x1 == 1) {
+            if (((path >> height) & 0x01) == 1) {
                 parent = computeParentHash(parent, proofEntry);
             } else {
                 parent = computeParentHash(proofEntry, parent);
