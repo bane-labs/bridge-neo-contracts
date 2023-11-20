@@ -166,10 +166,11 @@ public class TestHelper {
     }
 
     public static Map<ContractParameter, ContractParameter> signMsg(List<Account> validators, String root) {
+        String msg = sha256Hex(hexStringToByteArray(root));
         Map<ContractParameter, ContractParameter> signatures  = new HashMap<>();
         for (int i = 0; i < validators.size(); i++) {
             ECKeyPair validator = validators.get(i).getECKeyPair();
-            signatures.put(publicKey(validator.getPublicKey()), signature(Sign.signHexMessage(root, validator)));
+            signatures.put(publicKey(validator.getPublicKey()), signature(Sign.signHexMessage(msg, validator)));
         }
         return signatures;
     }

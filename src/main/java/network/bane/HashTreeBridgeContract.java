@@ -279,12 +279,13 @@ public class HashTreeBridgeContract {
         int threshold = validatorThreshold();
         assert signatures.keys().length >= threshold : "Not enough signatures provided.";
 
+        ByteString msg = cryptoLib.sha256(root);
         int covered = 0;
         for (int i = 0; i < validators.size(); i++) {
             ECPoint validator = validators.get(i);
             if (signatures.containsKey(validator)) {
                 boolean verified =
-                        cryptoLib.verifyWithECDsa(root, validator, signatures.get(validator), NamedCurve.Secp256r1);
+                        cryptoLib.verifyWithECDsa(msg, validator, signatures.get(validator), NamedCurve.Secp256r1);
                 if (verified) {
                     covered++;
                 }
