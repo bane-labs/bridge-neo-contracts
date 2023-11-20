@@ -151,6 +151,7 @@ public class HashTreeBridgeContract {
         }
         Hash160 to = (Hash160) data;
         assert Hash160.isValid(to) : "Invalid recipient data.";
+        assert !to.isZero() : "Recipient must not be zero.";
 
         assert amount >= minDeposit() : "Deposit amount is too low.";
         assert amount < maxDeposit() : "Deposit amount is too high.";
