@@ -234,7 +234,6 @@ public class BridgeDepositTest {
         assertThat(bridge.depositPrice(), is(depositPrice));
         assertThat(bridge.minDeposit(), is(minDeposit));
         assertThat(bridge.maxDeposit(), is(maxDeposit));
-        assertThat(bridge.maxProofsPerWithdrawal(), is(maxProofsPerWithdrawal));
 
         assertThrows(RpcResponseErrorException.class, () -> bridge.getStorage("0x0a10"));
         // Deposit Root

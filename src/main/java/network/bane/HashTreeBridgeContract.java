@@ -9,11 +9,7 @@ import io.neow3j.devpack.Map;
 import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
-import io.neow3j.devpack.annotations.DisplayName;
-import io.neow3j.devpack.annotations.ManifestExtra;
-import io.neow3j.devpack.annotations.OnDeployment;
-import io.neow3j.devpack.annotations.OnNEP17Payment;
-import io.neow3j.devpack.annotations.Safe;
+import io.neow3j.devpack.annotations.*;
 import io.neow3j.devpack.constants.NamedCurve;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
@@ -33,6 +29,7 @@ import static io.neow3j.devpack.Runtime.checkWitness;
 import static io.neow3j.devpack.Runtime.getCallingScriptHash;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 
+@Permission(contract = "*", methods = "transfer")
 @DisplayName("BaneBridge")
 @ManifestExtra(key = "author", value = "BaneLabs")
 @ManifestExtra(key = "description", value = "Contract for bridging GAS tokens from Neo N3 to Bane.")
@@ -52,7 +49,7 @@ public class HashTreeBridgeContract {
     private static final int key_deposit_price = 0x02;
     private static final int key_deposit_min = 0x03;
     private static final int key_deposit_max = 0x04;
-    private static final int key_max_proofs_per_withdrawal = 0x05;
+    private static final int key_max_withdrawal_per_root = 0x05;
     //    private static final int key_locked = 0x06;
 
     private static final int key_deposit_root = 0x10;
@@ -132,6 +129,7 @@ public class HashTreeBridgeContract {
             baseMap.put(key_deposit_price, deploymentData.depositPrice);
             baseMap.put(key_deposit_min, deploymentData.minDeposit);
             baseMap.put(key_deposit_max, deploymentData.maxDeposit);
+            baseMap.put(key_max_withdrawal_per_root, deploymentData.maxWithdrawalPerRootUpdate);
 
 
             // First deposit and withdrawal roots will be zero hashes
@@ -153,6 +151,7 @@ public class HashTreeBridgeContract {
         }
         Hash160 to = (Hash160) data;
         assert Hash160.isValid(to) : "Invalid recipient data.";
+        assert !to.isZero() : "Recipient must not be zero.";
 
         assert amount >= minDeposit() : "Deposit amount is too low.";
         assert amount < maxDeposit() : "Deposit amount is too high.";
@@ -208,7 +207,7 @@ public class HashTreeBridgeContract {
         assert withdrawals.size() > 0 : "At least one withdrawal is required.";
         int startNonce = withdrawals.get(0).nonce;
         assert startNonce == currentNonce() + 1 : "Provided first nonce is not the next one.";
-        assert subsequentNonces(withdrawals, startNonce) : "Provided withdrawals are not subsequent.";
+        assert subsequentNonces(withdrawals, currentNonce()) : "Provided withdrawals are not subsequent.";
 
         baseMap.put(key_withdrawal_nonce, withdrawals.get(withdrawals.size() - 1).nonce);
         ByteString formerWithdrawalRoot = withdrawalRoot();
@@ -269,7 +268,7 @@ public class HashTreeBridgeContract {
     }
 
     private static void addToClaim(Withdrawal withdrawal) {
-        claimMap.put(withdrawal.nonce, concat(withdrawal.to.toByteArray(), withdrawal.amount));
+        claimMap.put(withdrawal.nonce, concat(withdrawal.to.toByteArray(), padToBytes(toByteArray(withdrawal.amount), const_amount_padding_size)));
     }
 
     private static boolean isContract(Hash160 scriptHash) {
@@ -281,13 +280,12 @@ public class HashTreeBridgeContract {
         int threshold = validatorThreshold();
         assert signatures.keys().length >= threshold : "Not enough signatures provided.";
 
-        ByteString msg = cryptoLib.sha256(root);
         int covered = 0;
         for (int i = 0; i < validators.size(); i++) {
             ECPoint validator = validators.get(i);
             if (signatures.containsKey(validator)) {
                 boolean verified =
-                        cryptoLib.verifyWithECDsa(msg, validator, signatures.get(validator), NamedCurve.Secp256r1);
+                        cryptoLib.verifyWithECDsa(root, validator, signatures.get(validator), NamedCurve.Secp256r1);
                 if (verified) {
                     covered++;
                 }
@@ -298,7 +296,7 @@ public class HashTreeBridgeContract {
 
     // Makes sure the withdrawals have subsequent nonces.
     private static boolean subsequentNonces(List<Withdrawal> withdrawals, int startNonce) {
-        for (int i = 1; i < withdrawals.size(); i++) {
+        for (int i = 1; i <= withdrawals.size(); i++) {
             if (withdrawals.get(i - 1).nonce != startNonce + i) {
                 return false;
             }
@@ -374,8 +372,8 @@ public class HashTreeBridgeContract {
     }
 
     @Safe
-    public static int maxProofsPerWithdrawal() {
-        return baseMap.getInt(key_max_proofs_per_withdrawal);
+    public static int maxWithdrawalPerRoot() {
+        return baseMap.getInt(key_max_withdrawal_per_root);
     }
 
     // endregion

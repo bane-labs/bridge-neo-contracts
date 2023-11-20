@@ -32,8 +32,8 @@ public class Bridge extends SmartContractHelper {
         return callFunctionReturningInt("maxDeposit");
     }
 
-    public BigInteger maxProofsPerWithdrawal() throws IOException {
-        return callFunctionReturningInt("maxProofsPerWithdrawal");
+    public BigInteger maxWithdrawalPerRoot() throws IOException {
+        return callFunctionReturningInt("maxWithdrawalPerRoot");
     }
 
     // endregion
@@ -41,6 +41,10 @@ public class Bridge extends SmartContractHelper {
 
     public String depositRoot() throws IOException {
         return prependHexPrefix(callInvokeFunction("depositRoot").getInvocationResult().getFirstStackItem().getHexString());
+    }
+
+    public String withdrawRoot() throws IOException {
+        return prependHexPrefix(callInvokeFunction("withdrawalRoot").getInvocationResult().getFirstStackItem().getHexString());
     }
 
     public BigInteger depositsProcessed() throws IOException {
