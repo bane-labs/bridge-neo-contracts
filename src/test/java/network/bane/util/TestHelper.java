@@ -9,8 +9,6 @@ import io.neow3j.protocol.core.response.ContractStorageEntry;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.StackItem;
-import io.neow3j.script.InvocationScript;
-import io.neow3j.script.ScriptBuilder;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -25,7 +23,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static io.neow3j.devpack.Helper.concat;
-import static io.neow3j.devpack.Helper.toByteArray;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.*;
 import static io.neow3j.utils.ArrayUtils.concatenate;
@@ -288,9 +285,12 @@ public class TestHelper {
         BigInteger amount = state.get(1).getInteger();
         Hash160 to = Hash160.fromAddress(state.get(2).getAddress());
         Hash160 from = Hash160.fromAddress(state.get(3).getAddress());
-        String depositHash = prependHexPrefix(state.get(4).getHexString());
-        String rootHash = prependHexPrefix(state.get(5).getHexString());
-        return new DepositEvent(nonce, amount, to, from, depositHash, rootHash);
+        if (state.size() > 4) {
+            String depositHash = prependHexPrefix(state.get(4).getHexString());
+            String rootHash = prependHexPrefix(state.get(5).getHexString());
+            return new DepositEvent(nonce, amount, to, from, depositHash, rootHash);
+        }
+        return new DepositEvent(nonce, amount, to, from);
     }
 
     private static WithdrawEvent withdrawEventFromNotification(Notification depositEvent) {
@@ -333,6 +333,13 @@ public class TestHelper {
             this.amount = amount;
             this.depositHashHex = depositHashHex;
             this.rootHashHex = rootHashHex;
+        }
+
+        public DepositEvent(BigInteger nonce, BigInteger amount, Hash160 to, Hash160 from) {
+            this.nonce = nonce;
+            this.from = from;
+            this.to = to;
+            this.amount = amount;
         }
 
         @Override

@@ -1,19 +1,7 @@
 package network.bane;
 
-import io.neow3j.devpack.ByteString;
-import io.neow3j.devpack.ECPoint;
-import io.neow3j.devpack.Hash160;
-import io.neow3j.devpack.Hash256;
-import io.neow3j.devpack.List;
-import io.neow3j.devpack.Map;
-import io.neow3j.devpack.Storage;
-import io.neow3j.devpack.StorageContext;
-import io.neow3j.devpack.StorageMap;
-import io.neow3j.devpack.annotations.DisplayName;
-import io.neow3j.devpack.annotations.ManifestExtra;
-import io.neow3j.devpack.annotations.OnDeployment;
-import io.neow3j.devpack.annotations.OnNEP17Payment;
-import io.neow3j.devpack.annotations.Safe;
+import io.neow3j.devpack.*;
+import io.neow3j.devpack.annotations.*;
 import io.neow3j.devpack.constants.NamedCurve;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
@@ -25,13 +13,8 @@ import network.bane.interfaces.BridgeManagement;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.MerkleProof;
 
-import static io.neow3j.devpack.Helper.abort;
-import static io.neow3j.devpack.Helper.concat;
-import static io.neow3j.devpack.Helper.reverse;
-import static io.neow3j.devpack.Helper.toByteArray;
-import static io.neow3j.devpack.Runtime.checkWitness;
-import static io.neow3j.devpack.Runtime.getCallingScriptHash;
-import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
+import static io.neow3j.devpack.Helper.*;
+import static io.neow3j.devpack.Runtime.*;
 
 @DisplayName("BaneBridge")
 @ManifestExtra(key = "author", value = "BaneLabs")

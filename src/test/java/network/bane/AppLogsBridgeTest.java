@@ -13,10 +13,9 @@ import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
+import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
-import network.bane.util.Bridge;
-import network.bane.util.Management;
-import network.bane.util.TestHelper;
+import network.bane.util.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -39,14 +38,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ContractTest(
         blockTime = 1,
-        contracts = {BridgeManagementContract.class, HashTreeBridgeContract.class, TestContract.class},
+        contracts = {BridgeManagementContract.class, AppLogsBridgeContract.class, TestContract.class},
         batchFile = "setup.batch"
 )
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class HashTreeBridgeTest {
-
-    private static final int howManyDepositProofsToPrint = 0;
+public class AppLogsBridgeTest {
 
     private static final BigInteger depositPrice = new BigInteger("10000000");
     private static final BigInteger minDeposit = new BigInteger("100000000");
@@ -90,7 +87,7 @@ public class HashTreeBridgeTest {
         management = new Management(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
         assert management.getScriptHash().equals(managementContractHash) : "BridgeManagement Contract or its deployer" +
                 " has changed. Change the contract hash in this test to " + management.getScriptHash() + ".";
-        bridge = new Bridge(ext.getDeployedContract(HashTreeBridgeContract.class).getScriptHash(), neow3j);
+        bridge = new Bridge(ext.getDeployedContract(AppLogsBridgeContract.class).getScriptHash(), neow3j);
         testContract = ext.getDeployedContract(TestContract.class).getScriptHash();
         alice = ext.getAccount(TestHelper.ALICE);
         bob = ext.getAccount(TestHelper.BOB);
@@ -102,9 +99,6 @@ public class HashTreeBridgeTest {
         henry = ext.getAccount(TestHelper.HENRY);
         isabella = ext.getAccount(TestHelper.ISABELLA);
 
-        for (int i = 1; i <= howManyDepositProofsToPrint; i++) {
-            printDeposits.add(i);
-        }
     }
 
     // endregion
@@ -132,7 +126,7 @@ public class HashTreeBridgeTest {
         return config;
     }
 
-    @DeployConfig(HashTreeBridgeContract.class)
+    @DeployConfig(AppLogsBridgeContract.class)
     public static DeployConfiguration deployConfigBridge() {
         DeployConfiguration config = new DeployConfiguration();
         config.setDeployParam(
@@ -187,7 +181,7 @@ public class HashTreeBridgeTest {
     @Test
     @Order(0)
     public void testDeployment_deploymentDataSetCorrectly() throws IOException {
-        assertThat(bridge.findStorage("0x0a"), hasSize(9));
+        assertThat(bridge.findStorage("0x0a"), hasSize(8));
         // Bridge Management Contract Hash
         assertThat(bridge.getStorage("0x0a01"), is(toHexString(management.getScriptHash().toLittleEndianArray())));
         // Deposit Price
@@ -203,10 +197,7 @@ public class HashTreeBridgeTest {
         assertThat(bridge.depositPrice(), is(depositPrice));
         assertThat(bridge.minDeposit(), is(minDeposit));
         assertThat(bridge.maxDeposit(), is(maxDeposit));
-        assertThat(bridge.maxWithdrawalPerRoot(), is(maxWithdrawalPerRootUpdate));
 
-        // Deposit Root
-        assertThat(bridge.getStorage("0x0a10"), is("0x0000000000000000000000000000000000000000000000000000000000000000"));
         // Deposit Nonce
         assertThat(bridge.getStorage("0x0a11"), is("0x"));
         // Withdrawal Nonce
@@ -280,7 +271,6 @@ public class HashTreeBridgeTest {
     }
 //
 //    // endregion
-//    // region accepted deposits
 
     /**
      * test deposit function
@@ -288,7 +278,7 @@ public class HashTreeBridgeTest {
      */
     @Test
     @Order(11)
-    public void testRootComputation_1() throws Throwable {
+    public void testDeposit_1() throws Throwable {
         Account from = alice;
         Hash160 to = recipient1;
         BigInteger amount = minDeposit;
@@ -296,107 +286,41 @@ public class HashTreeBridgeTest {
 
         Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(1));
 
-        String d1 = createDepositHash(nextNonce, to, amount);
-
-        // root after first deposit is the deposit hash itself
-        String newRoot = concatAndSha256(Hash256.ZERO.toString(), d1);
-        assertThat(bridge.getStorage("0x0a10"), is(newRoot));
-        assertThat(bridge.depositRoot(), is(newRoot));
-
         TestHelper.DepositEvent depositEvent = getDepositEvent(txHash, neow3j);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
         assertThat(depositEvent.amount, is(amount));
-        assertThat(depositEvent.depositHashHex, is(d1));
-        assertThat(depositEvent.rootHashHex, is(newRoot));
     }
 
     @Test
     @Order(12)
-    public void testRootComputation_2() throws Throwable {
-        Account from = bob;
-        Hash160 to = recipient2;
+    public void testDeposit_2() throws Throwable {
+        Account from = alice;
+        Hash160 to = recipient1;
         BigInteger amount = minDeposit;
-        BigInteger nextNonce = new BigInteger("2");
+        BigInteger nextNonce1 = new BigInteger("2");
+        BigInteger nextNonce2 = new BigInteger("3");
 
-        String depositRootBefore = bridge.depositRoot();
-        Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(2));
+        Hash256 txHash1 = bridgeGas(from, to, amount, printDeposits.contains(1));
 
-        String d2 = createDepositHash(nextNonce, to, amount);
-        String d12 = concatAndSha256(depositRootBefore, d2);
-
-        assertThat(bridge.getStorage("0x0a10"), is(d12));
-        assertThat(bridge.depositRoot(), is(d12));
-
-        TestHelper.DepositEvent depositEvent = getDepositEvent(txHash, neow3j);
-        assertThat(depositEvent.nonce, is(nextNonce));
+        TestHelper.DepositEvent depositEvent = getDepositEvent(txHash1, neow3j);
+        assertThat(depositEvent.nonce, is(nextNonce1));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
         assertThat(depositEvent.amount, is(amount));
-        assertThat(depositEvent.depositHashHex, is(d2));
-        assertThat(depositEvent.rootHashHex, is(d12));
+
+        Hash256 txHash2 = bridgeGas(from, to, amount, printDeposits.contains(1));
+
+        depositEvent = getDepositEvent(txHash2, neow3j);
+        assertThat(depositEvent.nonce, is(nextNonce2));
+        assertThat(depositEvent.from, is(from.getScriptHash()));
+        assertThat(depositEvent.to, is(to));
+        assertThat(depositEvent.amount, is(amount));
     }
 
     @Test
     @Order(13)
-    public void testRootComputation_3() throws Throwable {
-        Account from = charlie;
-        Hash160 to = recipient3;
-        BigInteger amount = minDeposit.multiply(new BigInteger("3"));
-        BigInteger nextNonce = new BigInteger("3");
-
-        String depositRootBefore = bridge.depositRoot();
-        Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(3));
-
-        String d3 = createDepositHash(nextNonce, to, amount);
-        String d12d3 = concatAndSha256(depositRootBefore, d3);
-
-        assertThat(bridge.getStorage("0x0a10"), is(d12d3));
-        assertThat(bridge.depositRoot(), is(d12d3));
-
-        TestHelper.DepositEvent depositEvent = getDepositEvent(txHash, neow3j);
-        assertThat(depositEvent.nonce, is(nextNonce));
-        assertThat(depositEvent.from, is(from.getScriptHash()));
-        assertThat(depositEvent.to, is(to));
-        assertThat(depositEvent.amount, is(amount));
-        assertThat(depositEvent.depositHashHex, is(d3));
-        assertThat(depositEvent.rootHashHex, is(d12d3));
-    }
-
-    @Test
-    @Order(14)
-    public void testRootComputation_4() throws Throwable {
-        Account from = denise;
-        Hash160 to = recipient4;
-        BigInteger amount = minDeposit.multiply(new BigInteger("4"));
-        BigInteger nextNonce = new BigInteger("4");
-
-        String depositRootBefore = bridge.depositRoot();
-
-        Hash256 txHash = bridgeGas(from, to, amount, printDeposits.contains(4));
-
-        String depositHashOffChain = createDepositHash(nextNonce, to, amount);
-        String d1234 = concatAndSha256(depositRootBefore, depositHashOffChain);
-
-        assertThat(bridge.getStorage("0x0a10"), is(d1234));
-        assertThat(bridge.depositRoot(), is(d1234));
-
-        TestHelper.DepositEvent depositEvent = getDepositEvent(txHash, neow3j);
-        assertThat(depositEvent.nonce, is(nextNonce));
-        assertThat(depositEvent.from, is(from.getScriptHash()));
-        assertThat(depositEvent.to, is(to));
-        assertThat(depositEvent.amount, is(amount));
-        assertThat(depositEvent.depositHashHex, is(depositHashOffChain));
-        assertThat(depositEvent.rootHashHex, is(d1234));
-    }
-
-    /**
-     * test withdraw function with one withdraw
-     * @throws Throwable
-     */
-    @Test
-    @Order(15)
     public void testWithdrawal_1() throws Throwable {
         Hash160 to = alice.getScriptHash();
         BigInteger amount1 = new BigInteger("1000000000");
@@ -405,75 +329,83 @@ public class HashTreeBridgeTest {
         BigInteger nonce = new BigInteger("1");
 
         String d1 = createDepositHash(nonce, to, amount);
-        String root =  concatAndSha256(Hash256.ZERO.toString(), d1);
+        String[] leafNodes = new String[32];
+        Arrays.fill(leafNodes, Numeric.toHexString(Hash256.ZERO.toArray()));
+        leafNodes[0] = d1;
+        String root = buildSubTree(32, Arrays.asList(leafNodes), 0);
+        MerkleTree tree = new MerkleTree(Arrays.asList(leafNodes));
+        assertThat(root, is(tree.getRoot()));
+
+        WithdrawalWithProof withdrawalWithProof = tree.getProof(d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter withdrawal = array(array(integer(nonce), integer(amount), hash160(to)));
-        Hash256 txHash = withdrawalGas(root, signMsg(validators, root), withdrawal);
+        ContractParameter withdrawal = array(array(hash160(to), integer(amount), integer(nonce), integer(withdrawalWithProof.path), array(withdrawalWithProof.proof)));
+        Hash256 txHash = withdrawalGas(tree.getRoot(), signMsg(validators, root), withdrawal);
         TestHelper.WithdrawEvent withdrawEvent = getWithdrawEvent(txHash, neow3j);
         assertThat(withdrawEvent.nonce, is(nonce));
         assertThat(withdrawEvent.to, is(to));
         assertThat(withdrawEvent.amount, is(amount));
     }
 
-    /**
-     * test withdraw function with two withdrawals
-     * @throws Throwable
-     */
     @Test
-    @Order(16)
+    @Order(14)
     public void testWithdrawal_2() throws Throwable {
-        Hash160 to1 = alice.getScriptHash();
+        Hash160 to = alice.getScriptHash();
+        BigInteger amount = new BigInteger("1000000000");
+        bridgeGas(bob, to, amount, false);
         BigInteger amount1 = minDeposit;
         BigInteger nonce1 = new BigInteger("2");
-        Hash160 to2 = charlie.getScriptHash();
         BigInteger amount2 = minDeposit;
         BigInteger nonce2 = new BigInteger("3");
 
-        String withdrawRootBefore = bridge.withdrawRoot();
+        String d1 = createDepositHash(nonce1, to, amount1);
+        String d2 = createDepositHash(nonce2, to, amount2);
+        String[] leafNodes = new String[32];
+        Arrays.fill(leafNodes, Numeric.toHexString(Hash256.ZERO.toArray()));
+        leafNodes[0] = d1;
+        leafNodes[1] = d2;
+//        String root = buildSubTree(32, Arrays.asList(leafNodes), 0);
+        MerkleTree tree = new MerkleTree(Arrays.asList(leafNodes));
+//        assertThat(root, is(tree.getRoot()));
 
-        String d1 = createDepositHash(nonce1, to1, amount1);
-        String root1 = concatAndSha256(withdrawRootBefore, d1);
-        String d2 = createDepositHash(nonce2, to2, amount2);
-        String newRoot = concatAndSha256(root1, d2);
-
+        WithdrawalWithProof withdrawalWithProof1 = tree.getProof(d1);
+        WithdrawalWithProof withdrawalWithProof2 = tree.getProof(d2);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter withdrawal = array(array(integer(nonce1), integer(amount1), hash160(to1)), array(integer(nonce2), integer(amount2), hash160(to2)));
-        Hash256 txHash = withdrawalGas(newRoot, signMsg(validators, newRoot), withdrawal);
+        ContractParameter withdrawal = array(array(hash160(to), integer(amount1), integer(nonce1), integer(withdrawalWithProof1.path), array(withdrawalWithProof1.proof)),
+                array(hash160(to), integer(amount2), integer(nonce2), integer(withdrawalWithProof2.path), array(withdrawalWithProof2.proof)));
+        Hash256 txHash = withdrawalGas(tree.getRoot(), signMsg(validators, tree.getRoot()), withdrawal);
         TestHelper.WithdrawEvent withdrawEvent = getWithdrawEvent(txHash, neow3j);
         assertThat(withdrawEvent.nonce, is(nonce1));
-        assertThat(withdrawEvent.to, is(to1));
+        assertThat(withdrawEvent.to, is(to));
         assertThat(withdrawEvent.amount, is(amount1));
     }
 
-    /**
-     * test withdraw function if to address is contract
-     * @throws Throwable
-     */
     @Test
-    @Order(17)
+    @Order(15)
     public void testWithdrawal_3() throws Throwable {
         Hash160 to = testContract;
         BigInteger amount = minDeposit;
         BigInteger nonce = new BigInteger("4");
 
-        String withdrawRootBefore = bridge.withdrawRoot();
         String d1 = createDepositHash(nonce, to, amount);
-        String root =  concatAndSha256(withdrawRootBefore, d1);
+        String[] leafNodes = new String[32];
+        Arrays.fill(leafNodes, Numeric.toHexString(Hash256.ZERO.toArray()));
+        leafNodes[0] = d1;
+        String root = buildSubTree(32, Arrays.asList(leafNodes), 0);
+        MerkleTree tree = new MerkleTree(Arrays.asList(leafNodes));
+        assertThat(root, is(tree.getRoot()));
+
+        WithdrawalWithProof withdrawalWithProof = tree.getProof(d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter withdrawal = array(array(integer(nonce), integer(amount), hash160(to)));
-        Hash256 txHash = withdrawalGas(root, signMsg(validators, root), withdrawal);
+        ContractParameter withdrawal = array(array(hash160(to), integer(amount), integer(nonce), integer(withdrawalWithProof.path), array(withdrawalWithProof.proof)));
+        Hash256 txHash = withdrawalGas(tree.getRoot(), signMsg(validators, root), withdrawal);
         TestHelper.ClaimableEvent claimableEvent = getClaimableEvent(txHash, neow3j);
         assertThat(claimableEvent.nonce, is(nonce));
         assertThat(claimableEvent.to, is(to));
         assertThat(claimableEvent.amount, is(amount));
     }
 
-    /**
-     * test claim function
-     * @throws Throwable
-     */
     @Test
-    @Order(17)
+    @Order(16)
     public void testWithdrawal_4() throws Throwable {
         Hash160 to = testContract;
         BigInteger amount = minDeposit;
@@ -486,6 +418,16 @@ public class HashTreeBridgeTest {
         assertThat(claimEvent.amount, is(amount));
     }
 
+    private Hash256 claimGas(int nonce) throws Throwable {
+        NeoSendRawTransaction response = bridge.invokeFunction("claim", integer(nonce))
+                .signers(AccountSigner.calledByEntry(alice))
+                .sign()
+                .send();
+        Hash256 txHash = response.getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+        return txHash;
+    }
+
     private Hash256 withdrawalGas(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
                                   ContractParameter withdrawals) throws Throwable {
         NeoSendRawTransaction response = bridge.invokeFunction("withdraw", byteArray(withdrawalRoot), map(signatures), withdrawals)
@@ -496,15 +438,4 @@ public class HashTreeBridgeTest {
         waitUntilTransactionIsExecuted(txHash, neow3j);
         return txHash;
     }
-
-    private Hash256 claimGas(int nonce) throws Throwable {
-        NeoSendRawTransaction response = bridge.invokeFunction("claim", integer(nonce))
-                .signers(AccountSigner.calledByEntry(alice))
-                .sign()
-                .send();
-        Hash256 txHash = response.getSendRawTransaction().getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
-        return txHash;
-    }
-    // endregion
 }

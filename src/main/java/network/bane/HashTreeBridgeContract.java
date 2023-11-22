@@ -1,14 +1,6 @@
 package network.bane;
 
-import io.neow3j.devpack.ByteString;
-import io.neow3j.devpack.ECPoint;
-import io.neow3j.devpack.Hash160;
-import io.neow3j.devpack.Hash256;
-import io.neow3j.devpack.List;
-import io.neow3j.devpack.Map;
-import io.neow3j.devpack.Storage;
-import io.neow3j.devpack.StorageContext;
-import io.neow3j.devpack.StorageMap;
+import io.neow3j.devpack.*;
 import io.neow3j.devpack.annotations.*;
 import io.neow3j.devpack.constants.NamedCurve;
 import io.neow3j.devpack.contracts.ContractManagement;
@@ -21,13 +13,8 @@ import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.MerkleProof;
 import network.bane.structs.Withdrawal;
 
-import static io.neow3j.devpack.Helper.abort;
-import static io.neow3j.devpack.Helper.concat;
-import static io.neow3j.devpack.Helper.reverse;
-import static io.neow3j.devpack.Helper.toByteArray;
-import static io.neow3j.devpack.Runtime.checkWitness;
-import static io.neow3j.devpack.Runtime.getCallingScriptHash;
-import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
+import static io.neow3j.devpack.Helper.*;
+import static io.neow3j.devpack.Runtime.*;
 
 @Permission(contract = "*", methods = "transfer")
 @DisplayName("BaneBridge")

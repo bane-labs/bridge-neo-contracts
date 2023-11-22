@@ -1,19 +1,7 @@
 package network.bane;
 
-import io.neow3j.devpack.ByteString;
-import io.neow3j.devpack.ECPoint;
-import io.neow3j.devpack.Hash160;
-import io.neow3j.devpack.Hash256;
-import io.neow3j.devpack.List;
-import io.neow3j.devpack.Map;
-import io.neow3j.devpack.Storage;
-import io.neow3j.devpack.StorageContext;
-import io.neow3j.devpack.StorageMap;
-import io.neow3j.devpack.annotations.DisplayName;
-import io.neow3j.devpack.annotations.ManifestExtra;
-import io.neow3j.devpack.annotations.OnDeployment;
-import io.neow3j.devpack.annotations.OnNEP17Payment;
-import io.neow3j.devpack.annotations.Safe;
+import io.neow3j.devpack.*;
+import io.neow3j.devpack.annotations.*;
 import io.neow3j.devpack.constants.NamedCurve;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
@@ -24,15 +12,11 @@ import network.bane.interfaces.BridgeManagement;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.WithdrawalWithProof;
 
-import static io.neow3j.devpack.Helper.abort;
-import static io.neow3j.devpack.Helper.concat;
-import static io.neow3j.devpack.Helper.reverse;
-import static io.neow3j.devpack.Helper.toByteArray;
-import static io.neow3j.devpack.Runtime.checkWitness;
-import static io.neow3j.devpack.Runtime.getCallingScriptHash;
-import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
+import static io.neow3j.devpack.Helper.*;
+import static io.neow3j.devpack.Runtime.*;
 
 //@DisplayName("BaneBridge")
+@Permission(contract = "*", methods = "transfer")
 @ManifestExtra(key = "author", value = "BaneLabs")
 @ManifestExtra(key = "description", value = "Contract for bridging GAS tokens from Neo N3 to Bane.")
 public class AppLogsBridgeContract {
@@ -57,7 +41,6 @@ public class AppLogsBridgeContract {
     private static final int key_deposit_root = 0x10;
     private static final int key_deposit_nonce = 0x11;
     private static final int key_deposit_maxDepth_current = 0x12;
-
     private static final int key_withdrawal_root = 0x20;
     private static final int key_withdrawal_nonce = 0x21;
 
@@ -158,7 +141,7 @@ public class AppLogsBridgeContract {
 
         int nonce = newNonce();
 
-        // Providing the deposit hash in the notificatino is not necessarily required since the validators will compute
+        // Providing the deposit hash in the notification is not necessarily required since the validators will compute
         // the full merkle tree anyway and can thus compute the deposit hash themselves. However, it could be provided
         // here to make it easier for the validators to compute the merkle tree.
 //        ByteString depositHash = hashDepositOrWithdrawal(nonce, amount, to);
@@ -230,13 +213,13 @@ public class AppLogsBridgeContract {
 //        int nrWithdrawals = withdrawals.size();
 //        assert nrWithdrawals <= maxWithdrawalsPerRootUpdate() : "Too many withdrawals provided.";
         // Only checks if merkle proof parameters don't have invalid values, e.g., a negative number for amount.
-        assert areValid(withdrawals) : "Invalid proofs provided.";
+        assert areValid(withdrawals) : "Invalid withdrawals provided.";
 
         // Check Subsequent Nonces
         int startNonce = withdrawals.get(0).nonce;
         int currentNonce = currentNonce();
         assert startNonce == currentNonce + 1 : "Provided first nonce is not the next one.";
-        assert subsequentNonces(withdrawals, startNonce) : "Provided withdrawals are not subsequent.";
+        assert subsequentNonces(withdrawals, currentNonce()) : "Provided withdrawals are not subsequent.";
 
         // Validator Signature Check
         assert verifyValidatorSignatures(signatures, newWithdrawalRoot) : "Invalid validator signatures provided.";
@@ -282,7 +265,7 @@ public class AppLogsBridgeContract {
     }
 
     private static void addToClaim(WithdrawalWithProof withdrawal) {
-        claimMap.put(withdrawal.nonce, concat(withdrawal.to.toByteArray(), withdrawal.amount));
+        claimMap.put(withdrawal.nonce, concat(withdrawal.to.toByteArray(), padToBytes(toByteArray(withdrawal.amount), const_amount_padding_bytes)));
     }
 
     private static boolean verify(ByteString root, WithdrawalWithProof withdrawal) {
@@ -299,6 +282,7 @@ public class AppLogsBridgeContract {
             }
             height += 1;
         }
+
         return parent == root;
     }
 
@@ -358,8 +342,8 @@ public class AppLogsBridgeContract {
         // This should always be true, but we check it anyway.
         assert claimData.length() == const_hash160_size + const_amount_padding_bytes : "Invalid claim data.";
 
-        Hash160 to = new Hash160(claimData.range(0, const_hash160_size));
-        int amount = claimData.range(const_hash160_size, const_hash160_size + const_amount_padding_bytes).toInt();
+        Hash160 to = new Hash160(claimData.take(const_hash160_size));
+        int amount = claimData.last(const_amount_padding_bytes).toInt();
 
         claimMap.delete(nonce);
         if (gasToken.transfer(getExecutingScriptHash(), to, amount, null)) {
