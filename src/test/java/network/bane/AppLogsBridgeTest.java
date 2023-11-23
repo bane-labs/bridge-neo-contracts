@@ -339,11 +339,17 @@ public class AppLogsBridgeTest {
         WithdrawalWithProof withdrawalWithProof = tree.getProof(d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(hash160(to), integer(amount), integer(nonce), integer(withdrawalWithProof.path), array(withdrawalWithProof.proof)));
+
         Hash256 txHash = withdrawalGas(tree.getRoot(), signMsg(validators, root), withdrawal);
         TestHelper.WithdrawEvent withdrawEvent = getWithdrawEvent(txHash, neow3j);
         assertThat(withdrawEvent.nonce, is(nonce));
         assertThat(withdrawEvent.to, is(to));
         assertThat(withdrawEvent.amount, is(amount));
+
+        TestHelper.TransferEvent transferEvent = getTransferEvent(txHash, neow3j, 0);
+        assertThat(transferEvent.from, is(bridge.getScriptHash()));
+        assertThat(transferEvent.to, is(to));
+        assertThat(transferEvent.amount, is(amount));
     }
 
     @Test
@@ -375,6 +381,16 @@ public class AppLogsBridgeTest {
         assertThat(withdrawEvent.nonce, is(nonce1));
         assertThat(withdrawEvent.to, is(to));
         assertThat(withdrawEvent.amount, is(amount1));
+
+        TestHelper.TransferEvent transferEvent = getTransferEvent(txHash, neow3j, 0);
+        assertThat(transferEvent.from, is(bridge.getScriptHash()));
+        assertThat(transferEvent.to, is(to));
+        assertThat(transferEvent.amount, is(amount1));
+
+        transferEvent = getTransferEvent(txHash, neow3j, 2);
+        assertThat(transferEvent.from, is(bridge.getScriptHash()));
+        assertThat(transferEvent.to, is(to));
+        assertThat(transferEvent.amount, is(amount2));
     }
 
     @Test
@@ -388,14 +404,12 @@ public class AppLogsBridgeTest {
         String[] leafNodes = new String[32];
         Arrays.fill(leafNodes, Numeric.toHexString(Hash256.ZERO.toArray()));
         leafNodes[0] = d1;
-        String root = buildSubTree(32, Arrays.asList(leafNodes), 0);
         MerkleTree tree = new MerkleTree(Arrays.asList(leafNodes));
-        assertThat(root, is(tree.getRoot()));
 
         WithdrawalWithProof withdrawalWithProof = tree.getProof(d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(hash160(to), integer(amount), integer(nonce), integer(withdrawalWithProof.path), array(withdrawalWithProof.proof)));
-        Hash256 txHash = withdrawalGas(tree.getRoot(), signMsg(validators, root), withdrawal);
+        Hash256 txHash = withdrawalGas(tree.getRoot(), signMsg(validators, tree.getRoot()), withdrawal);
         TestHelper.ClaimableEvent claimableEvent = getClaimableEvent(txHash, neow3j);
         assertThat(claimableEvent.nonce, is(nonce));
         assertThat(claimableEvent.to, is(to));
@@ -414,6 +428,11 @@ public class AppLogsBridgeTest {
         assertThat(claimEvent.nonce, is(nonce));
         assertThat(claimEvent.to, is(to));
         assertThat(claimEvent.amount, is(amount));
+
+        TestHelper.TransferEvent transferEvent = getTransferEvent(txHash, neow3j, 0);
+        assertThat(transferEvent.from, is(bridge.getScriptHash()));
+        assertThat(transferEvent.to, is(to));
+        assertThat(transferEvent.amount, is(amount));
     }
 
     private Hash256 claimGas(int nonce) throws Throwable {

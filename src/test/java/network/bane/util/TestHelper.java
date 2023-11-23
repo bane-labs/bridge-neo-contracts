@@ -234,11 +234,7 @@ public class TestHelper {
     }
 
     private static boolean powOfTwo(int n) {
-        if (n == 1) return false; // technically valid, but in this case we require n > 1
-        while (n % 2 == 0) {
-            n /= 2;
-        }
-        return n == 1;
+       return  (n & (n - 1)) == 0;
     }
 
     // endregion
@@ -253,6 +249,14 @@ public class TestHelper {
                 .getFirstExecution().getNotification(1);
         assertThat(depositEvent.getEventName(), is("Deposit"));
         return depositEventFromNotification(depositEvent);
+    }
+
+    public static TransferEvent getTransferEvent(Hash256 txHash, Neow3j neow3j, int index) throws IOException {
+        // GasToken Transfer is first notification, onWithdrawal is second notification.
+        Notification transferEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution().getNotification(index);
+        assertThat(transferEvent.getEventName(), is("Transfer"));
+        return transferEventFromNotification(transferEvent);
     }
 
     public static WithdrawEvent getWithdrawEvent(Hash256 txHash, Neow3j neow3j) throws IOException {
@@ -291,6 +295,14 @@ public class TestHelper {
             return new DepositEvent(nonce, amount, to, from, depositHash, rootHash);
         }
         return new DepositEvent(nonce, amount, to, from);
+    }
+
+    private static TransferEvent transferEventFromNotification(Notification depositEvent) {
+        List<StackItem> state = depositEvent.getState().getList();
+        Hash160 from = Hash160.fromAddress(state.get(0).getAddress());
+        Hash160 to = Hash160.fromAddress(state.get(1).getAddress());
+        BigInteger amount = state.get(2).getInteger();
+        return new TransferEvent(from, to, amount);
     }
 
     private static WithdrawEvent withdrawEventFromNotification(Notification depositEvent) {
@@ -434,6 +446,37 @@ public class TestHelper {
         public String toString() {
             return "\nWithdrawEvent\n" +
                     "\n  nonce=" + nonce +
+                    "\n  to=" + to +
+                    "\n  amount=" + amount +
+                    "\n";
+        }
+    }
+
+    public static class TransferEvent {
+        public Hash160 from;
+        public Hash160 to;
+        public BigInteger amount;
+
+        public TransferEvent( Hash160 from, Hash160 to, BigInteger amount) {
+            this.from = from;
+            this.to = to;
+            this.amount = amount;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof TransferEvent)) return false;
+            TransferEvent that = (TransferEvent) o;
+            return from.equals(that.from) &&
+                    to.equals(that.to) &&
+                    amount.equals(that.amount);
+        }
+
+        @Override
+        public String toString() {
+            return "\nTransferEvent\n" +
+                    "\n  from=" + from +
                     "\n  to=" + to +
                     "\n  amount=" + amount +
                     "\n";
