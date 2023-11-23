@@ -362,10 +362,8 @@ public class AppLogsBridgeTest {
         String[] leafNodes = new String[32];
         Arrays.fill(leafNodes, Numeric.toHexString(Hash256.ZERO.toArray()));
         leafNodes[0] = d1;
-        leafNodes[1] = d2;
-//        String root = buildSubTree(32, Arrays.asList(leafNodes), 0);
+        leafNodes[15] = d2;
         MerkleTree tree = new MerkleTree(Arrays.asList(leafNodes));
-//        assertThat(root, is(tree.getRoot()));
 
         WithdrawalWithProof withdrawalWithProof1 = tree.getProof(d1);
         WithdrawalWithProof withdrawalWithProof2 = tree.getProof(d2);

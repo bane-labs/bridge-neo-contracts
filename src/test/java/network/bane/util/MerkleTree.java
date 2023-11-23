@@ -84,9 +84,7 @@ public class MerkleTree {
 
         }
         int base = (int)(Math.log(leaves.size()) / Math.log(2));
-        if (path <= (Math.pow(2, base-1)-1)){
-            path = path << 1 ;
-        }
+        path = path << base-(Integer.toBinaryString(path).length());
         return new WithdrawalWithProof(proofList, path);
     }
 
