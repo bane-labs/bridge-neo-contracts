@@ -435,6 +435,112 @@ public class AppLogsBridgeTest {
         assertThat(transferEvent.amount, is(amount));
     }
 
+    @Test
+    @Order(17)
+    public void testWithdrawal_5() throws Throwable {
+        Hash160 to = alice.getScriptHash();
+        BigInteger amount = new BigInteger("1000000000");
+        bridgeGas(bob, to, amount, false);
+        BigInteger amount1 = minDeposit;
+        BigInteger nonce1 = new BigInteger("5");
+        BigInteger amount2 = minDeposit;
+        BigInteger nonce2 = new BigInteger("7");
+
+        String d1 = createDepositHash(nonce1, to, amount1);
+        String[] leafNodes = new String[32];
+        Arrays.fill(leafNodes, Numeric.toHexString(Hash256.ZERO.toArray()));
+        leafNodes[0] = d1;
+        MerkleTree tree = new MerkleTree(Arrays.asList(leafNodes));
+
+        // the number of signatures less than 5
+        WithdrawalWithProof withdrawalWithProof = tree.getProof(d1);
+        List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4);
+        ContractParameter withdrawal = array(array(hash160(to), integer(amount1), integer(nonce1), integer(withdrawalWithProof.path), array(withdrawalWithProof.proof)));
+        MerkleTree finalTree1 = tree;
+        List<Account> finalValidators1 = validators;
+        ContractParameter finalWithdrawal1 = withdrawal;
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () ->
+                withdrawalGas(finalTree1.getRoot(), signMsg(finalValidators1, finalTree1.getRoot()), finalWithdrawal1));
+        assertThat(thrown.getMessage(), containsString("Not enough signatures provided."));
+
+
+        // nonce array is not subsequent.
+        String d2 = createDepositHash(nonce1, to, amount1);
+        String d3 = createDepositHash(nonce2, to, amount2);
+        leafNodes = new String[32];
+        Arrays.fill(leafNodes, Numeric.toHexString(Hash256.ZERO.toArray()));
+        leafNodes[0] = d2;
+        leafNodes[15] = d3;
+        tree = new MerkleTree(Arrays.asList(leafNodes));
+
+        WithdrawalWithProof withdrawalWithProof1 = tree.getProof(d2);
+        WithdrawalWithProof withdrawalWithProof2 = tree.getProof(d3);
+        validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
+        withdrawal = array(array(hash160(to), integer(amount1), integer(nonce1), integer(withdrawalWithProof1.path), array(withdrawalWithProof1.proof)),
+                array(hash160(to), integer(amount2), integer(nonce2), integer(withdrawalWithProof2.path), array(withdrawalWithProof2.proof)));
+        MerkleTree finalTree2 = tree;
+        List<Account> finalValidators2 = validators;
+        ContractParameter finalWithdrawal2 = withdrawal;
+        thrown = assertThrows(TransactionConfigurationException.class, () ->
+                withdrawalGas(finalTree2.getRoot(), signMsg(finalValidators2, finalTree2.getRoot()), finalWithdrawal2));
+        assertThat(thrown.getMessage(), containsString("Provided withdrawals are not subsequent."));
+
+
+        // start nonce is incorrect.
+        d1 = createDepositHash(nonce2, to, amount2);
+        leafNodes = new String[32];
+        Arrays.fill(leafNodes, Numeric.toHexString(Hash256.ZERO.toArray()));
+        leafNodes[0] = d1;
+        tree = new MerkleTree(Arrays.asList(leafNodes));
+
+        withdrawalWithProof = tree.getProof(d1);
+        validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
+        withdrawal = array(array(hash160(to), integer(amount2), integer(nonce2), integer(withdrawalWithProof.path), array(withdrawalWithProof.proof)));
+        MerkleTree finalTree3 = tree;
+        List<Account> finalValidators3 = validators;
+        ContractParameter finalWithdrawal3 = withdrawal;
+        thrown = assertThrows(TransactionConfigurationException.class, () ->
+                withdrawalGas(finalTree3.getRoot(), signMsg(finalValidators3, finalTree3.getRoot()), finalWithdrawal3));
+        assertThat(thrown.getMessage(), containsString("Provided first nonce is not the next one."));
+
+        // proof invalid in the withdrawal process
+        d1 = createDepositHash(nonce1, to, amount1);
+        leafNodes = new String[32];
+        Arrays.fill(leafNodes, Numeric.toHexString(Hash256.ZERO.toArray()));
+        leafNodes[0] = d1;
+        tree = new MerkleTree(Arrays.asList(leafNodes));
+
+        withdrawalWithProof = tree.getProof(d1);
+        withdrawalWithProof.path = 1;
+        validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
+        withdrawal = array(array(hash160(to), integer(amount1), integer(nonce1), integer(withdrawalWithProof.path), array(withdrawalWithProof.proof)));
+        MerkleTree finalTree4 = tree;
+        List<Account> finalValidators4 = validators;
+        ContractParameter finalWithdrawal4 = withdrawal;
+        thrown = assertThrows(TransactionConfigurationException.class, () ->
+                withdrawalGas(finalTree4.getRoot(), signMsg(finalValidators4, finalTree4.getRoot()), finalWithdrawal4));
+        assertThat(thrown.getMessage(), containsString("Invalid proof provided."));
+
+        // signatures invalid
+        d1 = createDepositHash(nonce1, to, amount1);
+        leafNodes = new String[32];
+        Arrays.fill(leafNodes, Numeric.toHexString(Hash256.ZERO.toArray()));
+        leafNodes[0] = d1;
+        tree = new MerkleTree(Arrays.asList(leafNodes));
+
+        withdrawalWithProof = tree.getProof(d1);
+        withdrawalWithProof.path = 1;
+        validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
+        withdrawal = array(array(hash160(to), integer(amount1), integer(nonce1), integer(withdrawalWithProof.path), array(withdrawalWithProof.proof)));
+        MerkleTree finalTree5 = tree;
+        List<Account> finalValidators5 = validators;
+        ContractParameter finalWithdrawal5 = withdrawal;
+        String invalidRoot = Hash256.ZERO.toString();
+        thrown = assertThrows(TransactionConfigurationException.class, () ->
+                withdrawalGas(finalTree5.getRoot(), signMsg(finalValidators5, invalidRoot), finalWithdrawal5));
+        assertThat(thrown.getMessage(), containsString("Invalid validator signatures provided."));
+    }
+
     private Hash256 claimGas(int nonce) throws Throwable {
         NeoSendRawTransaction response = bridge.invokeFunction("claim", integer(nonce))
                 .signers(AccountSigner.calledByEntry(alice))

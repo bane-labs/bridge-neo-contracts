@@ -41,6 +41,7 @@ public class AppLogsBridgeContract {
     private static final int key_deposit_root = 0x10;
     private static final int key_deposit_nonce = 0x11;
     private static final int key_deposit_maxDepth_current = 0x12;
+
     private static final int key_withdrawal_root = 0x20;
     private static final int key_withdrawal_nonce = 0x21;
 
@@ -310,7 +311,7 @@ public class AppLogsBridgeContract {
 
     // Makes sure the withdrawal have subsequent nonces.
     private static boolean subsequentNonces(List<WithdrawalWithProof> withdrawal, int startNonce) {
-        for (int i = 1; i < withdrawal.size(); i++) {
+        for (int i = 1; i <= withdrawal.size(); i++) {
             if (withdrawal.get(i - 1).nonce != startNonce + i) {
                 return false;
             }
