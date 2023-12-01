@@ -10,7 +10,6 @@ import io.neow3j.devpack.events.Event3Args;
 import io.neow3j.devpack.events.Event6Args;
 import network.bane.interfaces.BridgeManagement;
 import network.bane.structs.BridgeDeploymentData;
-import network.bane.structs.MerkleProof;
 import network.bane.structs.Withdrawal;
 
 import static io.neow3j.devpack.Helper.*;
@@ -294,15 +293,6 @@ public class HashTreeBridgeContract {
 
     private static int currentNonce() {
         return baseMap.getInt(key_withdrawal_nonce);
-    }
-
-    private static boolean areValid(List<MerkleProof> proofs) {
-        for (int i = 0; i < proofs.size(); i++) {
-            if (!MerkleProof.isValid(proofs.get(i))) {
-                return false;
-            }
-        }
-        return true;
     }
 
     // endregion
