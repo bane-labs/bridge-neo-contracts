@@ -39,12 +39,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ContractTest(
         blockTime = 1,
-        contracts = {BridgeManagementContract.class, HashTreeBridgeContract.class, TestContract.class},
+        contracts = {BridgeManagementContract.class, BridgeContract.class, TestContract.class},
         batchFile = "setup.batch"
 )
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class HashTreeBridgeTest {
+public class BridgeTest {
 
     private static final int howManyDepositProofsToPrint = 0;
 
@@ -90,7 +90,7 @@ public class HashTreeBridgeTest {
         management = new Management(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
         assert management.getScriptHash().equals(managementContractHash) : "BridgeManagement Contract or its deployer" +
                 " has changed. Change the contract hash in this test to " + management.getScriptHash() + ".";
-        bridge = new Bridge(ext.getDeployedContract(HashTreeBridgeContract.class).getScriptHash(), neow3j);
+        bridge = new Bridge(ext.getDeployedContract(BridgeContract.class).getScriptHash(), neow3j);
         testContract = ext.getDeployedContract(TestContract.class).getScriptHash();
         alice = ext.getAccount(TestHelper.ALICE);
         bob = ext.getAccount(TestHelper.BOB);
@@ -132,7 +132,7 @@ public class HashTreeBridgeTest {
         return config;
     }
 
-    @DeployConfig(HashTreeBridgeContract.class)
+    @DeployConfig(BridgeContract.class)
     public static DeployConfiguration deployConfigBridge() {
         DeployConfiguration config = new DeployConfiguration();
         config.setDeployParam(

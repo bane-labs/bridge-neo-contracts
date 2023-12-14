@@ -16,10 +16,10 @@ import static io.neow3j.devpack.Helper.*;
 import static io.neow3j.devpack.Runtime.*;
 
 @Permission(contract = "*", methods = "transfer")
-@DisplayName("BaneBridge")
+@DisplayName("NeoXBridge")
 @ManifestExtra(key = "author", value = "BaneLabs")
-@ManifestExtra(key = "description", value = "Contract for bridging GAS tokens from Neo N3 to Bane.")
-public class HashTreeBridgeContract {
+@ManifestExtra(key = "description", value = "Contract for bridging GAS tokens from Neo N3 to Neo X.")
+public class BridgeContract {
 
     private static final StorageContext ctx = Storage.getStorageContext();
     private static final CryptoLib cryptoLib = new CryptoLib();
