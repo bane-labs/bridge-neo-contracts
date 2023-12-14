@@ -214,30 +214,6 @@ public class TestHelper {
     }
 
     // endregion
-    // region merkle tree building
-
-    public static String buildSubTree(int n, List<String> leaves, int startIndex) {
-        assert powOfTwo(n);
-        List<String> subList = leaves.subList(startIndex, startIndex + n);
-        assert subList.size() == n;
-        return buildSubTree(n, subList);
-    }
-
-    private static String buildSubTree(int n, List<String> leaves) {
-        assert leaves.size() == n;
-        if (n == 2) {
-            return concatAndSha256(leaves.get(0), leaves.get(1));
-        }
-        String left = buildSubTree(n / 2, leaves.subList(0, leaves.size() / 2));// 0-1
-        String right = buildSubTree(n / 2, leaves.subList(leaves.size() / 2, leaves.size()));// 2-3
-        return sha256Hex(concatLeftRight(left, right));
-    }
-
-    private static boolean powOfTwo(int n) {
-       return  (n & (n - 1)) == 0;
-    }
-
-    // endregion
 
     private static List<Notification> getEvents(Hash256 txHash, Neow3j neow3j) throws IOException {
         return neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getNotifications();

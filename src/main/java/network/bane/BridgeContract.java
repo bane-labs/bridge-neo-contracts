@@ -32,7 +32,7 @@ public class BridgeContract {
     private static final StorageMap claimMap = new StorageMap(ctx, prefix_claim);
 
     private static final int key_bridgeManagement = 0x01;
-    private static final int key_deposit_price = 0x02;
+    private static final int key_deposit_fee = 0x02;
     private static final int key_deposit_min = 0x03;
     private static final int key_deposit_max = 0x04;
     private static final int key_max_withdrawal_per_root = 0x05;
@@ -112,11 +112,10 @@ public class BridgeContract {
             assert BridgeDeploymentData.isValid(deploymentData);
 
             baseMap.put(key_bridgeManagement, deploymentData.bridgeManagementContractHash);
-            baseMap.put(key_deposit_price, deploymentData.depositPrice);
+            baseMap.put(key_deposit_fee, deploymentData.depositFee);
             baseMap.put(key_deposit_min, deploymentData.minDeposit);
             baseMap.put(key_deposit_max, deploymentData.maxDeposit);
             baseMap.put(key_max_withdrawal_per_root, deploymentData.maxWithdrawalPerRootUpdate);
-
 
             // First deposit and withdrawal roots will be zero hashes
             baseMap.put(key_deposit_root, Hash256.zero());
@@ -131,22 +130,28 @@ public class BridgeContract {
     // region public deposit
 
     @OnNEP17Payment
-    public static void onNep17Payment(Hash160 from, int amount, Object data) {
-        if (getCallingScriptHash() != gasToken.getHash()) {
-            abort("Only GAS is accepted.");
-        }
+    public static void onNep17Payment(Hash160 from, int amountWithFee, Object data) {
+        if (getCallingScriptHash() != gasToken.getHash()) abort("Only GAS is accepted.");
         Hash160 to = (Hash160) data;
-        assert Hash160.isValid(to) : "Invalid recipient data.";
-        assert !to.isZero() : "Recipient must not be zero.";
+        if (!Hash160.isValid(to)) abort("Invalid recipient data.");
+        if (to.isZero()) abort("Recipient must not be zero.");
 
-        assert amount >= minDeposit() : "Deposit amount is too low.";
-        assert amount < maxDeposit() : "Deposit amount is too high.";
+        int depositFee = depositFee();
+        if (amountWithFee < minDeposit() + depositFee) abort("Deposit amount is too low.");
+        if (amountWithFee >= maxDeposit() + depositFee) abort("Deposit amount is too high.");
+        int depositAmount = amountWithFee - depositFee;
 
         int nonce = newNonce();
-        ByteString depositHash = hashDepositOrWithdrawal(nonce, amount, to);
+        ByteString depositHash = hashDepositOrWithdrawal(nonce, depositAmount, to);
         ByteString newRoot = computeNewRoot(baseMap.get(key_deposit_root), depositHash);
         baseMap.put(key_deposit_root, newRoot);
-        onDeposit.fire(nonce, amount, to, from, depositHash, newRoot);
+        onDeposit.fire(nonce, depositAmount, to, from, depositHash, newRoot);
+    }
+
+    public static void deposit(Hash160 from, Hash160 to, int depositAmount) {
+        if (!gasToken.transfer(from, getExecutingScriptHash(), depositAmount + depositFee(), to)) {
+            abort("Transfer failed.");
+        }
     }
 
     // endregion
@@ -335,8 +340,8 @@ public class BridgeContract {
     }
 
     @Safe
-    public static int depositPrice() {
-        return baseMap.getInt(key_deposit_price);
+    public static int depositFee() {
+        return baseMap.getInt(key_deposit_fee);
     }
 
     @Safe

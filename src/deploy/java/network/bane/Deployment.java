@@ -28,7 +28,7 @@ public class Deployment {
         Neow3j neow3j = Neow3j.build(new HttpService(NODE));
 
         // Compile the HelloWorldSmartContract
-        CompilationUnit res = new Compiler().compile(FungibleTokenBridgeContract.class.getCanonicalName());
+        CompilationUnit res = new Compiler().compile(BridgeContract.class.getCanonicalName());
 
         // Build the deployment transaction
         AccountSigner signer = AccountSigner.none(OWNER_ACCOUNT);
