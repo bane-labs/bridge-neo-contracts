@@ -35,8 +35,7 @@ public class BridgeContract {
     private static final int key_deposit_fee = 0x02;
     private static final int key_deposit_min = 0x03;
     private static final int key_deposit_max = 0x04;
-    private static final int key_max_withdrawal_per_root = 0x05;
-    //    private static final int key_locked = 0x06;
+    //    private static final int key_locked = 0x05;
 
     private static final int key_deposit_root = 0x10;
     private static final int key_deposit_nonce = 0x11;
@@ -115,7 +114,6 @@ public class BridgeContract {
             baseMap.put(key_deposit_fee, deploymentData.depositFee);
             baseMap.put(key_deposit_min, deploymentData.minDeposit);
             baseMap.put(key_deposit_max, deploymentData.maxDeposit);
-            baseMap.put(key_max_withdrawal_per_root, deploymentData.maxWithdrawalPerRootUpdate);
 
             // First deposit and withdrawal roots will be zero hashes
             baseMap.put(key_deposit_root, Hash256.zero());
@@ -352,11 +350,6 @@ public class BridgeContract {
     @Safe
     public static int maxDeposit() {
         return baseMap.getInt(key_deposit_max);
-    }
-
-    @Safe
-    public static int maxWithdrawalPerRoot() {
-        return baseMap.getInt(key_max_withdrawal_per_root);
     }
 
     // endregion

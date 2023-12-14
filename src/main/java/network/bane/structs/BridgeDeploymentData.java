@@ -9,14 +9,12 @@ public class BridgeDeploymentData {
     public int depositFee;
     public int minDeposit;
     public int maxDeposit;
-    public int maxWithdrawalPerRootUpdate;
 
     public static boolean isValid(BridgeDeploymentData bridgeDeploymentData) {
         return Hash160.isValid(bridgeDeploymentData.bridgeManagementContractHash) &&
                 bridgeDeploymentData.depositFee >= 0 &&
                 bridgeDeploymentData.minDeposit >= 0 &&
-                bridgeDeploymentData.maxDeposit >= bridgeDeploymentData.minDeposit &&
-                bridgeDeploymentData.maxWithdrawalPerRootUpdate >= 0;
+                bridgeDeploymentData.maxDeposit >= bridgeDeploymentData.minDeposit;
     }
 
 }
