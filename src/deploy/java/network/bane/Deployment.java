@@ -52,9 +52,9 @@ public class Deployment {
 
     // Parameters
 
-    private static final BigInteger depositFee = new BigInteger("0_1000_0000");
-    private static final BigInteger minDepositAmount = new BigInteger("1_0000_0000");
-    private static final BigInteger maxDepositAmount = new BigInteger("10_000_0000_0000");
+    private static final BigInteger depositFee = new BigInteger("10000000");
+    private static final BigInteger minDepositAmount = new BigInteger("100000000");
+    private static final BigInteger maxDepositAmount = new BigInteger("1000000000000");
 
     public static ContractParameter prepareManagementDeployParameter(
             ECKeyPair.ECPublicKey owner,
