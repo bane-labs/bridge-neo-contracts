@@ -396,12 +396,8 @@ public class BridgeContract {
     //endregion
     
     // region update
-
-    public static void update(ByteString nef, String manifest, Object data) {
-        if (!checkWitness(owner())) abort("Only the owner can update.");
-        contractManagement.update(nef, manifest, data);
-    }
-
+    // Todo: Add code for updating contract (call to contract management and storage changes)
+    //  Consider allowing contract update only through Mangement contract.
     // endregion
 
 }
