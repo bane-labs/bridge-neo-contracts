@@ -1,7 +1,6 @@
 package network.bane;
 
 import io.neow3j.devpack.*;
-import io.neow3j.devpack.Runtime;
 import io.neow3j.devpack.annotations.*;
 import io.neow3j.devpack.constants.NamedCurve;
 import io.neow3j.devpack.contracts.ContractManagement;
@@ -388,7 +387,7 @@ public class BridgeContract {
 
     //region set fee
     public static void setFee(int fee) {
-        if(!Runtime.checkWitness(owner())) abort("only owner can set fee");
+        if(!checkWitness(owner())) abort("only owner can set fee");
         if(fee < 0) abort("Fee must be positive.");
         baseMap.put(key_deposit_fee, fee);
     }
