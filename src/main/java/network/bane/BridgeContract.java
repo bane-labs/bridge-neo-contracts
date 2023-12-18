@@ -1,6 +1,7 @@
 package network.bane;
 
 import io.neow3j.devpack.*;
+import io.neow3j.devpack.Runtime;
 import io.neow3j.devpack.annotations.*;
 import io.neow3j.devpack.constants.NamedCurve;
 import io.neow3j.devpack.contracts.ContractManagement;
@@ -51,6 +52,7 @@ public class BridgeContract {
     private static final byte const_hash160_size = 20;
 
     private static final GasToken gasToken = new GasToken();
+    private static final ContractManagement contractManagement = new ContractManagement();
 
     // endregion
     // region events
@@ -383,10 +385,21 @@ public class BridgeContract {
     }
 
     // endregion
+
+    //region set fee
+    public static void setFee(int fee) {
+        if(!Runtime.checkWitness(owner())) abort("only owner can set fee");
+        if(fee < 0) abort("Fee must be positive.");
+        baseMap.put(key_deposit_fee, fee);
+    }
+    //endregion
+    
     // region update
 
-    // Todo: Add code for updating contract (call to contract management and storage changes)
-    //  Consider allowing contract update only through Mangement contract.
+    public static void update(ByteString nef, String manifest, Object data) {
+        if (!checkWitness(owner())) abort("Only the owner can update.");
+        contractManagement.update(nef, manifest, data);
+    }
 
     // endregion
 
