@@ -385,12 +385,14 @@ public class BridgeContract {
 
     // endregion
 
-    //region set fee
-    public static void setFee(int fee) {
-        if(!checkWitness(owner())) abort("only owner can set fee");
-        if(fee < 0) abort("Fee must be positive.");
+    // region setters
+    
+    public static void setDepositFee(int fee) {
+        if(!checkWitness(owner())) abort("Only owner can set deposit fee.");
+        if(fee < 0) abort("Deposit fee must be positive.");
         baseMap.put(key_deposit_fee, fee);
     }
+    
     //endregion
     
     // region update

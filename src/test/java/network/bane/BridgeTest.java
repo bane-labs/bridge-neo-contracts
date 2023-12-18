@@ -498,6 +498,17 @@ public class BridgeTest {
         assertThat(claimEvent.amount, is(amount));
     }
 
+    // Test setDepositFee function
+    @Test
+    @Order(0)
+    public void testSetDepositFee() throws Throwable {
+        BigInteger newFee = new BigInteger("200000000");
+        setDepositFee(bridge, neow3j, newFee);
+        BigInteger newdepositFee = bridge.depositFee();
+        assertThat(newdepositFee, is(newFee));
+        setDepositFee(bridge, neow3j, depositFee);
+    }
+
     private Hash256 withdrawGas(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
             ContractParameter withdrawals) throws Throwable {
         NeoSendRawTransaction response =
