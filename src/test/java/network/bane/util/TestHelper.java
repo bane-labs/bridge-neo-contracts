@@ -140,6 +140,15 @@ public class TestHelper {
         waitUntilTransactionIsExecuted(response, neow3j);
     }
 
+    public static void setDepositFee(Bridge bridge, Neow3j neow3j, BigInteger fee) throws Throwable {
+        NeoSendRawTransaction response =
+                bridge.invokeFunction("setDepositFee", integer(fee))
+                        .signers(calledByEntry(owner))
+                        .sign()
+                        .send();
+        waitUntilTransactionIsExecuted(response, neow3j);
+    }
+
     public static void waitUntilTransactionIsExecuted(NeoSendRawTransaction response, Neow3j neow3j) {
         Await.waitUntilTransactionIsExecuted(response.getSendRawTransaction().getHash(), neow3j);
     }

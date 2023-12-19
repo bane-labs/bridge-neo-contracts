@@ -483,7 +483,6 @@ public class BridgeTest {
         assertThat(claimableEvent.amount, is(amount));
     }
 
-    // Test claim function
     @Test
     @Order(23)
     public void testClaim() throws Throwable {
@@ -496,6 +495,60 @@ public class BridgeTest {
         assertThat(claimEvent.nonce, is(nonce));
         assertThat(claimEvent.to, is(to));
         assertThat(claimEvent.amount, is(amount));
+    }
+
+    // endregion
+    // region deposit fee
+
+    @Test
+    @Order(0)
+    public void testSetDepositFee() throws Throwable {
+        BigInteger newFee = new BigInteger("200000000");
+        assertThat(bridge.depositFee(), is(not(newFee)));
+
+        setDepositFee(bridge, neow3j, newFee);
+        BigInteger actualDepositFee = bridge.depositFee();
+        assertThat(actualDepositFee, is(newFee));
+        setDepositFee(bridge, neow3j, depositFee);
+    }
+
+    @Test
+    @Order(0)
+    public void testSetDepositFee_FeeisZero() throws Throwable {
+        BigInteger newFee = new BigInteger("0");
+        assertThat(bridge.depositFee(), is(not(newFee)));
+
+        setDepositFee(bridge, neow3j, newFee);
+        BigInteger actualDepositFee = bridge.depositFee();
+        assertThat(actualDepositFee, is(newFee));
+        setDepositFee(bridge, neow3j, depositFee);
+    }
+
+    @Test
+    @Order(0)
+    public void testSetDepositFee_assertFailIfFeeLowerThanZero() {
+        BigInteger newFee = new BigInteger("-1");
+        TransactionConfigurationException thrown =
+                assertThrows(TransactionConfigurationException.class, () ->
+                        setDepositFee(bridge, neow3j, newFee)
+                );
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Deposit fee must be nonnegative."));
+    }
+
+    @Test
+    @Order(0)
+    public void testSetDepositFee_assertFailIfCallerisNotOwner() {
+        BigInteger newFee = new BigInteger("200000000");
+        TransactionConfigurationException thrown =
+                assertThrows(TransactionConfigurationException.class, () ->
+                        bridge.invokeFunction("setDepositFee", integer(newFee))
+                                .signers(AccountSigner.calledByEntry(alice))
+                                .sign()
+                                .send()
+                );
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Only owner can set deposit fee."));
     }
 
     private Hash256 withdrawGas(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,

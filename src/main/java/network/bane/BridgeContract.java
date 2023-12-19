@@ -50,6 +50,7 @@ public class BridgeContract {
     private static final byte const_hash160_size = 20;
 
     private static final GasToken gasToken = new GasToken();
+    private static final ContractManagement contractManagement = new ContractManagement();
 
     // endregion
     // region events
@@ -376,11 +377,20 @@ public class BridgeContract {
     }
 
     // endregion
-    // region update
 
+    // region setters
+    
+    public static void setDepositFee(int fee) {
+        if(!checkWitness(owner())) abort("Only owner can set deposit fee.");
+        if(fee < 0) abort("Deposit fee must be nonnegative.");
+        baseMap.put(key_deposit_fee, fee);
+    }
+    
+    //endregion
+    
+    // region update
     // Todo: Add code for updating contract (call to contract management and storage changes)
     //  Consider allowing contract update only through Mangement contract.
-
     // endregion
 
 }
