@@ -140,6 +140,15 @@ public class TestHelper {
         waitUntilTransactionIsExecuted(response, neow3j);
     }
 
+    public static void setDepositFee(Bridge bridge, Neow3j neow3j, BigInteger fee) throws Throwable {
+        NeoSendRawTransaction response =
+                bridge.invokeFunction("setDepositFee", integer(fee))
+                        .signers(calledByEntry(owner))
+                        .sign()
+                        .send();
+        waitUntilTransactionIsExecuted(response, neow3j);
+    }
+
     public static void waitUntilTransactionIsExecuted(NeoSendRawTransaction response, Neow3j neow3j) {
         Await.waitUntilTransactionIsExecuted(response.getSendRawTransaction().getHash(), neow3j);
     }
@@ -211,30 +220,6 @@ public class TestHelper {
             return temp;
         }
         return bytes;
-    }
-
-    // endregion
-    // region merkle tree building
-
-    public static String buildSubTree(int n, List<String> leaves, int startIndex) {
-        assert powOfTwo(n);
-        List<String> subList = leaves.subList(startIndex, startIndex + n);
-        assert subList.size() == n;
-        return buildSubTree(n, subList);
-    }
-
-    private static String buildSubTree(int n, List<String> leaves) {
-        assert leaves.size() == n;
-        if (n == 2) {
-            return concatAndSha256(leaves.get(0), leaves.get(1));
-        }
-        String left = buildSubTree(n / 2, leaves.subList(0, leaves.size() / 2));// 0-1
-        String right = buildSubTree(n / 2, leaves.subList(leaves.size() / 2, leaves.size()));// 2-3
-        return sha256Hex(concatLeftRight(left, right));
-    }
-
-    private static boolean powOfTwo(int n) {
-       return  (n & (n - 1)) == 0;
     }
 
     // endregion
