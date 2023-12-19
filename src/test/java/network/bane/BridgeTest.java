@@ -483,7 +483,6 @@ public class BridgeTest {
         assertThat(claimableEvent.amount, is(amount));
     }
 
-    // Test claim function
     @Test
     @Order(23)
     public void testClaim() throws Throwable {
@@ -498,14 +497,18 @@ public class BridgeTest {
         assertThat(claimEvent.amount, is(amount));
     }
 
-    // Test setDepositFee function
+    // endregion
+    // region deposit fee
+
     @Test
     @Order(0)
     public void testSetDepositFee() throws Throwable {
         BigInteger newFee = new BigInteger("200000000");
+        assertThat(bridge.depositFee(), is(not(newFee)));
+
         setDepositFee(bridge, neow3j, newFee);
-        BigInteger newdepositFee = bridge.depositFee();
-        assertThat(newdepositFee, is(newFee));
+        BigInteger actualDepositFee = bridge.depositFee();
+        assertThat(actualDepositFee, is(newFee));
         setDepositFee(bridge, neow3j, depositFee);
     }
 
@@ -513,9 +516,11 @@ public class BridgeTest {
     @Order(0)
     public void testSetDepositFee_FeeisZero() throws Throwable {
         BigInteger newFee = new BigInteger("0");
+        assertThat(bridge.depositFee(), is(not(newFee)));
+
         setDepositFee(bridge, neow3j, newFee);
-        BigInteger newdepositFee = bridge.depositFee();
-        assertThat(newdepositFee, is(newFee));
+        BigInteger actualDepositFee = bridge.depositFee();
+        assertThat(actualDepositFee, is(newFee));
         setDepositFee(bridge, neow3j, depositFee);
     }
 
