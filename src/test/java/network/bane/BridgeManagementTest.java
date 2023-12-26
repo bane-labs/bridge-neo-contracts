@@ -108,7 +108,8 @@ public class BridgeManagementTest {
                                 validator6PubKey,
                                 validator7PubKey
                         ),
-                        5
+                        5,
+                        validator1PubKey
                 )
         );
         return config;
@@ -119,8 +120,8 @@ public class BridgeManagementTest {
     @Test
     public void testManifestMethods() throws IOException {
         assertThat(management.getManifest().getName(), is("BridgeManagement"));
-        assertThat(management.getManifest().getAbi().getMethods(), hasSize(9));
-        assertThat(management.getManifest().getAbi().getEvents(), hasSize(3));
+        assertThat(management.getManifest().getAbi().getMethods(), hasSize(10));
+        assertThat(management.getManifest().getAbi().getEvents(), hasSize(4));
         assertThat(management.getManifest().getSupportedStandards(), hasSize(0));
         assertThat(management.getManifest().getPermissions(), hasSize(0));
         assertThat(management.getManifest().getTrusts(), hasSize(0));

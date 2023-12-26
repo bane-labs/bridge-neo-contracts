@@ -51,9 +51,8 @@ public class BridgeTest {
     private static final BigInteger depositFee = new BigInteger("10000000");
     private static final BigInteger minDeposit = new BigInteger("100000000");
     private static final BigInteger maxDeposit = new BigInteger("1000000000000");
-    private static final BigInteger maxWithdrawalPerRootUpdate = new BigInteger("10");
 
-    private static final Hash160 managementContractHash = new Hash160("5d5875cab4333e13b645926c3a5a206153aa58a0");
+    private static final Hash160 managementContractHash = new Hash160("11d63f20e63fd360d07367fab34dc97b5e070300");
 
     private static Bridge bridge;
     private static Management management;
@@ -126,7 +125,8 @@ public class BridgeTest {
                                 validator6PubKey,
                                 validator7PubKey
                         ),
-                        5
+                        5,
+                        validator1PubKey
                 )
         );
         return config;
@@ -140,22 +140,19 @@ public class BridgeTest {
                         managementContractHash,
                         depositFee,
                         minDeposit,
-                        maxDeposit,
-                        maxWithdrawalPerRootUpdate
+                        maxDeposit
                 )
         );
         return config;
     }
 
     private static ContractParameter prepareBridgeDeployParameter(Hash160 managementContractHash,
-            BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit,
-            BigInteger maxWithdrawalPerRootUpdate) {
+            BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit) {
         return array(
                 hash160(managementContractHash),
                 integer(depositFee),
                 integer(minDeposit),
-                integer(maxDeposit),
-                integer(maxWithdrawalPerRootUpdate)
+                integer(maxDeposit)
         );
     }
 
@@ -222,7 +219,7 @@ public class BridgeTest {
         assertThat(bridge.depositFee(), is(depositFee));
         assertThat(bridge.minDeposit(), is(minDeposit));
         assertThat(bridge.maxDeposit(), is(maxDeposit));
-        assertThat(bridge.maxWithdrawalPerRoot(), is(maxWithdrawalPerRootUpdate));
+        assertThat(bridge.isLocked(), is(false));
 
         // Deposit Root
         assertThat(bridge.getStorage("0x0a10"), is(

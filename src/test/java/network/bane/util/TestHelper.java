@@ -113,7 +113,8 @@ public class TestHelper {
             ECKeyPair.ECPublicKey owner,
             ECKeyPair.ECPublicKey relayer,
             List<ECPublicKey> validators,
-            Integer threshold
+            Integer threshold,
+            ECKeyPair.ECPublicKey recoverer
     ) {
         return array(
                 publicKey(owner),
@@ -127,7 +128,8 @@ public class TestHelper {
                         publicKey(validators.get(5)),
                         publicKey(validators.get(6))
                 ),
-                integer(threshold)
+                integer(threshold),
+                publicKey(recoverer)
         );
     }
 

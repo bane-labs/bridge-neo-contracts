@@ -35,7 +35,7 @@ public class BridgeContract {
     private static final int key_deposit_fee = 0x02;
     private static final int key_deposit_min = 0x03;
     private static final int key_deposit_max = 0x04;
-    //    private static final int key_locked = 0x05;
+    private static final int key_locked = 0x05;
 
     private static final int key_deposit_root = 0x10;
     private static final int key_deposit_nonce = 0x11;
@@ -122,6 +122,7 @@ public class BridgeContract {
 
             baseMap.put(key_deposit_nonce, 0);
             baseMap.put(key_withdrawal_nonce, 0);
+            baseMap.put(key_locked, 0);
         }
     }
 
@@ -194,6 +195,7 @@ public class BridgeContract {
             abort("Invalid validator signatures provided.");
         }
 
+        assert baseMap.getInt(key_locked) == 0 : "Contract is locked.";
         assert withdrawals.size() > 0 : "At least one withdrawal is required.";
         int startNonce = withdrawals.get(0).nonce;
         assert startNonce == currentNonce() + 1 : "Provided first nonce is not the next one.";
@@ -224,6 +226,24 @@ public class BridgeContract {
         } else {
             onClaimed.fire(nonce, amount, to);
         }
+    }
+
+    public static void lock() {
+        if (!checkWitness(owner())) {
+            abort("Only the owner can lock the contract.");
+        }
+        baseMap.put(key_locked, 1);
+    }
+
+    public static void unlock() {
+        if (!checkWitness(recoverer())) {
+            abort("Only the recoverer can unlock the contract.");
+        }
+        baseMap.put(key_locked, 0);
+    }
+
+    public static boolean isLocked() {
+        return baseMap.getInt(key_locked) != 0;
     }
 
     // endregion
@@ -316,6 +336,10 @@ public class BridgeContract {
 
     private static ECPoint owner() {
         return managementContract().owner();
+    }
+
+    private static ECPoint recoverer() {
+        return managementContract().recoverer();
     }
 
     private static List<ECPoint> validators() {

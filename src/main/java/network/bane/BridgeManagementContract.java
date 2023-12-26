@@ -27,6 +27,7 @@ public class BridgeManagementContract {
     private static final int key_owner = 0x00;
     private static final int key_relayer = 0x01;
     private static final int key_validator_threshold = 0x02;
+    private static final int key_recoverer = 0x03;
 
     private static final byte prefix_validator = 0x0b;
     private static final StorageMap validatorMap = new StorageMap(ctx, prefix_validator);
@@ -41,6 +42,9 @@ public class BridgeManagementContract {
     @DisplayName("SetRelayer")
     public static Event1Arg<ECPoint> onRelayerSet;
 
+    @DisplayName("SetRecoverer")
+    public static Event1Arg<ECPoint> onRecovererSet;
+
     @DisplayName("SetValidators")
     public static Event2Args<List<ECPoint>, Integer> onValidatorsSet;
 
@@ -53,6 +57,7 @@ public class BridgeManagementContract {
             ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
             assert ECPoint.isValid(deploymentData.owner);
             assert ECPoint.isValid(deploymentData.relayer);
+            assert ECPoint.isValid(deploymentData.recoverer);
             List<ECPoint> validators = deploymentData.validators;
             int validatorSize = validators.size();
             assert validatorSize <= const_max_validators;
@@ -61,7 +66,7 @@ public class BridgeManagementContract {
             baseMap.put(key_owner, deploymentData.owner);
             baseMap.put(key_relayer, deploymentData.relayer);
             baseMap.put(key_validator_threshold, deploymentData.validatorThreshold);
-
+            baseMap.put(key_recoverer, deploymentData.recoverer);
             for (int i = 0; i < validatorSize; i++) {
                 ECPoint validator = validators.get(i);
                 assert ECPoint.isValid(validator);
@@ -83,6 +88,12 @@ public class BridgeManagementContract {
         onlyOwner();
         baseMap.put(key_relayer, relayer);
         onRelayerSet.fire(relayer);
+    }
+
+    public static void setRecoverer(ECPoint recoverer) {
+        onlyOwner();
+        baseMap.put(key_recoverer, recoverer);
+        onRecovererSet.fire(recoverer);
     }
 
     public static void setValidators(List<ECPoint> validators, int threshold) {

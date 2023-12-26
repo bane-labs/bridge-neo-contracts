@@ -14,6 +14,7 @@ public class BridgeManagement extends ContractInterface {
     public native ECPoint owner();
     public native ECPoint relayer();
     public native List<ECPoint> validators();
+    public native ECPoint recoverer();
 
     public native int validatorThreshold();
 

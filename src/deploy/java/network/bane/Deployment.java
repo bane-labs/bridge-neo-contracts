@@ -50,6 +50,8 @@ public class Deployment {
 
     private static final int validator_threshold = 5;
 
+    private static final ECPublicKey recoverer = new ECPublicKey("0x");
+
     // Parameters
 
     private static final BigInteger depositFee = new BigInteger("10000000");
@@ -60,7 +62,8 @@ public class Deployment {
             ECKeyPair.ECPublicKey owner,
             ECKeyPair.ECPublicKey relayer,
             List<ECKeyPair.ECPublicKey> validators,
-            Integer threshold
+            Integer threshold,
+            ECKeyPair.ECPublicKey recoverer
     ) {
         return array(
                 publicKey(owner),
@@ -74,7 +77,8 @@ public class Deployment {
                         publicKey(validators.get(5)),
                         publicKey(validators.get(6))
                 ),
-                integer(threshold)
+                integer(threshold),
+                publicKey(recoverer)
         );
     }
 
@@ -107,7 +111,8 @@ public class Deployment {
                         validator_6,
                         validator_7
                 ),
-                validator_threshold
+                validator_threshold,
+                recoverer
         );
 
         // Deploy the management contract

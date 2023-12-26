@@ -47,8 +47,8 @@ public class Bridge extends SmartContractHelper {
         return callFunctionReturningInt("maxDeposit");
     }
 
-    public BigInteger maxWithdrawalPerRoot() throws IOException {
-        return callFunctionReturningInt("maxWithdrawalPerRoot");
+    public boolean isLocked() throws IOException {
+        return callFunctionReturningBool("isLocked");
     }
 
     // endregion
