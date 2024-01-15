@@ -19,14 +19,24 @@ import io.neow3j.wallet.Account;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
-import static io.neow3j.types.ContractParameter.*;
+import static io.neow3j.types.ContractParameter.array;
+import static io.neow3j.types.ContractParameter.integer;
+import static io.neow3j.types.ContractParameter.publicKey;
+import static io.neow3j.types.ContractParameter.signature;
 import static io.neow3j.utils.ArrayUtils.concatenate;
-import static io.neow3j.utils.Numeric.*;
+import static io.neow3j.utils.Numeric.cleanHexPrefix;
+import static io.neow3j.utils.Numeric.hexStringToByteArray;
+import static io.neow3j.utils.Numeric.prependHexPrefix;
+import static io.neow3j.utils.Numeric.toHexString;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;

@@ -29,13 +29,36 @@ import java.util.stream.Collectors;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
-import static io.neow3j.types.ContractParameter.*;
-import static io.neow3j.types.StackItemType.*;
+import static io.neow3j.types.ContractParameter.integer;
+import static io.neow3j.types.ContractParameter.publicKey;
+import static io.neow3j.types.StackItemType.ARRAY;
+import static io.neow3j.types.StackItemType.BYTE_STRING;
+import static io.neow3j.types.StackItemType.INTEGER;
 import static java.util.Arrays.asList;
-import static network.bane.util.TestHelper.*;
+import static network.bane.util.TestHelper.defaultValidatorThreshold;
+import static network.bane.util.TestHelper.defaultValidators;
+import static network.bane.util.TestHelper.owner;
+import static network.bane.util.TestHelper.ownerPubKey;
+import static network.bane.util.TestHelper.prepareManagementDeployParameter;
+import static network.bane.util.TestHelper.relayerPubKey;
+import static network.bane.util.TestHelper.setDefaultValidators;
+import static network.bane.util.TestHelper.validator1PubKey;
+import static network.bane.util.TestHelper.validator2PubKey;
+import static network.bane.util.TestHelper.validator3PubKey;
+import static network.bane.util.TestHelper.validator4PubKey;
+import static network.bane.util.TestHelper.validator5PubKey;
+import static network.bane.util.TestHelper.validator6PubKey;
+import static network.bane.util.TestHelper.validator7PubKey;
+import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ContractTest(blockTime = 1, contracts = BridgeManagementContract.class, batchFile = "setup.batch")
 public class BridgeManagementTest {
