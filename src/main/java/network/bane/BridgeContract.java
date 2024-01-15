@@ -68,7 +68,6 @@ public class BridgeContract {
     private static final byte const_hash160_size = 20;
 
     private static final GasToken gasToken = new GasToken();
-    private static final ContractManagement contractManagement = new ContractManagement();
 
     // endregion
     // region events
@@ -203,8 +202,7 @@ public class BridgeContract {
     // endregion
     // region withdrawal
 
-    public static void withdraw(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
-            List<Withdrawal> withdrawals) {
+    public static void withdraw(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures, List<Withdrawal> withdrawals) {
         if (!checkWitness(relayer())) {
             abort("Only the relayer can call this method.");
         }
@@ -344,6 +342,14 @@ public class BridgeContract {
         return managementContract().validatorThreshold();
     }
 
+    private static ECPoint governor() {
+        return managementContract().governor();
+    }
+
+    private static ECPoint securityGuard() {
+        return managementContract().securityGuard();
+    }
+
     private static BridgeManagement managementContract() {
         return new BridgeManagement(baseMap.getHash160(key_bridgeManagement));
     }
@@ -397,18 +403,19 @@ public class BridgeContract {
     // endregion
 
     // region setters
-    
+
     public static void setDepositFee(int fee) {
-        if(!checkWitness(owner())) abort("Only owner can set deposit fee.");
+        if(!checkWitness(governor())) abort("Only governor can set deposit fee.");
         if(fee < 0) abort("Deposit fee must be nonnegative.");
         baseMap.put(key_deposit_fee, fee);
     }
-    
+
     //endregion
-    
+
     // region update
     // Todo: Add code for updating contract (call to contract management and storage changes)
     //  Consider allowing contract update only through Mangement contract.
     // endregion
 
 }
+
