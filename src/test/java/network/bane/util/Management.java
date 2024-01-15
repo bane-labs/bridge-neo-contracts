@@ -42,4 +42,8 @@ public class Management extends SmartContractHelper {
         return new ECKeyPair.ECPublicKey(callInvokeFunction("governor").getInvocationResult().getFirstStackItem().getByteArray());
     }
 
+    public ECKeyPair.ECPublicKey securityGuard() throws IOException {
+        return new ECKeyPair.ECPublicKey(callInvokeFunction("securityGuard").getInvocationResult().getFirstStackItem().getByteArray());
+    }
+
 }

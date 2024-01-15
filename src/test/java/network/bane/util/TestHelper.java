@@ -100,6 +100,10 @@ public class TestHelper {
     public static final ECPublicKey governorPubKey = governor.getECKeyPair().getPublicKey();
     public static final Hash160 governorScriptHash = governor.getScriptHash();
 
+    public static final Account securityGuard = Account.fromWIF("L44P4HWJzrepipaXACary7LV9MEg1qkmBw83hRpQzRd8ditW17Yi");
+    public static final ECPublicKey securityGuardPubKey = securityGuard.getECKeyPair().getPublicKey();
+    public static final Hash160 securityGuardScriptHash = securityGuard.getScriptHash();
+
     public static final Account account0 = Account.fromWIF("Kzczq8Bd3h6ukXs4tgTkGd6jDeETcm18VTx3gS8ZcC5DobB25sGm");
     public static final Account account1 = Account.fromWIF("L49FvTGZTdSJbck687Kg9wrjBzQBJ1asnvKWqcvJ2sJcyP9U9rbJ");
     public static final Account account2 = Account.fromWIF("KwPnYQg2VFMq2Jn62DTVKYCg7TGdzFWvsfKkzKYgPi2LSJcxEW7D");
@@ -128,7 +132,8 @@ public class TestHelper {
             ECPublicKey relayer,
             List<ECPublicKey> validators,
             Integer threshold,
-            ECPublicKey governor
+            ECPublicKey governor,
+            ECPublicKey securityGuard
     ) {
         return array(
                 publicKey(owner),
@@ -143,7 +148,8 @@ public class TestHelper {
                         publicKey(validators.get(6))
                 ),
                 integer(threshold),
-                publicKey(governor)
+                publicKey(governor),
+                publicKey(securityGuard)
         );
     }
 

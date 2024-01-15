@@ -52,6 +52,8 @@ public class Deployment {
 
     private static final ECPublicKey governor = new ECPublicKey("0x");
 
+    private static final ECPublicKey securityGuard = new ECPublicKey("0x");
+
     // Parameters
 
     private static final BigInteger depositFee = new BigInteger("10000000");
@@ -63,7 +65,8 @@ public class Deployment {
             ECPublicKey relayer,
             List<ECKeyPair.ECPublicKey> validators,
             Integer threshold,
-            ECPublicKey governor
+            ECPublicKey governor,
+            ECPublicKey securityGuard
     ) {
         return array(
                 publicKey(owner),
@@ -78,7 +81,8 @@ public class Deployment {
                         publicKey(validators.get(6))
                 ),
                 integer(threshold),
-                publicKey(governor)
+                publicKey(governor),
+                publicKey(securityGuard)
         );
     }
 
@@ -112,7 +116,8 @@ public class Deployment {
                         validator_7
                 ),
                 validator_threshold,
-                governor
+                governor,
+                securityGuard
         );
 
         // Deploy the management contract

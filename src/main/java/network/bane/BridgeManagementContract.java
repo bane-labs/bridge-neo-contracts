@@ -38,6 +38,7 @@ public class BridgeManagementContract {
     private static final int key_owner = 0x00;
     private static final int key_relayer = 0x01;
     private static final int key_governor = 0x02;
+    private static final int key_securityguard = 0x03;
 
     private static final int key_validator_threshold = 0x10;
 
@@ -56,6 +57,9 @@ public class BridgeManagementContract {
 
     @DisplayName("SetGovernor")
     public static Event1Arg<ECPoint> onGovernorSet;
+
+    @DisplayName("SetSecurityGuard")
+    public static Event1Arg<ECPoint> onSecurityGuardSet;
 
     // endregion
     // region deployment
@@ -80,6 +84,7 @@ public class BridgeManagementContract {
             }
             baseMap.put(key_validator_threshold, deploymentData.validatorThreshold);
             baseMap.put(key_governor, deploymentData.governor);
+            baseMap.put(key_securityguard, deploymentData.securityGuard);
         }
     }
 
@@ -130,6 +135,12 @@ public class BridgeManagementContract {
         onGovernorSet.fire(governor);
     }
 
+    public static void setSecurityGuard(ECPoint securityGuard) {
+        onlyOwner();
+        baseMap.put(key_securityguard, securityGuard);
+        onSecurityGuardSet.fire(securityGuard);
+    }
+
     // endregion
     // region getters
 
@@ -161,6 +172,11 @@ public class BridgeManagementContract {
     @Safe
     public static ECPoint governor() {
         return baseMap.getECPoint(key_governor);
+    }
+
+    @Safe
+    public static ECPoint securityGuard() {
+        return baseMap.getECPoint(key_securityguard);
     }
 
     // endregion

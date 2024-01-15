@@ -60,6 +60,7 @@ import static network.bane.util.TestHelper.recipient3;
 import static network.bane.util.TestHelper.recipient4;
 import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.relayerPubKey;
+import static network.bane.util.TestHelper.securityGuardPubKey;
 import static network.bane.util.TestHelper.setDepositFee;
 import static network.bane.util.TestHelper.signMsg;
 import static network.bane.util.TestHelper.validator1;
@@ -97,7 +98,7 @@ public class BridgeTest {
     private static final BigInteger maxDeposit = new BigInteger("1000000000000");
     private static final BigInteger maxWithdrawalPerRootUpdate = new BigInteger("10");
 
-    private static final Hash160 managementContractHash = new Hash160("5d5875cab4333e13b645926c3a5a206153aa58a0");
+    private static final Hash160 managementContractHash = new Hash160("e40bcc951e426679e5ab8ee3cabe573d79ade518");
 
     private static Bridge bridge;
     private static Management management;
@@ -171,7 +172,8 @@ public class BridgeTest {
                                 validator7PubKey
                         ),
                         5,
-                        governorPubKey
+                        governorPubKey,
+                        securityGuardPubKey
                 )
         );
         return config;

@@ -12,5 +12,6 @@ public class ManagementDeploymentData {
     public List<ECPoint> validators;
     public int validatorThreshold;
     public ECPoint governor;
+    public ECPoint securityGuard;
 
 }
