@@ -96,6 +96,10 @@ public class TestHelper {
     );
     public static int defaultValidatorThreshold = 5;
 
+    public static final Account governor = Account.fromWIF("Kwda1XcgLDwjvb3DUmo7h6GbzY5tvpMKRmwWKAhbtbrUzo6Ukwix");
+    public static final ECPublicKey governorPubKey = governor.getECKeyPair().getPublicKey();
+    public static final Hash160 governorScriptHash = governor.getScriptHash();
+
     public static final Account account0 = Account.fromWIF("Kzczq8Bd3h6ukXs4tgTkGd6jDeETcm18VTx3gS8ZcC5DobB25sGm");
     public static final Account account1 = Account.fromWIF("L49FvTGZTdSJbck687Kg9wrjBzQBJ1asnvKWqcvJ2sJcyP9U9rbJ");
     public static final Account account2 = Account.fromWIF("KwPnYQg2VFMq2Jn62DTVKYCg7TGdzFWvsfKkzKYgPi2LSJcxEW7D");
@@ -120,10 +124,11 @@ public class TestHelper {
     public static final Hash160 recipient9 = new Hash160("0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199");
 
     public static ContractParameter prepareManagementDeployParameter(
-            ECKeyPair.ECPublicKey owner,
-            ECKeyPair.ECPublicKey relayer,
+            ECPublicKey owner,
+            ECPublicKey relayer,
             List<ECPublicKey> validators,
-            Integer threshold
+            Integer threshold,
+            ECPublicKey governor
     ) {
         return array(
                 publicKey(owner),
@@ -137,7 +142,8 @@ public class TestHelper {
                         publicKey(validators.get(5)),
                         publicKey(validators.get(6))
                 ),
-                integer(threshold)
+                integer(threshold),
+                publicKey(governor)
         );
     }
 

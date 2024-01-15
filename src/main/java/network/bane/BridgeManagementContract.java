@@ -2,7 +2,6 @@ package network.bane;
 
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
-import io.neow3j.devpack.Helper;
 import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
@@ -19,6 +18,8 @@ import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
 import network.bane.structs.ManagementDeploymentData;
 
+import static io.neow3j.devpack.Helper.abort;
+
 @DisplayName("BridgeManagement")
 @ManifestExtra(key = "author", value = "BaneLabs")
 @ManifestExtra(
@@ -31,13 +32,14 @@ public class BridgeManagementContract {
 
     private static final byte prefix_base = 0x0a;
     private static final StorageMap baseMap = new StorageMap(ctx, prefix_base);
+    private static final byte prefix_validator = 0x0b;
+    private static final StorageMap validatorMap = new StorageMap(ctx, prefix_validator);
 
     private static final int key_owner = 0x00;
     private static final int key_relayer = 0x01;
-    private static final int key_validator_threshold = 0x02;
+    private static final int key_governor = 0x02;
 
-    private static final byte prefix_validator = 0x0b;
-    private static final StorageMap validatorMap = new StorageMap(ctx, prefix_validator);
+    private static final int key_validator_threshold = 0x10;
 
     private static final int const_max_validators = 21;
 
@@ -51,6 +53,9 @@ public class BridgeManagementContract {
 
     @DisplayName("SetValidators")
     public static Event2Args<List<ECPoint>, Integer> onValidatorsSet;
+
+    @DisplayName("SetGovernor")
+    public static Event1Arg<ECPoint> onGovernorSet;
 
     // endregion
     // region deployment
@@ -68,13 +73,13 @@ public class BridgeManagementContract {
 
             baseMap.put(key_owner, deploymentData.owner);
             baseMap.put(key_relayer, deploymentData.relayer);
-            baseMap.put(key_validator_threshold, deploymentData.validatorThreshold);
-
             for (int i = 0; i < validatorSize; i++) {
                 ECPoint validator = validators.get(i);
                 assert ECPoint.isValid(validator);
                 validatorMap.put(validator, true);
             }
+            baseMap.put(key_validator_threshold, deploymentData.validatorThreshold);
+            baseMap.put(key_governor, deploymentData.governor);
         }
     }
 
@@ -119,6 +124,12 @@ public class BridgeManagementContract {
         return map.keys().length != validators.size();
     }
 
+    public static void setGovernor(ECPoint governor) {
+        onlyOwner();
+        baseMap.put(key_governor, governor);
+        onGovernorSet.fire(governor);
+    }
+
     // endregion
     // region getters
 
@@ -147,12 +158,17 @@ public class BridgeManagementContract {
         return baseMap.getInt(key_validator_threshold);
     }
 
+    @Safe
+    public static ECPoint governor() {
+        return baseMap.getECPoint(key_governor);
+    }
+
     // endregion
     // region restrictions
 
     private static void onlyOwner() {
         if (!Runtime.checkWitness(owner())) {
-            Helper.abort("No authorization.");
+            abort("No authorization.");
         }
     }
 

@@ -49,6 +49,7 @@ import static network.bane.util.TestHelper.getClaimableEvent;
 import static network.bane.util.TestHelper.getDepositEvent;
 import static network.bane.util.TestHelper.getProofFromStorage;
 import static network.bane.util.TestHelper.getWithdrawEvent;
+import static network.bane.util.TestHelper.governorPubKey;
 import static network.bane.util.TestHelper.ownerPubKey;
 import static network.bane.util.TestHelper.prepareManagementDeployParameter;
 import static network.bane.util.TestHelper.printDepositStorage;
@@ -169,7 +170,8 @@ public class BridgeTest {
                                 validator6PubKey,
                                 validator7PubKey
                         ),
-                        5
+                        5,
+                        governorPubKey
                 )
         );
         return config;

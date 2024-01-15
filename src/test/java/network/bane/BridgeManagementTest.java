@@ -37,6 +37,7 @@ import static io.neow3j.types.StackItemType.INTEGER;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.defaultValidatorThreshold;
 import static network.bane.util.TestHelper.defaultValidators;
+import static network.bane.util.TestHelper.governorPubKey;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.ownerPubKey;
 import static network.bane.util.TestHelper.prepareManagementDeployParameter;
@@ -131,7 +132,8 @@ public class BridgeManagementTest {
                                 validator6PubKey,
                                 validator7PubKey
                         ),
-                        5
+                        5,
+                        governorPubKey
                 )
         );
         return config;
@@ -142,8 +144,8 @@ public class BridgeManagementTest {
     @Test
     public void testManifestMethods() throws IOException {
         assertThat(management.getManifest().getName(), is("BridgeManagement"));
-        assertThat(management.getManifest().getAbi().getMethods(), hasSize(9));
-        assertThat(management.getManifest().getAbi().getEvents(), hasSize(3));
+        assertThat(management.getManifest().getAbi().getMethods(), hasSize(11));
+        assertThat(management.getManifest().getAbi().getEvents(), hasSize(4));
         assertThat(management.getManifest().getSupportedStandards(), hasSize(0));
         assertThat(management.getManifest().getPermissions(), hasSize(0));
         assertThat(management.getManifest().getTrusts(), hasSize(0));
@@ -428,6 +430,49 @@ public class BridgeManagementTest {
         );
         assertThat(thrown.getMessage(),
                 containsString("ASSERTMSG is executed with false result. Reason: Duplicate validators provided."));
+    }
+
+    @Test
+    public void testSetGovernor() throws Throwable {
+        assertThat(management.governor(), is(governorPubKey));
+
+        Transaction tx = management.invokeFunction("setGovernor", publicKey(bobPubKey))
+                .signers(calledByEntry(owner))
+                .sign();
+        NeoSendRawTransaction response = tx.send();
+        assertFalse(response.hasError());
+        waitUntilTransactionIsExecuted(response, neow3j);
+
+        Notification expected = new Notification(
+                management.getScriptHash(),
+                "SetGovernor",
+                new ArrayStackItem(asList(new ByteStringStackItem(bobPubKey.toArray())))
+        );
+        assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
+        assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
+
+        assertThat(management.governor(), is(bobPubKey));
+
+        // reverse set owner
+        response = management.invokeFunction("setGovernor", publicKey(governorPubKey))
+                .signers(calledByEntry(owner))
+                .sign()
+                .send();
+        assertFalse(response.hasError());
+        waitUntilTransactionIsExecuted(response, neow3j);
+
+        assertThat(management.governor(), is(governorPubKey));
+    }
+
+    @Test
+    public void testSetGovernor_unauthorized() throws IOException {
+        assertThat(management.governor(), is(governorPubKey));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setGovernor", publicKey(charliePubKey))
+                        .signers(calledByEntry(alice))
+                        .sign()
+        );
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
     }
 
     // endregion
