@@ -96,11 +96,11 @@ public class TestHelper {
     );
     public static int defaultValidatorThreshold = 5;
 
-    public static final Account governor = Account.fromWIF("Kwda1XcgLDwjvb3DUmo7h6GbzY5tvpMKRmwWKAhbtbrUzo6Ukwix");
+    public static final Account governor = Account.fromWIF("L31FLxpHiSuZLzjzJAVY5z9gSu25pZxRB2yBCzqjc3JDUz2GkLBH");
     public static final ECPublicKey governorPubKey = governor.getECKeyPair().getPublicKey();
     public static final Hash160 governorScriptHash = governor.getScriptHash();
 
-    public static final Account securityGuard = Account.fromWIF("L44P4HWJzrepipaXACary7LV9MEg1qkmBw83hRpQzRd8ditW17Yi");
+    public static final Account securityGuard = Account.fromWIF("L287EDF2W9Eq7ojFtC5dWvnsLDNGCjMR2hBX3qa1FkfWt5Uzkf9Y");
     public static final ECPublicKey securityGuardPubKey = securityGuard.getECKeyPair().getPublicKey();
     public static final Hash160 securityGuardScriptHash = securityGuard.getScriptHash();
 
@@ -165,7 +165,7 @@ public class TestHelper {
     public static void setDepositFee(Bridge bridge, Neow3j neow3j, BigInteger fee) throws Throwable {
         NeoSendRawTransaction response =
                 bridge.invokeFunction("setDepositFee", integer(fee))
-                        .signers(calledByEntry(owner))
+                        .signers(calledByEntry(governor))
                         .sign()
                         .send();
         waitUntilTransactionIsExecuted(response, neow3j);

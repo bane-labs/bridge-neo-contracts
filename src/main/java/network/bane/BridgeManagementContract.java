@@ -12,15 +12,19 @@ import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
 import io.neow3j.devpack.annotations.ManifestExtra;
 import io.neow3j.devpack.annotations.OnDeployment;
+import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.constants.FindOptions;
+import io.neow3j.devpack.constants.NativeContract;
+import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
 import network.bane.structs.ManagementDeploymentData;
 
 import static io.neow3j.devpack.Helper.abort;
 
-@DisplayName("BridgeManagement")
+@DisplayName("NeoXBridgeManagement")
+@Permission(nativeContract = NativeContract.ContractManagement, methods = "update")
 @ManifestExtra(key = "author", value = "BaneLabs")
 @ManifestExtra(
         key = "description",
@@ -189,9 +193,12 @@ public class BridgeManagementContract {
     }
 
     // endregion
-    // region migrate
+    // region update
 
-    // Todo: Add code for updating contract (call to contract management and storage changes)
+    public static void update(ByteString nef, String manifest) {
+        onlyOwner();
+        new ContractManagement().update(nef, manifest);
+    }
 
     // endregion
 

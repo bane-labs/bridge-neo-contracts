@@ -343,6 +343,40 @@
           }
         }
       ]
+    },
+    {
+      "name": "governor",
+      "accounts": [
+        {
+          "private-key": "ac9cf20c7c0fbcf270af819b25b86fdd11cc89c5524c12ce3b31111ce297c613",
+          "script-hash": "NLtz8TRHsRTEuMxyF9waDh5Rr71pnb2gCE",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c2102297dac0d0be4ee744292440248cb3687478f4bf8705e08d1c8dc40f5bdc942d74156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "securityGuard",
+      "accounts": [
+        {
+          "private-key": "924e03eea46c56379d024234627b709c31033839b20391fa163c1db34b169653",
+          "script-hash": "NZWSkBowdnK2yUZUCbZx8xJUgZbhyv8zia",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c2102839e28ffe59aecd1adc3123b2869499db4f20aa89618405f682e5403e8e4baa54156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
     }
   ],
   "settings": {

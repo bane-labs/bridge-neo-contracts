@@ -37,3 +37,9 @@ transfer 10000 GAS genesis validator6
 transfer 1000 NEO genesis validator6
 transfer 10000 GAS genesis validator7
 transfer 1000 NEO genesis validator7
+
+transfer 10000 GAS genesis governor
+transfer 1000 NEO genesis governor
+
+transfer 10000 GAS genesis securityGuard
+transfer 1000 NEO genesis securityGuard

@@ -1,8 +1,11 @@
 package network.bane;
 
 import io.neow3j.contract.GasToken;
+import io.neow3j.contract.NefFile;
 import io.neow3j.contract.NeoToken;
 import io.neow3j.protocol.Neow3j;
+import io.neow3j.protocol.ObjectMapperFactory;
+import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
@@ -24,8 +27,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -50,6 +56,7 @@ import static network.bane.util.TestHelper.getDepositEvent;
 import static network.bane.util.TestHelper.getProofFromStorage;
 import static network.bane.util.TestHelper.getWithdrawEvent;
 import static network.bane.util.TestHelper.governorPubKey;
+import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.ownerPubKey;
 import static network.bane.util.TestHelper.prepareManagementDeployParameter;
 import static network.bane.util.TestHelper.printDepositStorage;
@@ -87,7 +94,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
         contracts = {BridgeManagementContract.class, BridgeContract.class, TestContract.class},
         batchFile = "setup.batch"
 )
-
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class BridgeTest {
 
@@ -98,7 +104,7 @@ public class BridgeTest {
     private static final BigInteger maxDeposit = new BigInteger("1000000000000");
     private static final BigInteger maxWithdrawalPerRootUpdate = new BigInteger("10");
 
-    private static final Hash160 managementContractHash = new Hash160("e40bcc951e426679e5ab8ee3cabe573d79ade518");
+    private static final Hash160 managementContractHash = new Hash160("e9f0d93e6bcca4e8eea2da82dc09a0161e55d5e7");
 
     private static Bridge bridge;
     private static Management management;
@@ -594,7 +600,7 @@ public class BridgeTest {
                                 .send()
                 );
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only owner can set deposit fee."));
+                containsString("ABORTMSG is executed. Reason: Only the governor can set the deposit fee."));
     }
 
     private Hash256 withdrawGas(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
@@ -617,6 +623,47 @@ public class BridgeTest {
         Hash256 txHash = response.getSendRawTransaction().getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
         return txHash;
+    }
+
+    // endregion
+    // region contract update
+
+    @Test
+    @Order(100)
+    public void testUpdateContract() throws Throwable {
+        File contractNefFile = Paths.get("src", "test", "resources", "DummyBridge.nef").toFile();
+        NefFile nefFile = NefFile.readFromFile(contractNefFile);
+
+        File manifestFile = Paths.get("src", "test", "resources", "DummyBridge.manifest.json").toFile();
+        ContractManifest manifest;
+        try (FileInputStream s = new FileInputStream(manifestFile)) {
+            manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
+        }
+        byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
+
+        NeoSendRawTransaction response =
+                bridge.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes))
+                        .signers(AccountSigner.calledByEntry(owner))
+                        .sign()
+                        .send();
+        waitUntilTransactionIsExecuted(response.getSendRawTransaction().getHash(), ext.getNeow3j());
+
+        assertThat(bridge.getManifest().getAbi().getMethods(), hasSize(1));
+        assertThat(bridge.callFunctionReturningString("sayHello", string("World")), is("Hello World!"));
+    }
+
+    @Test
+    @Order(0)
+    public void testUpdateContract_notOwner() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () -> {
+            bridge.invokeFunction("update", byteArray(""), string(""))
+                    .signers(AccountSigner.calledByEntry(alice))
+                    .sign()
+                    .send();
+        });
+
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Only the owner can update this " +
+                "contract."));
     }
 
     // endregion
