@@ -36,6 +36,7 @@ import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 
 @DisplayName("NeoXBridge")
 @Permission(nativeContract = NativeContract.GasToken, methods = "transfer")
+@Permission(nativeContract = NativeContract.ContractManagement, methods = "update")
 @ManifestExtra(key = "author", value = "BaneLabs")
 @ManifestExtra(key = "description", value = "Contract for bridging GAS tokens from Neo N3 to Neo X.")
 public class BridgeContract {
@@ -69,6 +70,7 @@ public class BridgeContract {
     private static final byte const_hash160_size = 20;
 
     private static final GasToken gasToken = new GasToken();
+    private static final ContractManagement contractManagement = new ContractManagement();
 
     // endregion
     // region events
@@ -279,7 +281,7 @@ public class BridgeContract {
     }
 
     private static boolean isContract(Hash160 scriptHash) {
-        return new ContractManagement().getContract(scriptHash) != null;
+        return contractManagement.getContract(scriptHash) != null;
     }
 
     private static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, ByteString root) {
@@ -402,7 +404,6 @@ public class BridgeContract {
     }
 
     // endregion
-
     // region setters
 
     public static void setDepositFee(int fee) {
@@ -412,13 +413,13 @@ public class BridgeContract {
     }
 
     //endregion
-
     // region update
+
     public static void update(ByteString nef, String manifest) {
         if (!checkWitness(owner())) abort("Only the owner can update.");
         contractManagement.update(nef, manifest);
     }
+
     // endregion
 
 }
-
