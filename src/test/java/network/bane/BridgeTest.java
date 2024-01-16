@@ -17,7 +17,11 @@ import io.neow3j.wallet.Account;
 import network.bane.util.Bridge;
 import network.bane.util.Management;
 import network.bane.util.TestHelper;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
@@ -28,13 +32,54 @@ import java.util.List;
 import java.util.Map;
 
 import static io.neow3j.types.ContractParameter.array;
-import static io.neow3j.types.ContractParameter.*;
+import static io.neow3j.types.ContractParameter.byteArray;
+import static io.neow3j.types.ContractParameter.hash160;
+import static io.neow3j.types.ContractParameter.integer;
+import static io.neow3j.types.ContractParameter.map;
+import static io.neow3j.types.ContractParameter.string;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
-import static io.neow3j.utils.Numeric.*;
+import static io.neow3j.utils.Numeric.prependHexPrefix;
+import static io.neow3j.utils.Numeric.reverseHexString;
+import static io.neow3j.utils.Numeric.toHexString;
 import static java.util.Arrays.asList;
-import static network.bane.util.TestHelper.*;
+import static network.bane.util.TestHelper.concatAndSha256;
+import static network.bane.util.TestHelper.createDepositHash;
+import static network.bane.util.TestHelper.getClaimEvent;
+import static network.bane.util.TestHelper.getClaimableEvent;
+import static network.bane.util.TestHelper.getDepositEvent;
+import static network.bane.util.TestHelper.getProofFromStorage;
+import static network.bane.util.TestHelper.getWithdrawEvent;
+import static network.bane.util.TestHelper.governorPubKey;
+import static network.bane.util.TestHelper.ownerPubKey;
+import static network.bane.util.TestHelper.prepareManagementDeployParameter;
+import static network.bane.util.TestHelper.printDepositStorage;
+import static network.bane.util.TestHelper.recipient0;
+import static network.bane.util.TestHelper.recipient1;
+import static network.bane.util.TestHelper.recipient2;
+import static network.bane.util.TestHelper.recipient3;
+import static network.bane.util.TestHelper.recipient4;
+import static network.bane.util.TestHelper.relayer;
+import static network.bane.util.TestHelper.relayerPubKey;
+import static network.bane.util.TestHelper.securityGuardPubKey;
+import static network.bane.util.TestHelper.setDepositFee;
+import static network.bane.util.TestHelper.signMsg;
+import static network.bane.util.TestHelper.validator1;
+import static network.bane.util.TestHelper.validator1PubKey;
+import static network.bane.util.TestHelper.validator2;
+import static network.bane.util.TestHelper.validator2PubKey;
+import static network.bane.util.TestHelper.validator3;
+import static network.bane.util.TestHelper.validator3PubKey;
+import static network.bane.util.TestHelper.validator4;
+import static network.bane.util.TestHelper.validator4PubKey;
+import static network.bane.util.TestHelper.validator5;
+import static network.bane.util.TestHelper.validator5PubKey;
+import static network.bane.util.TestHelper.validator6PubKey;
+import static network.bane.util.TestHelper.validator7PubKey;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ContractTest(
@@ -52,7 +97,7 @@ public class BridgeTest {
     private static final BigInteger minDeposit = new BigInteger("100000000");
     private static final BigInteger maxDeposit = new BigInteger("1000000000000");
 
-    private static final Hash160 managementContractHash = new Hash160("11d63f20e63fd360d07367fab34dc97b5e070300");
+    private static final Hash160 managementContractHash = new Hash160("f8e4593b3056b63d132576d02f11bf5c0ad1592c");
 
     private static Bridge bridge;
     private static Management management;
@@ -126,7 +171,8 @@ public class BridgeTest {
                                 validator7PubKey
                         ),
                         5,
-                        validator1PubKey
+                        governorPubKey,
+                        securityGuardPubKey
                 )
         );
         return config;
@@ -219,7 +265,6 @@ public class BridgeTest {
         assertThat(bridge.depositFee(), is(depositFee));
         assertThat(bridge.minDeposit(), is(minDeposit));
         assertThat(bridge.maxDeposit(), is(maxDeposit));
-        assertThat(bridge.isLocked(), is(false));
 
         // Deposit Root
         assertThat(bridge.getStorage("0x0a10"), is(
@@ -502,7 +547,9 @@ public class BridgeTest {
     public void testSetDepositFee() throws Throwable {
         BigInteger newFee = new BigInteger("200000000");
         assertThat(bridge.depositFee(), is(not(newFee)));
-
+        NeoSendRawTransaction response = gasToken.transfer(alice, TestHelper.governorScriptHash, minDeposit, string(recipient0.toString())).sign().send();
+        Hash256 txHash = response.getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
         setDepositFee(bridge, neow3j, newFee);
         BigInteger actualDepositFee = bridge.depositFee();
         assertThat(actualDepositFee, is(newFee));
@@ -514,7 +561,6 @@ public class BridgeTest {
     public void testSetDepositFee_FeeisZero() throws Throwable {
         BigInteger newFee = new BigInteger("0");
         assertThat(bridge.depositFee(), is(not(newFee)));
-
         setDepositFee(bridge, neow3j, newFee);
         BigInteger actualDepositFee = bridge.depositFee();
         assertThat(actualDepositFee, is(newFee));
@@ -545,7 +591,7 @@ public class BridgeTest {
                                 .send()
                 );
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only owner can set deposit fee."));
+                containsString("ABORTMSG is executed. Reason: Only governor can set deposit fee."));
     }
 
     private Hash256 withdrawGas(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,

@@ -50,7 +50,9 @@ public class Deployment {
 
     private static final int validator_threshold = 5;
 
-    private static final ECPublicKey recoverer = new ECPublicKey("0x");
+    private static final ECPublicKey governor = new ECPublicKey("0x");
+
+    private static final ECPublicKey securityGuard = new ECPublicKey("0x");
 
     // Parameters
 
@@ -59,11 +61,12 @@ public class Deployment {
     private static final BigInteger maxDepositAmount = new BigInteger("1000000000000");
 
     public static ContractParameter prepareManagementDeployParameter(
-            ECKeyPair.ECPublicKey owner,
-            ECKeyPair.ECPublicKey relayer,
+            ECPublicKey owner,
+            ECPublicKey relayer,
             List<ECKeyPair.ECPublicKey> validators,
             Integer threshold,
-            ECKeyPair.ECPublicKey recoverer
+            ECPublicKey governor,
+            ECPublicKey securityGuard
     ) {
         return array(
                 publicKey(owner),
@@ -78,7 +81,8 @@ public class Deployment {
                         publicKey(validators.get(6))
                 ),
                 integer(threshold),
-                publicKey(recoverer)
+                publicKey(governor),
+                publicKey(securityGuard)
         );
     }
 
@@ -112,7 +116,8 @@ public class Deployment {
                         validator_7
                 ),
                 validator_threshold,
-                recoverer
+                governor,
+                securityGuard
         );
 
         // Deploy the management contract
