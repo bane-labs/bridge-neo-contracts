@@ -1,7 +1,11 @@
 package network.bane;
 
+import io.neow3j.contract.ContractManagement;
+import io.neow3j.contract.NefFile;
 import io.neow3j.crypto.ECKeyPair.ECPublicKey;
 import io.neow3j.protocol.Neow3j;
+import io.neow3j.protocol.ObjectMapperFactory;
+import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.InvocationResult;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
@@ -12,28 +16,40 @@ import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
+import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.ContractParameter;
+import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
 import network.bane.util.Management;
 import network.bane.util.TestHelper;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
+import static io.neow3j.types.ContractParameter.byteArray;
+import static io.neow3j.types.ContractParameter.byteArrayFromString;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.publicKey;
+import static io.neow3j.types.ContractParameter.string;
 import static io.neow3j.types.StackItemType.ARRAY;
 import static io.neow3j.types.StackItemType.BYTE_STRING;
 import static io.neow3j.types.StackItemType.INTEGER;
+import static io.neow3j.utils.Numeric.prependHexPrefix;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.defaultValidatorThreshold;
 import static network.bane.util.TestHelper.defaultValidators;
@@ -41,6 +57,7 @@ import static network.bane.util.TestHelper.governorPubKey;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.ownerPubKey;
 import static network.bane.util.TestHelper.prepareManagementDeployParameter;
+import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.relayerPubKey;
 import static network.bane.util.TestHelper.securityGuardPubKey;
 import static network.bane.util.TestHelper.setDefaultValidators;
@@ -63,6 +80,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ContractTest(blockTime = 1, contracts = BridgeManagementContract.class, batchFile = "setup.batch")
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class BridgeManagementTest {
 
     private static Management management;
@@ -144,12 +162,17 @@ public class BridgeManagementTest {
     // region manifest
 
     @Test
+    @Order(0)
     public void testManifestMethods() throws IOException {
-        assertThat(management.getManifest().getName(), is("BridgeManagement"));
-        assertThat(management.getManifest().getAbi().getMethods(), hasSize(13));
+        assertThat(management.getManifest().getName(), is("NeoXBridgeManagement"));
+        assertThat(management.getManifest().getAbi().getMethods(), hasSize(14));
         assertThat(management.getManifest().getAbi().getEvents(), hasSize(5));
         assertThat(management.getManifest().getSupportedStandards(), hasSize(0));
-        assertThat(management.getManifest().getPermissions(), hasSize(0));
+        assertThat(management.getManifest().getPermissions(), hasSize(1));
+        assertThat(management.getManifest().getFirstPermission().getContract(),
+                is(prependHexPrefix(ContractManagement.SCRIPT_HASH.toString())));
+        assertThat(management.getManifest().getFirstPermission().getMethods(), hasSize(1));
+        assertThat(management.getManifest().getFirstPermission().getMethod(0), is("update"));
         assertThat(management.getManifest().getTrusts(), hasSize(0));
         assertThat(management.getManifest().getGroups(), hasSize(0));
     }
@@ -158,6 +181,7 @@ public class BridgeManagementTest {
     // region deployment
 
     @Test
+    @Order(0)
     public void testDeployOwnerCorrect() throws IOException {
         InvocationResult result = management.callInvokeFunction("owner").getInvocationResult();
 
@@ -167,6 +191,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testDeployRelayerCorrect() throws IOException {
         InvocationResult result = management.callInvokeFunction("relayer").getInvocationResult();
 
@@ -176,6 +201,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testDeployValidatorThresholdCorrect() throws IOException {
         InvocationResult result = management.callInvokeFunction("validatorThreshold").getInvocationResult();
 
@@ -185,6 +211,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testDeployValidatorsCorrect() throws IOException {
         InvocationResult result = management.callInvokeFunction("validators").getInvocationResult();
 
@@ -208,6 +235,7 @@ public class BridgeManagementTest {
     // region set owner
 
     @Test
+    @Order(0)
     public void testSetOwner() throws Throwable {
         assertThat(management.owner(), is(ownerPubKey));
 
@@ -247,6 +275,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetOwner_unauthorized() throws IOException {
         assertThat(management.owner(), is(ownerPubKey));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
@@ -261,6 +290,7 @@ public class BridgeManagementTest {
     // region set relayer
 
     @Test
+    @Order(0)
     public void testSetRelayer() throws Throwable {
         assertThat(management.relayer(), is(relayerPubKey));
 
@@ -293,6 +323,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetRelayer_unauthorized() throws IOException {
         assertThat(management.relayer(), is(relayerPubKey));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
@@ -307,6 +338,7 @@ public class BridgeManagementTest {
     // region set validators
 
     @Test
+    @Order(0)
     public void testSetValidators() throws Throwable {
         assertThat(management.validators(), hasSize(defaultValidators.size()));
         assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
@@ -358,6 +390,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetValidators_unauthorized() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("setValidators", array(publicKey(alicePubKey)), integer(1))
@@ -368,6 +401,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetValidators_invalidThreshold() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("setValidators",
@@ -379,6 +413,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetValidators_moreThanMax() throws IOException {
         List<ContractParameter> newValidators = new ArrayList<>();
         for (int i = 0; i <= 21; i++) {
@@ -396,6 +431,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetValidators_exactlyMax() throws Throwable {
         List<ContractParameter> newValidators = new ArrayList<>();
         for (int i = 0; i < 21; i++) {
@@ -419,6 +455,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetValidators_sameValidatorMultipleTimesInParams() throws Throwable {
         assertThat(management.validators(), hasSize(defaultValidators.size()));
         assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
@@ -444,6 +481,7 @@ public class BridgeManagementTest {
     // region set governor
 
     @Test
+    @Order(0)
     public void testSetGovernor() throws Throwable {
         assertThat(management.governor(), is(governorPubKey));
 
@@ -476,6 +514,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetGovernor_unauthorized() throws IOException {
         assertThat(management.governor(), is(governorPubKey));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
@@ -490,6 +529,7 @@ public class BridgeManagementTest {
     // region set security guard
 
     @Test
+    @Order(0)
     public void testSetSecurityGuard() throws Throwable {
         assertThat(management.securityGuard(), is(securityGuardPubKey));
 
@@ -522,11 +562,50 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetSecurityGuard_unauthorized() throws IOException {
         assertThat(management.securityGuard(), is(securityGuardPubKey));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("setSecurityGuard", publicKey(charliePubKey))
                         .signers(calledByEntry(alice))
+                        .sign()
+        );
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+    }
+
+    // endregion
+    // region contract update
+
+    @Test
+    @Order(100)
+    public void testUpdateContract() throws Throwable {
+        File contractNefFile = Paths.get("src", "test", "resources", "DummyBridgeManagement.nef").toFile();
+        NefFile nefFile = NefFile.readFromFile(contractNefFile);
+
+        File manifestFile = Paths.get("src", "test", "resources", "DummyBridgeManagement.manifest.json").toFile();
+        ContractManifest manifest;
+        try (FileInputStream s = new FileInputStream(manifestFile)) {
+            manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
+        }
+        byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
+
+        NeoSendRawTransaction response =
+                management.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes))
+                        .signers(AccountSigner.calledByEntry(owner))
+                        .sign()
+                        .send();
+        Await.waitUntilTransactionIsExecuted(response.getSendRawTransaction().getHash(), ext.getNeow3j());
+
+        assertThat(management.getManifest().getAbi().getMethods(), hasSize(1));
+        assertThat(management.callFunctionReturningString("sayHello", string("World")), is("Hello World!"));
+    }
+
+    @Test
+    @Order(0)
+    public void testContractUpdate_notOwner() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("update", byteArrayFromString(""), string(""))
+                        .signers(calledByEntry(relayer))
                         .sign()
         );
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));

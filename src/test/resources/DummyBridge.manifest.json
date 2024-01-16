@@ -1,0 +1,22 @@
+{
+  "name" : "NeoXBridge",
+  "groups" : [ ],
+  "features" : { },
+  "supportedstandards" : [ ],
+  "abi" : {
+    "methods" : [ {
+      "name" : "sayHello",
+      "parameters" : [ {
+        "name" : "to",
+        "type" : "String"
+      } ],
+      "offset" : 0,
+      "returntype" : "String",
+      "safe" : false
+    } ],
+    "events" : [ ]
+  },
+  "permissions" : [ ],
+  "trusts" : [ ],
+  "extra" : { }
+}

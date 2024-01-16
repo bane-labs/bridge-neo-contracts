@@ -407,7 +407,7 @@ public class BridgeContract {
     // region setters
 
     public static void setDepositFee(int fee) {
-        if(!checkWitness(governor())) abort("Only governor can set deposit fee.");
+        if(!checkWitness(governor())) abort("Only the governor can set the deposit fee.");
         if(fee < 0) abort("Deposit fee must be nonnegative.");
         baseMap.put(key_deposit_fee, fee);
     }
@@ -416,7 +416,7 @@ public class BridgeContract {
     // region update
 
     public static void update(ByteString nef, String manifest) {
-        if (!checkWitness(owner())) abort("Only the owner can update.");
+        if (!checkWitness(owner())) abort("Only the owner can update this contract.");
         contractManagement.update(nef, manifest);
     }
 
