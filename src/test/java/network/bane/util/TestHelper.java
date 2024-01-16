@@ -19,14 +19,24 @@ import io.neow3j.wallet.Account;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
-import static io.neow3j.types.ContractParameter.*;
+import static io.neow3j.types.ContractParameter.array;
+import static io.neow3j.types.ContractParameter.integer;
+import static io.neow3j.types.ContractParameter.publicKey;
+import static io.neow3j.types.ContractParameter.signature;
 import static io.neow3j.utils.ArrayUtils.concatenate;
-import static io.neow3j.utils.Numeric.*;
+import static io.neow3j.utils.Numeric.cleanHexPrefix;
+import static io.neow3j.utils.Numeric.hexStringToByteArray;
+import static io.neow3j.utils.Numeric.prependHexPrefix;
+import static io.neow3j.utils.Numeric.toHexString;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -86,6 +96,14 @@ public class TestHelper {
     );
     public static int defaultValidatorThreshold = 5;
 
+    public static final Account governor = Account.fromWIF("Kwda1XcgLDwjvb3DUmo7h6GbzY5tvpMKRmwWKAhbtbrUzo6Ukwix");
+    public static final ECPublicKey governorPubKey = governor.getECKeyPair().getPublicKey();
+    public static final Hash160 governorScriptHash = governor.getScriptHash();
+
+    public static final Account securityGuard = Account.fromWIF("L44P4HWJzrepipaXACary7LV9MEg1qkmBw83hRpQzRd8ditW17Yi");
+    public static final ECPublicKey securityGuardPubKey = securityGuard.getECKeyPair().getPublicKey();
+    public static final Hash160 securityGuardScriptHash = securityGuard.getScriptHash();
+
     public static final Account account0 = Account.fromWIF("Kzczq8Bd3h6ukXs4tgTkGd6jDeETcm18VTx3gS8ZcC5DobB25sGm");
     public static final Account account1 = Account.fromWIF("L49FvTGZTdSJbck687Kg9wrjBzQBJ1asnvKWqcvJ2sJcyP9U9rbJ");
     public static final Account account2 = Account.fromWIF("KwPnYQg2VFMq2Jn62DTVKYCg7TGdzFWvsfKkzKYgPi2LSJcxEW7D");
@@ -110,10 +128,12 @@ public class TestHelper {
     public static final Hash160 recipient9 = new Hash160("0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199");
 
     public static ContractParameter prepareManagementDeployParameter(
-            ECKeyPair.ECPublicKey owner,
-            ECKeyPair.ECPublicKey relayer,
+            ECPublicKey owner,
+            ECPublicKey relayer,
             List<ECPublicKey> validators,
-            Integer threshold
+            Integer threshold,
+            ECPublicKey governor,
+            ECPublicKey securityGuard
     ) {
         return array(
                 publicKey(owner),
@@ -127,7 +147,9 @@ public class TestHelper {
                         publicKey(validators.get(5)),
                         publicKey(validators.get(6))
                 ),
-                integer(threshold)
+                integer(threshold),
+                publicKey(governor),
+                publicKey(securityGuard)
         );
     }
 

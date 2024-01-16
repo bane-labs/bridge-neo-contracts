@@ -29,13 +29,38 @@ import java.util.stream.Collectors;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
-import static io.neow3j.types.ContractParameter.*;
-import static io.neow3j.types.StackItemType.*;
+import static io.neow3j.types.ContractParameter.integer;
+import static io.neow3j.types.ContractParameter.publicKey;
+import static io.neow3j.types.StackItemType.ARRAY;
+import static io.neow3j.types.StackItemType.BYTE_STRING;
+import static io.neow3j.types.StackItemType.INTEGER;
 import static java.util.Arrays.asList;
-import static network.bane.util.TestHelper.*;
+import static network.bane.util.TestHelper.defaultValidatorThreshold;
+import static network.bane.util.TestHelper.defaultValidators;
+import static network.bane.util.TestHelper.governorPubKey;
+import static network.bane.util.TestHelper.owner;
+import static network.bane.util.TestHelper.ownerPubKey;
+import static network.bane.util.TestHelper.prepareManagementDeployParameter;
+import static network.bane.util.TestHelper.relayerPubKey;
+import static network.bane.util.TestHelper.securityGuardPubKey;
+import static network.bane.util.TestHelper.setDefaultValidators;
+import static network.bane.util.TestHelper.validator1PubKey;
+import static network.bane.util.TestHelper.validator2PubKey;
+import static network.bane.util.TestHelper.validator3PubKey;
+import static network.bane.util.TestHelper.validator4PubKey;
+import static network.bane.util.TestHelper.validator5PubKey;
+import static network.bane.util.TestHelper.validator6PubKey;
+import static network.bane.util.TestHelper.validator7PubKey;
+import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ContractTest(blockTime = 1, contracts = BridgeManagementContract.class, batchFile = "setup.batch")
 public class BridgeManagementTest {
@@ -108,7 +133,9 @@ public class BridgeManagementTest {
                                 validator6PubKey,
                                 validator7PubKey
                         ),
-                        5
+                        5,
+                        governorPubKey,
+                        securityGuardPubKey
                 )
         );
         return config;
@@ -119,8 +146,8 @@ public class BridgeManagementTest {
     @Test
     public void testManifestMethods() throws IOException {
         assertThat(management.getManifest().getName(), is("BridgeManagement"));
-        assertThat(management.getManifest().getAbi().getMethods(), hasSize(9));
-        assertThat(management.getManifest().getAbi().getEvents(), hasSize(3));
+        assertThat(management.getManifest().getAbi().getMethods(), hasSize(13));
+        assertThat(management.getManifest().getAbi().getEvents(), hasSize(5));
         assertThat(management.getManifest().getSupportedStandards(), hasSize(0));
         assertThat(management.getManifest().getPermissions(), hasSize(0));
         assertThat(management.getManifest().getTrusts(), hasSize(0));
@@ -178,7 +205,7 @@ public class BridgeManagementTest {
     }
 
     // endregion
-    // region setters
+    // region set owner
 
     @Test
     public void testSetOwner() throws Throwable {
@@ -230,6 +257,9 @@ public class BridgeManagementTest {
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
     }
 
+    // endregion
+    // region set relayer
+
     @Test
     public void testSetRelayer() throws Throwable {
         assertThat(management.relayer(), is(relayerPubKey));
@@ -272,6 +302,9 @@ public class BridgeManagementTest {
         );
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
     }
+
+    // endregion
+    // region set validators
 
     @Test
     public void testSetValidators() throws Throwable {
@@ -405,6 +438,98 @@ public class BridgeManagementTest {
         );
         assertThat(thrown.getMessage(),
                 containsString("ASSERTMSG is executed with false result. Reason: Duplicate validators provided."));
+    }
+
+    // endregion
+    // region set governor
+
+    @Test
+    public void testSetGovernor() throws Throwable {
+        assertThat(management.governor(), is(governorPubKey));
+
+        Transaction tx = management.invokeFunction("setGovernor", publicKey(bobPubKey))
+                .signers(calledByEntry(owner))
+                .sign();
+        NeoSendRawTransaction response = tx.send();
+        assertFalse(response.hasError());
+        waitUntilTransactionIsExecuted(response, neow3j);
+
+        Notification expected = new Notification(
+                management.getScriptHash(),
+                "SetGovernor",
+                new ArrayStackItem(asList(new ByteStringStackItem(bobPubKey.toArray())))
+        );
+        assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
+        assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
+
+        assertThat(management.governor(), is(bobPubKey));
+
+        // reverse set owner
+        response = management.invokeFunction("setGovernor", publicKey(governorPubKey))
+                .signers(calledByEntry(owner))
+                .sign()
+                .send();
+        assertFalse(response.hasError());
+        waitUntilTransactionIsExecuted(response, neow3j);
+
+        assertThat(management.governor(), is(governorPubKey));
+    }
+
+    @Test
+    public void testSetGovernor_unauthorized() throws IOException {
+        assertThat(management.governor(), is(governorPubKey));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setGovernor", publicKey(charliePubKey))
+                        .signers(calledByEntry(alice))
+                        .sign()
+        );
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+    }
+
+    // endregion
+    // region set security guard
+
+    @Test
+    public void testSetSecurityGuard() throws Throwable {
+        assertThat(management.securityGuard(), is(securityGuardPubKey));
+
+        Transaction tx = management.invokeFunction("setSecurityGuard", publicKey(florianPubKey))
+                .signers(calledByEntry(owner))
+                .sign();
+        NeoSendRawTransaction response = tx.send();
+        assertFalse(response.hasError());
+        waitUntilTransactionIsExecuted(response, neow3j);
+
+        Notification expected = new Notification(
+                management.getScriptHash(),
+                "SetSecurityGuard",
+                new ArrayStackItem(asList(new ByteStringStackItem(florianPubKey.toArray())))
+        );
+        assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
+        assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
+
+        assertThat(management.securityGuard(), is(florianPubKey));
+
+        // reverse set owner
+        response = management.invokeFunction("setSecurityGuard", publicKey(securityGuardPubKey))
+                .signers(calledByEntry(owner))
+                .sign()
+                .send();
+        assertFalse(response.hasError());
+        waitUntilTransactionIsExecuted(response, neow3j);
+
+        assertThat(management.securityGuard(), is(securityGuardPubKey));
+    }
+
+    @Test
+    public void testSetSecurityGuard_unauthorized() throws IOException {
+        assertThat(management.securityGuard(), is(securityGuardPubKey));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setSecurityGuard", publicKey(charliePubKey))
+                        .signers(calledByEntry(alice))
+                        .sign()
+        );
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
     }
 
     // endregion

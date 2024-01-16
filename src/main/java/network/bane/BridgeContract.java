@@ -1,8 +1,22 @@
 package network.bane;
 
-import io.neow3j.devpack.*;
-import io.neow3j.devpack.annotations.*;
+import io.neow3j.devpack.ByteString;
+import io.neow3j.devpack.ECPoint;
+import io.neow3j.devpack.Hash160;
+import io.neow3j.devpack.Hash256;
+import io.neow3j.devpack.List;
+import io.neow3j.devpack.Map;
+import io.neow3j.devpack.Storage;
+import io.neow3j.devpack.StorageContext;
+import io.neow3j.devpack.StorageMap;
+import io.neow3j.devpack.annotations.DisplayName;
+import io.neow3j.devpack.annotations.ManifestExtra;
+import io.neow3j.devpack.annotations.OnDeployment;
+import io.neow3j.devpack.annotations.OnNEP17Payment;
+import io.neow3j.devpack.annotations.Permission;
+import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.constants.NamedCurve;
+import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
@@ -12,11 +26,16 @@ import network.bane.interfaces.BridgeManagement;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.Withdrawal;
 
-import static io.neow3j.devpack.Helper.*;
-import static io.neow3j.devpack.Runtime.*;
+import static io.neow3j.devpack.Helper.abort;
+import static io.neow3j.devpack.Helper.concat;
+import static io.neow3j.devpack.Helper.reverse;
+import static io.neow3j.devpack.Helper.toByteArray;
+import static io.neow3j.devpack.Runtime.checkWitness;
+import static io.neow3j.devpack.Runtime.getCallingScriptHash;
+import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 
-@Permission(contract = "*", methods = "transfer")
 @DisplayName("NeoXBridge")
+@Permission(nativeContract = NativeContract.GasToken, methods = "transfer")
 @ManifestExtra(key = "author", value = "BaneLabs")
 @ManifestExtra(key = "description", value = "Contract for bridging GAS tokens from Neo N3 to Neo X.")
 public class BridgeContract {
@@ -50,7 +69,6 @@ public class BridgeContract {
     private static final byte const_hash160_size = 20;
 
     private static final GasToken gasToken = new GasToken();
-    private static final ContractManagement contractManagement = new ContractManagement();
 
     // endregion
     // region events
@@ -185,8 +203,7 @@ public class BridgeContract {
     // endregion
     // region withdrawal
 
-    public static void withdraw(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
-            List<Withdrawal> withdrawals) {
+    public static void withdraw(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures, List<Withdrawal> withdrawals) {
         if (!checkWitness(relayer())) {
             abort("Only the relayer can call this method.");
         }
@@ -326,6 +343,14 @@ public class BridgeContract {
         return managementContract().validatorThreshold();
     }
 
+    private static ECPoint governor() {
+        return managementContract().governor();
+    }
+
+    private static ECPoint securityGuard() {
+        return managementContract().securityGuard();
+    }
+
     private static BridgeManagement managementContract() {
         return new BridgeManagement(baseMap.getHash160(key_bridgeManagement));
     }
@@ -379,15 +404,15 @@ public class BridgeContract {
     // endregion
 
     // region setters
-    
+
     public static void setDepositFee(int fee) {
-        if(!checkWitness(owner())) abort("Only owner can set deposit fee.");
+        if(!checkWitness(governor())) abort("Only governor can set deposit fee.");
         if(fee < 0) abort("Deposit fee must be nonnegative.");
         baseMap.put(key_deposit_fee, fee);
     }
-    
+
     //endregion
-    
+
     // region update
     public static void update(ByteString nef, String manifest) {
         if (!checkWitness(owner())) abort("Only the owner can update.");
@@ -396,3 +421,4 @@ public class BridgeContract {
     // endregion
 
 }
+
