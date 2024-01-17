@@ -166,7 +166,7 @@ public class BridgeManagementTest {
     public void testManifestMethods() throws IOException {
         assertThat(management.getManifest().getName(), is("NeoXBridgeManagement"));
         assertThat(management.getManifest().getAbi().getMethods(), hasSize(14));
-        assertThat(management.getManifest().getAbi().getEvents(), hasSize(6));
+        assertThat(management.getManifest().getAbi().getEvents(), hasSize(5));
         assertThat(management.getManifest().getSupportedStandards(), hasSize(0));
         assertThat(management.getManifest().getPermissions(), hasSize(1));
         assertThat(management.getManifest().getFirstPermission().getContract(),

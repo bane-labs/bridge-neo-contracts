@@ -142,7 +142,7 @@ public class BridgeContract {
 
             baseMap.put(key_deposit_nonce, 0);
             baseMap.put(key_withdrawal_nonce, 0);
-            baseMap.put(key_locked, 0);
+            baseMap.put(key_locked, false);
         }
     }
 
@@ -214,7 +214,7 @@ public class BridgeContract {
             abort("Invalid validator signatures provided.");
         }
 
-        assert baseMap.getInt(key_locked) == 0 : "Contract is locked.";
+        assert baseMap.getBoolean(key_locked) == false : "Contract is locked.";
         assert withdrawals.size() > 0 : "At least one withdrawal is required.";
         int startNonce = withdrawals.get(0).nonce;
         assert startNonce == currentNonce() + 1 : "Provided first nonce is not the next one.";
@@ -248,21 +248,23 @@ public class BridgeContract {
     }
 
     public static void lock() {
-        if (!checkWitness(owner())) {
-            abort("Only the owner can lock the contract.");
+        assert baseMap.getBoolean(key_locked) == false : "Contract is already locked.";
+        if (!checkWitness(securityGuard())) {
+            abort("Only the securityGuard can lock the contract.");
         }
-        baseMap.put(key_locked, 1);
+        baseMap.put(key_locked, true);
     }
 
     public static void unlock() {
+        assert baseMap.getBoolean(key_locked) == true : "Contract is already unlocked.";
         if (!checkWitness(governor())) {
             abort("Only the governor can unlock the contract.");
         }
-        baseMap.put(key_locked, 0);
+        baseMap.put(key_locked, false);
     }
 
     public static boolean isLocked() {
-        return baseMap.getInt(key_locked) != 0;
+        return baseMap.getBoolean(key_locked);
     }
 
     // endregion

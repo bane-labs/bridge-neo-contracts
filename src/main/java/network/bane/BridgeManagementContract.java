@@ -56,9 +56,6 @@ public class BridgeManagementContract {
     @DisplayName("SetRelayer")
     public static Event1Arg<ECPoint> onRelayerSet;
 
-    @DisplayName("SetRecoverer")
-    public static Event1Arg<ECPoint> onRecovererSet;
-
     @DisplayName("SetValidators")
     public static Event2Args<List<ECPoint>, Integer> onValidatorsSet;
 
