@@ -553,10 +553,6 @@ public class BridgeTest {
     public void testSetDepositFee() throws Throwable {
         BigInteger newFee = new BigInteger("200000000");
         assertThat(bridge.depositFee(), is(not(newFee)));
-        NeoSendRawTransaction response =
-                gasToken.transfer(alice, TestHelper.governorScriptHash, minDeposit, string(recipient0.toString())).sign().send();
-        Hash256 txHash = response.getSendRawTransaction().getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
         setDepositFee(bridge, neow3j, newFee);
         BigInteger actualDepositFee = bridge.depositFee();
         assertThat(actualDepositFee, is(newFee));
