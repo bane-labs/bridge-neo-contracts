@@ -4,8 +4,8 @@ import io.neow3j.contract.GasToken;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Signer;
-import io.neow3j.transaction.TransactionBuilder;
 import io.neow3j.types.Hash160;
+import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
 
 import java.io.IOException;
@@ -14,6 +14,8 @@ import java.math.BigInteger;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Numeric.prependHexPrefix;
+import static network.bane.util.TestHelper.governor;
+import static network.bane.util.TestHelper.securityGuard;
 
 public class Bridge extends SmartContractHelper {
 
@@ -23,10 +25,33 @@ public class Bridge extends SmartContractHelper {
 
     // region methods
 
-    public TransactionBuilder deposit(Account from, Hash160 to, BigInteger amount) {
+    public Hash256 deposit(Account from, Hash160 to, BigInteger amount) throws Throwable {
         Signer signer = AccountSigner.none(from).setAllowedContracts(GasToken.SCRIPT_HASH);
-        return invokeFunction("deposit", hash160(from), hash160(to), integer(amount))
-                .signers(signer);
+        return sendAndAwaitExecution(invokeFunction("deposit", hash160(from), hash160(to), integer(amount))
+                .signers(signer));
+    }
+
+    public Hash256 claim(Account sender, BigInteger nonce) throws Throwable {
+        Signer signer = AccountSigner.none(sender).setAllowedContracts(GasToken.SCRIPT_HASH);
+        return sendAndAwaitExecution(invokeFunction("claim", integer(nonce)).signers(signer));
+    }
+
+    public Hash256 lock() throws Throwable {
+        return lock(securityGuard);
+    }
+
+    public Hash256 lock(Account sender) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("lock").signers(signer));
+    }
+
+    public Hash256 unlock() throws Throwable {
+        return unlock(governor);
+    }
+
+    public Hash256 unlock(Account sender) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("unlock").signers(signer));
     }
 
     // region static values
