@@ -36,5 +36,5 @@ tasks.withType(Test).configureEach {
 }
 
 neow3jCompiler {
-    className = "network.bane.NeoXBridge"
+    className = "network.bane.BridgeContract"
 }
