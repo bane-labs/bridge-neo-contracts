@@ -151,7 +151,7 @@ public class BridgeContract {
 
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amountWithFee, Object data) {
-        assert !isLocked() : "Contract is locked.";
+        if (isLocked()) abort("Contract is locked.");
         if (getCallingScriptHash() != gasToken.getHash()) abort("Only GAS is accepted.");
         Hash160 to = (Hash160) data;
         if (!Hash160.isValid(to)) abort("Invalid recipient data.");
@@ -208,6 +208,7 @@ public class BridgeContract {
     // region withdrawal
 
     public static void withdraw(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures, List<Withdrawal> withdrawals) {
+        if (isLocked()) abort("Contract is locked.");
         if (!checkWitness(relayer())) {
             abort("Only the relayer can call this method.");
         }
@@ -215,7 +216,6 @@ public class BridgeContract {
             abort("Invalid validator signatures provided.");
         }
 
-        assert !isLocked() : "Contract is locked.";
         assert withdrawals.size() > 0 : "At least one withdrawal is required.";
         int startNonce = withdrawals.get(0).nonce;
         assert startNonce == currentNonce() + 1 : "Provided first nonce is not the next one.";
@@ -231,7 +231,7 @@ public class BridgeContract {
     // region public claim
 
     public static void claim(int nonce) {
-        assert !isLocked() : "Contract is locked.";
+        if (isLocked()) abort("Contract is locked.");
         ByteString claimable = claimMap.get(nonce);
         if (claimable == null) {
             abort("No claim for this nonce.");
@@ -249,16 +249,19 @@ public class BridgeContract {
         }
     }
 
+    // endregion
+    // region locking
+
     public static void lock() {
-        assert !isLocked() : "Contract is already locked.";
+        if (isLocked()) abort("Contract is already locked.");
         if (!checkWitness(securityGuard())) {
-            abort("Only the securityGuard can lock the contract.");
+            abort("Only the security guard can lock the contract.");
         }
         baseMap.put(key_locked, true);
     }
 
     public static void unlock() {
-        assert isLocked() : "Contract is already unlocked.";
+        if (!isLocked()) abort("Contract is already unlocked.");
         if (!checkWitness(governor())) {
             abort("Only the governor can unlock the contract.");
         }
@@ -441,7 +444,7 @@ public class BridgeContract {
     // region update
 
     public static void update(ByteString nef, String manifest) {
-        assert isLocked() : "Update only occurs when contact is locked.";
+        if (!isLocked()) abort("Contract needs to be locked to update.");
         if (!checkWitness(owner())) abort("Only the owner can update this contract.");
         contractManagement.update(nef, manifest);
     }
