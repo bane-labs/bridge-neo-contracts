@@ -215,7 +215,7 @@ public class BridgeContract {
             abort("Invalid validator signatures provided.");
         }
 
-        assert baseMap.getBoolean(key_locked) == false : "Contract is locked.";
+        assert !isLocked() : "Contract is locked.";
         assert withdrawals.size() > 0 : "At least one withdrawal is required.";
         int startNonce = withdrawals.get(0).nonce;
         assert startNonce == currentNonce() + 1 : "Provided first nonce is not the next one.";
