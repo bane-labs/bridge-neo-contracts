@@ -34,9 +34,11 @@ import java.math.BigInteger;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
@@ -56,7 +58,6 @@ import static network.bane.util.TestHelper.getDepositEvent;
 import static network.bane.util.TestHelper.getProofFromStorage;
 import static network.bane.util.TestHelper.getWithdrawEvent;
 import static network.bane.util.TestHelper.governorPubKey;
-import static network.bane.util.TestHelper.lockContract;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.ownerPubKey;
 import static network.bane.util.TestHelper.prepareManagementDeployParameter;
@@ -68,10 +69,10 @@ import static network.bane.util.TestHelper.recipient3;
 import static network.bane.util.TestHelper.recipient4;
 import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.relayerPubKey;
+import static network.bane.util.TestHelper.securityGuard;
 import static network.bane.util.TestHelper.securityGuardPubKey;
 import static network.bane.util.TestHelper.setDepositFee;
 import static network.bane.util.TestHelper.signMsg;
-import static network.bane.util.TestHelper.unlockContract;
 import static network.bane.util.TestHelper.validator1;
 import static network.bane.util.TestHelper.validator1PubKey;
 import static network.bane.util.TestHelper.validator2;
@@ -89,7 +90,9 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ContractTest(
         blockTime = 1,
@@ -240,11 +243,7 @@ public class BridgeTest {
         if (print) {
             proof = getProofFromStorage(bridge);
         }
-        NeoSendRawTransaction response = bridge.deposit(from, to, amount)
-                .sign()
-                .send();
-        Hash256 txHash = response.getSendRawTransaction().getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
+        Hash256 txHash = bridge.deposit(from, to, amount);
         if (print) {
             printDepositStorage(bridge, neow3j, txHash, proof);
         }
@@ -266,8 +265,6 @@ public class BridgeTest {
         assertThat(bridge.getStorage("0x0a03"), is(prependHexPrefix(reverseHexString("0x05f5e100"))));
         // Max Deposit
         assertThat(bridge.getStorage("0x0a04"), is(prependHexPrefix(reverseHexString("0x00e8d4a51000"))));
-        // Max Proofs Per Withdrawal
-//        assertThat(bridge.getStorage("0x0a05"), is(prependHexPrefix(reverseHexString("0x0a"))));
 
         assertThat(bridge.management(), is(managementContractHash));
         assertThat(bridge.depositFee(), is(depositFee));
@@ -502,8 +499,8 @@ public class BridgeTest {
 
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal =
-                array(array(integer(nonce1), integer(amount1), hash160(to1)), array(integer(nonce2), integer(amount2)
-                        , hash160(to2)));
+                array(array(integer(nonce1), integer(amount1), hash160(to1)), array(integer(nonce2), integer(amount2),
+                        hash160(to2)));
         Hash256 txHash = withdrawGas(newRoot, signMsg(validators, newRoot), withdrawal);
         TestHelper.WithdrawEvent withdrawEvent = getWithdrawEvent(txHash, neow3j);
         assertThat(withdrawEvent.nonce, is(nonce1));
@@ -636,7 +633,7 @@ public class BridgeTest {
             manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
         }
         byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
-        lockContract(bridge, neow3j);
+        bridge.lock();
         NeoSendRawTransaction response =
                 bridge.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes))
                         .signers(AccountSigner.calledByEntry(owner))
@@ -651,17 +648,97 @@ public class BridgeTest {
     @Test
     @Order(0)
     public void testUpdateContract_notOwner() throws Throwable {
-        lockContract(bridge, neow3j);
-        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () -> {
-            bridge.invokeFunction("update", byteArray(""), string(""))
-                    .signers(AccountSigner.calledByEntry(alice))
-                    .sign()
-                    .send();
-        });
+        bridge.lock();
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.invokeFunction("update", byteArray(""), string(""))
+                        .signers(AccountSigner.calledByEntry(alice))
+                        .sign());
 
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Only the owner can update this " +
-                "contract."));
-        unlockContract(bridge, neow3j);
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Only the owner can update this contract."));
+        bridge.unlock();
+    }
+
+    @Test
+    @Order(0)
+    public void testUpdate_unlocked() throws IOException {
+        assertFalse(bridge.isLocked());
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.invokeFunction("update", byteArray(""), string(""))
+                        .signers(AccountSigner.calledByEntry(owner))
+                        .sign());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract needs to be locked to update."));
+    }
+
+    // endregion
+    // region lock
+
+    @Test
+    @Order(0)
+    public void testLock_onlySecurityGuard() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.invokeFunction("lock").signers(calledByEntry(relayer)).sign());
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Only the security guard can lock the contract."));
+    }
+
+    @Test
+    @Order(0)
+    public void testUnlock_onlyGovernor() throws Throwable {
+        bridge.lock();
+        assertTrue(bridge.isLocked());
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.invokeFunction("unlock").signers(calledByEntry(relayer)).sign());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Only the governor can unlock " +
+                "the contract."));
+        bridge.unlock();
+    }
+
+    @Test
+    @Order(0)
+    public void testLock() throws Throwable {
+        bridge.lock();
+        assertTrue(bridge.isLocked());
+
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> gasToken.transfer(relayer, bridge.getScriptHash(), BigInteger.ONE, hash160(recipient0)).sign());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is locked."));
+
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.deposit(relayer, recipient0, BigInteger.TEN));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is locked."));
+
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.claim(relayer, BigInteger.TEN));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is locked."));
+
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.lock(securityGuard));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is already locked."));
+        bridge.unlock();
+    }
+
+    @Test
+    @Order(0)
+    public void testUnlock_alreadyUnlocked() throws IOException {
+        assertFalse(bridge.isLocked());
+        TransactionConfigurationException thrown =
+                assertThrows(TransactionConfigurationException.class, () -> bridge.unlock());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is already unlocked."));
+    }
+
+    @Test
+    @Order(0)
+    public void testLock_withdrawal() throws Throwable {
+        bridge.lock();
+        HashMap<ContractParameter, ContractParameter> map = new HashMap<>();
+        // Map content doesn't matter for this test, just required to have at least one entry.
+        map.put(integer(0), integer(0));
+
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> withdrawGas("", map, array("")));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is locked."));
+        bridge.unlock();
     }
 
     // endregion
