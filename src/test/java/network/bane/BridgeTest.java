@@ -56,6 +56,7 @@ import static network.bane.util.TestHelper.getDepositEvent;
 import static network.bane.util.TestHelper.getProofFromStorage;
 import static network.bane.util.TestHelper.getWithdrawEvent;
 import static network.bane.util.TestHelper.governorPubKey;
+import static network.bane.util.TestHelper.lockContract;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.ownerPubKey;
 import static network.bane.util.TestHelper.prepareManagementDeployParameter;
@@ -70,6 +71,7 @@ import static network.bane.util.TestHelper.relayerPubKey;
 import static network.bane.util.TestHelper.securityGuardPubKey;
 import static network.bane.util.TestHelper.setDepositFee;
 import static network.bane.util.TestHelper.signMsg;
+import static network.bane.util.TestHelper.unlockContract;
 import static network.bane.util.TestHelper.validator1;
 import static network.bane.util.TestHelper.validator1PubKey;
 import static network.bane.util.TestHelper.validator2;
@@ -634,7 +636,7 @@ public class BridgeTest {
             manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
         }
         byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
-
+        lockContract(bridge, neow3j);
         NeoSendRawTransaction response =
                 bridge.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes))
                         .signers(AccountSigner.calledByEntry(owner))
@@ -648,7 +650,8 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testUpdateContract_notOwner() {
+    public void testUpdateContract_notOwner() throws Throwable {
+        lockContract(bridge, neow3j);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () -> {
             bridge.invokeFunction("update", byteArray(""), string(""))
                     .signers(AccountSigner.calledByEntry(alice))
@@ -658,6 +661,7 @@ public class BridgeTest {
 
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Only the owner can update this " +
                 "contract."));
+        unlockContract(bridge, neow3j);
     }
 
     // endregion

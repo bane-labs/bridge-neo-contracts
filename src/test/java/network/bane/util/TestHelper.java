@@ -171,6 +171,24 @@ public class TestHelper {
         waitUntilTransactionIsExecuted(response, neow3j);
     }
 
+    public static void lockContract(Bridge bridge, Neow3j neow3j) throws Throwable {
+        NeoSendRawTransaction response =
+                bridge.invokeFunction("lock")
+                        .signers(calledByEntry(securityGuard))
+                        .sign()
+                        .send();
+        waitUntilTransactionIsExecuted(response, neow3j);
+    }
+
+    public static void unlockContract(Bridge bridge, Neow3j neow3j) throws Throwable {
+        NeoSendRawTransaction response =
+                bridge.invokeFunction("unlock")
+                        .signers(calledByEntry(governor))
+                        .sign()
+                        .send();
+        waitUntilTransactionIsExecuted(response, neow3j);
+    }
+
     public static void waitUntilTransactionIsExecuted(NeoSendRawTransaction response, Neow3j neow3j) {
         Await.waitUntilTransactionIsExecuted(response.getSendRawTransaction().getHash(), neow3j);
     }

@@ -151,6 +151,7 @@ public class BridgeContract {
 
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amountWithFee, Object data) {
+        assert !isLocked() : "Contract is locked.";
         if (getCallingScriptHash() != gasToken.getHash()) abort("Only GAS is accepted.");
         Hash160 to = (Hash160) data;
         if (!Hash160.isValid(to)) abort("Invalid recipient data.");
@@ -230,6 +231,7 @@ public class BridgeContract {
     // region public claim
 
     public static void claim(int nonce) {
+        assert !isLocked() : "Contract is locked.";
         ByteString claimable = claimMap.get(nonce);
         if (claimable == null) {
             abort("No claim for this nonce.");
@@ -248,7 +250,7 @@ public class BridgeContract {
     }
 
     public static void lock() {
-        assert baseMap.getBoolean(key_locked) == false : "Contract is already locked.";
+        assert !isLocked() : "Contract is already locked.";
         if (!checkWitness(securityGuard())) {
             abort("Only the securityGuard can lock the contract.");
         }
@@ -256,13 +258,14 @@ public class BridgeContract {
     }
 
     public static void unlock() {
-        assert baseMap.getBoolean(key_locked) == true : "Contract is already unlocked.";
+        assert isLocked() : "Contract is already unlocked.";
         if (!checkWitness(governor())) {
             abort("Only the governor can unlock the contract.");
         }
         baseMap.put(key_locked, false);
     }
 
+    @Safe
     public static boolean isLocked() {
         return baseMap.getBoolean(key_locked);
     }
@@ -438,6 +441,7 @@ public class BridgeContract {
     // region update
 
     public static void update(ByteString nef, String manifest) {
+        assert isLocked() : "Update only occurs when contact is locked.";
         if (!checkWitness(owner())) abort("Only the owner can update this contract.");
         contractManagement.update(nef, manifest);
     }
