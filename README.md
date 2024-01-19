@@ -19,7 +19,7 @@ git clone https://github.com/bane-labs/bridge-neo-contracts.git
 cd bridge-neo-contracts
 ```
 
-#### 3. **Compile the smart contract for the fungible token bridge:**
+#### 3. **Compile the smart contract for the bridge:**
 
 ```bash
 ./gradlew neow3jCompile
@@ -32,18 +32,40 @@ $ ls -la build/neow3j
 total 24
 drwxr-xr-x  5 user  wheel  160 23 Feb 17:40 .
 drwxr-xr-x  7 user  wheel  224 23 Feb 17:40 ..
--rw-r--r--  1 user  wheel  425 23 Feb 17:40 FungibleTokenBridge.manifest.json
--rw-r--r--  1 user  wheel   94 23 Feb 17:40 FungibleTokenBridge.nef
--rw-r--r--  1 user  wheel  430 23 Feb 17:40 FungibleTokenBridge.nefdbgnfo
+-rw-r--r--  1 user  wheel  425 23 Feb 17:40 NeoXBridge.manifest.json
+-rw-r--r--  1 user  wheel   94 23 Feb 17:40 NeoXBridge.nef
+-rw-r--r--  1 user  wheel  430 23 Feb 17:40 NeoXBridge.nefdbgnfo
 ```
 
-#### 5. **Run the contract test**
+#### 5. **Compile the bridge management contract**
+
+First, go to the `build.gradle` file and change the `className` under the `neow3jCompiler` to `network.bane.BridgeManagementContract`.
+
+Then, run the following command:
+
+```bash
+./gradlew neow3jCompile
+```
+
+Then, similar to the bridge contract before, you will see the following output in the directory `./build/neow3j`:
+
+```bash
+$ ls -la build/neow3j
+total 24
+drwxr-xr-x  5 user  wheel  160 23 Feb 17:40 .
+drwxr-xr-x  7 user  wheel  224 23 Feb 17:40 ..
+-rw-r--r--  1 user  wheel  425 23 Feb 17:40 NeoXBridgeManagement.manifest.json
+-rw-r--r--  1 user  wheel   94 23 Feb 17:40 NeoXBridgeManagement.nef
+-rw-r--r--  1 user  wheel  430 23 Feb 17:40 NeoXBridgeManagement.nefdbgnfo
+```
+
+#### 6. **Run the contract test**
 
 ```bash
 ./gradlew test
 ```
 
-#### 6. **Deploy the contract**
+#### 7. **Deploy the bridge contracts locally**
 
 - Run a local [Neo Express](https://github.com/neo-project/neo-express) instance. The project includes a Neo Express configuration file.
 - Fund Alice's account: `neoxp transfer 100 GAS genesis alice`
