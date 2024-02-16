@@ -37,8 +37,9 @@ import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 @DisplayName("NeoXBridge")
 @Permission(nativeContract = NativeContract.GasToken, methods = "transfer")
 @Permission(nativeContract = NativeContract.ContractManagement, methods = "update")
-@ManifestExtra(key = "author", value = "BaneLabs")
-@ManifestExtra(key = "description", value = "Contract for bridging GAS tokens from Neo N3 to Neo X.")
+@ManifestExtra(key = "Author", value = "BaneLabs")
+@ManifestExtra(key = "Target", value = "Neo X TestNet T2")
+@ManifestExtra(key = "Description", value = "Contract for bridging GAS tokens between Neo N3 and Neo X.")
 public class BridgeContract {
 
     private static final StorageContext ctx = Storage.getStorageContext();
@@ -129,14 +130,20 @@ public class BridgeContract {
     public static void deploy(Object data, boolean isUpdate) {
         if (!isUpdate) {
             BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
-            assert BridgeDeploymentData.isValid(deploymentData);
+
+            if (!Hash160.isValid(deploymentData.bridgeManagementContractHash))
+                abort("Invalid bridge management contract hash.");
+            if (deploymentData.depositFee < 0) abort("Deposit fee must be nonnegative.");
+            if (deploymentData.minDeposit < 0) abort("Minimum deposit must be nonnegative.");
+            if (deploymentData.maxDeposit < deploymentData.minDeposit)
+                abort("Maximum deposit must be greater than the minimum deposit.");
 
             baseMap.put(key_bridgeManagement, deploymentData.bridgeManagementContractHash);
             baseMap.put(key_deposit_fee, deploymentData.depositFee);
             baseMap.put(key_deposit_min, deploymentData.minDeposit);
             baseMap.put(key_deposit_max, deploymentData.maxDeposit);
 
-            // First deposit and withdrawal roots will be zero hashes
+            // Initial deposit and withdrawal roots will be zero hashes
             baseMap.put(key_deposit_root, Hash256.zero());
             baseMap.put(key_withdrawal_root, Hash256.zero());
 
@@ -159,7 +166,7 @@ public class BridgeContract {
 
         int depositFee = depositFee();
         if (amountWithFee < minDeposit() + depositFee) abort("Deposit amount is too low.");
-        if (amountWithFee >= maxDeposit() + depositFee) abort("Deposit amount is too high.");
+        if (amountWithFee > maxDeposit() + depositFee) abort("Deposit amount is too high.");
         int depositAmount = amountWithFee - depositFee;
 
         int nonce = newNonce();
@@ -207,19 +214,16 @@ public class BridgeContract {
     // endregion
     // region withdrawal
 
-    public static void withdraw(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures, List<Withdrawal> withdrawals) {
+    public static void withdraw(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
+            List<Withdrawal> withdrawals) {
         if (isLocked()) abort("Contract is locked.");
-        if (!checkWitness(relayer())) {
-            abort("Only the relayer can call this method.");
-        }
-        if (!verifyValidatorSignatures(signatures, withdrawalRoot)) {
-            abort("Invalid validator signatures provided.");
-        }
+        if (!checkWitness(relayer())) abort("Only the relayer can call this method.");
+        if (!verifyValidatorSignatures(signatures, withdrawalRoot)) abort("Invalid validator signatures provided.");
 
-        assert withdrawals.size() > 0 : "At least one withdrawal is required.";
+        if (withdrawals.size() <= 0) abort("At least one withdrawal is required.");
         int startNonce = withdrawals.get(0).nonce;
-        assert startNonce == currentNonce() + 1 : "Provided first nonce is not the next one.";
-        assert subsequentNonces(withdrawals, currentNonce()) : "Provided withdrawals are not subsequent.";
+        if (startNonce != currentNonce() + 1) abort("Provided first nonce is not the next one.");
+        if (!subsequentNonces(withdrawals, currentNonce())) abort("Provided withdrawals are not subsequent.");
 
         baseMap.put(key_withdrawal_nonce, withdrawals.get(withdrawals.size() - 1).nonce);
         ByteString formerWithdrawalRoot = withdrawalRoot();
@@ -233,19 +237,17 @@ public class BridgeContract {
     public static void claim(int nonce) {
         if (isLocked()) abort("Contract is locked.");
         ByteString claimable = claimMap.get(nonce);
-        if (claimable == null) {
-            abort("No claim for this nonce.");
-        }
-        assert claimable.length() == const_hash160_size + const_amount_padding_size : "Invalid claimable data.";
+        if (claimable == null) abort("No claim for this nonce.");
+        if (claimable.length() != const_hash160_size + const_amount_padding_size) abort("Invalid claimable data.");
 
         claimMap.delete(nonce);
 
         Hash160 to = new Hash160(claimable.take(const_hash160_size));
         int amount = claimable.last(const_amount_padding_size).toInt();
-        if (!gasToken.transfer(getExecutingScriptHash(), to, amount, null)) {
-            abort("Claim transfer failed.");
-        } else {
+        if (gasToken.transfer(getExecutingScriptHash(), to, amount, null)) {
             onClaimed.fire(nonce, amount, to);
+        } else {
+            abort("Claim transfer failed.");
         }
     }
 
@@ -254,17 +256,13 @@ public class BridgeContract {
 
     public static void lock() {
         if (isLocked()) abort("Contract is already locked.");
-        if (!checkWitness(securityGuard())) {
-            abort("Only the security guard can lock the contract.");
-        }
+        if (!checkWitness(securityGuard())) abort("Only the security guard can lock the contract.");
         baseMap.put(key_locked, true);
     }
 
     public static void unlock() {
         if (!isLocked()) abort("Contract is already unlocked.");
-        if (!checkWitness(governor())) {
-            abort("Only the governor can unlock the contract.");
-        }
+        if (!checkWitness(governor())) abort("Only the governor can unlock the contract.");
         baseMap.put(key_locked, false);
     }
 
@@ -281,8 +279,7 @@ public class BridgeContract {
         ByteString parent = formerWithdrawalRoot;
         for (int i = 0; i < withdrawals.size(); i++) {
             Withdrawal withdrawal = withdrawals.get(i);
-            // Assertion might not be necessary - just another verification
-            assert Withdrawal.isValid(withdrawal) : "Invalid withdrawal provided.";
+            if (!Withdrawal.isValid(withdrawal)) abort("Invalid withdrawal provided.");
             ByteString withdrawalHash = hashDepositOrWithdrawal(withdrawal.nonce, withdrawal.amount, withdrawal.to);
             parent = computeNewRoot(parent, withdrawalHash);
         }
@@ -305,7 +302,8 @@ public class BridgeContract {
     }
 
     private static void addToClaim(Withdrawal withdrawal) {
-        claimMap.put(withdrawal.nonce, concat(withdrawal.to.toByteArray(), padToBytes(toByteArray(withdrawal.amount), const_amount_padding_size)));
+        claimMap.put(withdrawal.nonce, concat(withdrawal.to.toByteArray(), padToBytes(toByteArray(withdrawal.amount),
+                const_amount_padding_size)));
     }
 
     private static boolean isContract(Hash160 scriptHash) {
@@ -315,7 +313,7 @@ public class BridgeContract {
     private static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, ByteString root) {
         List<ECPoint> validators = validators();
         int threshold = validatorThreshold();
-        assert signatures.keys().length >= threshold : "Not enough signatures provided.";
+        if (signatures.keys().length < threshold) abort("Not enough signatures provided.");
 
         ByteString msg = cryptoLib.sha256(root);
         int covered = 0;
@@ -435,8 +433,8 @@ public class BridgeContract {
     // region setters
 
     public static void setDepositFee(int fee) {
-        if(!checkWitness(governor())) abort("Only the governor can set the deposit fee.");
-        if(fee < 0) abort("Deposit fee must be nonnegative.");
+        if (!checkWitness(governor())) abort("Only the governor can set the deposit fee.");
+        if (fee < 0) abort("Deposit fee must be nonnegative.");
         baseMap.put(key_deposit_fee, fee);
     }
 

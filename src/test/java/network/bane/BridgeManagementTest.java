@@ -474,7 +474,7 @@ public class BridgeManagementTest {
                         .sign()
         );
         assertThat(thrown.getMessage(),
-                containsString("ASSERTMSG is executed with false result. Reason: Duplicate validators provided."));
+                containsString("ABORTMSG is executed. Reason: Duplicate validators provided."));
     }
 
     // endregion

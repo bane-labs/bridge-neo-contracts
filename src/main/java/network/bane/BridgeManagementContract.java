@@ -5,7 +5,6 @@ import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
-import io.neow3j.devpack.Runtime;
 import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
@@ -22,14 +21,12 @@ import io.neow3j.devpack.events.Event2Args;
 import network.bane.structs.ManagementDeploymentData;
 
 import static io.neow3j.devpack.Helper.abort;
+import static io.neow3j.devpack.Runtime.checkWitness;
 
 @DisplayName("NeoXBridgeManagement")
 @Permission(nativeContract = NativeContract.ContractManagement, methods = "update")
-@ManifestExtra(key = "author", value = "BaneLabs")
-@ManifestExtra(
-        key = "description",
-        value = "Contract for managing ownership and rights for interacting with the bridge contract."
-)
+@ManifestExtra(key = "Author", value = "BaneLabs")
+@ManifestExtra(key = "Description", value = "Contract for managing roles in the Neo X bridge contract")
 public class BridgeManagementContract {
 
     private static final StorageContext ctx = Storage.getStorageContext();
@@ -72,18 +69,19 @@ public class BridgeManagementContract {
     public static void deploy(Object data, boolean isUpdate) {
         if (!isUpdate) {
             ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
-            assert ECPoint.isValid(deploymentData.owner);
-            assert ECPoint.isValid(deploymentData.relayer);
+
+            if (!ECPoint.isValid(deploymentData.owner)) abort("Invalid public key provided for owner.");
+            if (!ECPoint.isValid(deploymentData.relayer)) abort("Invalid public key provided for relayer.");
             List<ECPoint> validators = deploymentData.validators;
             int validatorSize = validators.size();
-            assert validatorSize <= const_max_validators;
-            assert validatorSize >= deploymentData.validatorThreshold;
+            if (validatorSize > const_max_validators) abort("Too many validators provided.");
+            if (validatorSize < deploymentData.validatorThreshold) abort("Not enough validators.");
 
             baseMap.put(key_owner, deploymentData.owner);
             baseMap.put(key_relayer, deploymentData.relayer);
             for (int i = 0; i < validatorSize; i++) {
                 ECPoint validator = validators.get(i);
-                assert ECPoint.isValid(validator);
+                if (!ECPoint.isValid(validator)) abort("Invalid public key provided for validator.");
                 validatorMap.put(validator, true);
             }
             baseMap.put(key_validator_threshold, deploymentData.validatorThreshold);
@@ -109,8 +107,9 @@ public class BridgeManagementContract {
 
     public static void setValidators(List<ECPoint> validators, int threshold) {
         onlyOwner();
-        assert !hasDuplicates(validators) : "Duplicate validators provided.";
-        assert validators.size() >= threshold : "Not enough validators.";
+        if (hasDuplicates(validators)) abort("Duplicate validators provided.");
+        if (validators.size() < threshold) abort("Not enough validators.");
+        if (threshold <= 0) abort("Threshold must be greater than 0.");
         Iterator<ByteString> it = validatorMap.find(FindOptions.RemovePrefix | FindOptions.KeysOnly);
         while (it.next()) {
             ByteString key = it.get();
@@ -118,7 +117,7 @@ public class BridgeManagementContract {
         }
         for (int i = 0; i < validators.size(); i++) {
             ECPoint validator = validators.get(i);
-            assert ECPoint.isValid(validator) : "Invalid validator public key provided.";
+            if (!ECPoint.isValid(validator)) abort("Invalid validator public key provided.");
             validatorMap.put(validator, true);
         }
         baseMap.put(key_validator_threshold, threshold);
@@ -187,9 +186,7 @@ public class BridgeManagementContract {
     // region restrictions
 
     private static void onlyOwner() {
-        if (!Runtime.checkWitness(owner())) {
-            abort("No authorization.");
-        }
+        if (!checkWitness(owner())) abort("No authorization.");
     }
 
     // endregion

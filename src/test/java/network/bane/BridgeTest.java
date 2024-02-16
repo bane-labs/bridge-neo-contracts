@@ -108,7 +108,7 @@ public class BridgeTest {
     private static final BigInteger minDeposit = new BigInteger("100000000");
     private static final BigInteger maxDeposit = new BigInteger("1000000000000");
 
-    private static final Hash160 managementContractHash = new Hash160("e9f0d93e6bcca4e8eea2da82dc09a0161e55d5e7");
+    private static final Hash160 managementContractHash = new Hash160("0x55195481028b97404ebbe40a8aad3a5b0fb39005");
 
     private static Bridge bridge;
     private static Management management;
@@ -306,7 +306,7 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testDeposit_assertFailIfInvalidDataHash160() {
+    public void testDeposit_abortIfInvalidDataHash160() {
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () ->
                         gasToken.transfer(
@@ -349,7 +349,7 @@ public class BridgeTest {
     // endregion
     // region deposits
 
-    // Test OnNEP17Payment and deposit functions
+    // TODO: Test both deposit using OnNEP17Payment and deposit function
     @Test
     @Order(11)
     public void testRootComputation_1() throws Throwable {
@@ -571,7 +571,7 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testSetDepositFee_assertFailIfFeeLowerThanZero() {
+    public void testSetDepositFee_abortIfFeeLowerThanZero() {
         BigInteger newFee = new BigInteger("-1");
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () ->
@@ -583,7 +583,7 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testSetDepositFee_assertFailIfCallerisNotOwner() {
+    public void testSetDepositFee_abortFailIfCallerisNotOwner() {
         BigInteger newFee = new BigInteger("200000000");
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () ->

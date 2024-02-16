@@ -5,6 +5,7 @@ import io.neow3j.devpack.annotations.Struct;
 
 @Struct
 public class Withdrawal {
+
     public Integer nonce;
     public Integer amount;
     public Hash160 to;
