@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'application'
     id 'io.neow3j.gradle-plugin' version '3.21.2'
 }
 
@@ -17,6 +18,9 @@ sourceSets {
     deploy {
         compileClasspath += sourceSets.main.output
         runtimeClasspath += sourceSets.main.output
+    }
+    main {
+        runtimeClasspath += sourceSets.deploy.runtimeClasspath
     }
 }
 
@@ -37,4 +41,17 @@ tasks.withType(Test).configureEach {
 
 neow3jCompiler {
     className = project.hasProperty('className') ? project.className : "network.bane.BridgeContract"
+}
+
+// The following configuration enables you to execute any specific
+// class file that contains a main() method, directly in the command line.
+// For example:
+// ./gradlew -q -PmainClass=network.bane.Deployment run
+application {
+    if (!project.hasProperty('mainClass')) {
+        throw new GradleException('The "mainClass" property is not specified. Please provide it using -PmainClass=your.main.Class')
+    } else {
+        // If the property is provided, set it as the main class name to run
+        application.mainClassName = project.mainClass
+    }
 }
