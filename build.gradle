@@ -47,7 +47,7 @@ neow3jCompiler {
 // class file that contains a main() method, directly in the command line.
 // For example:
 // ./gradlew -q -PmainClass=network.bane.Deployment run
-application {
+tasks.named('run') {
     if (!project.hasProperty('mainClass')) {
         throw new GradleException('The "mainClass" property is not specified. Please provide it using -PmainClass=your.main.Class')
     } else {
