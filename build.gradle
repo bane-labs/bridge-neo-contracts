@@ -48,5 +48,10 @@ neow3jCompiler {
 // For example:
 // ./gradlew -q -PmainClass=network.bane.Deployment run
 application {
-    mainClassName = project.hasProperty("mainClass") ? project.mainClass : "network.bane.Deployment"
+    if (!project.hasProperty('mainClass')) {
+        throw new GradleException('The "mainClass" property is not specified. Please provide it using -PmainClass=your.main.Class')
+    } else {
+        // If the property is provided, set it as the main class name to run
+        application.mainClassName = project.mainClass
+    }
 }
