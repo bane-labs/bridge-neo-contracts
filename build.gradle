@@ -36,5 +36,5 @@ tasks.withType(Test).configureEach {
 }
 
 neow3jCompiler {
-    className = "network.bane.BridgeContract"
+    className = project.hasProperty('className') ? project.className : "network.bane.BridgeContract"
 }
