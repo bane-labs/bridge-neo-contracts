@@ -87,6 +87,7 @@ import static network.bane.util.TestHelper.validator6PubKey;
 import static network.bane.util.TestHelper.validator7PubKey;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -355,7 +356,7 @@ public class BridgeTest {
     public void testRootComputation_1() throws Throwable {
         Account from = alice;
         Hash160 to = recipient1;
-        BigInteger amount = minDeposit;
+        BigInteger amount = new BigInteger("10000000000");
         BigInteger nextNonce = new BigInteger("1");
 
         Hash256 txHash = bridgeGasWithFee(from, to, amount, printDeposits.contains(1));
@@ -453,6 +454,20 @@ public class BridgeTest {
         assertThat(depositEvent.amount, is(amount));
         assertThat(depositEvent.depositHashHex, is(depositHashOffChain));
         assertThat(depositEvent.rootHashHex, is(d1234));
+    }
+
+    @Test
+    @Order(15)
+    public void testTryingToDepositWithBridgeContractAsFrom() throws Throwable {
+        BigInteger amount = minDeposit.multiply(new BigInteger("3"));
+        assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), greaterThan(amount));
+        System.out.println();
+        TransactionConfigurationException thrown =
+                assertThrows(TransactionConfigurationException.class, () -> {
+                    bridge.deposit(alice, bridge.getScriptHash(), recipient0, amount);
+                });
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Invalid 'from' parameter."));
     }
 
     // endregion
@@ -667,7 +682,8 @@ public class BridgeTest {
                 () -> bridge.invokeFunction("update", byteArray(""), string(""))
                         .signers(AccountSigner.calledByEntry(owner))
                         .sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract needs to be locked to update."));
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Contract needs to be locked to update."));
     }
 
     // endregion

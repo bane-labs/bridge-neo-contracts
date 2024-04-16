@@ -177,7 +177,9 @@ public class BridgeContract {
     }
 
     public static void deposit(Hash160 from, Hash160 to, int depositAmount) {
-        if (!gasToken.transfer(from, getExecutingScriptHash(), depositAmount + depositFee(), to)) {
+        Hash160 executingScriptHash = getExecutingScriptHash();
+        if (executingScriptHash.equals(from)) abort("Invalid 'from' parameter.");
+        if (!gasToken.transfer(from, executingScriptHash, depositAmount + depositFee(), to)) {
             abort("Transfer failed.");
         }
     }
