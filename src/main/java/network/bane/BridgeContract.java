@@ -38,7 +38,7 @@ import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 @Permission(nativeContract = NativeContract.GasToken, methods = "transfer")
 @Permission(nativeContract = NativeContract.ContractManagement, methods = "update")
 @ManifestExtra(key = "Author", value = "BaneLabs")
-@ManifestExtra(key = "Target", value = "Neo X TestNet T2")
+@ManifestExtra(key = "Target", value = "Neo X TestNet T3")
 @ManifestExtra(key = "Description", value = "Contract for bridging GAS tokens between Neo N3 and Neo X.")
 public class BridgeContract {
 
