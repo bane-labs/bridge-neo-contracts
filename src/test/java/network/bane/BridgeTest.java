@@ -87,6 +87,7 @@ import static network.bane.util.TestHelper.validator6PubKey;
 import static network.bane.util.TestHelper.validator7PubKey;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -108,7 +109,7 @@ public class BridgeTest {
     private static final BigInteger minDeposit = new BigInteger("100000000");
     private static final BigInteger maxDeposit = new BigInteger("1000000000000");
 
-    private static final Hash160 managementContractHash = new Hash160("e9f0d93e6bcca4e8eea2da82dc09a0161e55d5e7");
+    private static final Hash160 managementContractHash = new Hash160("0x55195481028b97404ebbe40a8aad3a5b0fb39005");
 
     private static Bridge bridge;
     private static Management management;
@@ -306,7 +307,7 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testDeposit_assertFailIfInvalidDataHash160() {
+    public void testDeposit_abortIfInvalidDataHash160() {
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () ->
                         gasToken.transfer(
@@ -349,13 +350,13 @@ public class BridgeTest {
     // endregion
     // region deposits
 
-    // Test OnNEP17Payment and deposit functions
+    // TODO: Test both deposit using OnNEP17Payment and deposit function
     @Test
     @Order(11)
     public void testRootComputation_1() throws Throwable {
         Account from = alice;
         Hash160 to = recipient1;
-        BigInteger amount = minDeposit;
+        BigInteger amount = new BigInteger("10000000000");
         BigInteger nextNonce = new BigInteger("1");
 
         Hash256 txHash = bridgeGasWithFee(from, to, amount, printDeposits.contains(1));
@@ -453,6 +454,20 @@ public class BridgeTest {
         assertThat(depositEvent.amount, is(amount));
         assertThat(depositEvent.depositHashHex, is(depositHashOffChain));
         assertThat(depositEvent.rootHashHex, is(d1234));
+    }
+
+    @Test
+    @Order(15)
+    public void testTryingToDepositWithBridgeContractAsFrom() throws Throwable {
+        BigInteger amount = minDeposit.multiply(new BigInteger("3"));
+        assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), greaterThan(amount));
+        System.out.println();
+        TransactionConfigurationException thrown =
+                assertThrows(TransactionConfigurationException.class, () -> {
+                    bridge.deposit(alice, bridge.getScriptHash(), recipient0, amount);
+                });
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Invalid 'from' parameter."));
     }
 
     // endregion
@@ -571,7 +586,7 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testSetDepositFee_assertFailIfFeeLowerThanZero() {
+    public void testSetDepositFee_abortIfFeeLowerThanZero() {
         BigInteger newFee = new BigInteger("-1");
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () ->
@@ -583,7 +598,7 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testSetDepositFee_assertFailIfCallerisNotOwner() {
+    public void testSetDepositFee_abortFailIfCallerisNotOwner() {
         BigInteger newFee = new BigInteger("200000000");
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () ->
@@ -667,7 +682,8 @@ public class BridgeTest {
                 () -> bridge.invokeFunction("update", byteArray(""), string(""))
                         .signers(AccountSigner.calledByEntry(owner))
                         .sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract needs to be locked to update."));
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Contract needs to be locked to update."));
     }
 
     // endregion

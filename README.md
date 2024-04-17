@@ -22,7 +22,7 @@ cd bridge-neo-contracts
 #### 3. **Compile the smart contract for the bridge:**
 
 ```bash
-./gradlew neow3jCompile
+./gradlew neow3jCompile -PclassName=network.bane.BridgeContract
 ```
 
 #### 4. **You will see the following output in the directory `./build/neow3j`:**
@@ -39,12 +39,8 @@ drwxr-xr-x  7 user  wheel  224 23 Feb 17:40 ..
 
 #### 5. **Compile the bridge management contract**
 
-First, go to the `build.gradle` file and change the `className` under the `neow3jCompiler` to `network.bane.BridgeManagementContract`.
-
-Then, run the following command:
-
 ```bash
-./gradlew neow3jCompile
+./gradlew neow3jCompile -PclassName=network.bane.BridgeManagementContract
 ```
 
 Then, similar to the bridge contract before, you will see the following output in the directory `./build/neow3j`:
