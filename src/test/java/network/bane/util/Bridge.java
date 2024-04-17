@@ -25,10 +25,14 @@ public class Bridge extends SmartContractHelper {
 
     // region methods
 
-    public Hash256 deposit(Account from, Hash160 to, BigInteger amount) throws Throwable {
-        Signer signer = AccountSigner.none(from).setAllowedContracts(GasToken.SCRIPT_HASH);
+    public Hash256 deposit(Account sender, Hash160 from, Hash160 to, BigInteger amount) throws Throwable {
+        Signer signer = AccountSigner.none(sender).setAllowedContracts(GasToken.SCRIPT_HASH);
         return sendAndAwaitExecution(invokeFunction("deposit", hash160(from), hash160(to), integer(amount))
                 .signers(signer));
+    }
+
+    public Hash256 deposit(Account from, Hash160 to, BigInteger amount) throws Throwable {
+        return deposit(from, from.getScriptHash(), to, amount);
     }
 
     public Hash256 claim(Account sender, BigInteger nonce) throws Throwable {
