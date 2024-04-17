@@ -32,7 +32,7 @@ import static java.util.Arrays.asList;
 
 public class Deployment {
 
-    private static final String NODE = getEnvVariableOrDefault("NEON3_JSON_RPC", "http://localhost:50012");
+    private static final String NODE = getEnvVariableOrDefault("NEON3_JSON_RPC", "");
 
     private static final Account deployer = Account.fromWIF(getEnvVariableOrDefault("NEON3_DEPLOYER_WIF", ""));
 
@@ -43,11 +43,11 @@ public class Deployment {
             getEnvVariableOrDefault("NEON3_RELAYER_PUBKEY", "03aa2942dcc6fc61caccf34c830fe1a6964b3a512059972ba90028e133fbddbcd2"));
 
     private static final ECPublicKey validator_1 = new ECPublicKey(
-            getEnvVariableOrDefault("NEON3_VALIDATOR1_PUBKEY", "0328d3d90ec2dee756ebf716ee90db19011c8c1fe6227876c5125a04dc17ff7f70"));
+            getEnvVariableOrDefault("NEON3_VALIDATOR1_PUBKEY", "021fed0d208f2c4b2fe425571c36aea1d465159c93af349581896fe38553dffae1"));
     private static final ECPublicKey validator_2 = new ECPublicKey(
             getEnvVariableOrDefault("NEON3_VALIDATOR2_PUBKEY", "021986f90b2596322c9f681c42814237555732411e8c517100c702b91cd404f090"));
     private static final ECPublicKey validator_3 = new ECPublicKey(
-            getEnvVariableOrDefault("NEON3_VALIDATOR3_PUBKEY", "03d620846988b86d60426f39cf51660f4e5ca5949d7ba7f052dccb9af4d4b188b8"));
+            getEnvVariableOrDefault("NEON3_VALIDATOR3_PUBKEY", "021387fa5748344658778d9a3de2bd99f2133b96a3fe5ab2cda007bce3531f4d9f"));
     private static final ECPublicKey validator_4 = new ECPublicKey(
             getEnvVariableOrDefault("NEON3_VALIDATOR4_PUBKEY", "02108e50c32a9b4c12b90013b145370530a413a605ced93491ba2523d903295f45"));
     private static final ECPublicKey validator_5 = new ECPublicKey(
@@ -60,7 +60,7 @@ public class Deployment {
     private static final int validator_threshold = Integer.parseInt(getEnvVariableOrDefault("NEON3_VALIDATOR_THRESHOLD", "5"));
 
     private static final ECPublicKey governor = new ECPublicKey(
-            getEnvVariableOrDefault("NEON3_GOVERNOR_PUBKEY", "02d66cc1799a687173a6850fbf4fb5142490f33e11045f96e82f29906ce82bba9e"));
+            getEnvVariableOrDefault("NEON3_GOVERNOR_PUBKEY", "03c0b3f7cfe36fe06fbdb157d72746ed772fe06a09e094f3ea052536cd1fd330bb"));
 
     private static final ECPublicKey securityGuard = new ECPublicKey(
             getEnvVariableOrDefault("NEON3_SECURITYGUARD_PUBKEY", "0342ad9cdea8142af0ac4b5496a7f5baca72b4173c10b357f3ff3e54e9998ae9ec"));
