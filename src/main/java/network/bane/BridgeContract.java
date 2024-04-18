@@ -440,6 +440,19 @@ public class BridgeContract {
         baseMap.put(key_deposit_fee, fee);
     }
 
+    public static void setMinDeposit(int newMinDeposit) {
+        if (!checkWitness(governor())) abort("Only the governor can set the minimum deposit.");
+        if (newMinDeposit < 0) abort("Minimum deposit must be nonnegative.");
+        if (newMinDeposit > maxDeposit()) abort("Minimum deposit must be less than the maximum deposit.");
+        baseMap.put(key_deposit_min, newMinDeposit);
+    }
+
+    public static void setMaxDeposit(int newMaxDeposit) {
+        if (!checkWitness(governor())) abort("Only the governor can set the maximum deposit.");
+        if (newMaxDeposit < minDeposit()) abort("Maximum deposit must be greater than the minimum deposit.");
+        baseMap.put(key_deposit_max, newMaxDeposit);
+    }
+
     //endregion
     // region update
 
