@@ -9,6 +9,7 @@ import io.neow3j.protocol.core.response.ContractStorageEntry;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.StackItem;
+import io.neow3j.transaction.Transaction;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -162,17 +163,49 @@ public class TestHelper {
         waitUntilTransactionIsExecuted(response, neow3j);
     }
 
-    public static void setDepositFee(Bridge bridge, Neow3j neow3j, BigInteger fee) throws Throwable {
-        NeoSendRawTransaction response =
+    public static Hash256 setDepositFee(Bridge bridge, Neow3j neow3j, BigInteger fee) throws Throwable {
+        Transaction transaction =
                 bridge.invokeFunction("setDepositFee", integer(fee))
                         .signers(calledByEntry(governor))
-                        .sign()
-                        .send();
+                        .sign();
+        Hash256 txHash = transaction.getTxId();
+        NeoSendRawTransaction response = transaction.send();
         waitUntilTransactionIsExecuted(response, neow3j);
+        return txHash;
+    }
+
+    public static Hash256 setMinDeposit(Bridge bridge, Neow3j neow3j, BigInteger minDeposit) throws Throwable {
+        Transaction transaction =
+                bridge.invokeFunction("setMinDeposit", integer(minDeposit))
+                        .signers(calledByEntry(governor))
+                        .sign();
+        Hash256 txHash = transaction.getTxId();
+        NeoSendRawTransaction response = transaction.send();
+        waitUntilTransactionIsExecuted(response, neow3j);
+        return txHash;
+    }
+
+    public static Hash256 setMaxDeposit(Bridge bridge, Neow3j neow3j, BigInteger maxDeposit) throws Throwable {
+        Transaction transaction =
+                bridge.invokeFunction("setMaxDeposit", integer(maxDeposit))
+                        .signers(calledByEntry(governor))
+                        .sign();
+        Hash256 txHash = transaction.getTxId();
+        NeoSendRawTransaction response = transaction.send();
+        waitUntilTransactionIsExecuted(response, neow3j);
+        return txHash;
     }
 
     public static void waitUntilTransactionIsExecuted(NeoSendRawTransaction response, Neow3j neow3j) {
         Await.waitUntilTransactionIsExecuted(response.getSendRawTransaction().getHash(), neow3j);
+    }
+
+    public static boolean hasFiredEvent(Neow3j neow3j, Hash256 txHash, Hash160 contract, String eventName,
+            StackItem state) throws IOException {
+        return getEvents(txHash, neow3j).stream()
+                        .filter(e -> e.getEventName().equals(eventName))
+                        .filter(e -> e.getContract().equals(contract))
+                        .anyMatch(e -> e.getState().equals(state));
     }
 
     // region concat and sha256 functions

@@ -20,6 +20,7 @@ import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
+import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event3Args;
 import io.neow3j.devpack.events.Event6Args;
 import network.bane.interfaces.BridgeManagement;
@@ -122,6 +123,33 @@ public class BridgeContract {
      */
     @DisplayName("Claimed")
     public static Event3Args<Integer, Integer, Hash160> onClaimed;
+
+    /**
+     * Parameters:
+     * <l>
+     * <li>New Deposit Fee</li>
+     * </l>
+     */
+    @DisplayName("DepositFeeChanged")
+    public static Event1Arg<Integer> onDepositFeeSet;
+
+    /**
+     * Parameters:
+     * <l>
+     * <li>New Min Deposit</li>
+     * </l>
+     */
+    @DisplayName("MinDepositChanged")
+    public static Event1Arg<Integer> onMinDepositSet;
+
+    /**
+     * Parameters:
+     * <l>
+     * <li>New Max Deposit</li>
+     * </l>
+     */
+    @DisplayName("MaxDepositChanged")
+    public static Event1Arg<Integer> onMaxDepositSet;
 
     // endregion
     // region deployment
@@ -438,6 +466,22 @@ public class BridgeContract {
         if (!checkWitness(governor())) abort("Only the governor can set the deposit fee.");
         if (fee < 0) abort("Deposit fee must be nonnegative.");
         baseMap.put(key_deposit_fee, fee);
+        onDepositFeeSet.fire(fee);
+    }
+
+    public static void setMinDeposit(int newMinDeposit) {
+        if (!checkWitness(governor())) abort("Only the governor can set the minimum deposit.");
+        if (newMinDeposit < 0) abort("Minimum deposit must be nonnegative.");
+        if (newMinDeposit > maxDeposit()) abort("Minimum deposit must be less than the maximum deposit.");
+        baseMap.put(key_deposit_min, newMinDeposit);
+        onMinDepositSet.fire(newMinDeposit);
+    }
+
+    public static void setMaxDeposit(int newMaxDeposit) {
+        if (!checkWitness(governor())) abort("Only the governor can set the maximum deposit.");
+        if (newMaxDeposit < minDeposit()) abort("Maximum deposit must be greater than the minimum deposit.");
+        baseMap.put(key_deposit_max, newMaxDeposit);
+        onMaxDepositSet.fire(newMaxDeposit);
     }
 
     //endregion
