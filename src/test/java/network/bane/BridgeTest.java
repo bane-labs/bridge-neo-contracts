@@ -7,6 +7,8 @@ import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
+import io.neow3j.protocol.core.stackitem.ArrayStackItem;
+import io.neow3j.protocol.core.stackitem.IntegerStackItem;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
@@ -58,6 +60,7 @@ import static network.bane.util.TestHelper.getDepositEvent;
 import static network.bane.util.TestHelper.getProofFromStorage;
 import static network.bane.util.TestHelper.getWithdrawEvent;
 import static network.bane.util.TestHelper.governorPubKey;
+import static network.bane.util.TestHelper.hasFiredEvent;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.ownerPubKey;
 import static network.bane.util.TestHelper.prepareManagementDeployParameter;
@@ -72,6 +75,8 @@ import static network.bane.util.TestHelper.relayerPubKey;
 import static network.bane.util.TestHelper.securityGuard;
 import static network.bane.util.TestHelper.securityGuardPubKey;
 import static network.bane.util.TestHelper.setDepositFee;
+import static network.bane.util.TestHelper.setMaxDeposit;
+import static network.bane.util.TestHelper.setMinDeposit;
 import static network.bane.util.TestHelper.signMsg;
 import static network.bane.util.TestHelper.validator1;
 import static network.bane.util.TestHelper.validator1PubKey;
@@ -567,9 +572,11 @@ public class BridgeTest {
     public void testSetDepositFee() throws Throwable {
         BigInteger newFee = new BigInteger("200000000");
         assertThat(bridge.depositFee(), is(not(newFee)));
-        setDepositFee(bridge, neow3j, newFee);
+        Hash256 txHash = setDepositFee(bridge, neow3j, newFee);
         BigInteger actualDepositFee = bridge.depositFee();
         assertThat(actualDepositFee, is(newFee));
+        assertTrue(hasFiredEvent(neow3j, txHash, bridge.getScriptHash(), "DepositFeeChanged",
+                new ArrayStackItem(asList(new IntegerStackItem(newFee)))));
         setDepositFee(bridge, neow3j, depositFee);
     }
 
@@ -598,7 +605,7 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testSetDepositFee_abortFailIfCallerisNotOwner() {
+    public void testSetDepositFee_abortGovernorNotSigner() {
         BigInteger newFee = new BigInteger("200000000");
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () ->
@@ -609,6 +616,95 @@ public class BridgeTest {
                 );
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Only the governor can set the deposit fee."));
+    }
+
+    @Test
+    @Order(0)
+    public void testSetMinDeposit() throws Throwable {
+        BigInteger newMinDeposit = new BigInteger("200000000");
+        assertThat(bridge.minDeposit(), is(not(newMinDeposit)));
+        Hash256 txHash = setMinDeposit(bridge, neow3j, newMinDeposit);
+        BigInteger actualMinDeposit = bridge.minDeposit();
+        assertThat(actualMinDeposit, is(newMinDeposit));
+        assertTrue(hasFiredEvent(neow3j, txHash, bridge.getScriptHash(), "MinDepositChanged",
+                new ArrayStackItem(asList(new IntegerStackItem(newMinDeposit)))));
+        setMinDeposit(bridge, neow3j, minDeposit);
+    }
+
+    @Test
+    @Order(0)
+    public void testSetMinDeposit_isZero() throws Throwable {
+        BigInteger newMinDeposit = new BigInteger("0");
+        assertThat(bridge.minDeposit(), is(not(newMinDeposit)));
+        setMinDeposit(bridge, neow3j, newMinDeposit);
+        BigInteger actualMinDeposit = bridge.minDeposit();
+        assertThat(actualMinDeposit, is(newMinDeposit));
+        setMinDeposit(bridge, neow3j, minDeposit);
+    }
+
+    @Test
+    @Order(0)
+    public void testSetMinDeposit_greaterThanMaxDeposit() throws Throwable {
+        BigInteger newMinDeposit = bridge.maxDeposit().add(BigInteger.ONE);
+        assertThat(bridge.minDeposit(), is(not(newMinDeposit)));
+        TransactionConfigurationException thrown =
+                assertThrows(TransactionConfigurationException.class, () -> setMinDeposit(bridge, neow3j, newMinDeposit));
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Minimum deposit must be less than the maximum deposit."));
+    }
+
+    @Test
+    @Order(0)
+    public void testSetMinDeposit_abortGovernorNotSigner() throws Throwable {
+        BigInteger newMinDeposit = new BigInteger("200000000");
+        assertThat(bridge.minDeposit(), is(not(newMinDeposit)));
+        TransactionConfigurationException thrown =
+                assertThrows(TransactionConfigurationException.class, () ->
+                        bridge.invokeFunction("setMinDeposit", integer(newMinDeposit))
+                                .signers(AccountSigner.calledByEntry(alice))
+                                .sign());
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Only the governor can set the minimum deposit."));
+    }
+
+    @Test
+    @Order(0)
+    public void testSetMaxDeposit() throws Throwable {
+        BigInteger newMaxDeposit = new BigInteger("20000000000");
+        assertThat(bridge.maxDeposit(), is(not(newMaxDeposit)));
+        Hash256 txHash = setMaxDeposit(bridge, neow3j, newMaxDeposit);
+        BigInteger actualMaxDeposit = bridge.maxDeposit();
+        assertThat(actualMaxDeposit, is(newMaxDeposit));
+        assertTrue(hasFiredEvent(neow3j, txHash, bridge.getScriptHash(), "MaxDepositChanged",
+                new ArrayStackItem(asList(new IntegerStackItem(newMaxDeposit)))));
+        setMaxDeposit(bridge, neow3j, maxDeposit);
+    }
+
+    @Test
+    @Order(0)
+    public void testSetMaxDeposit_lessThanMinDeposit() throws Throwable {
+        BigInteger newMaxDeposit = bridge.minDeposit().subtract(BigInteger.ONE);
+        assertThat(bridge.maxDeposit(), is(not(newMaxDeposit)));
+        TransactionConfigurationException thrown =
+                assertThrows(TransactionConfigurationException.class, () -> setMaxDeposit(bridge, neow3j,
+                        newMaxDeposit));
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Maximum deposit must be greater than the minimum " +
+                        "deposit."));
+    }
+
+    @Test
+    @Order(0)
+    public void testSetMaxDeposit_abortGovernorNotSigner() throws Throwable {
+        BigInteger newMaxDeposit = new BigInteger("20000000000");
+        assertThat(bridge.maxDeposit(), is(not(newMaxDeposit)));
+        TransactionConfigurationException thrown =
+                assertThrows(TransactionConfigurationException.class, () ->
+                        bridge.invokeFunction("setMaxDeposit", integer(newMaxDeposit))
+                                .signers(AccountSigner.calledByEntry(alice))
+                                .sign());
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Only the governor can set the maximum deposit."));
     }
 
     private Hash256 withdrawGas(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
