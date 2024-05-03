@@ -45,6 +45,8 @@ import static org.hamcrest.Matchers.is;
 
 public class TestHelper {
 
+    private static final byte UINT256_SIZE = 32;
+
     // Account names available in the neo-express config file.
     public static final String ALICE = "NM7Aky765FG8NhhwtxjXRx7jEL1cnw7PBP";
     public static final String BOB = "NZpsgXn9VQQoLexpuXJsrX8BsoyAhKUyiX";
@@ -241,8 +243,8 @@ public class TestHelper {
     }
 
     public static byte[] concatDepositData(BigInteger nonce, Hash160 recipient, BigInteger amount) {
-        byte[] noncePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(nonce, 8);
-        byte[] amountPadded = BigIntegers.toLittleEndianByteArrayZeroPadded(amount, 8);
+        byte[] noncePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
+        byte[] amountPadded = BigIntegers.toLittleEndianByteArrayZeroPadded(amount, UINT256_SIZE);
         byte[] recipientArray = ArrayUtils.reverseArray(recipient.toArray());
         byte[] concatenated =  concatenate(concatenate(recipientArray, amountPadded), noncePadded);
         concatenated =  ArrayUtils.reverseArray(concatenated);
