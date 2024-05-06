@@ -47,19 +47,19 @@ public class BridgeManagementContract {
 
     // region events
 
-    @DisplayName("SetOwner")
+    @DisplayName("OwnerChange")
     public static Event1Arg<ECPoint> onOwnerSet;
 
-    @DisplayName("SetRelayer")
+    @DisplayName("RelayerChange")
     public static Event1Arg<ECPoint> onRelayerSet;
 
-    @DisplayName("SetValidators")
+    @DisplayName("ValidatorsChange")
     public static Event2Args<List<ECPoint>, Integer> onValidatorsSet;
 
-    @DisplayName("SetGovernor")
+    @DisplayName("GovernorChange")
     public static Event1Arg<ECPoint> onGovernorSet;
 
-    @DisplayName("SetSecurityGuard")
+    @DisplayName("SecurityGuardChange")
     public static Event1Arg<ECPoint> onSecurityGuardSet;
 
     // endregion

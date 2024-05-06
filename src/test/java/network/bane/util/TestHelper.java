@@ -167,7 +167,7 @@ public class TestHelper {
 
     public static Hash256 setDepositFee(Bridge bridge, Neow3j neow3j, BigInteger fee) throws Throwable {
         Transaction transaction =
-                bridge.invokeFunction("setDepositFee", integer(fee))
+                bridge.invokeFunction("setGasDepositFee", integer(fee))
                         .signers(calledByEntry(governor))
                         .sign();
         Hash256 txHash = transaction.getTxId();
@@ -178,7 +178,7 @@ public class TestHelper {
 
     public static Hash256 setMinDeposit(Bridge bridge, Neow3j neow3j, BigInteger minDeposit) throws Throwable {
         Transaction transaction =
-                bridge.invokeFunction("setMinDeposit", integer(minDeposit))
+                bridge.invokeFunction("setMinGasDeposit", integer(minDeposit))
                         .signers(calledByEntry(governor))
                         .sign();
         Hash256 txHash = transaction.getTxId();
@@ -187,9 +187,9 @@ public class TestHelper {
         return txHash;
     }
 
-    public static Hash256 setMaxDeposit(Bridge bridge, Neow3j neow3j, BigInteger maxDeposit) throws Throwable {
+    public static Hash256 setMaxGasDeposit(Bridge bridge, Neow3j neow3j, BigInteger maxDeposit) throws Throwable {
         Transaction transaction =
-                bridge.invokeFunction("setMaxDeposit", integer(maxDeposit))
+                bridge.invokeFunction("setMaxGasDeposit", integer(maxDeposit))
                         .signers(calledByEntry(governor))
                         .sign();
         Hash256 txHash = transaction.getTxId();
@@ -289,7 +289,7 @@ public class TestHelper {
         // GasToken Transfer is first notification, OnDeposit is second notification.
         Notification depositEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution().getNotification(1);
-        assertThat(depositEvent.getEventName(), is("Deposit"));
+        assertThat(depositEvent.getEventName(), is("GasDeposit"));
         return depositEventFromNotification(depositEvent);
     }
 
@@ -305,7 +305,7 @@ public class TestHelper {
         // GasToken Transfer is first notification, onWithdrawal is second notification.
         Notification withdrawalEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution().getNotification(1);
-        assertThat(withdrawalEvent.getEventName(), is("Withdrawal"));
+        assertThat(withdrawalEvent.getEventName(), is("GasWithdrawal"));
         return withdrawEventFromNotification(withdrawalEvent);
     }
 
@@ -313,7 +313,7 @@ public class TestHelper {
         // GasToken Transfer is first notification, onClaimable is second notification.
         Notification withdrawalEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution().getNotification(0);
-        assertThat(withdrawalEvent.getEventName(), is("Claimable"));
+        assertThat(withdrawalEvent.getEventName(), is("GasClaimable"));
         return claimableEventFromNotification(withdrawalEvent);
     }
 
@@ -321,7 +321,7 @@ public class TestHelper {
         // GasToken Transfer is first notification, onClaimable is second notification.
         Notification claimEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution().getNotification(1);
-        assertThat(claimEvent.getEventName(), is("Claimed"));
+        assertThat(claimEvent.getEventName(), is("GasClaim"));
         return claimEventFromNotification(claimEvent);
     }
 
