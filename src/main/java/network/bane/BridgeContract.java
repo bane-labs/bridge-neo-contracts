@@ -89,7 +89,7 @@ public class BridgeContract {
      * <li>New Root Hash</li>
      * </l>
      */
-    @DisplayName("Deposit")
+    @DisplayName("GasDeposit")
     public static Event6Args<Integer, Integer, Hash160, Hash160, ByteString, ByteString> onGasDeposit;
 
     /**
@@ -100,7 +100,7 @@ public class BridgeContract {
      * <li>Receiving Address</li>
      * </l>
      */
-    @DisplayName("Withdrawal")
+    @DisplayName("GasWithdrawal")
     public static Event3Args<Integer, Integer, Hash160> onGasWithdrawal;
 
     /**
@@ -111,7 +111,7 @@ public class BridgeContract {
      * <li>Claimable Recipient</li>
      * </l>
      */
-    @DisplayName("Claimable")
+    @DisplayName("GasClaimable")
     public static Event3Args<Integer, Integer, Hash160> onGasClaimable;
 
     /**
@@ -122,7 +122,7 @@ public class BridgeContract {
      * <li>Claimable Recipient</li>
      * </l>
      */
-    @DisplayName("Claimed")
+    @DisplayName("GasClaim")
     public static Event3Args<Integer, Integer, Hash160> onGasClaim;
 
     /**
@@ -131,7 +131,7 @@ public class BridgeContract {
      * <li>New Deposit Fee</li>
      * </l>
      */
-    @DisplayName("DepositFeeChanged")
+    @DisplayName("GasDepositFeeChange")
     public static Event1Arg<Integer> onGasDepositFeeChange;
 
     /**
@@ -140,7 +140,7 @@ public class BridgeContract {
      * <li>New Min Deposit</li>
      * </l>
      */
-    @DisplayName("MinDepositChanged")
+    @DisplayName("MinGasDepositChanged")
     public static Event1Arg<Integer> onMinGasDepositChange;
 
     /**
@@ -149,7 +149,7 @@ public class BridgeContract {
      * <li>New Max Deposit</li>
      * </l>
      */
-    @DisplayName("MaxDepositChanged")
+    @DisplayName("MaxGasDepositChanged")
     public static Event1Arg<Integer> onMaxGasDepositChange;
 
     // endregion
