@@ -40,7 +40,7 @@ import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 @Permission(nativeContract = NativeContract.ContractManagement, methods = "update")
 @ManifestExtra(key = "Author", value = "BaneLabs")
 @ManifestExtra(key = "Target", value = "Neo X TestNet T3")
-@ManifestExtra(key = "Description", value = "Contract for bridging GAS tokens between Neo N3 and Neo X.")
+@ManifestExtra(key = "Description", value = "Contract for bridging GAS and tokens between Neo N3 and Neo X.")
 public class BridgeContract {
     // region initsslot setup
     private static final byte UINT256_SIZE = 32;
@@ -90,7 +90,7 @@ public class BridgeContract {
      * </l>
      */
     @DisplayName("Deposit")
-    public static Event6Args<Integer, Integer, Hash160, Hash160, ByteString, ByteString> onDeposit;
+    public static Event6Args<Integer, Integer, Hash160, Hash160, ByteString, ByteString> onGasDeposit;
 
     /**
      * Parameters:
@@ -101,7 +101,7 @@ public class BridgeContract {
      * </l>
      */
     @DisplayName("Withdrawal")
-    public static Event3Args<Integer, Integer, Hash160> onWithdrawal;
+    public static Event3Args<Integer, Integer, Hash160> onGasWithdrawal;
 
     /**
      * Parameters:
@@ -112,7 +112,7 @@ public class BridgeContract {
      * </l>
      */
     @DisplayName("Claimable")
-    public static Event3Args<Integer, Integer, Hash160> onClaimable;
+    public static Event3Args<Integer, Integer, Hash160> onGasClaimable;
 
     /**
      * Parameters:
@@ -123,7 +123,7 @@ public class BridgeContract {
      * </l>
      */
     @DisplayName("Claimed")
-    public static Event3Args<Integer, Integer, Hash160> onClaimed;
+    public static Event3Args<Integer, Integer, Hash160> onGasClaim;
 
     /**
      * Parameters:
@@ -132,7 +132,7 @@ public class BridgeContract {
      * </l>
      */
     @DisplayName("DepositFeeChanged")
-    public static Event1Arg<Integer> onDepositFeeSet;
+    public static Event1Arg<Integer> onGasDepositFeeChange;
 
     /**
      * Parameters:
@@ -141,7 +141,7 @@ public class BridgeContract {
      * </l>
      */
     @DisplayName("MinDepositChanged")
-    public static Event1Arg<Integer> onMinDepositSet;
+    public static Event1Arg<Integer> onMinGasDepositChange;
 
     /**
      * Parameters:
@@ -150,10 +150,10 @@ public class BridgeContract {
      * </l>
      */
     @DisplayName("MaxDepositChanged")
-    public static Event1Arg<Integer> onMaxDepositSet;
+    public static Event1Arg<Integer> onMaxGasDepositChange;
 
     // endregion
-    // region deployment
+    // region deployment/update
 
     @OnDeployment
     public static void deploy(Object data, boolean isUpdate) {
@@ -182,8 +182,15 @@ public class BridgeContract {
         }
     }
 
+    public static void update(ByteString nef, String manifest) {
+        if (!isLocked()) abort("Contract needs to be locked to update.");
+        if (!checkWitness(owner())) abort("Only the owner can update this contract.");
+        contractManagement.update(nef, manifest);
+    }
+
     // endregion
-    // region public deposit
+    // region gas bridge
+    // region gas deposit
 
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amountWithFee, Object data) {
@@ -193,57 +200,28 @@ public class BridgeContract {
         if (!Hash160.isValid(to)) abort("Invalid recipient data.");
         if (to.isZero()) abort("Recipient must not be zero.");
 
-        int depositFee = depositFee();
-        if (amountWithFee < minDeposit() + depositFee) abort("Deposit amount is too low.");
-        if (amountWithFee > maxDeposit() + depositFee) abort("Deposit amount is too high.");
+        int depositFee = gasDepositFee();
+        if (amountWithFee < minGasDeposit() + depositFee) abort("Deposit amount is too low.");
+        if (amountWithFee > maxGasDeposit() + depositFee) abort("Deposit amount is too high.");
         int depositAmount = amountWithFee - depositFee;
 
-        int nonce = newNonce();
-        ByteString depositHash = hashDepositOrWithdrawal(nonce, depositAmount, to);
+        int nonce = incrementGasDepositNonce();
+        ByteString depositHash = hashGasBridgeOp(nonce, depositAmount, to);
         ByteString newRoot = computeNewRoot(baseMap.get(KEY_GAS_DEPOSIT_ROOT), depositHash);
         baseMap.put(KEY_GAS_DEPOSIT_ROOT, newRoot);
-        onDeposit.fire(nonce, depositAmount, to, from, depositHash, newRoot);
+        onGasDeposit.fire(nonce, depositAmount, to, from, depositHash, newRoot);
     }
 
     public static void deposit(Hash160 from, Hash160 to, int depositAmount) {
         Hash160 executingScriptHash = getExecutingScriptHash();
         if (executingScriptHash.equals(from)) abort("Invalid 'from' parameter.");
-        if (!gasToken.transfer(from, executingScriptHash, depositAmount + depositFee(), to)) {
+        if (!gasToken.transfer(from, executingScriptHash, depositAmount + gasDepositFee(), to)) {
             abort("Transfer failed.");
         }
     }
 
-    // endregion
-    // region private deposit helpers
-
-    private static ByteString hashDepositOrWithdrawal(int nonce, int amount, Hash160 to) {
-        return cryptoLib.sha256(concatDepositOrWithdrawal(nonce, amount, to));
-    }
-
-    private static ByteString concatDepositOrWithdrawal(int nonce, int amount, Hash160 to) {
-        byte[] nonceP = padToBytes(toByteArray(nonce), UINT256_SIZE);
-        byte[] amountP = padToBytes(toByteArray(amount), UINT256_SIZE);
-        byte[] concatenated = concat(concat(to.toByteArray(), amountP), nonceP);
-        reverse(concatenated);
-        return new ByteString(concatenated);
-    }
-
-    private static byte[] padToBytes(byte[] data, int padToSize) {
-        int dataSize = data.length;
-        int toPad = padToSize - dataSize;
-        assert toPad >= 0 : "Data is too long.";
-        byte[] padding = new byte[toPad];
-        return concat(data, padding);
-    }
-
-    private static int newNonce() {
-        int nextNonce = baseMap.getInt(KEY_GAS_DEPOSIT_NONCE) + 1;
-        baseMap.put(KEY_GAS_DEPOSIT_NONCE, nextNonce);
-        return nextNonce;
-    }
-
-    // endregion
-    // region withdrawal
+    // endregion gas deposit
+    // region gas withdrawal
 
     public static void withdraw(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
@@ -257,13 +235,13 @@ public class BridgeContract {
         if (!subsequentNonces(withdrawals, currentNonce())) abort("Provided withdrawals are not subsequent.");
 
         baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, withdrawals.get(withdrawals.size() - 1).nonce);
-        ByteString formerWithdrawalRoot = withdrawalRoot();
+        ByteString formerWithdrawalRoot = gasWithdrawalRoot();
         baseMap.put(KEY_GAS_WITHDRAWAL_ROOT, withdrawalRoot);
         verifyWithdrawalsAndTransfer(formerWithdrawalRoot, withdrawals);
     }
 
     // endregion
-    // region public claim
+    // region gas claim
 
     public static void claim(int nonce) {
         if (isLocked()) abort("Contract is locked.");
@@ -276,7 +254,7 @@ public class BridgeContract {
         Hash160 to = new Hash160(claimable.take(HASH160_SIZE));
         int amount = claimable.last(UINT256_SIZE).toInt();
         if (gasToken.transfer(getExecutingScriptHash(), to, amount, null)) {
-            onClaimed.fire(nonce, amount, to);
+            onGasClaim.fire(nonce, amount, to);
         } else {
             abort("Claim transfer failed.");
         }
@@ -303,7 +281,7 @@ public class BridgeContract {
     }
 
     // endregion
-    // region private withdrawal helpers
+    // region gas withdrawal helpers
 
     private static void verifyWithdrawalsAndTransfer(ByteString formerWithdrawalRoot, List<Withdrawal> withdrawals) {
         // Hash Tree verification
@@ -311,10 +289,10 @@ public class BridgeContract {
         for (int i = 0; i < withdrawals.size(); i++) {
             Withdrawal withdrawal = withdrawals.get(i);
             if (!Withdrawal.isValid(withdrawal)) abort("Invalid withdrawal provided.");
-            ByteString withdrawalHash = hashDepositOrWithdrawal(withdrawal.nonce, withdrawal.amount, withdrawal.to);
+            ByteString withdrawalHash = hashGasBridgeOp(withdrawal.nonce, withdrawal.amount, withdrawal.to);
             parent = computeNewRoot(parent, withdrawalHash);
         }
-        if (parent != withdrawalRoot()) {
+        if (parent != gasWithdrawalRoot()) {
             abort("Provided withdrawals do not match the withdrawal root.");
         }
 
@@ -323,24 +301,33 @@ public class BridgeContract {
             Withdrawal withdrawal = withdrawals.get(i);
             if (!isContract(withdrawal.to) &&
                     gasToken.transfer(getExecutingScriptHash(), withdrawal.to, withdrawal.amount, null)) {
-                onWithdrawal.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
+                onGasWithdrawal.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
             } else {
                 // Add the withdrawal to the claim map if either the recipient was a contract, or the transfer failed.
-                addToClaim(withdrawal);
-                onClaimable.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
+                addGasClaimable(withdrawal);
+                onGasClaimable.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
             }
         }
     }
 
-    private static void addToClaim(Withdrawal withdrawal) {
+    private static void addGasClaimable(Withdrawal withdrawal) {
         gasClaimableMap.put(withdrawal.nonce, concat(withdrawal.to.toByteArray(),
                 padToBytes(toByteArray(withdrawal.amount), UINT256_SIZE)));
+    }
+
+    private static byte[] padToBytes(byte[] data, int padToSize) {
+        int dataSize = data.length;
+        int toPad = padToSize - dataSize;
+        assert toPad >= 0 : "Data is too long.";
+        byte[] padding = new byte[toPad];
+        return concat(data, padding);
     }
 
     private static boolean isContract(Hash160 scriptHash) {
         return contractManagement.getContract(scriptHash) != null;
     }
 
+    // Todo: Move this verification to the bridge management contract.
     private static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, ByteString root) {
         List<ECPoint> validators = validators();
         int threshold = validatorThreshold();
@@ -376,7 +363,60 @@ public class BridgeContract {
     }
 
     // endregion
-    // region private general helpers
+    // region gas bridge configuration
+
+    @Safe
+    public static int gasDepositFee() {
+        return baseMap.getInt(KEY_GAS_DEPOSIT_FEE);
+    }
+
+    public static void setGasDepositFee(int fee) {
+        if (!checkWitness(governor())) abort("not governor");
+        if (fee < 0) abort("fee must be nonnegative");
+        baseMap.put(KEY_GAS_DEPOSIT_FEE, fee);
+        onGasDepositFeeChange.fire(fee);
+    }
+
+    public static void setMinDeposit(int newMinDeposit) {
+        if (!checkWitness(governor())) abort("Only the governor can set the minimum deposit.");
+        if (newMinDeposit < 0) abort("Minimum deposit must be nonnegative.");
+        if (newMinDeposit > maxGasDeposit()) abort("Minimum deposit must be less than the maximum deposit.");
+        baseMap.put(KEY_GAS_DEPOSIT_MIN_AMOUNT, newMinDeposit);
+        onMinGasDepositChange.fire(newMinDeposit);
+    }
+
+    public static void setMaxDeposit(int newMaxDeposit) {
+        if (!checkWitness(governor())) abort("Only the governor can set the maximum deposit.");
+        if (newMaxDeposit < minGasDeposit()) abort("Maximum deposit must be greater than the minimum deposit.");
+        baseMap.put(KEY_GAS_DEPOSIT_MAX_AMOUNT, newMaxDeposit);
+        onMaxGasDepositChange.fire(newMaxDeposit);
+    }
+
+    // endregion
+    // endregion
+    // region token bridge
+    // region token register
+
+    // Todo: Implement token register and unregister
+
+    // endregion token register
+    // region token deposit
+
+    // Todo: Implement token deposit
+
+    // endregion
+    // region token withdrawal
+
+    // Todo: Implement token withdrawal
+
+    // endregion
+    // region token claim
+
+    // Todo: Implement token claim
+
+    // endregion
+    // endregion token bridge
+    // region general helpers
 
     private static ByteString computeNewRoot(ByteString left, ByteString right) {
         ByteString leftRight = new ByteString(concat(left.toByteArray(), right));
@@ -384,7 +424,39 @@ public class BridgeContract {
     }
 
     // endregion
-    // region private management getters
+    // region gas helpers
+
+    private static ByteString hashGasBridgeOp(int nonce, int amount, Hash160 to) {
+        return cryptoLib.sha256(concatGasBridgeOpData(nonce, amount, to));
+    }
+
+    private static ByteString concatGasBridgeOpData(int nonce, int amount, Hash160 to) {
+        byte[] nonceP = padToBytes(toByteArray(nonce), UINT256_SIZE);
+        byte[] amountP = padToBytes(toByteArray(amount), UINT256_SIZE);
+        byte[] concatenated = concat(concat(to.toByteArray(), amountP), nonceP);
+        reverse(concatenated);
+        return new ByteString(concatenated);
+    }
+
+    /**
+     * Increments the Gas deposit nonce and returns the new value.
+     * @return the new nonce value.
+     */
+    private static int incrementGasDepositNonce() {
+        int nextNonce = baseMap.getInt(KEY_GAS_DEPOSIT_NONCE) + 1;
+        baseMap.put(KEY_GAS_DEPOSIT_NONCE, nextNonce);
+        return nextNonce;
+    }
+
+    // endregion
+    // endregion
+    // region token setters
+
+    // Todo: Implement token setters
+
+    // endregion
+    // region getters
+    // region management getters
 
     private static ECPoint relayer() {
         return managementContract().relayer();
@@ -415,7 +487,7 @@ public class BridgeContract {
     }
 
     // endregion
-    // region public getters with static value
+    // region bridge getters
 
     @Safe
     public static Hash160 management() {
@@ -423,77 +495,36 @@ public class BridgeContract {
     }
 
     @Safe
-    public static int depositFee() {
-        return baseMap.getInt(KEY_GAS_DEPOSIT_FEE);
-    }
-
-    @Safe
-    public static int minDeposit() {
+    public static int minGasDeposit() {
         return baseMap.getInt(KEY_GAS_DEPOSIT_MIN_AMOUNT);
     }
 
     @Safe
-    public static int maxDeposit() {
+    public static int maxGasDeposit() {
         return baseMap.getInt(KEY_GAS_DEPOSIT_MAX_AMOUNT);
     }
 
-    // endregion
-    // region public getters with dynamic value
-
     @Safe
-    public static ByteString depositRoot() {
+    public static ByteString gasDepositRoot() {
         return baseMap.get(KEY_GAS_DEPOSIT_ROOT);
     }
 
     @Safe
-    public static ByteString withdrawalRoot() {
+    public static ByteString gasWithdrawalRoot() {
         return baseMap.get(KEY_GAS_WITHDRAWAL_ROOT);
     }
 
     @Safe
-    public static int depositsProcessed() {
+    public static int gasDepositNonce() {
         return baseMap.getInt(KEY_GAS_DEPOSIT_NONCE);
     }
 
     @Safe
-    public static int withdrawalsProcessed() {
+    public static int gasWithdrawalNonce() {
         return baseMap.getInt(KEY_GAS_WITHDRAWAL_NONCE);
     }
 
     // endregion
-    // region setters
-
-    public static void setDepositFee(int fee) {
-        if (!checkWitness(governor())) abort("Only the governor can set the deposit fee.");
-        if (fee < 0) abort("Deposit fee must be nonnegative.");
-        baseMap.put(KEY_GAS_DEPOSIT_FEE, fee);
-        onDepositFeeSet.fire(fee);
-    }
-
-    public static void setMinDeposit(int newMinDeposit) {
-        if (!checkWitness(governor())) abort("Only the governor can set the minimum deposit.");
-        if (newMinDeposit < 0) abort("Minimum deposit must be nonnegative.");
-        if (newMinDeposit > maxDeposit()) abort("Minimum deposit must be less than the maximum deposit.");
-        baseMap.put(KEY_GAS_DEPOSIT_MIN_AMOUNT, newMinDeposit);
-        onMinDepositSet.fire(newMinDeposit);
-    }
-
-    public static void setMaxDeposit(int newMaxDeposit) {
-        if (!checkWitness(governor())) abort("Only the governor can set the maximum deposit.");
-        if (newMaxDeposit < minDeposit()) abort("Maximum deposit must be greater than the minimum deposit.");
-        baseMap.put(KEY_GAS_DEPOSIT_MAX_AMOUNT, newMaxDeposit);
-        onMaxDepositSet.fire(newMaxDeposit);
-    }
-
-    //endregion
-    // region update
-
-    public static void update(ByteString nef, String manifest) {
-        if (!isLocked()) abort("Contract needs to be locked to update.");
-        if (!checkWitness(owner())) abort("Only the owner can update this contract.");
-        contractManagement.update(nef, manifest);
-    }
-
     // endregion
 
 }
