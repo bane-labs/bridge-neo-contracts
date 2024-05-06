@@ -10,6 +10,7 @@ import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
+import io.neow3j.devpack.annotations.EventParameterNames;
 import io.neow3j.devpack.annotations.ManifestExtra;
 import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.OnNEP17Payment;
@@ -74,78 +75,32 @@ public class BridgeContract {
     // endregion
     // region events
 
-    /**
-     * Parameters:
-     * <l>
-     * <li>Deposit Nonce</li>
-     * <li>Deposit Amount</li>
-     * <li>Receiving Address</li>
-     * <li>Depositing Address</li>
-     * <li>Deposit Hash</li>
-     * <li>New Root Hash</li>
-     * </l>
-     */
     @DisplayName("GasDeposit")
+    @EventParameterNames({"Nonce", "Amount", "Recipient", "Depositor", "DepositHash", "NewDepositRoot"})
     public static Event6Args<Integer, Integer, Hash160, Hash160, ByteString, ByteString> onGasDeposit;
 
-    /**
-     * Parameters:
-     * <l>
-     * <li>Withdrawal Nonce</li>
-     * <li>Withdrawal Amount</li>
-     * <li>Receiving Address</li>
-     * </l>
-     */
     @DisplayName("GasWithdrawal")
+    @EventParameterNames({"Nonce", "Amount", "Recipient"})
     public static Event3Args<Integer, Integer, Hash160> onGasWithdrawal;
 
-    /**
-     * Parameters:
-     * <l>
-     * <li>Claimable Nonce</li>
-     * <li>Claimable Amount</li>
-     * <li>Claimable Recipient</li>
-     * </l>
-     */
     @DisplayName("GasClaimable")
+    @EventParameterNames({"Nonce", "Amount", "Recipient"})
     public static Event3Args<Integer, Integer, Hash160> onGasClaimable;
 
-    /**
-     * Parameters:
-     * <l>
-     * <li>Claimed Nonce</li>
-     * <li>Claimable Amount</li>
-     * <li>Claimable Recipient</li>
-     * </l>
-     */
     @DisplayName("GasClaim")
+    @EventParameterNames({"Nonce", "Amount", "Recipient"})
     public static Event3Args<Integer, Integer, Hash160> onGasClaim;
 
-    /**
-     * Parameters:
-     * <l>
-     * <li>New Deposit Fee</li>
-     * </l>
-     */
     @DisplayName("GasDepositFeeChange")
+    @EventParameterNames({"NewFee"})
     public static Event1Arg<Integer> onGasDepositFeeChange;
 
-    /**
-     * Parameters:
-     * <l>
-     * <li>New Min Deposit</li>
-     * </l>
-     */
     @DisplayName("MinGasDepositChange")
+    @EventParameterNames({"NewMinDeposit"})
     public static Event1Arg<Integer> onMinGasDepositChange;
 
-    /**
-     * Parameters:
-     * <l>
-     * <li>New Max Deposit</li>
-     * </l>
-     */
     @DisplayName("MaxGasDepositChange")
+    @EventParameterNames({"NewMaxDeposit"})
     public static Event1Arg<Integer> onMaxGasDepositChange;
 
     // endregion
