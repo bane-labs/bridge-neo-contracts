@@ -6,6 +6,7 @@ import io.neow3j.contract.NeoToken;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
+import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.stackitem.ArrayStackItem;
 import io.neow3j.protocol.core.stackitem.IntegerStackItem;
@@ -14,6 +15,7 @@ import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.AccountSigner;
+import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
@@ -552,6 +554,55 @@ public class BridgeTest {
 
     @Test
     @Order(23)
+    public void testMultipleWithdrawals() throws Throwable {
+        Hash160 to1 = recipient0;
+        Hash160 to2 = recipient1;
+        Hash160 to3 = recipient2;
+        Hash160 to4 = recipient3;
+        BigInteger amount1 = minDeposit.multiply(new BigInteger("2"));
+        BigInteger amount2 = minDeposit.multiply(new BigInteger("12"));
+        BigInteger amount3 = minDeposit.multiply(new BigInteger("5"));
+        BigInteger amount4 = minDeposit.multiply(new BigInteger("9"));
+        BigInteger nonce1 = new BigInteger("5");
+        BigInteger nonce2 = new BigInteger("6");
+        BigInteger nonce3 = new BigInteger("7");
+        BigInteger nonce4 = new BigInteger("8");
+
+        String rootBefore = bridge.gasWithdrawRoot();
+        String d1 = createDepositHash(nonce1, to1, amount1);
+        String root = concatAndSha256(rootBefore, d1);
+        String d2 = createDepositHash(nonce2, to2, amount2);
+        root = concatAndSha256(root, d2);
+        String d3 = createDepositHash(nonce3, to3, amount3);
+        root = concatAndSha256(root, d3);
+        String d4 = createDepositHash(nonce4, to4, amount4);
+        root = concatAndSha256(root, d4);
+
+        List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
+        ContractParameter withdrawals = array(
+                array(integer(nonce1), integer(amount1), hash160(to1)),
+                array(integer(nonce2), integer(amount2), hash160(to2)),
+                array(integer(nonce3), integer(amount3), hash160(to3)),
+                array(integer(nonce4), integer(amount4), hash160(to4))
+        );
+
+        Transaction transaction = bridge.invokeFunction("withdrawGas",
+                        byteArray(root),
+                        map(signMsg(validators, root)),
+                        withdrawals
+                ).signers(calledByEntry(relayer))
+                .sign();
+        NeoSendRawTransaction response = transaction.send();
+        Hash256 txHash = response.getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+
+        assertThat(bridge.gasWithdrawRoot(), is(root));
+        NeoApplicationLog appLog = transaction.getApplicationLog();
+        assertThat(appLog.getFirstExecution().getNotifications(), hasSize(8));
+    }
+
+    @Test
+    @Order(23)
     public void testClaim() throws Throwable {
         Hash160 to = testContract;
         BigInteger amount = minDeposit;
@@ -647,8 +698,8 @@ public class BridgeTest {
     public void testSetMinDeposit_greaterThanMaxDeposit() throws Throwable {
         BigInteger newMinDeposit = bridge.maxGasDeposit().add(BigInteger.ONE);
         assertThat(bridge.minGasDeposit(), is(not(newMinDeposit)));
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> setMinDeposit(bridge, neow3j, newMinDeposit));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> setMinDeposit(bridge, neow3j, newMinDeposit));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Minimum deposit must be less than the maximum deposit."));
     }
