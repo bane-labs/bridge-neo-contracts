@@ -114,14 +114,15 @@ public class BridgeManagementContract {
     public static void setValidators(List<ECPoint> validators, int threshold) {
         onlyOwner();
         if (hasDuplicates(validators)) abort("Duplicate validators provided.");
-        if (validators.size() < threshold) abort("Not enough validators.");
+        int validatorsSize = validators.size();
+        if (validatorsSize < threshold) abort("Not enough validators.");
         if (threshold <= 0) abort("Threshold must be greater than 0.");
         Iterator<ByteString> it = validatorMap.find(FindOptions.RemovePrefix | FindOptions.KeysOnly);
         while (it.next()) {
             ByteString key = it.get();
             validatorMap.delete(key);
         }
-        for (int i = 0; i < validators.size(); i++) {
+        for (int i = 0; i < validatorsSize; i++) {
             ECPoint validator = validators.get(i);
             if (!ECPoint.isValid(validator)) abort("Invalid validator public key provided.");
             validatorMap.put(validator, true);
@@ -132,10 +133,11 @@ public class BridgeManagementContract {
 
     private static boolean hasDuplicates(List<ECPoint> validators) {
         Map<ECPoint, Boolean> map = new Map<>();
-        for (int i = 0; i < validators.size(); i++) {
+        int validatorsSize = validators.size();
+        for (int i = 0; i < validatorsSize; i++) {
             map.put(validators.get(i), true);
         }
-        return map.keys().length != validators.size();
+        return map.keys().length != validatorsSize;
     }
 
     public static void setGovernor(ECPoint governor) {

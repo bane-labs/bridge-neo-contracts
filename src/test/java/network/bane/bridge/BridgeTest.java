@@ -118,7 +118,7 @@ public class BridgeTest {
     private static final BigInteger minDeposit = new BigInteger("100000000");
     private static final BigInteger maxDeposit = new BigInteger("1000000000000");
 
-    private static final Hash160 managementContractHash = new Hash160("def11e25b81eff49192bf7e7213fa8dc35a080e3");
+    private static final Hash160 managementContractHash = new Hash160("ebe6b7fc380e753f15e216afcaa6b2bf023b80c0");
 
     private static Bridge bridge;
     private static Management management;

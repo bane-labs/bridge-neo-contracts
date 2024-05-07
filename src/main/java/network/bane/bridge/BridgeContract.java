@@ -216,10 +216,11 @@ public class BridgeContract {
         }
         if (!verifyValidatorSignatures(signatures, withdrawalRoot)) abort("Invalid validator signatures provided.");
 
-        if (withdrawals.size() <= 0) abort("At least one withdrawal is required.");
+        int withdrawalsSize = withdrawals.size();
+        if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
         if (!subsequentNonces(withdrawals, currentNonce())) abort("Provided withdrawals are not subsequent.");
 
-        baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, withdrawals.get(withdrawals.size() - 1).nonce);
+        baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, withdrawals.get(withdrawalsSize - 1).nonce);
         ByteString formerWithdrawalRoot = gasWithdrawalRoot();
         baseMap.put(KEY_GAS_WITHDRAWAL_ROOT, withdrawalRoot);
         verifyGasWithdrawalsAndTransfer(formerWithdrawalRoot, withdrawals);
@@ -231,7 +232,8 @@ public class BridgeContract {
     private static void verifyGasWithdrawalsAndTransfer(ByteString formerWithdrawalRoot, List<Withdrawal> withdrawals) {
         // Hash Tree verification
         ByteString parent = formerWithdrawalRoot;
-        for (int i = 0; i < withdrawals.size(); i++) {
+        int withdrawalsSize = withdrawals.size();
+        for (int i = 0; i < withdrawalsSize; i++) {
             Withdrawal withdrawal = withdrawals.get(i);
             if (!Withdrawal.isValid(withdrawal)) abort("Invalid withdrawal provided.");
             ByteString withdrawalHash = hashGasBridgeOp(cryptoLib, withdrawal.nonce, withdrawal.amount, withdrawal.to);
@@ -243,7 +245,7 @@ public class BridgeContract {
 
         // Once this is reached, execute the withdrawals
         StorageMap gasClaimableMap = new StorageMap(ctx, PREFIX_GAS_CLAIMABLES);
-        for (int i = 0; i < withdrawals.size(); i++) {
+        for (int i = 0; i < withdrawalsSize; i++) {
             Withdrawal withdrawal = withdrawals.get(i);
             if (!isContract(withdrawal.to) &&
                     gasToken.transfer(getExecutingScriptHash(), withdrawal.to, withdrawal.amount, null)) {
@@ -273,7 +275,8 @@ public class BridgeContract {
 
         ByteString msg = cryptoLib.sha256(root);
         int covered = 0;
-        for (int i = 0; i < validators.size(); i++) {
+        int validatorsSize = validators.size();
+        for (int i = 0; i < validatorsSize; i++) {
             ECPoint validator = validators.get(i);
             if (signatures.containsKey(validator)) {
                 boolean verified =
