@@ -5,6 +5,7 @@ import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
+import io.neow3j.devpack.Runtime;
 import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
@@ -99,10 +100,12 @@ public class BridgeManagementContract {
     // endregion
     // region setters
 
-    public static void setOwner(ECPoint owner) {
+    public static void setOwner(ECPoint newOwner) {
         onlyOwner();
-        baseMap.put(key_owner, owner);
-        onOwnerSet.fire(owner);
+        if (newOwner == null || !ECPoint.isValid(newOwner)) abort("Invalid public key provided.");
+        if (!Runtime.checkWitness(newOwner)) abort("New owner must be witness to the transaction.");
+        baseMap.put(key_owner, newOwner);
+        onOwnerSet.fire(newOwner);
     }
 
     public static void setRelayer(ECPoint relayer) {
