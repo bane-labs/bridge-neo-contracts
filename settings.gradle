@@ -1,1 +1,15 @@
+// TODO: Remove the pluginManagement block once neow3j 3.23.0 is released.
+pluginManagement {
+    repositories {
+        maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
+        gradlePluginPortal()
+    }
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == 'io.neow3j.gradle-plugin') {
+                useModule("io.neow3j:gradle-plugin:${requested.version}")
+            }
+        }
+    }
+}
 rootProject.name = 'bridge-neo-contracts'

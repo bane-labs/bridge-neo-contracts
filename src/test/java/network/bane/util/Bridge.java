@@ -25,19 +25,19 @@ public class Bridge extends SmartContractHelper {
 
     // region methods
 
-    public Hash256 deposit(Account sender, Hash160 from, Hash160 to, BigInteger amount) throws Throwable {
+    public Hash256 depositGas(Account sender, Hash160 from, Hash160 to, BigInteger amount) throws Throwable {
         Signer signer = AccountSigner.none(sender).setAllowedContracts(GasToken.SCRIPT_HASH);
-        return sendAndAwaitExecution(invokeFunction("deposit", hash160(from), hash160(to), integer(amount))
+        return sendAndAwaitExecution(invokeFunction("depositGas", hash160(from), hash160(to), integer(amount))
                 .signers(signer));
     }
 
-    public Hash256 deposit(Account from, Hash160 to, BigInteger amount) throws Throwable {
-        return deposit(from, from.getScriptHash(), to, amount);
+    public Hash256 depositGas(Account from, Hash160 to, BigInteger amount) throws Throwable {
+        return depositGas(from, from.getScriptHash(), to, amount);
     }
 
-    public Hash256 claim(Account sender, BigInteger nonce) throws Throwable {
+    public Hash256 claimGas(Account sender, BigInteger nonce) throws Throwable {
         Signer signer = AccountSigner.none(sender).setAllowedContracts(GasToken.SCRIPT_HASH);
-        return sendAndAwaitExecution(invokeFunction("claim", integer(nonce)).signers(signer));
+        return sendAndAwaitExecution(invokeFunction("claimGas", integer(nonce)).signers(signer));
     }
 
     public Hash256 lock() throws Throwable {
@@ -64,16 +64,16 @@ public class Bridge extends SmartContractHelper {
         return callFunctionReturningScriptHash("management");
     }
 
-    public BigInteger depositFee() throws IOException {
-        return callFunctionReturningInt("depositFee");
+    public BigInteger gasDepositFee() throws IOException {
+        return callFunctionReturningInt("gasDepositFee");
     }
 
-    public BigInteger minDeposit() throws IOException {
-        return callFunctionReturningInt("minDeposit");
+    public BigInteger minGasDeposit() throws IOException {
+        return callFunctionReturningInt("minGasDeposit");
     }
 
-    public BigInteger maxDeposit() throws IOException {
-        return callFunctionReturningInt("maxDeposit");
+    public BigInteger maxGasDeposit() throws IOException {
+        return callFunctionReturningInt("maxGasDeposit");
     }
 
     public boolean isLocked() throws IOException {
@@ -83,20 +83,20 @@ public class Bridge extends SmartContractHelper {
     // endregion
     // region dynamic values
 
-    public String depositRoot() throws IOException {
-        return prependHexPrefix(callInvokeFunction("depositRoot").getInvocationResult().getFirstStackItem().getHexString());
+    public String gasDepositRoot() throws IOException {
+        return prependHexPrefix(callInvokeFunction("gasDepositRoot").getInvocationResult().getFirstStackItem().getHexString());
     }
 
-    public String withdrawRoot() throws IOException {
-        return prependHexPrefix(callInvokeFunction("withdrawalRoot").getInvocationResult().getFirstStackItem().getHexString());
+    public BigInteger gasDepositNonce() throws IOException {
+        return callFunctionReturningInt("gasDepositNonce");
     }
 
-    public BigInteger depositsProcessed() throws IOException {
-        return callFunctionReturningInt("depositsProcessed");
+    public String gasWithdrawRoot() throws IOException {
+        return prependHexPrefix(callInvokeFunction("gasWithdrawalRoot").getInvocationResult().getFirstStackItem().getHexString());
     }
 
-    public BigInteger withdrawalsProcessed() throws IOException {
-        return callFunctionReturningInt("withdrawalsProcessed");
+    public BigInteger gasWithdrawalNonce() throws IOException {
+        return callFunctionReturningInt("gasWithdrawalNonce");
     }
 
     // endregion

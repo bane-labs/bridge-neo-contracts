@@ -1,4 +1,4 @@
-package network.bane;
+package network.bane.management;
 
 import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.NefFile;
@@ -248,7 +248,7 @@ public class BridgeManagementTest {
 
         Notification expected = new Notification(
                 management.getScriptHash(),
-                "SetOwner",
+                "OwnerChange",
                 new ArrayStackItem(asList(new ByteStringStackItem(alicePubKey.toArray())))
         );
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
@@ -303,7 +303,7 @@ public class BridgeManagementTest {
 
         Notification expected = new Notification(
                 management.getScriptHash(),
-                "SetRelayer",
+                "RelayerChange",
                 new ArrayStackItem(asList(new ByteStringStackItem(bobPubKey.toArray())))
         );
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
@@ -362,7 +362,7 @@ public class BridgeManagementTest {
 
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
         Notification notification = tx.getApplicationLog().getFirstExecution().getFirstNotification();
-        assertThat(notification.getEventName(), is("SetValidators"));
+        assertThat(notification.getEventName(), is("ValidatorsChange"));
         assertThat(notification.getContract(), is(management.getScriptHash()));
         List<StackItem> stateList = notification.getState().getList();
         assertThat(stateList, hasSize(2));
@@ -494,7 +494,7 @@ public class BridgeManagementTest {
 
         Notification expected = new Notification(
                 management.getScriptHash(),
-                "SetGovernor",
+                "GovernorChange",
                 new ArrayStackItem(asList(new ByteStringStackItem(bobPubKey.toArray())))
         );
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
@@ -542,7 +542,7 @@ public class BridgeManagementTest {
 
         Notification expected = new Notification(
                 management.getScriptHash(),
-                "SetSecurityGuard",
+                "SecurityGuardChange",
                 new ArrayStackItem(asList(new ByteStringStackItem(florianPubKey.toArray())))
         );
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));

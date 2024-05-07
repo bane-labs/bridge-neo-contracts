@@ -1,4 +1,4 @@
-package network.bane;
+package network.bane.management;
 
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
@@ -9,6 +9,7 @@ import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
+import io.neow3j.devpack.annotations.EventParameterNames;
 import io.neow3j.devpack.annotations.ManifestExtra;
 import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.Permission;
@@ -47,19 +48,24 @@ public class BridgeManagementContract {
 
     // region events
 
-    @DisplayName("SetOwner")
+    @DisplayName("OwnerChange")
+    @EventParameterNames({"NewOwner"})
     public static Event1Arg<ECPoint> onOwnerSet;
 
-    @DisplayName("SetRelayer")
+    @DisplayName("RelayerChange")
+    @EventParameterNames({"NewRelayer"})
     public static Event1Arg<ECPoint> onRelayerSet;
 
-    @DisplayName("SetValidators")
+    @DisplayName("ValidatorsChange")
+    @EventParameterNames({"NewValidators", "NewThreshold"})
     public static Event2Args<List<ECPoint>, Integer> onValidatorsSet;
 
-    @DisplayName("SetGovernor")
+    @DisplayName("GovernorChange")
+    @EventParameterNames({"NewGovernor"})
     public static Event1Arg<ECPoint> onGovernorSet;
 
-    @DisplayName("SetSecurityGuard")
+    @DisplayName("SecurityGuardChange")
+    @EventParameterNames({"NewSecurityGuard"})
     public static Event1Arg<ECPoint> onSecurityGuardSet;
 
     // endregion

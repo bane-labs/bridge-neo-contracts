@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id 'application'
-    id 'io.neow3j.gradle-plugin' version '3.22.1'
+    id 'io.neow3j.gradle-plugin' version '3.23.0-SNAPSHOT'
 }
 
 group 'network.bane'
@@ -12,6 +12,8 @@ targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    // TODO: Remove this repository once neow3j 3.23.0 is released.
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
 }
 
 sourceSets {
@@ -25,13 +27,16 @@ sourceSets {
 }
 
 dependencies {
-    implementation 'io.neow3j:devpack:3.22.1'
+    // TODO: Update the neow3j version once 3.23.0 is released.
+    implementation 'io.neow3j:devpack:3.23.0-SNAPSHOT'
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0',
-            'io.neow3j:devpack-test:3.22.1',
+            'io.neow3j:devpack-test:3.23.0-SNAPSHOT',
             'ch.qos.logback:logback-classic:1.3.4'
 
-    deployImplementation 'io.neow3j:compiler:3.22.1',
+    deployImplementation 'io.neow3j:compiler:3.23.0-SNAPSHOT',
+            'io.neow3j:devpack:3.23.0-SNAPSHOT',
+            'io.neow3j:contract:3.23.0-SNAPSHOT',
             'ch.qos.logback:logback-classic:1.2.11'
 }
 

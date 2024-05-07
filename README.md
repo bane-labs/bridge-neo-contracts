@@ -22,7 +22,7 @@ cd bridge-neo-contracts
 #### 3. **Compile the smart contract for the bridge:**
 
 ```bash
-./gradlew neow3jCompile -PclassName=network.bane.BridgeContract
+./gradlew neow3jCompile -PclassName=network.bane.bridge.BridgeContract
 ```
 
 #### 4. **You will see the following output in the directory `./build/neow3j`:**
@@ -40,7 +40,7 @@ drwxr-xr-x  7 user  wheel  224 23 Feb 17:40 ..
 #### 5. **Compile the bridge management contract**
 
 ```bash
-./gradlew neow3jCompile -PclassName=network.bane.BridgeManagementContract
+./gradlew neow3jCompile -PclassName=network.bane.management.BridgeManagementContract
 ```
 
 Then, similar to the bridge contract before, you will see the following output in the directory `./build/neow3j`:

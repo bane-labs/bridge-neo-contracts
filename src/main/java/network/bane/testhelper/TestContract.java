@@ -1,4 +1,4 @@
-package network.bane;
+package network.bane.testhelper;
 
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.annotations.DisplayName;
