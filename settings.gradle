@@ -1,3 +1,4 @@
+// TODO: Remove the pluginManagement block once neow3j 3.23.0 is released.
 pluginManagement {
     repositories {
         maven { url "https://oss.sonatype.org/content/repositories/snapshots" }

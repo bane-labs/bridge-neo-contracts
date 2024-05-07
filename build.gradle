@@ -12,7 +12,7 @@ targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
-    mavenLocal()
+    // TODO: Remove this repository once neow3j 3.23.0 is released.
     maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
 }
 
@@ -27,6 +27,7 @@ sourceSets {
 }
 
 dependencies {
+    // TODO: Update the neow3j version once 3.23.0 is released.
     implementation 'io.neow3j:devpack:3.23.0-SNAPSHOT'
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0',
