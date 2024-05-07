@@ -60,19 +60,14 @@ import static network.bane.lib.StorageConstants.PREFIX_GAS_CLAIMABLES;
 @ManifestExtra(key = "Target", value = "Neo X TestNet T3")
 @ManifestExtra(key = "Description", value = "Contract for bridging GAS and tokens between Neo N3 and Neo X.")
 public class BridgeContract {
-    // region initsslot setup
-
     private static final StorageContext ctx = Storage.getStorageContext();
     private static final CryptoLib cryptoLib = new CryptoLib();
     private static final GasToken gasToken = new GasToken();
-    private static final ContractManagement contractManagement = new ContractManagement();
 
-    // base map and keys
+    // baseMap is used to store gas-related state and general contract information, i.e., management contract and
+    // locked status.
     private static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
-    // gas claim map
-    private static final StorageMap gasClaimableMap = new StorageMap(ctx, PREFIX_GAS_CLAIMABLES);
 
-    // endregion
     // region events
 
     @DisplayName("GasDeposit")
@@ -136,7 +131,7 @@ public class BridgeContract {
     public static void update(ByteString nef, String manifest) {
         if (!isLocked()) abort("Contract needs to be locked to update.");
         if (!checkWitness(owner())) abort("Only the owner can update this contract.");
-        contractManagement.update(nef, manifest);
+        new ContractManagement().update(nef, manifest);
     }
 
     // endregion
@@ -196,6 +191,7 @@ public class BridgeContract {
 
     public static void claimGas(int nonce) {
         if (isLocked()) abort("Contract is locked.");
+        StorageMap gasClaimableMap = new StorageMap(ctx, PREFIX_GAS_CLAIMABLES);
         ByteString claimable = gasClaimableMap.get(nonce);
         if (claimable == null) abort("No claim for this nonce.");
         if (claimable.length() != HASH160_SIZE + UINT256_SIZE) abort("Invalid claimable data.");
@@ -220,10 +216,11 @@ public class BridgeContract {
         }
         if (!verifyValidatorSignatures(signatures, withdrawalRoot)) abort("Invalid validator signatures provided.");
 
-        if (withdrawals.size() <= 0) abort("At least one withdrawal is required.");
+        int withdrawalsSize = withdrawals.size();
+        if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
         if (!subsequentNonces(withdrawals, currentNonce())) abort("Provided withdrawals are not subsequent.");
 
-        baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, withdrawals.get(withdrawals.size() - 1).nonce);
+        baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, withdrawals.get(withdrawalsSize - 1).nonce);
         ByteString formerWithdrawalRoot = gasWithdrawalRoot();
         baseMap.put(KEY_GAS_WITHDRAWAL_ROOT, withdrawalRoot);
         verifyGasWithdrawalsAndTransfer(formerWithdrawalRoot, withdrawals);
@@ -235,7 +232,8 @@ public class BridgeContract {
     private static void verifyGasWithdrawalsAndTransfer(ByteString formerWithdrawalRoot, List<Withdrawal> withdrawals) {
         // Hash Tree verification
         ByteString parent = formerWithdrawalRoot;
-        for (int i = 0; i < withdrawals.size(); i++) {
+        int withdrawalsSize = withdrawals.size();
+        for (int i = 0; i < withdrawalsSize; i++) {
             Withdrawal withdrawal = withdrawals.get(i);
             if (!Withdrawal.isValid(withdrawal)) abort("Invalid withdrawal provided.");
             ByteString withdrawalHash = hashGasBridgeOp(cryptoLib, withdrawal.nonce, withdrawal.amount, withdrawal.to);
@@ -246,26 +244,27 @@ public class BridgeContract {
         }
 
         // Once this is reached, execute the withdrawals
-        for (int i = 0; i < withdrawals.size(); i++) {
+        StorageMap gasClaimableMap = new StorageMap(ctx, PREFIX_GAS_CLAIMABLES);
+        for (int i = 0; i < withdrawalsSize; i++) {
             Withdrawal withdrawal = withdrawals.get(i);
             if (!isContract(withdrawal.to) &&
                     gasToken.transfer(getExecutingScriptHash(), withdrawal.to, withdrawal.amount, null)) {
                 onGasWithdrawal.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
             } else {
                 // Add the withdrawal to the claim map if either the recipient was a contract, or the transfer failed.
-                addGasClaimable(withdrawal);
+                addGasClaimable(gasClaimableMap, withdrawal);
                 onGasClaimable.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
             }
         }
     }
 
-    private static void addGasClaimable(Withdrawal withdrawal) {
+    private static void addGasClaimable(StorageMap gasClaimableMap, Withdrawal withdrawal) {
         gasClaimableMap.put(withdrawal.nonce, concat(withdrawal.to.toByteArray(),
                 padToBytes(toByteArray(withdrawal.amount), UINT256_SIZE)));
     }
 
     private static boolean isContract(Hash160 scriptHash) {
-        return contractManagement.getContract(scriptHash) != null;
+        return new ContractManagement().getContract(scriptHash) != null;
     }
 
     // Todo: Move this verification to the bridge management contract.
@@ -276,7 +275,8 @@ public class BridgeContract {
 
         ByteString msg = cryptoLib.sha256(root);
         int covered = 0;
-        for (int i = 0; i < validators.size(); i++) {
+        int validatorsSize = validators.size();
+        for (int i = 0; i < validatorsSize; i++) {
             ECPoint validator = validators.get(i);
             if (signatures.containsKey(validator)) {
                 boolean verified =
