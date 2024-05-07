@@ -1,6 +1,6 @@
 package network.bane.lib;
 
-public class Storage {
+public class StorageConstants {
 
     // map prefixes
     public static final byte PREFIX_BASE = 0x0a;

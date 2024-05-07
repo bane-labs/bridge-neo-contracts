@@ -1,4 +1,4 @@
-package network.bane;
+package network.bane.bridge;
 
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
@@ -41,17 +41,17 @@ import static network.bane.lib.BridgeLib.UINT256_SIZE;
 import static network.bane.lib.BridgeLib.computeNewRoot;
 import static network.bane.lib.BridgeLib.subsequentNonces;
 import static network.bane.lib.GasBridgeLib.hashGasBridgeOp;
-import static network.bane.lib.Storage.KEY_BRIDGE_MANAGEMENT;
-import static network.bane.lib.Storage.KEY_GAS_DEPOSIT_FEE;
-import static network.bane.lib.Storage.KEY_GAS_DEPOSIT_MAX_AMOUNT;
-import static network.bane.lib.Storage.KEY_GAS_DEPOSIT_MIN_AMOUNT;
-import static network.bane.lib.Storage.KEY_GAS_DEPOSIT_NONCE;
-import static network.bane.lib.Storage.KEY_GAS_DEPOSIT_ROOT;
-import static network.bane.lib.Storage.KEY_GAS_WITHDRAWAL_NONCE;
-import static network.bane.lib.Storage.KEY_GAS_WITHDRAWAL_ROOT;
-import static network.bane.lib.Storage.KEY_LOCKED;
-import static network.bane.lib.Storage.PREFIX_BASE;
-import static network.bane.lib.Storage.PREFIX_GAS_CLAIMABLES;
+import static network.bane.lib.StorageConstants.KEY_BRIDGE_MANAGEMENT;
+import static network.bane.lib.StorageConstants.KEY_GAS_DEPOSIT_FEE;
+import static network.bane.lib.StorageConstants.KEY_GAS_DEPOSIT_MAX_AMOUNT;
+import static network.bane.lib.StorageConstants.KEY_GAS_DEPOSIT_MIN_AMOUNT;
+import static network.bane.lib.StorageConstants.KEY_GAS_DEPOSIT_NONCE;
+import static network.bane.lib.StorageConstants.KEY_GAS_DEPOSIT_ROOT;
+import static network.bane.lib.StorageConstants.KEY_GAS_WITHDRAWAL_NONCE;
+import static network.bane.lib.StorageConstants.KEY_GAS_WITHDRAWAL_ROOT;
+import static network.bane.lib.StorageConstants.KEY_LOCKED;
+import static network.bane.lib.StorageConstants.PREFIX_BASE;
+import static network.bane.lib.StorageConstants.PREFIX_GAS_CLAIMABLES;
 
 @DisplayName("NeoXBridge")
 @Permission(nativeContract = NativeContract.GasToken, methods = "transfer")
@@ -69,7 +69,6 @@ public class BridgeContract {
 
     // base map and keys
     private static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
-
     // gas claim map
     private static final StorageMap gasClaimableMap = new StorageMap(ctx, PREFIX_GAS_CLAIMABLES);
 

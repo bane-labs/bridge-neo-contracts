@@ -19,6 +19,8 @@ import io.neow3j.types.Hash256;
 import io.neow3j.types.NeoVMStateType;
 import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
+import network.bane.bridge.BridgeContract;
+import network.bane.management.BridgeManagementContract;
 
 import java.math.BigInteger;
 import java.util.List;

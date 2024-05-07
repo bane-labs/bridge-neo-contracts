@@ -1,4 +1,4 @@
-package network.bane;
+package network.bane.management;
 
 import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.NefFile;

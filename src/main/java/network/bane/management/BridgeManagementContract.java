@@ -1,4 +1,4 @@
-package network.bane;
+package network.bane.management;
 
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
