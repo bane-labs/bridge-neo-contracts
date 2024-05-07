@@ -39,6 +39,7 @@ import static network.bane.TestPaddingContract.padToBytes;
 import static network.bane.lib.BridgeLib.HASH160_SIZE;
 import static network.bane.lib.BridgeLib.UINT256_SIZE;
 import static network.bane.lib.BridgeLib.computeNewRoot;
+import static network.bane.lib.BridgeLib.subsequentNonces;
 import static network.bane.lib.GasBridgeLib.hashGasBridgeOp;
 import static network.bane.lib.Storage.KEY_BRIDGE_MANAGEMENT;
 import static network.bane.lib.Storage.KEY_GAS_DEPOSIT_FEE;
@@ -221,8 +222,7 @@ public class BridgeContract {
         if (!verifyValidatorSignatures(signatures, withdrawalRoot)) abort("Invalid validator signatures provided.");
 
         if (withdrawals.size() <= 0) abort("At least one withdrawal is required.");
-        int startNonce = withdrawals.get(0).nonce;
-        if (!subsequentNonces(withdrawals)) abort("Provided withdrawals are not subsequent.");
+        if (!subsequentNonces(withdrawals, currentNonce())) abort("Provided withdrawals are not subsequent.");
 
         baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, withdrawals.get(withdrawals.size() - 1).nonce);
         ByteString formerWithdrawalRoot = gasWithdrawalRoot();
@@ -288,17 +288,6 @@ public class BridgeContract {
             }
         }
         return covered >= threshold;
-    }
-
-    // Makes sure the withdrawals have subsequent nonces.
-    private static boolean subsequentNonces(List<Withdrawal> withdrawals) {
-        int startNonce = currentNonce();
-        for (int i = 1; i <= withdrawals.size(); i++) {
-            if (withdrawals.get(i - 1).nonce != startNonce + i) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private static int currentNonce() {

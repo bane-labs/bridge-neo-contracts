@@ -1,7 +1,9 @@
 package network.bane.lib;
 
 import io.neow3j.devpack.ByteString;
+import io.neow3j.devpack.List;
 import io.neow3j.devpack.contracts.CryptoLib;
+import network.bane.structs.Withdrawal;
 
 import static io.neow3j.devpack.Helper.concat;
 
@@ -21,6 +23,16 @@ public class BridgeLib {
         assert toPad >= 0 : "Data is too long.";
         byte[] padding = new byte[toPad];
         return concat(data, padding);
+    }
+
+    // Makes sure the withdrawals have subsequent nonces.
+    public static boolean subsequentNonces(List<Withdrawal> withdrawals, int startNonce) {
+        for (int i = 1; i <= withdrawals.size(); i++) {
+            if (withdrawals.get(i - 1).nonce != startNonce + i) {
+                return false;
+            }
+        }
+        return true;
     }
 
 }
