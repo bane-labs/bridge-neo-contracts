@@ -40,6 +40,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
+import static io.neow3j.transaction.AccountSigner.none;
+import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.byteArrayFromString;
@@ -240,7 +242,7 @@ public class BridgeManagementTest {
         assertThat(management.owner(), is(ownerPubKey));
 
         Transaction tx = management.invokeFunction("setOwner", publicKey(alicePubKey))
-                .signers(calledByEntry(owner))
+                .signers(calledByEntry(owner), none(alice).setAllowedContracts(management.getScriptHash()))
                 .sign();
         NeoSendRawTransaction response = tx.send();
         assertFalse(response.hasError());
@@ -265,13 +267,30 @@ public class BridgeManagementTest {
 
         // reverse set owner
         response = management.invokeFunction("setOwner", publicKey(ownerPubKey))
-                .signers(calledByEntry(alice))
+                .signers(calledByEntry(alice), none(owner).setAllowedContracts(management.getScriptHash()))
                 .sign()
                 .send();
         assertFalse(response.hasError());
         waitUntilTransactionIsExecuted(response, neow3j);
 
         assertThat(management.owner(), is(ownerPubKey));
+    }
+
+    @Test
+    public void testSetOwner_InvalidParameters() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setOwner", any(null))
+                        .signers(calledByEntry(owner))
+                        .sign()
+        );
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key provided."));
+
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setOwner", byteArrayFromString("invalid"))
+                        .signers(calledByEntry(owner))
+                        .sign()
+        );
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key provided."));
     }
 
     @Test
