@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id 'application'
-    id 'io.neow3j.gradle-plugin' version '3.22.1'
+    id 'io.neow3j.gradle-plugin' version '3.23.0-SNAPSHOT'
 }
 
 group 'network.bane'
