@@ -1,5 +1,6 @@
 package network.bane.bridge;
 
+import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
 import io.neow3j.contract.NeoToken;
@@ -17,6 +18,9 @@ import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
+import io.neow3j.transaction.witnessrule.CalledByContractCondition;
+import io.neow3j.transaction.witnessrule.WitnessAction;
+import io.neow3j.transaction.witnessrule.WitnessRule;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -118,7 +122,7 @@ public class BridgeTest {
     private static final BigInteger minDeposit = new BigInteger("100000000");
     private static final BigInteger maxDeposit = new BigInteger("1000000000000");
 
-    private static final Hash160 managementContractHash = new Hash160("ebe6b7fc380e753f15e216afcaa6b2bf023b80c0");
+    private static final Hash160 managementContractHash = new Hash160("1eab8a0c4878db6dddaec9a255e5630448c565a4");
 
     private static Bridge bridge;
     private static Management management;
@@ -128,6 +132,9 @@ public class BridgeTest {
     private static Neow3j neow3j;
     private static GasToken gasToken;
     private static NeoToken neoToken;
+
+    private static BigInteger withdrawalNonce = BigInteger.ZERO;
+    private static BigInteger depositNonce = BigInteger.ZERO;
 
     private static Account alice;
     private static Account bob;
@@ -196,6 +203,11 @@ public class BridgeTest {
                         securityGuardPubKey
                 )
         );
+        AccountSigner deploySigner = AccountSigner.none(owner);
+        WitnessRule deployWitnessRule = new WitnessRule(WitnessAction.ALLOW,
+                new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
+        deploySigner.setRules(deployWitnessRule);
+        config.setSigner(deploySigner);
         return config;
     }
 
@@ -210,6 +222,11 @@ public class BridgeTest {
                         maxDeposit
                 )
         );
+        AccountSigner deploySigner = AccountSigner.none(owner);
+        WitnessRule deployWitnessRule = new WitnessRule(WitnessAction.ALLOW,
+                new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
+        deploySigner.setRules(deployWitnessRule);
+        config.setSigner(deploySigner);
         return config;
     }
 
@@ -226,20 +243,18 @@ public class BridgeTest {
     // endregion
     // region helper
 
-    private Hash256 bridgeGasWithFee(Account from, Hash160 to, BigInteger amount) throws Throwable {
-        return bridgeGasWithFee(from, to, amount, false);
+    private Hash256 depositGasWithFee(Account from, Hash160 to, BigInteger amount) throws Throwable {
+        return depositGasWithFee(from, to, amount, false);
     }
 
-    private Hash256 bridgeGasWithFee(Account from, Hash160 to, BigInteger amount, boolean print) throws Throwable {
+    private Hash256 depositGasWithFee(Account from, Hash160 to, BigInteger amount, boolean print) throws Throwable {
         List<String> proof = new ArrayList<>();
         if (print) {
             proof = getProofFromStorage(bridge);
         }
         BigInteger depositFee = bridge.gasDepositFee();
-        NeoSendRawTransaction response =
-                gasToken.transfer(from, bridge.getScriptHash(), amount.add(depositFee), hash160(to))
-                        .sign()
-                        .send();
+        Transaction tx = gasToken.transfer(from, bridge.getScriptHash(), amount.add(depositFee), hash160(to)).sign();
+        NeoSendRawTransaction response = tx.send();
         Hash256 txHash = response.getSendRawTransaction().getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
         if (print) {
@@ -248,7 +263,7 @@ public class BridgeTest {
         return txHash;
     }
 
-    private Hash256 bridgeGasUsingDepositMethod(Account from, Hash160 to, BigInteger amount, boolean print) throws Throwable {
+    private Hash256 depositGasUsingDepositMethod(Account from, Hash160 to, BigInteger amount, boolean print) throws Throwable {
         List<String> proof = new ArrayList<>();
         if (print) {
             proof = getProofFromStorage(bridge);
@@ -336,7 +351,7 @@ public class BridgeTest {
                         minDeposit
                 ).sign()
         );
-        assertThat(thrown.getMessage(), containsString("Invalid type for SIZE: Any"));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid recipient data."));
 
         ArrayList<ContractParameter> toArrayWithSize20 = new ArrayList<>();
         for (int i = 0; i < 20; i++) {
@@ -359,16 +374,15 @@ public class BridgeTest {
     // endregion
     // region deposits
 
-    // TODO: Test both deposit using OnNEP17Payment and deposit function
     @Test
     @Order(11)
     public void testRootComputation_1() throws Throwable {
         Account from = alice;
         Hash160 to = recipient1;
         BigInteger amount = new BigInteger("10000000000");
-        BigInteger nextNonce = new BigInteger("1");
+        BigInteger nextNonce = incrementAndGetDepositNonce();
 
-        Hash256 txHash = bridgeGasWithFee(from, to, amount, printDeposits.contains(1));
+        Hash256 txHash = depositGasWithFee(from, to, amount, printDeposits.contains(1));
 
         String d1 = createDepositHash(nextNonce, to, amount);
 
@@ -392,10 +406,10 @@ public class BridgeTest {
         Account from = bob;
         Hash160 to = recipient2;
         BigInteger amount = minDeposit;
-        BigInteger nextNonce = new BigInteger("2");
+        BigInteger nextNonce = incrementAndGetDepositNonce();
 
         String depositRootBefore = bridge.gasDepositRoot();
-        Hash256 txHash = bridgeGasUsingDepositMethod(from, to, amount, printDeposits.contains(2));
+        Hash256 txHash = depositGasUsingDepositMethod(from, to, amount, printDeposits.contains(2));
 
         String d2 = createDepositHash(nextNonce, to, amount);
         String d12 = concatAndSha256(depositRootBefore, d2);
@@ -418,10 +432,10 @@ public class BridgeTest {
         Account from = charlie;
         Hash160 to = recipient3;
         BigInteger amount = minDeposit.multiply(new BigInteger("3"));
-        BigInteger nextNonce = new BigInteger("3");
+        BigInteger nextNonce = incrementAndGetDepositNonce();
 
         String depositRootBefore = bridge.gasDepositRoot();
-        Hash256 txHash = bridgeGasUsingDepositMethod(from, to, amount, printDeposits.contains(3));
+        Hash256 txHash = depositGasUsingDepositMethod(from, to, amount, printDeposits.contains(3));
 
         String d3 = createDepositHash(nextNonce, to, amount);
         String d12d3 = concatAndSha256(depositRootBefore, d3);
@@ -444,11 +458,11 @@ public class BridgeTest {
         Account from = denise;
         Hash160 to = recipient4;
         BigInteger amount = minDeposit.multiply(new BigInteger("4"));
-        BigInteger nextNonce = new BigInteger("4");
+        BigInteger nextNonce = incrementAndGetDepositNonce();
 
         String depositRootBefore = bridge.gasDepositRoot();
 
-        Hash256 txHash = bridgeGasWithFee(from, to, amount, printDeposits.contains(4));
+        Hash256 txHash = depositGasWithFee(from, to, amount, printDeposits.contains(4));
 
         String depositHashOffChain = createDepositHash(nextNonce, to, amount);
         String d1234 = concatAndSha256(depositRootBefore, depositHashOffChain);
@@ -470,7 +484,6 @@ public class BridgeTest {
     public void testTryingToDepositWithBridgeContractAsFrom() throws Throwable {
         BigInteger amount = minDeposit.multiply(new BigInteger("3"));
         assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), greaterThan(amount));
-        System.out.println();
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () -> {
                     bridge.depositGas(alice, bridge.getScriptHash(), recipient0, amount);
@@ -482,15 +495,12 @@ public class BridgeTest {
     // endregion
     // region withdrawal and claim
 
-    // Test withdraw function with first withdrawal
     @Test
     @Order(20)
     public void testWithdrawal_1() throws Throwable {
         Hash160 to = alice.getScriptHash();
-        BigInteger amount1 = new BigInteger("1000000000");
-        bridgeGasWithFee(bob, to, amount1, false);
         BigInteger amount = minDeposit;
-        BigInteger nonce = new BigInteger("1");
+        BigInteger nonce = incrementAndGetWithdrawalNonce();
 
         String d1 = createDepositHash(nonce, to, amount);
         String root = concatAndSha256(Hash256.ZERO.toString(), d1);
@@ -503,16 +513,15 @@ public class BridgeTest {
         assertThat(withdrawEvent.amount, is(amount));
     }
 
-    // Test withdraw function with second withdrawal
     @Test
     @Order(21)
     public void testWithdrawal_2() throws Throwable {
         Hash160 to1 = alice.getScriptHash();
         BigInteger amount1 = minDeposit;
-        BigInteger nonce1 = new BigInteger("2");
+        BigInteger nonce1 = incrementAndGetWithdrawalNonce();
         Hash160 to2 = charlie.getScriptHash();
         BigInteger amount2 = minDeposit;
-        BigInteger nonce2 = new BigInteger("3");
+        BigInteger nonce2 = incrementAndGetWithdrawalNonce();
 
         String withdrawRootBefore = bridge.gasWithdrawRoot();
 
@@ -532,13 +541,12 @@ public class BridgeTest {
         assertThat(withdrawEvent.amount, is(amount1));
     }
 
-    // Test withdraw function with contract as recipient
     @Test
     @Order(22)
     public void testWithdrawalToContract() throws Throwable {
         Hash160 to = testContract;
         BigInteger amount = minDeposit;
-        BigInteger nonce = new BigInteger("4");
+        BigInteger nonce = incrementAndGetWithdrawalNonce();
 
         String withdrawRootBefore = bridge.gasWithdrawRoot();
         String d1 = createDepositHash(nonce, to, amount);
@@ -565,10 +573,10 @@ public class BridgeTest {
         BigInteger amount2 = minDeposit.multiply(new BigInteger("12"));
         BigInteger amount3 = minDeposit.multiply(new BigInteger("5"));
         BigInteger amount4 = minDeposit.multiply(new BigInteger("9"));
-        BigInteger nonce1 = new BigInteger("5");
-        BigInteger nonce2 = new BigInteger("6");
-        BigInteger nonce3 = new BigInteger("7");
-        BigInteger nonce4 = new BigInteger("8");
+        BigInteger nonce1 = incrementAndGetWithdrawalNonce();
+        BigInteger nonce2 = incrementAndGetWithdrawalNonce();
+        BigInteger nonce3 = incrementAndGetWithdrawalNonce();
+        BigInteger nonce4 = incrementAndGetWithdrawalNonce();
 
         String rootBefore = bridge.gasWithdrawRoot();
         String d1 = createDepositHash(nonce1, to1, amount1);
@@ -587,19 +595,10 @@ public class BridgeTest {
                 array(integer(nonce3), integer(amount3), hash160(to3)),
                 array(integer(nonce4), integer(amount4), hash160(to4))
         );
-
-        Transaction transaction = bridge.invokeFunction("withdrawGas",
-                        byteArray(root),
-                        map(signMsg(validators, root)),
-                        withdrawals
-                ).signers(calledByEntry(relayer))
-                .sign();
-        NeoSendRawTransaction response = transaction.send();
-        Hash256 txHash = response.getSendRawTransaction().getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
+        Hash256 txHash = withdrawGas(root, signMsg(validators, root), withdrawals);
 
         assertThat(bridge.gasWithdrawRoot(), is(root));
-        NeoApplicationLog appLog = transaction.getApplicationLog();
+        NeoApplicationLog appLog = neow3j.getApplicationLog(txHash).send().getApplicationLog();
         assertThat(appLog.getFirstExecution().getNotifications(), hasSize(8));
     }
 
@@ -608,7 +607,15 @@ public class BridgeTest {
     public void testClaim() throws Throwable {
         Hash160 to = testContract;
         BigInteger amount = minDeposit;
-        BigInteger nonce = new BigInteger("4");
+        BigInteger nonce = incrementAndGetWithdrawalNonce();
+
+        String withdrawRootBefore = bridge.gasWithdrawRoot();
+        String d1 = createDepositHash(nonce, to, amount);
+        String root = concatAndSha256(withdrawRootBefore, d1);
+        List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
+        ContractParameter withdrawal = array(array(integer(nonce), integer(amount), hash160(to)));
+        withdrawGas(root, signMsg(validators, root), withdrawal);
+        depositGasWithFee(alice, to, amount); // fund contract if this test is executed alone
 
         Hash256 txHash = claimGas(nonce.intValue());
         TestHelper.ClaimEvent claimEvent = getClaimEvent(txHash, neow3j);
@@ -618,7 +625,7 @@ public class BridgeTest {
     }
 
     // endregion
-    // region deposit fee
+    // region setters
 
     @Test
     @Order(0)
@@ -760,13 +767,28 @@ public class BridgeTest {
                 containsString("ABORTMSG is executed. Reason: Only the governor can set the maximum deposit."));
     }
 
+    // endregion
+    // region private helpers
+
+    private static BigInteger incrementAndGetWithdrawalNonce() {
+        withdrawalNonce = withdrawalNonce.add(BigInteger.ONE);
+        return withdrawalNonce;
+    }
+
+    private static BigInteger incrementAndGetDepositNonce() {
+        depositNonce = depositNonce.add(BigInteger.ONE);
+        return depositNonce;
+    }
+
     private Hash256 withdrawGas(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
             ContractParameter withdrawals) throws Throwable {
-        NeoSendRawTransaction response =
-                bridge.invokeFunction("withdrawGas", byteArray(withdrawalRoot), map(signatures), withdrawals)
-                        .signers(AccountSigner.calledByEntry(relayer))
-                        .sign()
-                        .send();
+        Transaction tx = bridge.invokeFunction("withdrawGas",
+                        byteArray(withdrawalRoot),
+                        map(signatures),
+                        withdrawals
+                ).signers(calledByEntry(relayer))
+                .sign();
+        NeoSendRawTransaction response = tx.send();
         Hash256 txHash = response.getSendRawTransaction().getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
         return txHash;
