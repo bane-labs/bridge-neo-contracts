@@ -101,6 +101,8 @@ public class BridgeManagementContract {
             baseMap.put(key_validator_threshold, validatorThreshold);
             baseMap.put(key_governor, governor);
             baseMap.put(key_securityguard, securityGuard);
+
+            if (!checkWitness(owner())) abort("Owner must witness the deployment.");
         }
     }
 

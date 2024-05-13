@@ -126,6 +126,10 @@ public class BridgeContract {
             baseMap.put(KEY_GAS_DEPOSIT_NONCE, 0);
             baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, 0);
             baseMap.put(KEY_LOCKED, false);
+
+            if (!checkWitness(owner())) {
+                abort("Owner must witness the deployment.");
+            }
         }
     }
 
