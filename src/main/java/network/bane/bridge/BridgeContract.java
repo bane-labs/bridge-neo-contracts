@@ -49,7 +49,7 @@ import static network.bane.lib.StorageConstants.KEY_GAS_DEPOSIT_NONCE;
 import static network.bane.lib.StorageConstants.KEY_GAS_DEPOSIT_ROOT;
 import static network.bane.lib.StorageConstants.KEY_GAS_WITHDRAWAL_NONCE;
 import static network.bane.lib.StorageConstants.KEY_GAS_WITHDRAWAL_ROOT;
-import static network.bane.lib.StorageConstants.KEY_LOCKED;
+import static network.bane.lib.StorageConstants.KEY_PAUSED;
 import static network.bane.lib.StorageConstants.PREFIX_BASE;
 import static network.bane.lib.StorageConstants.PREFIX_GAS_CLAIMABLES;
 
@@ -65,7 +65,7 @@ public class BridgeContract {
     private static final GasToken gasToken = new GasToken();
 
     // baseMap is used to store gas-related state and general contract information, i.e., management contract and
-    // locked status.
+    // pause status.
     private static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
 
     // region events
@@ -125,7 +125,7 @@ public class BridgeContract {
 
             baseMap.put(KEY_GAS_DEPOSIT_NONCE, 0);
             baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, 0);
-            baseMap.put(KEY_LOCKED, false);
+            baseMap.put(KEY_PAUSED, false);
 
             if (!checkWitness(owner())) {
                 abort("Owner must witness the deployment.");
@@ -134,29 +134,37 @@ public class BridgeContract {
     }
 
     public static void update(ByteString nef, String manifest) {
-        if (!isLocked()) abort("Contract needs to be locked to update.");
+        onlyPaused();
         if (!checkWitness(owner())) abort("Only the owner can update this contract.");
         new ContractManagement().update(nef, manifest);
     }
 
     // endregion
-    // region locking
+    // region pause/unpause
 
-    public static void lock() {
-        if (isLocked()) abort("Contract is already locked.");
-        if (!checkWitness(securityGuard())) abort("Only the security guard can lock the contract.");
-        baseMap.put(KEY_LOCKED, true);
+    public static void pause() {
+        onlyUnpaused();
+        if (!checkWitness(securityGuard())) abort("Only the security guard can pause the contract.");
+        baseMap.put(KEY_PAUSED, true);
     }
 
-    public static void unlock() {
-        if (!isLocked()) abort("Contract is already unlocked.");
-        if (!checkWitness(governor())) abort("Only the governor can unlock the contract.");
-        baseMap.put(KEY_LOCKED, false);
+    public static void unpause() {
+        onlyPaused();
+        if (!checkWitness(governor())) abort("Only the governor can unpause the contract.");
+        baseMap.put(KEY_PAUSED, false);
     }
 
     @Safe
-    public static boolean isLocked() {
-        return baseMap.getBoolean(KEY_LOCKED);
+    public static boolean isPaused() {
+        return baseMap.getBoolean(KEY_PAUSED);
+    }
+
+    private static void onlyPaused() {
+        if (!isPaused()) abort("Contract is not paused.");
+    }
+
+    private static void onlyUnpaused() {
+        if (isPaused()) abort("Contract is paused.");
     }
 
     // endregion
@@ -164,7 +172,7 @@ public class BridgeContract {
 
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amountWithFee, Object data) {
-        if (isLocked()) abort("Contract is locked.");
+        if (isPaused()) abort("Contract is paused.");
         if (getCallingScriptHash() != gasToken.getHash()) abort("Only GAS is accepted.");
         Hash160 to = (Hash160) data;
         if (to == null || !Hash160.isValid(to)) abort("Invalid recipient data.");
@@ -195,7 +203,7 @@ public class BridgeContract {
     }
 
     public static void claimGas(int nonce) {
-        if (isLocked()) abort("Contract is locked.");
+        if (isPaused()) abort("Contract is paused.");
         StorageMap gasClaimableMap = new StorageMap(ctx, PREFIX_GAS_CLAIMABLES);
         ByteString claimable = gasClaimableMap.get(nonce);
         if (claimable == null) abort("No claim for this nonce.");
@@ -214,7 +222,7 @@ public class BridgeContract {
 
     public static void withdrawGas(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
-        if (isLocked()) abort("Contract is locked.");
+        if (isPaused()) abort("Contract is paused.");
         if (!checkWitness(relayer())) abort("Only the relayer can call this method.");
         int withdrawalsSize = withdrawals.size();
         if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");

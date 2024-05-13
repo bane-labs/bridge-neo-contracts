@@ -819,7 +819,7 @@ public class BridgeTest {
             manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
         }
         byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
-        bridge.lock();
+        bridge.pause();
         NeoSendRawTransaction response =
                 bridge.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes))
                         .signers(AccountSigner.calledByEntry(owner))
@@ -834,7 +834,7 @@ public class BridgeTest {
     @Test
     @Order(0)
     public void testUpdateContract_notOwner() throws Throwable {
-        bridge.lock();
+        bridge.pause();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.invokeFunction("update", byteArray(""), string(""))
                         .signers(AccountSigner.calledByEntry(alice))
@@ -842,90 +842,90 @@ public class BridgeTest {
 
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Only the owner can update this contract."));
-        bridge.unlock();
+        bridge.unpause();
     }
 
     @Test
     @Order(0)
-    public void testUpdate_unlocked() throws IOException {
-        assertFalse(bridge.isLocked());
+    public void testUpdate_unpaused() throws IOException {
+        assertFalse(bridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.invokeFunction("update", byteArray(""), string(""))
                         .signers(AccountSigner.calledByEntry(owner))
                         .sign());
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Contract needs to be locked to update."));
+                containsString("ABORTMSG is executed. Reason: Contract is not paused."));
     }
 
     // endregion
-    // region lock
+    // region contract pausing
 
     @Test
     @Order(0)
-    public void testLock_onlySecurityGuard() {
+    public void testPause_onlySecurityGuard() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.invokeFunction("lock").signers(calledByEntry(relayer)).sign());
+                () -> bridge.invokeFunction("pause").signers(calledByEntry(relayer)).sign());
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the security guard can lock the contract."));
+                containsString("ABORTMSG is executed. Reason: Only the security guard can pause the contract."));
     }
 
     @Test
     @Order(0)
-    public void testUnlock_onlyGovernor() throws Throwable {
-        bridge.lock();
-        assertTrue(bridge.isLocked());
+    public void testUnpause_onlyGovernor() throws Throwable {
+        bridge.pause();
+        assertTrue(bridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.invokeFunction("unlock").signers(calledByEntry(relayer)).sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Only the governor can unlock " +
+                () -> bridge.invokeFunction("unpause").signers(calledByEntry(relayer)).sign());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Only the governor can unpause " +
                 "the contract."));
-        bridge.unlock();
+        bridge.unpause();
     }
 
     @Test
     @Order(0)
-    public void testLock() throws Throwable {
-        bridge.lock();
-        assertTrue(bridge.isLocked());
+    public void testPause() throws Throwable {
+        bridge.pause();
+        assertTrue(bridge.isPaused());
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> gasToken.transfer(relayer, bridge.getScriptHash(), BigInteger.ONE, hash160(recipient0)).sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is locked."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
 
         thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.depositGas(relayer, recipient0, BigInteger.TEN));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is locked."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
 
         thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.claimGas(relayer, BigInteger.TEN));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is locked."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
 
         thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.lock(securityGuard));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is already locked."));
-        bridge.unlock();
+                () -> bridge.pause(securityGuard));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
+        bridge.unpause();
     }
 
     @Test
     @Order(0)
-    public void testUnlock_alreadyUnlocked() throws IOException {
-        assertFalse(bridge.isLocked());
+    public void testUnpause_alreadyUnpaused() throws IOException {
+        assertFalse(bridge.isPaused());
         TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> bridge.unlock());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is already unlocked."));
+                assertThrows(TransactionConfigurationException.class, () -> bridge.unpause());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is not paused."));
     }
 
     @Test
     @Order(0)
-    public void testLock_withdrawal() throws Throwable {
-        bridge.lock();
+    public void testPause_withdrawal() throws Throwable {
+        bridge.pause();
         HashMap<ContractParameter, ContractParameter> map = new HashMap<>();
         // Map content doesn't matter for this test, just required to have at least one entry.
         map.put(integer(0), integer(0));
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> withdrawGas("", map, array("")));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is locked."));
-        bridge.unlock();
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
+        bridge.unpause();
     }
 
     // endregion
