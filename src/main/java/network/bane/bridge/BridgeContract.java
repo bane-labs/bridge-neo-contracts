@@ -106,17 +106,18 @@ public class BridgeContract {
         if (!isUpdate) {
             BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
 
-            if (!Hash160.isValid(deploymentData.bridgeManagementContractHash))
+            if (deploymentData.bridgeManagementContract == null ||
+                    !Hash160.isValid(deploymentData.bridgeManagementContract))
                 abort("Invalid bridge management contract hash.");
-            if (deploymentData.depositFee < 0) abort("Deposit fee must be nonnegative.");
-            if (deploymentData.minDeposit < 0) abort("Minimum deposit must be nonnegative.");
-            if (deploymentData.maxDeposit < deploymentData.minDeposit)
+            if (deploymentData.gasDepositFee < 0) abort("Deposit fee must be nonnegative.");
+            if (deploymentData.minGasDeposit < 0) abort("Minimum deposit must be nonnegative.");
+            if (deploymentData.maxGasDeposit < deploymentData.minGasDeposit)
                 abort("Maximum deposit must be greater than the minimum deposit.");
 
-            baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.bridgeManagementContractHash);
-            baseMap.put(KEY_GAS_DEPOSIT_FEE, deploymentData.depositFee);
-            baseMap.put(KEY_GAS_DEPOSIT_MIN_AMOUNT, deploymentData.minDeposit);
-            baseMap.put(KEY_GAS_DEPOSIT_MAX_AMOUNT, deploymentData.maxDeposit);
+            baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.bridgeManagementContract);
+            baseMap.put(KEY_GAS_DEPOSIT_FEE, deploymentData.gasDepositFee);
+            baseMap.put(KEY_GAS_DEPOSIT_MIN_AMOUNT, deploymentData.minGasDeposit);
+            baseMap.put(KEY_GAS_DEPOSIT_MAX_AMOUNT, deploymentData.maxGasDeposit);
 
             // Initial deposit and withdrawal roots will be zero hashes
             baseMap.put(KEY_GAS_DEPOSIT_ROOT, Hash256.zero());
@@ -162,7 +163,7 @@ public class BridgeContract {
         if (isLocked()) abort("Contract is locked.");
         if (getCallingScriptHash() != gasToken.getHash()) abort("Only GAS is accepted.");
         Hash160 to = (Hash160) data;
-        if (!Hash160.isValid(to)) abort("Invalid recipient data.");
+        if (to == null || !Hash160.isValid(to)) abort("Invalid recipient data.");
         if (to.isZero()) abort("Recipient must not be zero.");
 
         int depositFee = gasDepositFee();
@@ -211,49 +212,40 @@ public class BridgeContract {
             List<Withdrawal> withdrawals) {
         if (isLocked()) abort("Contract is locked.");
         if (!checkWitness(relayer())) abort("Only the relayer can call this method.");
+        int withdrawalsSize = withdrawals.size();
+        if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
+        if (!subsequentNonces(withdrawals, currentNonce())) abort("Provided withdrawals are not subsequent.");
         if (!GasBridgeLib.computeNewTopRoot(cryptoLib, gasWithdrawalRoot(), withdrawals).equals(withdrawalRoot)) {
             abort("Invalid root.");
         }
         if (!verifyValidatorSignatures(signatures, withdrawalRoot)) abort("Invalid validator signatures provided.");
 
-        int withdrawalsSize = withdrawals.size();
-        if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
-        if (!subsequentNonces(withdrawals, currentNonce())) abort("Provided withdrawals are not subsequent.");
-
         baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, withdrawals.get(withdrawalsSize - 1).nonce);
-        ByteString formerWithdrawalRoot = gasWithdrawalRoot();
         baseMap.put(KEY_GAS_WITHDRAWAL_ROOT, withdrawalRoot);
-        verifyGasWithdrawalsAndTransfer(formerWithdrawalRoot, withdrawals);
+        executeGasTransfers(withdrawals);
     }
 
     // endregion
     // region gas withdrawal helpers
 
-    private static void verifyGasWithdrawalsAndTransfer(ByteString formerWithdrawalRoot, List<Withdrawal> withdrawals) {
-        // Hash Tree verification
-        ByteString parent = formerWithdrawalRoot;
-        int withdrawalsSize = withdrawals.size();
-        for (int i = 0; i < withdrawalsSize; i++) {
-            Withdrawal withdrawal = withdrawals.get(i);
-            if (!Withdrawal.isValid(withdrawal)) abort("Invalid withdrawal provided.");
-            ByteString withdrawalHash = hashGasBridgeOp(cryptoLib, withdrawal.nonce, withdrawal.amount, withdrawal.to);
-            parent = computeNewRoot(cryptoLib, parent, withdrawalHash);
-        }
-        if (parent != gasWithdrawalRoot()) {
-            abort("Provided withdrawals do not match the withdrawal root.");
-        }
-
-        // Once this is reached, execute the withdrawals
+    private static void executeGasTransfers(List<Withdrawal> withdrawals) {
         StorageMap gasClaimableMap = new StorageMap(ctx, PREFIX_GAS_CLAIMABLES);
+        int withdrawalsSize = withdrawals.size();
+        Hash160 executingScriptHash = getExecutingScriptHash();
         for (int i = 0; i < withdrawalsSize; i++) {
             Withdrawal withdrawal = withdrawals.get(i);
-            if (!isContract(withdrawal.to) &&
-                    gasToken.transfer(getExecutingScriptHash(), withdrawal.to, withdrawal.amount, null)) {
-                onGasWithdrawal.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
-            } else {
-                // Add the withdrawal to the claim map if either the recipient was a contract, or the transfer failed.
+            // If the to address is a contract, add the withdrawal to the claimable map, otherwise exeucte the transfer.
+            if (isContract(withdrawal.to)) {
                 addGasClaimable(gasClaimableMap, withdrawal);
                 onGasClaimable.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
+            } else {
+                if (gasToken.transfer(executingScriptHash, withdrawal.to, withdrawal.amount, null)) {
+                    onGasWithdrawal.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
+                } else {
+                    // If the transfer was unsuccessful, add the withdrawal to the claimable map.
+                    addGasClaimable(gasClaimableMap, withdrawal);
+                    onGasClaimable.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
+                }
             }
         }
     }
