@@ -675,7 +675,7 @@ public class BridgeTest {
                                 .send()
                 );
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the governor can set the deposit fee."));
+                containsString("ABORTMSG is executed. Reason: Only the governor can call this method."));
     }
 
     @Test
@@ -724,7 +724,7 @@ public class BridgeTest {
                                 .signers(AccountSigner.calledByEntry(alice))
                                 .sign());
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the governor can set the minimum deposit."));
+                containsString("ABORTMSG is executed. Reason: Only the governor can call this method."));
     }
 
     @Test
@@ -764,7 +764,7 @@ public class BridgeTest {
                                 .signers(AccountSigner.calledByEntry(alice))
                                 .sign());
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the governor can set the maximum deposit."));
+                containsString("ABORTMSG is executed. Reason: Only the governor can call this method."));
     }
 
     // endregion
@@ -866,7 +866,7 @@ public class BridgeTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.invokeFunction("pause").signers(calledByEntry(relayer)).sign());
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the security guard can pause the contract."));
+                containsString("ABORTMSG is executed. Reason: Only the security guard can call this method"));
     }
 
     @Test
@@ -876,8 +876,8 @@ public class BridgeTest {
         assertTrue(bridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.invokeFunction("unpause").signers(calledByEntry(relayer)).sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Only the governor can unpause " +
-                "the contract."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Only the governor can call this" +
+                " method."));
         bridge.unpause();
     }
 

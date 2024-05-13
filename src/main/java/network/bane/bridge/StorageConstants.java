@@ -1,4 +1,4 @@
-package network.bane.lib;
+package network.bane.bridge;
 
 public class StorageConstants {
 
