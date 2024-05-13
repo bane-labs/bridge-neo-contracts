@@ -30,28 +30,31 @@ import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.Withdrawal;
 
 import static io.neow3j.devpack.Helper.abort;
-import static io.neow3j.devpack.Helper.concat;
-import static io.neow3j.devpack.Helper.toByteArray;
 import static io.neow3j.devpack.Runtime.checkWitness;
 import static io.neow3j.devpack.Runtime.getCallingScriptHash;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
-import static network.bane.TestPaddingContract.padToBytes;
+import static network.bane.bridge.BridgeHelper.managementContract;
+import static network.bane.bridge.BridgeHelper.onlyGovernor;
+import static network.bane.bridge.BridgeHelper.onlyPaused;
+import static network.bane.bridge.BridgeHelper.onlyRelayer;
+import static network.bane.bridge.BridgeHelper.onlySecurityGuard;
+import static network.bane.bridge.BridgeHelper.onlyUnpaused;
 import static network.bane.lib.BridgeLib.HASH160_SIZE;
 import static network.bane.lib.BridgeLib.UINT256_SIZE;
 import static network.bane.lib.BridgeLib.computeNewRoot;
 import static network.bane.lib.BridgeLib.subsequentNonces;
 import static network.bane.lib.GasBridgeLib.hashGasBridgeOp;
-import static network.bane.lib.StorageConstants.KEY_BRIDGE_MANAGEMENT;
-import static network.bane.lib.StorageConstants.KEY_GAS_DEPOSIT_FEE;
-import static network.bane.lib.StorageConstants.KEY_GAS_DEPOSIT_MAX_AMOUNT;
-import static network.bane.lib.StorageConstants.KEY_GAS_DEPOSIT_MIN_AMOUNT;
-import static network.bane.lib.StorageConstants.KEY_GAS_DEPOSIT_NONCE;
-import static network.bane.lib.StorageConstants.KEY_GAS_DEPOSIT_ROOT;
-import static network.bane.lib.StorageConstants.KEY_GAS_WITHDRAWAL_NONCE;
-import static network.bane.lib.StorageConstants.KEY_GAS_WITHDRAWAL_ROOT;
-import static network.bane.lib.StorageConstants.KEY_LOCKED;
-import static network.bane.lib.StorageConstants.PREFIX_BASE;
-import static network.bane.lib.StorageConstants.PREFIX_GAS_CLAIMABLES;
+import static network.bane.bridge.StorageConstants.KEY_BRIDGE_MANAGEMENT;
+import static network.bane.bridge.StorageConstants.KEY_GAS_DEPOSIT_FEE;
+import static network.bane.bridge.StorageConstants.KEY_GAS_DEPOSIT_MAX_AMOUNT;
+import static network.bane.bridge.StorageConstants.KEY_GAS_DEPOSIT_MIN_AMOUNT;
+import static network.bane.bridge.StorageConstants.KEY_GAS_DEPOSIT_NONCE;
+import static network.bane.bridge.StorageConstants.KEY_GAS_DEPOSIT_ROOT;
+import static network.bane.bridge.StorageConstants.KEY_GAS_WITHDRAWAL_NONCE;
+import static network.bane.bridge.StorageConstants.KEY_GAS_WITHDRAWAL_ROOT;
+import static network.bane.bridge.StorageConstants.KEY_PAUSED;
+import static network.bane.bridge.StorageConstants.PREFIX_BASE;
+import static network.bane.bridge.StorageConstants.PREFIX_GAS_CLAIMABLES;
 
 @DisplayName("NeoXBridge")
 @Permission(nativeContract = NativeContract.GasToken, methods = "transfer")
@@ -60,13 +63,13 @@ import static network.bane.lib.StorageConstants.PREFIX_GAS_CLAIMABLES;
 @ManifestExtra(key = "Target", value = "Neo X TestNet T3")
 @ManifestExtra(key = "Description", value = "Contract for bridging GAS and tokens between Neo N3 and Neo X.")
 public class BridgeContract {
-    private static final StorageContext ctx = Storage.getStorageContext();
+    static final StorageContext ctx = Storage.getStorageContext();
     private static final CryptoLib cryptoLib = new CryptoLib();
-    private static final GasToken gasToken = new GasToken();
+    static final GasToken gasToken = new GasToken();
 
     // baseMap is used to store gas-related state and general contract information, i.e., management contract and
-    // locked status.
-    private static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
+    // pause status.
+    static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
 
     // region events
 
@@ -105,18 +108,18 @@ public class BridgeContract {
     public static void deploy(Object data, boolean isUpdate) {
         if (!isUpdate) {
             BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
-
-            if (!Hash160.isValid(deploymentData.bridgeManagementContractHash))
+            if (deploymentData.bridgeManagementContract == null ||
+                    !Hash160.isValid(deploymentData.bridgeManagementContract))
                 abort("Invalid bridge management contract hash.");
-            if (deploymentData.depositFee < 0) abort("Deposit fee must be nonnegative.");
-            if (deploymentData.minDeposit < 0) abort("Minimum deposit must be nonnegative.");
-            if (deploymentData.maxDeposit < deploymentData.minDeposit)
+            if (deploymentData.gasDepositFee < 0) abort("Deposit fee must be nonnegative.");
+            if (deploymentData.minGasDeposit < 0) abort("Minimum deposit must be nonnegative.");
+            if (deploymentData.maxGasDeposit < deploymentData.minGasDeposit)
                 abort("Maximum deposit must be greater than the minimum deposit.");
 
-            baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.bridgeManagementContractHash);
-            baseMap.put(KEY_GAS_DEPOSIT_FEE, deploymentData.depositFee);
-            baseMap.put(KEY_GAS_DEPOSIT_MIN_AMOUNT, deploymentData.minDeposit);
-            baseMap.put(KEY_GAS_DEPOSIT_MAX_AMOUNT, deploymentData.maxDeposit);
+            baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.bridgeManagementContract);
+            baseMap.put(KEY_GAS_DEPOSIT_FEE, deploymentData.gasDepositFee);
+            baseMap.put(KEY_GAS_DEPOSIT_MIN_AMOUNT, deploymentData.minGasDeposit);
+            baseMap.put(KEY_GAS_DEPOSIT_MAX_AMOUNT, deploymentData.maxGasDeposit);
 
             // Initial deposit and withdrawal roots will be zero hashes
             baseMap.put(KEY_GAS_DEPOSIT_ROOT, Hash256.zero());
@@ -124,34 +127,38 @@ public class BridgeContract {
 
             baseMap.put(KEY_GAS_DEPOSIT_NONCE, 0);
             baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, 0);
-            baseMap.put(KEY_LOCKED, false);
+            baseMap.put(KEY_PAUSED, false);
+
+            if (!checkWitness(managementContract().owner())) {
+                abort("Owner must witness the deployment.");
+            }
         }
     }
 
     public static void update(ByteString nef, String manifest) {
-        if (!isLocked()) abort("Contract needs to be locked to update.");
-        if (!checkWitness(owner())) abort("Only the owner can update this contract.");
+        onlyPaused();
+        if (!checkWitness(managementContract().owner())) abort("Only the owner can update this contract.");
         new ContractManagement().update(nef, manifest);
     }
 
     // endregion
-    // region locking
+    // region pause/unpause
 
-    public static void lock() {
-        if (isLocked()) abort("Contract is already locked.");
-        if (!checkWitness(securityGuard())) abort("Only the security guard can lock the contract.");
-        baseMap.put(KEY_LOCKED, true);
+    public static void pause() {
+        onlyUnpaused();
+        onlySecurityGuard();
+        baseMap.put(KEY_PAUSED, true);
     }
 
-    public static void unlock() {
-        if (!isLocked()) abort("Contract is already unlocked.");
-        if (!checkWitness(governor())) abort("Only the governor can unlock the contract.");
-        baseMap.put(KEY_LOCKED, false);
+    public static void unpause() {
+        onlyPaused();
+        onlyGovernor();
+        baseMap.put(KEY_PAUSED, false);
     }
 
     @Safe
-    public static boolean isLocked() {
-        return baseMap.getBoolean(KEY_LOCKED);
+    public static boolean isPaused() {
+        return baseMap.getBoolean(KEY_PAUSED);
     }
 
     // endregion
@@ -159,10 +166,10 @@ public class BridgeContract {
 
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amountWithFee, Object data) {
-        if (isLocked()) abort("Contract is locked.");
+        if (isPaused()) abort("Contract is paused.");
         if (getCallingScriptHash() != gasToken.getHash()) abort("Only GAS is accepted.");
         Hash160 to = (Hash160) data;
-        if (!Hash160.isValid(to)) abort("Invalid recipient data.");
+        if (to == null || !Hash160.isValid(to)) abort("Invalid recipient data.");
         if (to.isZero()) abort("Recipient must not be zero.");
 
         int depositFee = gasDepositFee();
@@ -170,7 +177,7 @@ public class BridgeContract {
         if (amountWithFee > maxGasDeposit() + depositFee) abort("Deposit amount is too high.");
         int depositAmount = amountWithFee - depositFee;
 
-        int nonce = incrementGasDepositNonce();
+        int nonce = GasBridge.incrementGasDepositNonce();
         ByteString depositHash = hashGasBridgeOp(cryptoLib, nonce, depositAmount, to);
         ByteString newRoot = computeNewRoot(cryptoLib, baseMap.get(KEY_GAS_DEPOSIT_ROOT), depositHash);
         baseMap.put(KEY_GAS_DEPOSIT_ROOT, newRoot);
@@ -179,7 +186,7 @@ public class BridgeContract {
 
     // endregion
     // region gas bridge
-    // region gas deposit/withdrawal/claim
+    // region gas deposit/claim/withdrawal
 
     public static void depositGas(Hash160 from, Hash160 to, int depositAmount) {
         Hash160 executingScriptHash = getExecutingScriptHash();
@@ -190,7 +197,7 @@ public class BridgeContract {
     }
 
     public static void claimGas(int nonce) {
-        if (isLocked()) abort("Contract is locked.");
+        if (isPaused()) abort("Contract is paused.");
         StorageMap gasClaimableMap = new StorageMap(ctx, PREFIX_GAS_CLAIMABLES);
         ByteString claimable = gasClaimableMap.get(nonce);
         if (claimable == null) abort("No claim for this nonce.");
@@ -209,68 +216,29 @@ public class BridgeContract {
 
     public static void withdrawGas(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
-        if (isLocked()) abort("Contract is locked.");
-        if (!checkWitness(relayer())) abort("Only the relayer can call this method.");
+        if (isPaused()) abort("Contract is paused.");
+        onlyRelayer();
+        int withdrawalsSize = withdrawals.size();
+        if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
+        if (!subsequentNonces(withdrawals, gasWithdrawalNonce())) abort("Provided withdrawals are not subsequent.");
         if (!GasBridgeLib.computeNewTopRoot(cryptoLib, gasWithdrawalRoot(), withdrawals).equals(withdrawalRoot)) {
             abort("Invalid root.");
         }
         if (!verifyValidatorSignatures(signatures, withdrawalRoot)) abort("Invalid validator signatures provided.");
 
-        int withdrawalsSize = withdrawals.size();
-        if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
-        if (!subsequentNonces(withdrawals, currentNonce())) abort("Provided withdrawals are not subsequent.");
-
         baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, withdrawals.get(withdrawalsSize - 1).nonce);
-        ByteString formerWithdrawalRoot = gasWithdrawalRoot();
         baseMap.put(KEY_GAS_WITHDRAWAL_ROOT, withdrawalRoot);
-        verifyGasWithdrawalsAndTransfer(formerWithdrawalRoot, withdrawals);
+        GasBridge.executeGasTransfers(withdrawals);
     }
 
     // endregion
     // region gas withdrawal helpers
 
-    private static void verifyGasWithdrawalsAndTransfer(ByteString formerWithdrawalRoot, List<Withdrawal> withdrawals) {
-        // Hash Tree verification
-        ByteString parent = formerWithdrawalRoot;
-        int withdrawalsSize = withdrawals.size();
-        for (int i = 0; i < withdrawalsSize; i++) {
-            Withdrawal withdrawal = withdrawals.get(i);
-            if (!Withdrawal.isValid(withdrawal)) abort("Invalid withdrawal provided.");
-            ByteString withdrawalHash = hashGasBridgeOp(cryptoLib, withdrawal.nonce, withdrawal.amount, withdrawal.to);
-            parent = computeNewRoot(cryptoLib, parent, withdrawalHash);
-        }
-        if (parent != gasWithdrawalRoot()) {
-            abort("Provided withdrawals do not match the withdrawal root.");
-        }
-
-        // Once this is reached, execute the withdrawals
-        StorageMap gasClaimableMap = new StorageMap(ctx, PREFIX_GAS_CLAIMABLES);
-        for (int i = 0; i < withdrawalsSize; i++) {
-            Withdrawal withdrawal = withdrawals.get(i);
-            if (!isContract(withdrawal.to) &&
-                    gasToken.transfer(getExecutingScriptHash(), withdrawal.to, withdrawal.amount, null)) {
-                onGasWithdrawal.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
-            } else {
-                // Add the withdrawal to the claim map if either the recipient was a contract, or the transfer failed.
-                addGasClaimable(gasClaimableMap, withdrawal);
-                onGasClaimable.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
-            }
-        }
-    }
-
-    private static void addGasClaimable(StorageMap gasClaimableMap, Withdrawal withdrawal) {
-        gasClaimableMap.put(withdrawal.nonce, concat(withdrawal.to.toByteArray(),
-                padToBytes(toByteArray(withdrawal.amount), UINT256_SIZE)));
-    }
-
-    private static boolean isContract(Hash160 scriptHash) {
-        return new ContractManagement().getContract(scriptHash) != null;
-    }
-
     // Todo: Move this verification to the bridge management contract.
     private static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, ByteString root) {
-        List<ECPoint> validators = validators();
-        int threshold = validatorThreshold();
+        BridgeManagement bridgeManagement = managementContract();
+        List<ECPoint> validators = bridgeManagement.validators();
+        int threshold = bridgeManagement.validatorThreshold();
         if (signatures.keys().length < threshold) abort("Not enough signatures provided.");
 
         ByteString msg = cryptoLib.sha256(root);
@@ -289,21 +257,6 @@ public class BridgeContract {
         return covered >= threshold;
     }
 
-    private static int currentNonce() {
-        return baseMap.getInt(KEY_GAS_WITHDRAWAL_NONCE);
-    }
-
-    /**
-     * Increments the Gas deposit nonce and returns the new value.
-     *
-     * @return the new nonce value.
-     */
-    private static int incrementGasDepositNonce() {
-        int nextNonce = baseMap.getInt(KEY_GAS_DEPOSIT_NONCE) + 1;
-        baseMap.put(KEY_GAS_DEPOSIT_NONCE, nextNonce);
-        return nextNonce;
-    }
-
     // endregion
     // region gas bridge configuration
 
@@ -313,14 +266,14 @@ public class BridgeContract {
     }
 
     public static void setGasDepositFee(int fee) {
-        if (!checkWitness(governor())) abort("Only the governor can set the deposit fee.");
+        onlyGovernor();
         if (fee < 0) abort("Deposit fee must be nonnegative.");
         baseMap.put(KEY_GAS_DEPOSIT_FEE, fee);
         onGasDepositFeeChange.fire(fee);
     }
 
     public static void setMinGasDeposit(int newMinDeposit) {
-        if (!checkWitness(governor())) abort("Only the governor can set the minimum deposit.");
+        onlyGovernor();
         if (newMinDeposit < 0) abort("Minimum deposit must be nonnegative.");
         if (newMinDeposit > maxGasDeposit()) abort("Minimum deposit must be less than the maximum deposit.");
         baseMap.put(KEY_GAS_DEPOSIT_MIN_AMOUNT, newMinDeposit);
@@ -328,7 +281,7 @@ public class BridgeContract {
     }
 
     public static void setMaxGasDeposit(int newMaxDeposit) {
-        if (!checkWitness(governor())) abort("Only the governor can set the maximum deposit.");
+        onlyGovernor();
         if (newMaxDeposit < minGasDeposit()) abort("Maximum deposit must be greater than the minimum deposit.");
         baseMap.put(KEY_GAS_DEPOSIT_MAX_AMOUNT, newMaxDeposit);
         onMaxGasDepositChange.fire(newMaxDeposit);
@@ -365,34 +318,6 @@ public class BridgeContract {
     // endregion
     // region getters
     // region management getters
-
-    private static ECPoint relayer() {
-        return managementContract().relayer();
-    }
-
-    private static ECPoint owner() {
-        return managementContract().owner();
-    }
-
-    private static List<ECPoint> validators() {
-        return managementContract().validators();
-    }
-
-    private static int validatorThreshold() {
-        return managementContract().validatorThreshold();
-    }
-
-    private static ECPoint governor() {
-        return managementContract().governor();
-    }
-
-    private static ECPoint securityGuard() {
-        return managementContract().securityGuard();
-    }
-
-    private static BridgeManagement managementContract() {
-        return new BridgeManagement(baseMap.getHash160(KEY_BRIDGE_MANAGEMENT));
-    }
 
     // endregion
     // region bridge getters

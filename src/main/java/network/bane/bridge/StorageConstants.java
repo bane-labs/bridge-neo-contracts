@@ -1,4 +1,4 @@
-package network.bane.lib;
+package network.bane.bridge;
 
 public class StorageConstants {
 
@@ -12,7 +12,7 @@ public class StorageConstants {
     public static final int KEY_GAS_DEPOSIT_MIN_AMOUNT = 0x03;
     public static final int KEY_GAS_DEPOSIT_MAX_AMOUNT = 0x04;
 
-    public static final int KEY_LOCKED = 0x05;
+    public static final int KEY_PAUSED = 0x05;
 
     public static final int KEY_GAS_DEPOSIT_ROOT = 0x10;
     public static final int KEY_GAS_DEPOSIT_NONCE = 0x11;

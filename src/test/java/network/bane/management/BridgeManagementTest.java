@@ -19,6 +19,9 @@ import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
+import io.neow3j.transaction.witnessrule.CalledByContractCondition;
+import io.neow3j.transaction.witnessrule.WitnessAction;
+import io.neow3j.transaction.witnessrule.WitnessRule;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
@@ -158,6 +161,11 @@ public class BridgeManagementTest {
                         securityGuardPubKey
                 )
         );
+        AccountSigner deploySigner = AccountSigner.none(owner);
+        WitnessRule deployWitnessRule = new WitnessRule(WitnessAction.ALLOW,
+                new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
+        deploySigner.setRules(deployWitnessRule);
+        config.setSigner(deploySigner);
         return config;
     }
 
@@ -277,6 +285,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetOwner_InvalidParameters() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("setOwner", any(null))

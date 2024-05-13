@@ -40,22 +40,22 @@ public class Bridge extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("claimGas", integer(nonce)).signers(signer));
     }
 
-    public Hash256 lock() throws Throwable {
-        return lock(securityGuard);
+    public Hash256 pause() throws Throwable {
+        return pause(securityGuard);
     }
 
-    public Hash256 lock(Account sender) throws Throwable {
+    public Hash256 pause(Account sender) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("lock").signers(signer));
+        return sendAndAwaitExecution(invokeFunction("pause").signers(signer));
     }
 
-    public Hash256 unlock() throws Throwable {
-        return unlock(governor);
+    public Hash256 unpause() throws Throwable {
+        return unpause(governor);
     }
 
-    public Hash256 unlock(Account sender) throws Throwable {
+    public Hash256 unpause(Account sender) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("unlock").signers(signer));
+        return sendAndAwaitExecution(invokeFunction("unpause").signers(signer));
     }
 
     // region static values
@@ -76,8 +76,8 @@ public class Bridge extends SmartContractHelper {
         return callFunctionReturningInt("maxGasDeposit");
     }
 
-    public boolean isLocked() throws IOException {
-        return callFunctionReturningBool("isLocked");
+    public boolean isPaused() throws IOException {
+        return callFunctionReturningBool("isPaused");
     }
 
     // endregion
