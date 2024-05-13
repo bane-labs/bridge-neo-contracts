@@ -5,7 +5,6 @@ import io.neow3j.devpack.annotations.Struct;
 
 @Struct
 public class Withdrawal {
-
     public Integer nonce;
     public Integer amount;
     public Hash160 to;
@@ -13,7 +12,8 @@ public class Withdrawal {
     public static boolean isValid(Withdrawal w) {
         return w.nonce != null &&
                 w.amount != null &&
-                Hash160.isValid(w.to);
+                w.to != null &&
+                Hash160.isValid(w.to) &&
+                !w.to.isZero();
     }
-
 }
