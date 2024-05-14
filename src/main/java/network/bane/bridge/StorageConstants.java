@@ -5,6 +5,7 @@ public class StorageConstants {
     // map prefixes
     public static final byte PREFIX_BASE = 0x0a;
     public static final byte PREFIX_GAS_CLAIMABLES = 0x0b;
+    public static final byte PREFIX_TOKEN_BRIDGES = 0x0c;
 
     public static final int KEY_BRIDGE_MANAGEMENT = 0x01;
 

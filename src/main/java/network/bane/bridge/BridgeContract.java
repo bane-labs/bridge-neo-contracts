@@ -22,11 +22,15 @@ import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event1Arg;
+import io.neow3j.devpack.events.Event2Args;
 import io.neow3j.devpack.events.Event3Args;
+import io.neow3j.devpack.events.Event4Args;
 import io.neow3j.devpack.events.Event6Args;
+import io.neow3j.devpack.events.Event7Args;
 import network.bane.lib.GasBridgeLib;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.Claimable;
+import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
 
 import static io.neow3j.devpack.Helper.abort;
@@ -39,6 +43,8 @@ import static network.bane.bridge.BridgeHelper.onlyPaused;
 import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlySecurityGuard;
 import static network.bane.bridge.BridgeHelper.onlyUnpaused;
+import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
+import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
 import static network.bane.lib.BridgeLib.computeNewRoot;
 import static network.bane.lib.BridgeLib.subsequentNonces;
 import static network.bane.lib.GasBridgeLib.hashGasBridgeOp;
@@ -70,35 +76,84 @@ public class BridgeContract {
     static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
 
     // region events
+    // region gas bridge events
 
     @DisplayName("GasDeposit")
     @EventParameterNames({"Nonce", "Amount", "Recipient", "Depositor", "DepositHash", "NewDepositRoot"})
-    public static Event6Args<Integer, Integer, Hash160, Hash160, ByteString, ByteString> onGasDeposit;
-
-    @DisplayName("GasWithdrawal")
-    @EventParameterNames({"Nonce", "Amount", "Recipient"})
-    public static Event3Args<Integer, Integer, Hash160> onGasWithdrawal;
+    static Event6Args<Integer, Integer, Hash160, Hash160, ByteString, ByteString> onGasDeposit;
 
     @DisplayName("GasClaimable")
     @EventParameterNames({"Nonce", "Amount", "Recipient"})
-    public static Event3Args<Integer, Integer, Hash160> onGasClaimable;
+    static Event3Args<Integer, Integer, Hash160> onGasClaimable;
 
     @DisplayName("GasClaim")
     @EventParameterNames({"Nonce", "Amount", "Recipient"})
-    public static Event3Args<Integer, Integer, Hash160> onGasClaim;
+    static Event3Args<Integer, Integer, Hash160> onGasClaim;
+
+    @DisplayName("GasWithdrawal")
+    @EventParameterNames({"Nonce", "Amount", "Recipient"})
+    static Event3Args<Integer, Integer, Hash160> onGasWithdrawal;
 
     @DisplayName("GasDepositFeeChange")
     @EventParameterNames({"NewFee"})
-    public static Event1Arg<Integer> onGasDepositFeeChange;
+    static Event1Arg<Integer> onGasDepositFeeChange;
 
     @DisplayName("MinGasDepositChange")
     @EventParameterNames({"NewMinDeposit"})
-    public static Event1Arg<Integer> onMinGasDepositChange;
+    static Event1Arg<Integer> onMinGasDepositChange;
 
     @DisplayName("MaxGasDepositChange")
     @EventParameterNames({"NewMaxDeposit"})
-    public static Event1Arg<Integer> onMaxGasDepositChange;
+    static Event1Arg<Integer> onMaxGasDepositChange;
 
+    // endregion
+    // region token bridge events
+
+    @DisplayName("TokenRegister")
+    @EventParameterNames({"TokenHash", "TokenConfig"})
+    static Event2Args<Hash160, TokenBridge.TokenConfig> onTokenRegister;
+
+    @DisplayName("TokenUnregister")
+    @EventParameterNames({"TokenHash"})
+    static Event1Arg<Hash160> onTokenUnregister;
+
+    @DisplayName("TokenBridgePause")
+    @EventParameterNames({"TokenHash"})
+    static Event1Arg<Hash160> onTokenBridgePause;
+
+    @DisplayName("TokenBridgeUnpause")
+    @EventParameterNames({"TokenHash", "NeoXTokenHash"})
+    static Event2Args<Hash160, Hash160> onTokenBridgeUnpause;
+
+    @DisplayName("TokenDeposit")
+    @EventParameterNames({"TokenHash", "Nonce", "To", "Value", "Depositor", "DepositHash", "NewDepositRoot"})
+    static Event7Args<Hash160, Integer, Hash160, Integer, Hash160, ByteString, ByteString> onTokenDeposit;
+
+    @DisplayName("TokenClaimable")
+    @EventParameterNames({"TokenHash", "Nonce", "To", "Value"})
+    static Event4Args<Hash160, Integer, Hash160, Integer> onTokenClaimable;
+
+    @DisplayName("TokenClaim")
+    @EventParameterNames({"TokenHash", "Nonce", "To", "Value"})
+    static Event4Args<Hash160, Integer, Integer, Hash160> onTokenClaim;
+
+    @DisplayName("TokenWithdrawal")
+    @EventParameterNames({"TokenHash", "Nonce", "To", "Value"})
+    static Event4Args<Hash160, Integer, Hash160, Integer> onTokenWithdrawal;
+
+    @DisplayName("TokenDepositFeeChange")
+    @EventParameterNames({"TokenHash", "NewFee"})
+    static Event2Args<Hash160, Integer> onTokenDepositFeeChange;
+
+    @DisplayName("MinTokenDepositChange")
+    @EventParameterNames({"TokenHash", "NewMinDeposit"})
+    static Event2Args<Hash160, Integer> onMinTokenDepositChange;
+
+    @DisplayName("MaxTokenDepositChange")
+    @EventParameterNames({"TokenHash", "NewMaxDeposit"})
+    static Event2Args<Hash160, Integer> onMaxTokenDepositChange;
+
+    // endregion
     // endregion
     // region deployment/update
 
@@ -266,7 +321,34 @@ public class BridgeContract {
     // region token bridge
     // region token register
 
-    // Todo: Implement token register and unregister
+    public static void registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
+        onlyGovernor();
+        if (!TokenBridge.TokenConfig.isValid(tokenConfig)) abort("Invalid token configuration.");
+        _registerToken(token, tokenConfig);
+        onTokenRegister.fire(token, tokenConfig);
+    }
+
+    private static void _registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
+        StorageMap tokenBridges = new StorageMap(ctx, PREFIX_TOKEN_BRIDGES);
+        if (tokenBridges.get(token) != null) abort("Token already registered.");
+        ByteString zeroHash = Hash256.zero().toByteString();
+        new TokenBridge(false, new TokenBridge.State(0, zeroHash),
+                new TokenBridge.State(0, zeroHash), tokenConfig);
+    }
+
+    public static void unregisterToken(Hash160 token) {
+        onlyGovernor();
+        onlyTokenBridgePaused(token);
+        new StorageMap(ctx, PREFIX_TOKEN_BRIDGES).delete(token);
+        onTokenUnregister.fire(token);
+    }
+
+    @Safe
+    public static TokenBridge getTokenBridge(Hash160 token) {
+        ByteString serializedTokenBridge = new StorageMap(ctx, PREFIX_TOKEN_BRIDGES).get(token);
+        if (serializedTokenBridge == null) abort("Token not registered.");
+        return (TokenBridge) new StdLib().deserialize(serializedTokenBridge);
+    }
 
     // endregion token register
     // region token deposit
