@@ -10,7 +10,6 @@ import static io.neow3j.devpack.Helper.concat;
 public class BridgeLib {
 
     public static final int UINT256_SIZE = 32;
-    public static final byte HASH160_SIZE = 20;
 
     public static ByteString computeNewRoot(CryptoLib cryptoLib, ByteString left, ByteString right) {
         ByteString leftRight = new ByteString(concat(left.toByteArray(), right));
