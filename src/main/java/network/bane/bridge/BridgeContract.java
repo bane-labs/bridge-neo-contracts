@@ -43,11 +43,10 @@ import static network.bane.bridge.BridgeHelper.onlyPaused;
 import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlySecurityGuard;
 import static network.bane.bridge.BridgeHelper.onlyUnpaused;
+import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgeUnpaused;
-import static network.bane.lib.BridgeLib.computeNewRoot;
 import static network.bane.lib.BridgeLib.subsequentNonces;
-import static network.bane.lib.GasBridgeLib.hashGasBridgeOp;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_MANAGEMENT;
 import static network.bane.bridge.StorageConstants.KEY_GAS_DEPOSIT_FEE;
 import static network.bane.bridge.StorageConstants.KEY_GAS_DEPOSIT_MAX_AMOUNT;
@@ -222,40 +221,41 @@ public class BridgeContract {
     // endregion
     // region OnNEP17Payment
 
+    /**
+     * Any token payment of a registered token or GAS is accepted regardless of the provided sender, amount or data.
+     *
+     * @param from   the sender.
+     * @param amount the amount.
+     * @param data   the data provided.
+     */
     @OnNEP17Payment
-    public static void onNep17Payment(Hash160 from, int amountWithFee, Object data) {
-        if (isPaused()) abort("Contract is paused.");
-        if (getCallingScriptHash() != gasToken.getHash()) abort("Only GAS is accepted.");
-        Hash160 to = (Hash160) data;
-        if (to == null || !Hash160.isValid(to)) abort("Invalid recipient data.");
-        if (to.isZero()) abort("Recipient must not be zero.");
-
-        int depositFee = gasDepositFee();
-        if (amountWithFee < minGasDeposit() + depositFee) abort("Deposit amount is too low.");
-        if (amountWithFee > maxGasDeposit() + depositFee) abort("Deposit amount is too high.");
-        int depositAmount = amountWithFee - depositFee;
-
-        int nonce = GasBridge.incrementGasDepositNonce();
-        ByteString depositHash = hashGasBridgeOp(cryptoLib, nonce, depositAmount, to);
-        ByteString newRoot = computeNewRoot(cryptoLib, baseMap.get(KEY_GAS_DEPOSIT_ROOT), depositHash);
-        baseMap.put(KEY_GAS_DEPOSIT_ROOT, newRoot);
-        onGasDeposit.fire(nonce, depositAmount, to, from, depositHash, newRoot);
+    public static void onNep17Payment(Hash160 from, int amount, Object data) {
+        onlyUnpaused();
+        if (data != null) {
+            abort("Not accepting data.");
+        }
+        Hash160 callingScriptHash = getCallingScriptHash();
+        if (callingScriptHash.equals(gasToken.getHash())) {
+            // Accept any GAS payment
+            return;
+        } else if (new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(callingScriptHash) != null) {
+            return;
+        } else {
+            abort("Unregistered token.");
+        }
     }
 
     // endregion
     // region gas bridge
     // region gas deposit/claim/withdrawal
 
-    public static void depositGas(Hash160 from, Hash160 to, int depositAmount) {
-        Hash160 executingScriptHash = getExecutingScriptHash();
-        if (executingScriptHash.equals(from)) abort("Invalid 'from' parameter.");
-        if (!gasToken.transfer(from, executingScriptHash, depositAmount + gasDepositFee(), to)) {
-            abort("Transfer failed.");
-        }
+    public static void depositGas(Hash160 from, Hash160 to, int amount) {
+        onlyUnpaused();
+        GasBridge.depositGas(from, to, amount);
     }
 
     public static void claimGas(int nonce) {
-        if (isPaused()) abort("Contract is paused.");
+        onlyUnpaused();
         StorageMap gasClaimableMap = new StorageMap(ctx, PREFIX_GAS_CLAIMABLES);
         ByteString claimableEntry = gasClaimableMap.get(nonce);
         if (claimableEntry == null) abort("No claim for this nonce.");
@@ -342,7 +342,7 @@ public class BridgeContract {
 
     @Safe
     public static TokenBridge getTokenBridge(Hash160 token) {
-        return TokenBridgeImpl.getTokenBridge(token);
+        return TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
     }
 
     // endregion token register
