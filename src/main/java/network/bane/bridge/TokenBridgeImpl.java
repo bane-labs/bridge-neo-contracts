@@ -44,7 +44,7 @@ public class TokenBridgeImpl {
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).delete(token);
     }
 
-    static TokenBridge getTokenBridge(Hash160 token) {
+    static TokenBridge checkRegisteredAndGetTokenBridge(Hash160 token) {
         ByteString serializedTokenBridge = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(token);
         if (serializedTokenBridge == null) abort("Token not registered.");
         return (TokenBridge) new StdLib().deserialize(serializedTokenBridge);
@@ -62,14 +62,14 @@ public class TokenBridgeImpl {
     }
 
     static void pauseTokenBridge(Hash160 token) {
-        TokenBridge tokenBridge = getTokenBridge(token);
+        TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(token);
         if (tokenBridge.paused) abort("Token bridge already paused.");
         tokenBridge.paused = true;
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
     }
 
     static void unpauseTokenBridge(Hash160 token) {
-        TokenBridge tokenBridge = getTokenBridge(token);
+        TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(token);
         if (!tokenBridge.paused) abort("Token bridge already unpaused.");
         tokenBridge.paused = false;
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
@@ -79,11 +79,15 @@ public class TokenBridgeImpl {
     // region deposit
 
     static void depositToken(Hash160 token, Hash160 from, Hash160 to, int amount) {
-        TokenBridge tokenBridge = getTokenBridge(token);
-        if (amount < tokenBridge.config.minAmount) abort("Amount below minimum.");
-        if (amount > tokenBridge.config.maxAmount) abort("Amount above maximum.");
+        if (to == null || !Hash160.isValid(to) || to.isZero()) abort("Invalid to parameter.");
+        if (from == null || !Hash160.isValid(from) || from.isZero()) abort("Invalid from parameter.");
         Hash160 executingScriptHash = getExecutingScriptHash();
         if (executingScriptHash.equals(from)) abort("Invalid from parameter.");
+
+        TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(token);
+        if (amount < tokenBridge.config.minAmount) abort("Amount below minimum.");
+        if (amount > tokenBridge.config.maxAmount) abort("Amount above maximum.");
+
         // Pay the fee and transfer the token
         if (!BridgeContract.gasToken.transfer(from, executingScriptHash, tokenBridge.config.fee, null)) {
             abort("Fee transfer failed.");
@@ -91,6 +95,7 @@ public class TokenBridgeImpl {
         if (!new FungibleToken(token).transfer(from, executingScriptHash, amount, null)) {
             abort("Token transfer failed.");
         }
+        // Update the token state
         tokenBridge.depositState.nonce++;
         ByteString depositHash =
                 TokenBridgeLib.hashTokenBridgeOp(BridgeContract.cryptoLib, token, tokenBridge.config.neoXTokenHash,
@@ -110,7 +115,7 @@ public class TokenBridgeImpl {
     static void withdrawToken(Hash160 token, ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
         // Token registration is checked within getTokenBridge
-        TokenBridge tokenBridge = getTokenBridge(token);
+        TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(token);
         int withdrawalsSize = withdrawals.size();
         if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
         if (!subsequentNonces(withdrawals, tokenBridge.withdrawalState.nonce)) {

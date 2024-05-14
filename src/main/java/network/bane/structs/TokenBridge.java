@@ -55,7 +55,7 @@ public class TokenBridge {
             int minAmount = config.minAmount;
             int tokenType = config.tokenType;
             return config.neoXTokenHash != null &&
-                    config.neoXTokenHash != Hash160.zero() &&
+                    config.neoXTokenHash.isZero() &&
                     Hash160.isValid(config.neoXTokenHash) &&
                     config.fee >= 0 &&
                     minAmount >= 0 &&
