@@ -9,6 +9,7 @@ import io.neow3j.devpack.Map;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.contracts.FungibleToken;
 import io.neow3j.devpack.contracts.StdLib;
+import network.bane.lib.BridgeLib;
 import network.bane.lib.TokenBridgeLib;
 import network.bane.structs.Claimable;
 import network.bane.structs.TokenBridge;
@@ -72,6 +73,35 @@ public class TokenBridgeImpl {
         if (!tokenBridge.paused) abort("Token bridge already unpaused.");
         tokenBridge.paused = false;
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
+    }
+
+    // endregion
+    // region deposit
+
+    static void depositToken(Hash160 token, Hash160 from, Hash160 to, int amount) {
+        TokenBridge tokenBridge = getTokenBridge(token);
+        if (amount < tokenBridge.config.minAmount) abort("Amount below minimum.");
+        if (amount > tokenBridge.config.maxAmount) abort("Amount above maximum.");
+        Hash160 executingScriptHash = getExecutingScriptHash();
+        if (executingScriptHash.equals(from)) abort("Invalid from parameter.");
+        // Pay the fee and transfer the token
+        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, tokenBridge.config.fee, null)) {
+            abort("Fee transfer failed.");
+        }
+        if (!new FungibleToken(token).transfer(from, executingScriptHash, amount, null)) {
+            abort("Token transfer failed.");
+        }
+        tokenBridge.depositState.nonce++;
+        ByteString depositHash =
+                TokenBridgeLib.hashTokenBridgeOp(BridgeContract.cryptoLib, token, tokenBridge.config.neoXTokenHash,
+                        tokenBridge.depositState.nonce, amount, to);
+        ByteString newRoot =
+                BridgeLib.computeNewRoot(BridgeContract.cryptoLib, tokenBridge.depositState.root, depositHash);
+        tokenBridge.depositState.root = newRoot;
+        assert tokenBridge.depositState.root == newRoot : "Root was not set correctly.";
+        new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
+        BridgeContract.onTokenDeposit.fire(token, tokenBridge.depositState.nonce, to, amount, from, depositHash,
+                newRoot);
     }
 
     // endregion

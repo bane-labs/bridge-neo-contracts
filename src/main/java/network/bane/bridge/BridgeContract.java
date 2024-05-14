@@ -363,7 +363,11 @@ public class BridgeContract {
     // endregion
     // region token deposit
 
-    // Todo: Implement token deposit
+    public static void depositToken(Hash160 token, Hash160 from, Hash160 to, int amount) {
+        onlyUnpaused();
+        onlyTokenBridgeUnpaused(token);
+        TokenBridgeImpl.depositToken(token, from, to, amount);
+    }
 
     // endregion
     // region token withdrawal
