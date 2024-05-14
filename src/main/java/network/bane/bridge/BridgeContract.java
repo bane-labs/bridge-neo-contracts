@@ -19,7 +19,6 @@ import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
-import io.neow3j.devpack.contracts.FungibleToken;
 import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event1Arg;
@@ -29,14 +28,12 @@ import io.neow3j.devpack.events.Event4Args;
 import io.neow3j.devpack.events.Event6Args;
 import io.neow3j.devpack.events.Event7Args;
 import network.bane.lib.GasBridgeLib;
-import network.bane.lib.TokenBridgeLib;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.Claimable;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
 
 import static io.neow3j.devpack.Helper.abort;
-import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Runtime.checkWitness;
 import static io.neow3j.devpack.Runtime.getCallingScriptHash;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
@@ -46,8 +43,6 @@ import static network.bane.bridge.BridgeHelper.onlyPaused;
 import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlySecurityGuard;
 import static network.bane.bridge.BridgeHelper.onlyUnpaused;
-import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
-import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_CLAIMABLES;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgeUnpaused;
 import static network.bane.lib.BridgeLib.computeNewRoot;
@@ -73,12 +68,17 @@ import static network.bane.bridge.StorageConstants.PREFIX_GAS_CLAIMABLES;
 @ManifestExtra(key = "Description", value = "Contract for bridging GAS and tokens between Neo N3 and Neo X.")
 public class BridgeContract {
     static final StorageContext ctx = Storage.getStorageContext();
-    private static final CryptoLib cryptoLib = new CryptoLib();
+    static final CryptoLib cryptoLib = new CryptoLib();
     static final GasToken gasToken = new GasToken();
 
     // baseMap is used to store gas-related state and general contract information, i.e., management contract and
     // pause status.
     static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
+
+    // This needs to be here due to the neow3j compiler. Technically, the Java compiler does not see this as a
+    // constant value during compile time because it uses an instantiation with new. Static fields that are not
+    // considered final must be in the main contract file.
+    static final byte[] PREFIX_TOKEN_CLAIMABLES = new byte[]{StorageConstants.PREFIX_TOKEN_CLAIMABLES};
 
     // region events
     // region gas bridge events
@@ -329,30 +329,20 @@ public class BridgeContract {
     public static void registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
         onlyGovernor();
         if (!TokenBridge.TokenConfig.isValid(tokenConfig)) abort("Invalid token configuration.");
-        _registerToken(token, tokenConfig);
+        TokenBridgeImpl.registerToken(token, tokenConfig);
         onTokenRegister.fire(token, tokenConfig);
-    }
-
-    private static void _registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
-        StorageMap tokenBridges = new StorageMap(ctx, PREFIX_TOKEN_BRIDGES);
-        if (tokenBridges.get(token) != null) abort("Token already registered.");
-        ByteString zeroHash = Hash256.zero().toByteString();
-        new TokenBridge(false, new TokenBridge.State(0, zeroHash),
-                new TokenBridge.State(0, zeroHash), tokenConfig);
     }
 
     public static void unregisterToken(Hash160 token) {
         onlyGovernor();
         onlyTokenBridgePaused(token);
-        new StorageMap(ctx, PREFIX_TOKEN_BRIDGES).delete(token);
+        TokenBridgeImpl.unregisterToken(token);
         onTokenUnregister.fire(token);
     }
 
     @Safe
     public static TokenBridge getTokenBridge(Hash160 token) {
-        ByteString serializedTokenBridge = new StorageMap(ctx, PREFIX_TOKEN_BRIDGES).get(token);
-        if (serializedTokenBridge == null) abort("Token not registered.");
-        return (TokenBridge) new StdLib().deserialize(serializedTokenBridge);
+        return TokenBridgeImpl.getTokenBridge(token);
     }
 
     // endregion token register
@@ -360,19 +350,13 @@ public class BridgeContract {
 
     public static void pauseTokenBridge(Hash160 token) {
         onlyGovernor();
-        TokenBridge tokenBridge = getTokenBridge(token);
-        if (tokenBridge.paused) abort("Token bridge already paused.");
-        tokenBridge.paused = true;
-        new StorageMap(ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
+        TokenBridgeImpl.pauseTokenBridge(token);
         onTokenBridgePause.fire(token);
     }
 
     public static void unpauseTokenBridge(Hash160 token) {
         onlyGovernor();
-        TokenBridge tokenBridge = getTokenBridge(token);
-        if (!tokenBridge.paused) abort("Token bridge already unpaused.");
-        tokenBridge.paused = false;
-        new StorageMap(ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
+        TokenBridgeImpl.unpauseTokenBridge(token);
         onTokenBridgeUnpause.fire(token);
     }
 
@@ -388,27 +372,7 @@ public class BridgeContract {
             List<Withdrawal> withdrawals) {
         onlyUnpaused();
         onlyTokenBridgeUnpaused(token);
-        // Token registration is checked within getTokenBridge
-        TokenBridge tokenBridge = getTokenBridge(token);
-        int withdrawalsSize = withdrawals.size();
-        if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
-        if (!subsequentNonces(withdrawals, tokenBridge.withdrawalState.nonce)) {
-            abort("Provided withdrawals are not subsequent.");
-        }
-        if (!TokenBridgeLib.computeNewTopRoot(cryptoLib, tokenBridge.withdrawalState.root, token,
-                tokenBridge.config.neoXTokenHash, withdrawals).equals(withdrawalRoot)) {
-            abort("Invalid root.");
-        }
-        if (!managementContract().verifyValidatorSignatures(signatures, withdrawalRoot)) {
-            abort("Invalid validator signatures provided.");
-        }
-        // Update the token state
-        tokenBridge.withdrawalState.nonce = withdrawals.get(withdrawalsSize - 1).nonce;
-        tokenBridge.withdrawalState.root = withdrawalRoot;
-        assert tokenBridge.withdrawalState.root == withdrawalRoot : "Root was not set correctly.";
-        new StorageMap(ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
-        // Execute the token transfers
-        TokenBridgeImpl.executeTokenTransfers(token, tokenBridge.config.tokenType, withdrawals);
+        TokenBridgeImpl.withdrawToken(token, withdrawalRoot, signatures, withdrawals);
     }
 
     // endregion
@@ -417,21 +381,7 @@ public class BridgeContract {
     public static void claimToken(Hash160 token, int nonce) {
         onlyUnpaused();
         onlyTokenBridgeUnpaused(token);
-        StorageMap tokenClaimableMap = new StorageMap(ctx, concat(PREFIX_TOKEN_CLAIMABLES, token.toByteString()));
-        ByteString claimableEntry = tokenClaimableMap.get(nonce);
-        if (claimableEntry == null) abort("No claim for this nonce.");
-        Claimable claimable = (Claimable) new StdLib().deserialize(claimableEntry);
-        Hash160 to = claimable.to;
-        int amount = claimable.amount;
-
-        tokenClaimableMap.delete(nonce);
-
-        assert token != gasToken.getHash();
-        if (new FungibleToken(token).transfer(getExecutingScriptHash(), to, amount, null)) {
-            onTokenClaim.fire(token, nonce, amount, to);
-        } else {
-            abort("Claim transfer failed.");
-        }
+        TokenBridgeImpl.claimToken(token, nonce);
     }
 
     // endregion
