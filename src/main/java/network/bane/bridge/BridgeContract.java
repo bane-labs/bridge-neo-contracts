@@ -158,6 +158,10 @@ public class BridgeContract {
     @EventParameterNames({"TokenHash", "NewMaxDeposit"})
     static Event2Args<Hash160, Integer> onMaxTokenDepositChange;
 
+    @DisplayName("MaxTokenWithdrawalsChange")
+    @EventParameterNames({"TokenHash", "NewMaxWithdrawals"})
+    static Event2Args<Hash160, Integer> onMaxTokenWithdrawalsChange;
+
     // endregion
     // endregion
     // region deployment/update
@@ -421,7 +425,65 @@ public class BridgeContract {
     // endregion token bridge
     // region token setters
 
-    // Todo: Implement token setters
+    public static void setTokenDepositFee(List<Hash160> tokens, List<Integer> newDepositFees) {
+        onlyGovernor();
+        int nrTokens = tokens.size();
+        if (nrTokens != newDepositFees.size()) abort("Length mismatch.");
+        StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
+        for (int i = 0; i < nrTokens; i++) {
+            Hash160 token = tokens.get(i);
+            int newFee = newDepositFees.get(i);
+            TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
+            tokenBridge.config.fee = newFee;
+            tokenBridgesMap.put(token, new StdLib().serialize(tokenBridge));
+            onTokenDepositFeeChange.fire(token, newFee);
+        }
+    }
+
+    public static void setTokenMinAmount(List<Hash160> tokens, List<Integer> newMinAmounts) {
+        onlyGovernor();
+        int nrTokens = tokens.size();
+        if (nrTokens != newMinAmounts.size()) abort("Length mismatch.");
+        StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
+        for (int i = 0; i < nrTokens; i++) {
+            Hash160 token = tokens.get(i);
+            int newMinAmount = newMinAmounts.get(i);
+            TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
+            tokenBridge.config.minAmount = newMinAmount;
+            tokenBridgesMap.put(token, new StdLib().serialize(tokenBridge));
+            onMinTokenDepositChange.fire(token, newMinAmount);
+        }
+    }
+
+    public static void setTokenMaxAmount(List<Hash160> tokens, List<Integer> newMaxAmounts) {
+        onlyGovernor();
+        int nrTokens = tokens.size();
+        if (nrTokens != newMaxAmounts.size()) abort("Length mismatch.");
+        StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
+        for (int i = 0; i < nrTokens; i++) {
+            Hash160 token = tokens.get(i);
+            int newMaxAmount = newMaxAmounts.get(i);
+            TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
+            tokenBridge.config.maxAmount = newMaxAmount;
+            tokenBridgesMap.put(token, new StdLib().serialize(tokenBridge));
+            onMaxTokenDepositChange.fire(token, newMaxAmount);
+        }
+    }
+
+    public static void setTokenMaxWithdrawals(List<Hash160> tokens, List<Integer> newMaxWithdrawals) {
+        onlyGovernor();
+        int nrTokens = tokens.size();
+        if (nrTokens != newMaxWithdrawals.size()) abort("Length mismatch.");
+        StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
+        for (int i = 0; i < nrTokens; i++) {
+            Hash160 token = tokens.get(i);
+            int newMaxWithdrawal = newMaxWithdrawals.get(i);
+            TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
+            tokenBridge.config.maxWithdrawals = newMaxWithdrawal;
+            tokenBridgesMap.put(token, new StdLib().serialize(tokenBridge));
+            onMaxTokenWithdrawalsChange.fire(token, newMaxWithdrawal);
+        }
+    }
 
     // endregion
     // region getters
