@@ -30,6 +30,7 @@ import io.neow3j.devpack.events.Event7Args;
 import network.bane.lib.GasBridgeLib;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.Claimable;
+import network.bane.structs.GasBridgePaymentData;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
 
@@ -222,23 +223,43 @@ public class BridgeContract {
     // region OnNEP17Payment
 
     /**
-     * Any token payment of a registered token or GAS is accepted regardless of the provided sender, amount or data.
+     * Generally any token payment of a registered token is accepted regardless of the provided sender, amount or data.
+     * <p>
+     * If the token sent is the GAS token, the payment is always accepted if the {@code from} parameter is null. If
+     * this is not the case it is only accepted if either the {@code data} parameter is null, or the {@code data}
+     * parameter is an array of a valid non-zero {@link Hash160} value and an integer. In the latter case, a bridge
+     * deposit is initiated, resulting in an updated deposit state of the GasBridge. This is an advanced case. Usual
+     * bridge deposits should happen using the depositGas method.
      *
      * @param from   the sender.
      * @param amount the amount.
-     * @param data   the data provided.
+     * @param data   the data provided. If the transfer should be used to directly initiate a bridge deposit, make
+     *               sure to provide the data in the format of a {@link GasBridgePaymentData} object, i.e., an array
+     *               contract parameter. Its minBridgeAmount should be set to the amount sent minus the current
+     *               deposit fee. It ensures, that this minBridgeAmount will be the amount that is actually bridged,
+     *               and prevents any eventual front-running issues if the deposit fee would be manipulated by a
+     *               malicious governor.
      */
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
         onlyUnpaused();
-        if (data != null) {
-            abort("Not accepting data.");
-        }
         Hash160 callingScriptHash = getCallingScriptHash();
         if (callingScriptHash.equals(gasToken.getHash())) {
-            // Accept any GAS payment
+            // Accept GAS rewards from holding NEO
+            if (from == null) return;
+            if (data != null) {
+                // If there's data provided in a GAS transfer, it is handled as a bridge deposit.
+                GasBridgePaymentData paymentData = (GasBridgePaymentData) data;
+                if (!GasBridgePaymentData.isValid(paymentData)) abort("Invalid payment data.");
+                int bridgeAmount = amount - gasDepositFee();
+                if (bridgeAmount < paymentData.minBridgeAmount) abort("Amount below defined minimum.");
+                GasBridge.updateGasDepositState(from, paymentData.to, bridgeAmount);
+            }
             return;
         } else if (new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(callingScriptHash) != null) {
+            if (data != null) {
+                abort("No data accepted.");
+            }
             return;
         } else {
             abort("Unregistered token.");
@@ -249,46 +270,54 @@ public class BridgeContract {
     // region gas bridge
     // region gas deposit/claim/withdrawal
 
+    /**
+     * Deposit GAS to Neo X.
+     *
+     * @param from   the sender.
+     * @param to     the recipient on Neo X.
+     * @param amount the amount of GAS to deposit to Neo X.
+     */
     public static void depositGas(Hash160 from, Hash160 to, int amount) {
         onlyUnpaused();
         GasBridge.depositGas(from, to, amount);
     }
 
+    /**
+     * Claim GAS that has been withdrawn from Neo X.
+     * <p>
+     * Only withdrawals that have a contract as recipient or for which the transfer has failed (should never happen
+     * as long as the deposited GAS funds are held in this contract) are available to claim.
+     * <p>
+     * In order to claim a withdrawal, provide the nonce of the withdrawal and the amount will be transferred to the
+     * already specified recipient.
+     *
+     * @param nonce the nonce of the withdrawal that is claimable.
+     */
     public static void claimGas(int nonce) {
         onlyUnpaused();
-        StorageMap gasClaimableMap = new StorageMap(ctx, PREFIX_GAS_CLAIMABLES);
-        ByteString claimableEntry = gasClaimableMap.get(nonce);
-        if (claimableEntry == null) abort("No claim for this nonce.");
-        Claimable claimable = (Claimable) new StdLib().deserialize(claimableEntry);
-        Hash160 to = claimable.to;
-        int amount = claimable.amount;
-
-        gasClaimableMap.delete(nonce);
-
-        if (gasToken.transfer(getExecutingScriptHash(), to, amount, null)) {
-            onGasClaim.fire(nonce, amount, to);
-        } else {
-            abort("Claim transfer failed.");
-        }
+        GasBridge.claimGas(nonce);
     }
 
+    /**
+     * Withdraws GAS from the contract (i.e., from Neo X) to the provided recipients.
+     * <p>
+     * Requires the signatures of the validators. The signatures must sign the provided withdrawal root, while the
+     * provided withdrawal root must be the computed root based on the current root in storage and the provided
+     * withdrawals.
+     * <p>
+     * Withdrawals to contracts are made available for claiming and are not directly transferred due to uncertain
+     * computation costs. Additionaly, if a transfer fails, the withdrawal is also made available for claiming. This
+     * should never happen as long as the deposited GAS funds are held in this contract.
+     *
+     * @param withdrawalRoot the new withdrawal root.
+     * @param signatures     the signatures of the validators.
+     * @param withdrawals    the withdrawals to execute.
+     */
     public static void withdrawGas(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
-        if (isPaused()) abort("Contract is paused.");
         onlyRelayer();
-        int withdrawalsSize = withdrawals.size();
-        if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
-        if (!subsequentNonces(withdrawals, gasWithdrawalNonce())) abort("Provided withdrawals are not subsequent.");
-        if (!GasBridgeLib.computeNewTopRoot(cryptoLib, gasWithdrawalRoot(), withdrawals).equals(withdrawalRoot)) {
-            abort("Invalid root.");
-        }
-        if (!managementContract().verifyValidatorSignatures(signatures, withdrawalRoot)) {
-            abort("Invalid validator signatures provided.");
-        }
-
-        baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, withdrawals.get(withdrawalsSize - 1).nonce);
-        baseMap.put(KEY_GAS_WITHDRAWAL_ROOT, withdrawalRoot);
-        GasBridge.executeGasTransfers(withdrawals);
+        onlyUnpaused();
+        GasBridge.withdrawGas(withdrawalRoot, signatures, withdrawals);
     }
 
     // endregion
@@ -396,9 +425,6 @@ public class BridgeContract {
 
     // endregion
     // region getters
-    // region management getters
-
-    // endregion
     // region bridge getters
 
     @Safe
