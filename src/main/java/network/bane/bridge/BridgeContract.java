@@ -20,11 +20,13 @@ import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
+import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event3Args;
 import io.neow3j.devpack.events.Event6Args;
 import network.bane.lib.GasBridgeLib;
 import network.bane.structs.BridgeDeploymentData;
+import network.bane.structs.Claimable;
 import network.bane.structs.Withdrawal;
 
 import static io.neow3j.devpack.Helper.abort;
@@ -37,8 +39,6 @@ import static network.bane.bridge.BridgeHelper.onlyPaused;
 import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlySecurityGuard;
 import static network.bane.bridge.BridgeHelper.onlyUnpaused;
-import static network.bane.lib.BridgeLib.HASH160_SIZE;
-import static network.bane.lib.BridgeLib.UINT256_SIZE;
 import static network.bane.lib.BridgeLib.computeNewRoot;
 import static network.bane.lib.BridgeLib.subsequentNonces;
 import static network.bane.lib.GasBridgeLib.hashGasBridgeOp;
@@ -197,14 +197,14 @@ public class BridgeContract {
     public static void claimGas(int nonce) {
         if (isPaused()) abort("Contract is paused.");
         StorageMap gasClaimableMap = new StorageMap(ctx, PREFIX_GAS_CLAIMABLES);
-        ByteString claimable = gasClaimableMap.get(nonce);
-        if (claimable == null) abort("No claim for this nonce.");
-        if (claimable.length() != HASH160_SIZE + UINT256_SIZE) abort("Invalid claimable data.");
+        ByteString claimableEntry = gasClaimableMap.get(nonce);
+        if (claimableEntry == null) abort("No claim for this nonce.");
+        Claimable claimable = (Claimable) new StdLib().deserialize(claimableEntry);
+        Hash160 to = claimable.to;
+        int amount = claimable.amount;
 
         gasClaimableMap.delete(nonce);
 
-        Hash160 to = new Hash160(claimable.take(HASH160_SIZE));
-        int amount = claimable.last(UINT256_SIZE).toInt();
         if (gasToken.transfer(getExecutingScriptHash(), to, amount, null)) {
             onGasClaim.fire(nonce, amount, to);
         } else {
