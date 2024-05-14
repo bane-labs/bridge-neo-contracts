@@ -28,6 +28,7 @@ import io.neow3j.devpack.events.Event4Args;
 import io.neow3j.devpack.events.Event6Args;
 import io.neow3j.devpack.events.Event7Args;
 import network.bane.lib.GasBridgeLib;
+import network.bane.lib.TokenBridgeLib;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.Claimable;
 import network.bane.structs.TokenBridge;
@@ -380,7 +381,31 @@ public class BridgeContract {
     // endregion
     // region token withdrawal
 
-    // Todo: Implement token withdrawal
+    public static void withdrawToken(Hash160 token, ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
+            List<Withdrawal> withdrawals) {
+        onlyUnpaused();
+        onlyTokenBridgeUnpaused(token);
+        TokenBridge tokenBridge = getTokenBridge(token);
+        int withdrawalsSize = withdrawals.size();
+        if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
+        if (!subsequentNonces(withdrawals, tokenBridge.withdrawalState.nonce)) {
+            abort("Provided withdrawals are not subsequent.");
+        }
+        if (!TokenBridgeLib.computeNewTopRoot(cryptoLib, tokenBridge.withdrawalState.root, token,
+                tokenBridge.config.neoXTokenHash, withdrawals).equals(withdrawalRoot)) {
+            abort("Invalid root.");
+        }
+        if (!managementContract().verifyValidatorSignatures(signatures, withdrawalRoot)) {
+            abort("Invalid validator signatures provided.");
+        }
+        // update token state
+        tokenBridge.withdrawalState.nonce = withdrawals.get(withdrawalsSize - 1).nonce;
+        tokenBridge.withdrawalState.root = withdrawalRoot;
+        assert tokenBridge.withdrawalState.root == withdrawalRoot : "Root was not set correctly.";
+        new StorageMap(ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
+        // execute transfers
+        TokenBridgeImpl.executeTokenTransfers(token, tokenBridge.config.tokenType, withdrawals);
+    }
 
     // endregion
     // region token claim
