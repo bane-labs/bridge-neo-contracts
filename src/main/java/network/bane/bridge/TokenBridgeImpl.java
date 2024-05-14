@@ -28,30 +28,27 @@ public class TokenBridgeImpl {
     }
 
     static void executeTokenTransfers(Hash160 token, int tokenType, List<Withdrawal> withdrawals) {
-        if (tokenType > TokenTypeConstants.MAX_TOKEN_TYPE_INT_VALUE) abort("Invalid token type.");
+        assert tokenType == TokenTypeConstants.NEO ||
+                tokenType == TokenTypeConstants.NEP17_CAPPED : "Invalid token type.";
         Hash160 executingScriptHash = getExecutingScriptHash();
         int withdrawalsSize = withdrawals.size();
-        if (tokenType == TokenTypeConstants.NEO || tokenType == TokenTypeConstants.NEP17_CAPPED) {
-            for (int i = 0; i < withdrawalsSize; i++) {
-                Withdrawal withdrawal = withdrawals.get(i);
-                // If the to address is a contract, add the withdrawal to the claimable map, otherwise exeucte the
-                // transfer.
-                if (BridgeHelper.isContract(withdrawal.to)) {
+        for (int i = 0; i < withdrawalsSize; i++) {
+            Withdrawal withdrawal = withdrawals.get(i);
+            // If to is a contract, add the withdrawal to the claimable map, otherwise exeucte the transfer.
+            if (BridgeHelper.isContract(withdrawal.to)) {
+                addTokenClaimable(token, withdrawal);
+                BridgeContract.onTokenClaimable.fire(token, withdrawal.nonce, withdrawal.to, withdrawal.amount);
+            } else {
+                if (new FungibleToken(token).transfer(executingScriptHash, withdrawal.to, withdrawal.amount,
+                        null)) {
+                    BridgeContract.onTokenWithdrawal.fire(token, withdrawal.nonce, withdrawal.to,
+                            withdrawal.amount);
+                } else {
+                    // If the transfer was unsuccessful, add the withdrawal to the claimable map.
                     addTokenClaimable(token, withdrawal);
                     BridgeContract.onTokenClaimable.fire(token, withdrawal.nonce, withdrawal.to, withdrawal.amount);
-                } else {
-                    if (new FungibleToken(token).transfer(executingScriptHash, withdrawal.to, withdrawal.amount,
-                            null)) {
-                        BridgeContract.onTokenWithdrawal.fire(token, withdrawal.nonce, withdrawal.to,
-                                withdrawal.amount);
-                    } else {
-                        // If the transfer was unsuccessful, add the withdrawal to the claimable map.
-                        addTokenClaimable(token, withdrawal);
-                        BridgeContract.onTokenClaimable.fire(token, withdrawal.nonce, withdrawal.to, withdrawal.amount);
-                    }
                 }
             }
         }
-
     }
 }

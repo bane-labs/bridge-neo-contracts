@@ -19,6 +19,7 @@ import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
+import io.neow3j.devpack.contracts.FungibleToken;
 import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event1Arg;
@@ -35,6 +36,7 @@ import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
 
 import static io.neow3j.devpack.Helper.abort;
+import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Runtime.checkWitness;
 import static io.neow3j.devpack.Runtime.getCallingScriptHash;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
@@ -45,6 +47,7 @@ import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlySecurityGuard;
 import static network.bane.bridge.BridgeHelper.onlyUnpaused;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
+import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_CLAIMABLES;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgeUnpaused;
 import static network.bane.lib.BridgeLib.computeNewRoot;
@@ -385,6 +388,7 @@ public class BridgeContract {
             List<Withdrawal> withdrawals) {
         onlyUnpaused();
         onlyTokenBridgeUnpaused(token);
+        // Token registration is checked within getTokenBridge
         TokenBridge tokenBridge = getTokenBridge(token);
         int withdrawalsSize = withdrawals.size();
         if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
@@ -398,19 +402,37 @@ public class BridgeContract {
         if (!managementContract().verifyValidatorSignatures(signatures, withdrawalRoot)) {
             abort("Invalid validator signatures provided.");
         }
-        // update token state
+        // Update the token state
         tokenBridge.withdrawalState.nonce = withdrawals.get(withdrawalsSize - 1).nonce;
         tokenBridge.withdrawalState.root = withdrawalRoot;
         assert tokenBridge.withdrawalState.root == withdrawalRoot : "Root was not set correctly.";
         new StorageMap(ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
-        // execute transfers
+        // Execute the token transfers
         TokenBridgeImpl.executeTokenTransfers(token, tokenBridge.config.tokenType, withdrawals);
     }
 
     // endregion
     // region token claim
 
-    // Todo: Implement token claim
+    public static void claimToken(Hash160 token, int nonce) {
+        onlyUnpaused();
+        onlyTokenBridgeUnpaused(token);
+        StorageMap tokenClaimableMap = new StorageMap(ctx, concat(PREFIX_TOKEN_CLAIMABLES, token.toByteString()));
+        ByteString claimableEntry = tokenClaimableMap.get(nonce);
+        if (claimableEntry == null) abort("No claim for this nonce.");
+        Claimable claimable = (Claimable) new StdLib().deserialize(claimableEntry);
+        Hash160 to = claimable.to;
+        int amount = claimable.amount;
+
+        tokenClaimableMap.delete(nonce);
+
+        assert token != gasToken.getHash();
+        if (new FungibleToken(token).transfer(getExecutingScriptHash(), to, amount, null)) {
+            onTokenClaim.fire(token, nonce, amount, to);
+        } else {
+            abort("Claim transfer failed.");
+        }
+    }
 
     // endregion
     // endregion token bridge
