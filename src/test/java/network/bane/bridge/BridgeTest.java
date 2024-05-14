@@ -4,6 +4,7 @@ import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
 import io.neow3j.contract.NeoToken;
+import io.neow3j.contract.PolicyContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
@@ -24,6 +25,7 @@ import io.neow3j.transaction.witnessrule.WitnessRule;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
+import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
@@ -116,6 +118,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class BridgeTest {
 
+    // The current network settings on mainnet
+    private static final BigInteger networkFeePerByte = new BigInteger("100");
+    private static final BigInteger storageFeeFactor = new BigInteger("10000");
+    private static final BigInteger executionFeeFactor = new BigInteger("3");
+
     private static final int howManyDepositProofsToPrint = 0;
 
     private static final BigInteger depositFee = new BigInteger("10000000");
@@ -146,6 +153,8 @@ public class BridgeTest {
     private static Account henry;
     private static Account isabella;
 
+    private static Account committee;
+
     private static List<Integer> printDeposits = new ArrayList<>();
 
     @RegisterExtension
@@ -154,7 +163,7 @@ public class BridgeTest {
     // region setup
 
     @BeforeAll
-    public static void setUp() throws Exception {
+    public static void setUp() throws Throwable {
         neow3j = ext.getNeow3j();
 
         gasToken = new GasToken(neow3j);
@@ -165,6 +174,7 @@ public class BridgeTest {
         bridge = new Bridge(ext.getDeployedContract(BridgeContract.class).getScriptHash(), neow3j);
         testContract = ext.getDeployedContract(TestContract.class).getScriptHash();
         alice = ext.getAccount(TestHelper.ALICE);
+        committee = Account.createMultiSigAccount(asList(alice.getECKeyPair().getPublicKey()), 1);
         bob = ext.getAccount(TestHelper.BOB);
         charlie = ext.getAccount(TestHelper.CHARLIE);
         denise = ext.getAccount(TestHelper.DENISE);
@@ -174,9 +184,47 @@ public class BridgeTest {
         henry = ext.getAccount(TestHelper.HENRY);
         isabella = ext.getAccount(TestHelper.ISABELLA);
 
+        updateNetworkSettings();
+
         for (int i = 1; i <= howManyDepositProofsToPrint; i++) {
             printDeposits.add(i);
         }
+    }
+
+    private static void updateNetworkSettings() throws Throwable {
+        setNetworkFeePerByte();
+        setStorageFeeFactor();
+        setExecutionFeeFactor();
+    }
+
+    private static void setNetworkFeePerByte() throws Throwable {
+        PolicyContract policyContract = new PolicyContract(neow3j);
+        Transaction tx = policyContract.setFeePerByte(networkFeePerByte)
+                .signers(calledByEntry(committee))
+                .getUnsignedTransaction();
+        tx.addMultiSigWitness(committee.getVerificationScript(), alice);
+        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
+        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
+    }
+
+    private static void setStorageFeeFactor() throws Throwable {
+        PolicyContract policyContract = new PolicyContract(neow3j);
+        Transaction tx = policyContract.setStoragePrice(storageFeeFactor)
+                .signers(calledByEntry(committee))
+                .getUnsignedTransaction();
+        tx.addMultiSigWitness(committee.getVerificationScript(), alice);
+        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
+        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
+    }
+
+    private static void setExecutionFeeFactor() throws Throwable {
+        PolicyContract policyContract = new PolicyContract(neow3j);
+        Transaction tx = policyContract.setExecFeeFactor(executionFeeFactor)
+                .signers(calledByEntry(committee))
+                .getUnsignedTransaction();
+        tx.addMultiSigWitness(committee.getVerificationScript(), alice);
+        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
+        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
     }
 
     // endregion
