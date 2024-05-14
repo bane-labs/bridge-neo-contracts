@@ -16,7 +16,6 @@ import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.OnNEP17Payment;
 import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
-import io.neow3j.devpack.constants.NamedCurve;
 import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
@@ -24,7 +23,6 @@ import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event3Args;
 import io.neow3j.devpack.events.Event6Args;
-import network.bane.interfaces.BridgeManagement;
 import network.bane.lib.GasBridgeLib;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.Withdrawal;
@@ -224,37 +222,13 @@ public class BridgeContract {
         if (!GasBridgeLib.computeNewTopRoot(cryptoLib, gasWithdrawalRoot(), withdrawals).equals(withdrawalRoot)) {
             abort("Invalid root.");
         }
-        if (!verifyValidatorSignatures(signatures, withdrawalRoot)) abort("Invalid validator signatures provided.");
+        if (!managementContract().verifyValidatorSignatures(signatures, withdrawalRoot)) {
+            abort("Invalid validator signatures provided.");
+        }
 
         baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, withdrawals.get(withdrawalsSize - 1).nonce);
         baseMap.put(KEY_GAS_WITHDRAWAL_ROOT, withdrawalRoot);
         GasBridge.executeGasTransfers(withdrawals);
-    }
-
-    // endregion
-    // region gas withdrawal helpers
-
-    // Todo: Move this verification to the bridge management contract.
-    private static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, ByteString root) {
-        BridgeManagement bridgeManagement = managementContract();
-        List<ECPoint> validators = bridgeManagement.validators();
-        int threshold = bridgeManagement.validatorThreshold();
-        if (signatures.keys().length < threshold) abort("Not enough signatures provided.");
-
-        ByteString msg = cryptoLib.sha256(root);
-        int covered = 0;
-        int validatorsSize = validators.size();
-        for (int i = 0; i < validatorsSize; i++) {
-            ECPoint validator = validators.get(i);
-            if (signatures.containsKey(validator)) {
-                boolean verified =
-                        cryptoLib.verifyWithECDsa(msg, validator, signatures.get(validator), NamedCurve.Secp256r1);
-                if (verified) {
-                    covered++;
-                }
-            }
-        }
-        return covered >= threshold;
     }
 
     // endregion

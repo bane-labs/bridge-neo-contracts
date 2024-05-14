@@ -16,8 +16,10 @@ import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.constants.FindOptions;
+import io.neow3j.devpack.constants.NamedCurve;
 import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.ContractManagement;
+import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
 import network.bane.structs.ManagementDeploymentData;
@@ -44,8 +46,6 @@ public class BridgeManagementContract {
     private static final int key_securityguard = 0x03;
 
     private static final int key_validator_threshold = 0x10;
-
-    private static final int const_max_validators = 21;
 
     // region events
 
@@ -83,7 +83,6 @@ public class BridgeManagementContract {
             if (relayer == null || !ECPoint.isValid(relayer)) abort("Invalid public key provided for relayer.");
             List<ECPoint> validators = deploymentData.validators;
             int validatorSize = validators.size();
-            if (validatorSize > const_max_validators) abort("Too many validators provided.");
             int validatorThreshold = deploymentData.validatorThreshold;
             if (validatorSize < validatorThreshold) abort("Not enough validators.");
             ECPoint governor = deploymentData.governor;
@@ -193,6 +192,29 @@ public class BridgeManagementContract {
     @Safe
     public static int validatorThreshold() {
         return baseMap.getInt(key_validator_threshold);
+    }
+
+    @Safe
+    public static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, ByteString root) {
+        int threshold = validatorThreshold();
+        if (signatures.keys().length < threshold) abort("Not enough signatures provided.");
+        CryptoLib cryptoLib = new CryptoLib();
+        List<ECPoint> validators = validators();
+
+        ByteString msg = cryptoLib.sha256(root);
+        int covered = 0;
+        int validatorsSize = validators.size();
+        for (int i = 0; i < validatorsSize; i++) {
+            ECPoint validator = validators.get(i);
+            if (signatures.containsKey(validator)) {
+                boolean verified =
+                        cryptoLib.verifyWithECDsa(msg, validator, signatures.get(validator), NamedCurve.Secp256r1);
+                if (verified) {
+                    covered++;
+                }
+            }
+        }
+        return covered >= threshold;
     }
 
     @Safe
