@@ -45,6 +45,7 @@ import static network.bane.bridge.BridgeHelper.onlySecurityGuard;
 import static network.bane.bridge.BridgeHelper.onlyUnpaused;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
+import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgeUnpaused;
 import static network.bane.lib.BridgeLib.computeNewRoot;
 import static network.bane.lib.BridgeLib.subsequentNonces;
 import static network.bane.lib.GasBridgeLib.hashGasBridgeOp;
@@ -122,8 +123,8 @@ public class BridgeContract {
     static Event1Arg<Hash160> onTokenBridgePause;
 
     @DisplayName("TokenBridgeUnpause")
-    @EventParameterNames({"TokenHash", "NeoXTokenHash"})
-    static Event2Args<Hash160, Hash160> onTokenBridgeUnpause;
+    @EventParameterNames({"TokenHash"})
+    static Event1Arg<Hash160> onTokenBridgeUnpause;
 
     @DisplayName("TokenDeposit")
     @EventParameterNames({"TokenHash", "Nonce", "To", "Value", "Depositor", "DepositHash", "NewDepositRoot"})
@@ -351,6 +352,27 @@ public class BridgeContract {
     }
 
     // endregion token register
+    // region token pausing
+
+    public static void pauseTokenBridge(Hash160 token) {
+        onlyGovernor();
+        TokenBridge tokenBridge = getTokenBridge(token);
+        if (tokenBridge.paused) abort("Token bridge already paused.");
+        tokenBridge.paused = true;
+        new StorageMap(ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
+        onTokenBridgePause.fire(token);
+    }
+
+    public static void unpauseTokenBridge(Hash160 token) {
+        onlyGovernor();
+        TokenBridge tokenBridge = getTokenBridge(token);
+        if (!tokenBridge.paused) abort("Token bridge already unpaused.");
+        tokenBridge.paused = false;
+        new StorageMap(ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
+        onTokenBridgeUnpause.fire(token);
+    }
+
+    // endregion
     // region token deposit
 
     // Todo: Implement token deposit
