@@ -12,6 +12,7 @@ import io.neow3j.devpack.contracts.StdLib;
 import network.bane.lib.BridgeLib;
 import network.bane.lib.TokenBridgeLib;
 import network.bane.structs.Claimable;
+import network.bane.structs.State;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
 
@@ -30,11 +31,13 @@ public class TokenBridgeImpl {
         StorageMap tokenBridges = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
         if (tokenBridges.get(token) != null) abort("Token already registered.");
         ByteString zeroHash = Hash256.zero().toByteString();
+        State newDepositState = new State(0, zeroHash);
+        State newWithdrawalState = new State(0, zeroHash);
         tokenBridges.put(token, new StdLib().serialize(
                 new TokenBridge(
                         false,
-                        new TokenBridge.State(0, zeroHash),
-                        new TokenBridge.State(0, zeroHash),
+                        newDepositState,
+                        newWithdrawalState,
                         tokenConfig
                 )
         ));
