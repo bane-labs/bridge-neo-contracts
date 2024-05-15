@@ -377,13 +377,15 @@ public class BridgeContract {
     // region token pausing
 
     public static void pauseTokenBridge(Hash160 token) {
-        onlyGovernor();
+        onlySecurityGuard();
+        onlyTokenBridgeUnpaused(token);
         TokenBridgeImpl.pauseTokenBridge(token);
         onTokenBridgePause.fire(token);
     }
 
     public static void unpauseTokenBridge(Hash160 token) {
         onlyGovernor();
+        onlyTokenBridgePaused(token);
         TokenBridgeImpl.unpauseTokenBridge(token);
         onTokenBridgeUnpause.fire(token);
     }
