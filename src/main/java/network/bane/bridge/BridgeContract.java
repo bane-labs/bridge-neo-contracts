@@ -27,9 +27,7 @@ import io.neow3j.devpack.events.Event3Args;
 import io.neow3j.devpack.events.Event4Args;
 import io.neow3j.devpack.events.Event6Args;
 import io.neow3j.devpack.events.Event7Args;
-import network.bane.lib.GasBridgeLib;
 import network.bane.structs.BridgeDeploymentData;
-import network.bane.structs.Claimable;
 import network.bane.structs.GasBridgePaymentData;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
@@ -37,7 +35,6 @@ import network.bane.structs.Withdrawal;
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.checkWitness;
 import static io.neow3j.devpack.Runtime.getCallingScriptHash;
-import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 import static network.bane.bridge.BridgeHelper.managementContract;
 import static network.bane.bridge.BridgeHelper.onlyGovernor;
 import static network.bane.bridge.BridgeHelper.onlyPaused;
@@ -47,7 +44,6 @@ import static network.bane.bridge.BridgeHelper.onlyUnpaused;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgeUnpaused;
-import static network.bane.lib.BridgeLib.subsequentNonces;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_MANAGEMENT;
 import static network.bane.bridge.StorageConstants.KEY_GAS_DEPOSIT_FEE;
 import static network.bane.bridge.StorageConstants.KEY_GAS_DEPOSIT_MAX_AMOUNT;
@@ -58,7 +54,6 @@ import static network.bane.bridge.StorageConstants.KEY_GAS_WITHDRAWAL_NONCE;
 import static network.bane.bridge.StorageConstants.KEY_GAS_WITHDRAWAL_ROOT;
 import static network.bane.bridge.StorageConstants.KEY_PAUSED;
 import static network.bane.bridge.StorageConstants.PREFIX_BASE;
-import static network.bane.bridge.StorageConstants.PREFIX_GAS_CLAIMABLES;
 
 @DisplayName("NeoXBridge")
 @Permission(nativeContract = NativeContract.GasToken, methods = "transfer")
@@ -257,7 +252,7 @@ public class BridgeContract {
                 if (!GasBridgePaymentData.isValid(paymentData)) abort("Invalid payment data.");
                 int bridgeAmount = amount - gasDepositFee();
                 if (bridgeAmount < paymentData.minBridgeAmount) abort("Amount below defined minimum.");
-                GasBridge.updateGasDepositState(from, paymentData.to, bridgeAmount);
+                GasBridgeImpl.updateGasDepositState(from, paymentData.to, bridgeAmount);
             }
             return;
         } else if (new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(callingScriptHash) != null) {
@@ -283,7 +278,7 @@ public class BridgeContract {
      */
     public static void depositGas(Hash160 from, Hash160 to, int amount) {
         onlyUnpaused();
-        GasBridge.depositGas(from, to, amount);
+        GasBridgeImpl.depositGas(from, to, amount);
     }
 
     /**
@@ -299,7 +294,7 @@ public class BridgeContract {
      */
     public static void claimGas(int nonce) {
         onlyUnpaused();
-        GasBridge.claimGas(nonce);
+        GasBridgeImpl.claimGas(nonce);
     }
 
     /**
@@ -321,7 +316,7 @@ public class BridgeContract {
             List<Withdrawal> withdrawals) {
         onlyRelayer();
         onlyUnpaused();
-        GasBridge.withdrawGas(withdrawalRoot, signatures, withdrawals);
+        GasBridgeImpl.withdrawGas(withdrawalRoot, signatures, withdrawals);
     }
 
     // endregion

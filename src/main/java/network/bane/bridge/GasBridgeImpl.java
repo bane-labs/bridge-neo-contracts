@@ -23,7 +23,7 @@ import static network.bane.lib.BridgeLib.computeNewRoot;
 import static network.bane.lib.BridgeLib.subsequentNonces;
 import static network.bane.lib.GasBridgeLib.hashGasBridgeOp;
 
-public class GasBridge {
+public class GasBridgeImpl {
 
     // region deposit
 
@@ -45,7 +45,7 @@ public class GasBridge {
         if (amount < BridgeContract.minGasDeposit()) abort("Deposit amount is too low.");
         if (amount > BridgeContract.maxGasDeposit()) abort("Deposit amount is too high.");
         // Update the Gas bridge deposit state.
-        int newNonce = GasBridge.incrementGasDepositNonce();
+        int newNonce = GasBridgeImpl.incrementGasDepositNonce();
         ByteString depositHash = hashGasBridgeOp(BridgeContract.cryptoLib, newNonce, amount, to);
         ByteString newRoot = computeNewRoot(BridgeContract.cryptoLib, BridgeContract.baseMap.get(KEY_GAS_DEPOSIT_ROOT),
                 depositHash);
