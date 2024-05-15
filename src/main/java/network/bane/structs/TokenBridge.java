@@ -1,6 +1,5 @@
 package network.bane.structs;
 
-import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.annotations.Struct;
 import network.bane.bridge.TokenTypeConstants;
@@ -19,15 +18,11 @@ public class TokenBridge {
         this.config = config;
     }
 
-    @Struct
-    public static class State {
-        public int nonce;
-        public ByteString root;
-
-        public State(int nonce, ByteString root) {
-            this.nonce = nonce;
-            this.root = root;
-        }
+    public static boolean isValid(TokenBridge tokenBridge) {
+        return tokenBridge != null &&
+                State.isValid(tokenBridge.depositState) &&
+                State.isValid(tokenBridge.withdrawalState) &&
+                TokenConfig.isValid(tokenBridge.config);
     }
 
     @Struct

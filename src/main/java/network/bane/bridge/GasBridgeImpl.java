@@ -9,15 +9,13 @@ import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.lib.GasBridgeLib;
 import network.bane.structs.Claimable;
+import network.bane.structs.GasBridge;
 import network.bane.structs.Withdrawal;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 import static network.bane.bridge.BridgeHelper.managementContract;
-import static network.bane.bridge.StorageConstants.KEY_GAS_DEPOSIT_NONCE;
-import static network.bane.bridge.StorageConstants.KEY_GAS_DEPOSIT_ROOT;
-import static network.bane.bridge.StorageConstants.KEY_GAS_WITHDRAWAL_NONCE;
-import static network.bane.bridge.StorageConstants.KEY_GAS_WITHDRAWAL_ROOT;
+import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
 import static network.bane.bridge.StorageConstants.PREFIX_GAS_CLAIMABLES;
 import static network.bane.lib.BridgeLib.computeNewRoot;
 import static network.bane.lib.BridgeLib.subsequentNonces;
@@ -30,7 +28,7 @@ public class GasBridgeImpl {
     static void depositGas(Hash160 from, Hash160 to, int amount) {
         if (to == null || !Hash160.isValid(to) || to.isZero()) abort("Invalid recipient.");
         if (from == null || !Hash160.isValid(from) || from.isZero()) abort("Invalid sender.");
-        int depositFee = BridgeContract.gasDepositFee();
+        int depositFee = BridgeContract.getGasBridge().config.depositFee;
         Hash160 executingScriptHash = getExecutingScriptHash();
         if (executingScriptHash.equals(from)) abort("Invalid sender.");
 
@@ -42,26 +40,16 @@ public class GasBridgeImpl {
     }
 
     static void updateGasDepositState(Hash160 from, Hash160 to, int amount) {
-        if (amount < BridgeContract.minGasDeposit()) abort("Deposit amount is too low.");
-        if (amount > BridgeContract.maxGasDeposit()) abort("Deposit amount is too high.");
-        // Update the Gas bridge deposit state.
-        int newNonce = GasBridgeImpl.incrementGasDepositNonce();
-        ByteString depositHash = hashGasBridgeOp(BridgeContract.cryptoLib, newNonce, amount, to);
-        ByteString newRoot = computeNewRoot(BridgeContract.cryptoLib, BridgeContract.baseMap.get(KEY_GAS_DEPOSIT_ROOT),
-                depositHash);
-        BridgeContract.baseMap.put(KEY_GAS_DEPOSIT_ROOT, newRoot);
-        BridgeContract.onGasDeposit.fire(newNonce, amount, to, from, depositHash, newRoot);
-    }
-
-    /**
-     * Increments the Gas deposit nonce and returns the new value.
-     *
-     * @return the new nonce value.
-     */
-    static int incrementGasDepositNonce() {
-        int nextNonce = BridgeContract.baseMap.getInt(KEY_GAS_DEPOSIT_NONCE) + 1;
-        BridgeContract.baseMap.put(KEY_GAS_DEPOSIT_NONCE, nextNonce);
-        return nextNonce;
+        GasBridge gasBridge = BridgeContract.getGasBridge();
+        if (amount < gasBridge.config.minAmount) abort("Deposit amount is too low.");
+        if (amount > gasBridge.config.maxAmount) abort("Deposit amount is too high.");
+        gasBridge.depositState.nonce++;
+        ByteString depositHash = hashGasBridgeOp(BridgeContract.cryptoLib, gasBridge.depositState.nonce, amount, to);
+        gasBridge.depositState.root =
+                computeNewRoot(BridgeContract.cryptoLib, gasBridge.depositState.root, depositHash);
+        BridgeContract.baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
+        BridgeContract.onGasDeposit.fire(gasBridge.depositState.nonce, amount, to, from, depositHash,
+                gasBridge.depositState.root);
     }
 
     // endregion
@@ -71,10 +59,11 @@ public class GasBridgeImpl {
             List<Withdrawal> withdrawals) {
         int withdrawalsSize = withdrawals.size();
         if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
-        if (!subsequentNonces(withdrawals, BridgeContract.gasWithdrawalNonce())) {
+        GasBridge gasBridge = BridgeContract.getGasBridge();
+        if (!subsequentNonces(withdrawals, gasBridge.withdrawalState.nonce)) {
             abort("Provided withdrawals are not subsequent.");
         }
-        if (!GasBridgeLib.computeNewTopRoot(BridgeContract.cryptoLib, BridgeContract.gasWithdrawalRoot(), withdrawals)
+        if (!GasBridgeLib.computeNewTopRoot(BridgeContract.cryptoLib, gasBridge.withdrawalState.root, withdrawals)
                 .equals(withdrawalRoot)) {
             abort("Invalid root.");
         }
@@ -82,8 +71,9 @@ public class GasBridgeImpl {
             abort("Invalid validator signatures provided.");
         }
 
-        BridgeContract.baseMap.put(KEY_GAS_WITHDRAWAL_NONCE, withdrawals.get(withdrawalsSize - 1).nonce);
-        BridgeContract.baseMap.put(KEY_GAS_WITHDRAWAL_ROOT, withdrawalRoot);
+        gasBridge.withdrawalState.nonce += withdrawalsSize;
+        gasBridge.withdrawalState.root = withdrawalRoot;
+        BridgeContract.baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
         executeGasTransfers(withdrawals);
     }
 
