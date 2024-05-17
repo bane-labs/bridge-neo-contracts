@@ -11,6 +11,7 @@ public class StorageConstants {
     public static final int KEY_BRIDGE_MANAGEMENT = 0x01;
     public static final int KEY_BRIDGE_PAUSE = 0x02;
     public static final int KEY_GAS_BRIDGE = 0x03;
+    public static final int KEY_UNCLAIMED_REWARDS = 0x04;
 
     // Old keys
     public static final int OLD_KEY_GAS_DEPOSIT_FEE = 0x02;

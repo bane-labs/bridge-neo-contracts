@@ -50,6 +50,7 @@ import static network.bane.bridge.GasBridgeImpl.onlyGasBridgeUnpaused;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
 import static network.bane.bridge.StorageConstants.KEY_MIGRATED;
+import static network.bane.bridge.StorageConstants.KEY_UNCLAIMED_REWARDS;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgeUnpaused;
@@ -220,6 +221,9 @@ public class BridgeContract {
         assert GasBridge.isValid(gasBridge) : "Invalid gas bridge state.";
         ByteString serialized = new StdLib().serialize(gasBridge);
         baseMap.put(KEY_GAS_BRIDGE, serialized);
+        // In order to remain simple here as this is only used for the T3 contract update, the already collected fees
+        // up to this migration are ignored.
+        baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
     }
 
     @OnDeployment
@@ -298,9 +302,13 @@ public class BridgeContract {
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
         Hash160 callingScriptHash = getCallingScriptHash();
         if (callingScriptHash.equals(gasToken.getHash())) {
-            // Accept GAS rewards from holding NEO
-            if (from == null) return;
-            if (data != null) {
+            // Accept GAS rewards from holding NEO. This is the only case where the from parameter can be null.
+            if (from == null) {
+                BridgeImpl.addToUnclaimedRewards(amount);
+                return;
+            } else if (data == null) {
+                return;
+            } else {
                 // If there's data provided in a GAS transfer, it is handled as a bridge deposit.
                 onlyUnpaused();
                 onlyGasBridgeUnpaused();
@@ -308,6 +316,7 @@ public class BridgeContract {
                 if (!GasBridgePaymentData.isValid(paymentData)) abort("Invalid payment data.");
                 GasBridge gasBridge = getGasBridge();
                 int bridgeAmount = amount - gasBridge.config.depositFee;
+                BridgeImpl.addToUnclaimedRewards(gasBridge.config.depositFee);
                 if (bridgeAmount < paymentData.minBridgeAmount) abort("Amount below defined minimum.");
                 GasBridgeImpl.updateGasDepositState(from, paymentData.to, bridgeAmount);
             }
@@ -320,6 +329,26 @@ public class BridgeContract {
         } else {
             abort("Unregistered token.");
         }
+    }
+
+    // endregion
+    // region bridge management
+
+    @Safe
+    public static Hash160 management() {
+        return baseMap.getHash160(KEY_BRIDGE_MANAGEMENT);
+    }
+
+    // endregion
+    // region rewards
+
+    /**
+     * @return the amount of unclaimed rewards for the bridge operators. This amount is increased by the deposit fees
+     * of the gas and token bridges, as well as by rewards from holding NEO.
+     */
+    @Safe
+    public static int unclaimedRewards() {
+        return BridgeImpl.getUnclaimedRewards();
     }
 
     // endregion
@@ -645,14 +674,6 @@ public class BridgeContract {
 
     // endregion
     // endregion
-    // endregion
-    // region bridge management
-
-    @Safe
-    public static Hash160 management() {
-        return baseMap.getHash160(KEY_BRIDGE_MANAGEMENT);
-    }
-
     // endregion
 
 }
