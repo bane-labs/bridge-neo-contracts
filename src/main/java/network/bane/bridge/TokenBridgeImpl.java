@@ -66,14 +66,12 @@ public class TokenBridgeImpl {
 
     static void pauseTokenBridge(Hash160 token) {
         TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(token);
-        if (tokenBridge.paused) abort("Token bridge already paused.");
         tokenBridge.paused = true;
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
     }
 
     static void unpauseTokenBridge(Hash160 token) {
         TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(token);
-        if (!tokenBridge.paused) abort("Token bridge already unpaused.");
         tokenBridge.paused = false;
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
     }
