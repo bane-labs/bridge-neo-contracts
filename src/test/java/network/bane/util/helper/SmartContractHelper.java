@@ -1,4 +1,4 @@
-package network.bane.util;
+package network.bane.util.helper;
 
 import io.neow3j.contract.SmartContract;
 import io.neow3j.crypto.Base64;

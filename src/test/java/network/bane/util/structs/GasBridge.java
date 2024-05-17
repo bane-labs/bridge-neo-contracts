@@ -1,4 +1,4 @@
-package network.bane.util;
+package network.bane.util.structs;
 
 import java.math.BigInteger;
 

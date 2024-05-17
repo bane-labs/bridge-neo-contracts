@@ -325,7 +325,7 @@ public class TestHelper {
         return claimEventFromNotification(claimEvent);
     }
 
-    private static DepositEvent depositEventFromNotification(Notification depositEvent) {
+    public static DepositEvent depositEventFromNotification(Notification depositEvent) {
         List<StackItem> state = depositEvent.getState().getList();
         BigInteger nonce = state.get(0).getInteger();
         BigInteger amount = state.get(1).getInteger();
@@ -420,47 +420,6 @@ public class TestHelper {
                     "\n  rootHash=" + rootHashHex +
                     "\n";
         }
-    }
-
-    public static void printDepositStorage(Bridge bridge, Neow3j neow3j, Hash256 txHash, List<String> proof) throws IOException {
-        Optional<Notification> onDepositOpt =
-                neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution()
-                        .getNotifications().stream()
-                        .filter(n -> n.getContract().equals(bridge.getScriptHash()) &&
-                                n.getEventName().equals("OnDeposit"))
-                        .findFirst();
-        if (onDepositOpt.isPresent()) {
-            Notification depositNotification = onDepositOpt.get();
-            DepositEvent depositEvent = depositEventFromNotification(depositNotification);
-            BigInteger nonce = depositEvent.nonce;
-            Hash160 to = depositEvent.to;
-            BigInteger amount = depositEvent.amount;
-            String root = depositEvent.rootHashHex;
-            System.out.printf("new DepositProof(" +
-                            "%sn," +
-                            "\"%s\"," +
-                            "%sn," +
-                            "[%s]," +
-                            "\"%s\"" +
-                            ")%n",
-                    nonce, prependHexPrefix(to.toString()), amount, wrapWithQuotesAndJoin(proof), root);
-        }
-    }
-
-    private static String wrapWithQuotesAndJoin(List<String> strings) {
-        String joined = strings.stream().collect(Collectors.joining("\", \"", "\"", "\""));
-        if (joined.length() == 2) {
-            return "";
-        } else {
-            return joined;
-        }
-    }
-
-    public static List<String> getProofFromStorage(Bridge bridge) throws IOException {
-        List<ContractStorageEntry> foundStorageEntries = bridge.findStorage("0x0b");
-        List<String> proof = new ArrayList<>();
-        foundStorageEntries.forEach(e -> proof.add(e.getValueHex()));
-        return proof;
     }
 
     public static class WithdrawEvent {

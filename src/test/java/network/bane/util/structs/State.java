@@ -1,4 +1,4 @@
-package network.bane.util;
+package network.bane.util.structs;
 
 import io.neow3j.types.Hash256;
 
