@@ -23,6 +23,29 @@ import static network.bane.lib.GasBridgeLib.hashGasBridgeOp;
 
 public class GasBridgeImpl {
 
+    // region pause
+
+    static void onlyGasBridgePaused() {
+        if (!BridgeContract.getGasBridge().paused) abort("Gas bridge is unpaused.");
+    }
+
+    static void onlyGasBridgeUnpaused() {
+        if (BridgeContract.getGasBridge().paused) abort("Gas bridge is paused.");
+    }
+
+    static void pauseGasBridge() {
+        GasBridge gasBridge = BridgeContract.getGasBridge();
+        gasBridge.paused = true;
+        BridgeContract.baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
+    }
+
+    static void unpauseGasBridge() {
+        GasBridge gasBridge = BridgeContract.getGasBridge();
+        gasBridge.paused = false;
+        BridgeContract.baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
+    }
+
+    // endregion
     // region deposit
 
     static void depositGas(Hash160 from, Hash160 to, int amount) {

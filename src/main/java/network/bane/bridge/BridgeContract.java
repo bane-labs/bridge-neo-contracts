@@ -21,6 +21,7 @@ import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
+import io.neow3j.devpack.events.Event;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
 import io.neow3j.devpack.events.Event3Args;
@@ -44,6 +45,8 @@ import static network.bane.bridge.BridgeHelper.onlyPaused;
 import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlySecurityGuard;
 import static network.bane.bridge.BridgeHelper.onlyUnpaused;
+import static network.bane.bridge.GasBridgeImpl.onlyGasBridgePaused;
+import static network.bane.bridge.GasBridgeImpl.onlyGasBridgeUnpaused;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
 import static network.bane.bridge.StorageConstants.KEY_MIGRATED;
@@ -87,6 +90,12 @@ public class BridgeContract {
     // endregion
     // region events
     // region gas bridge events
+
+    @DisplayName("GasBridgePause")
+    static Event onGasBridgePause;
+
+    @DisplayName("GasBridgeUnpause")
+    static Event onGasBridgeUnpause;
 
     @DisplayName("GasDeposit")
     @EventParameterNames({"Nonce", "Amount", "Recipient", "Depositor", "DepositHash", "NewDepositRoot"})
@@ -287,13 +296,14 @@ public class BridgeContract {
      */
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
-        onlyUnpaused();
         Hash160 callingScriptHash = getCallingScriptHash();
         if (callingScriptHash.equals(gasToken.getHash())) {
             // Accept GAS rewards from holding NEO
             if (from == null) return;
             if (data != null) {
                 // If there's data provided in a GAS transfer, it is handled as a bridge deposit.
+                onlyUnpaused();
+                onlyGasBridgeUnpaused();
                 GasBridgePaymentData paymentData = (GasBridgePaymentData) data;
                 if (!GasBridgePaymentData.isValid(paymentData)) abort("Invalid payment data.");
                 GasBridge gasBridge = getGasBridge();
@@ -314,6 +324,23 @@ public class BridgeContract {
 
     // endregion
     // region gas bridge
+    // region gas bridge pausing
+
+    public static void pauseGasBridge() {
+        onlySecurityGuard();
+        onlyGasBridgeUnpaused();
+        GasBridgeImpl.pauseGasBridge();
+        onGasBridgePause.fire();
+    }
+
+    public static void unpauseGasBridge() {
+        onlyGovernor();
+        onlyGasBridgePaused();
+        GasBridgeImpl.unpauseGasBridge();
+        onGasBridgeUnpause.fire();
+    }
+
+    // endregion
     // region gas deposit/claim/withdrawal
 
     /**
@@ -325,6 +352,7 @@ public class BridgeContract {
      */
     public static void depositGas(Hash160 from, Hash160 to, int amount) {
         onlyUnpaused();
+        onlyGasBridgeUnpaused();
         GasBridgeImpl.depositGas(from, to, amount);
     }
 
@@ -347,6 +375,7 @@ public class BridgeContract {
             List<Withdrawal> withdrawals) {
         onlyRelayer();
         onlyUnpaused();
+        onlyGasBridgeUnpaused();
         GasBridgeImpl.withdrawGas(withdrawalRoot, signatures, withdrawals);
     }
 
@@ -363,6 +392,7 @@ public class BridgeContract {
      */
     public static void claimGas(int nonce) {
         onlyUnpaused();
+        onlyGasBridgeUnpaused();
         GasBridgeImpl.claimGas(nonce);
     }
 
