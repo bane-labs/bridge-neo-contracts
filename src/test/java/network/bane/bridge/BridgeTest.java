@@ -437,9 +437,11 @@ public class BridgeTest {
     @Order(12)
     public void testRootComputation_2() throws Throwable {
         Account from = bob;
-        Hash160 to = recipient2;
+        BigInteger nextNonce = new BigInteger("2");
+        incrementAndGetDepositNonce();
+        Hash160 to = new Hash160("0x89fc6b042b146f373cec4ca4a1b112697763360f");
         BigInteger amount = minGasDeposit.add(bridge.gasDepositFee());
-        BigInteger nextNonce = incrementAndGetDepositNonce();
+        assertThat(amount, is(new BigInteger("110000000")));
 
         String depositRootBefore = bridge.gasDepositRoot();
         Hash256 txHash = depositGasWithDirectTransfer(from, to, amount, minGasDeposit);
@@ -449,7 +451,9 @@ public class BridgeTest {
         // used for the deposit to Neo X.
         BigInteger bridgedAmount = amount.subtract(bridge.gasDepositFee());
         String d2 = createDepositHash(nextNonce, to, bridgedAmount);
+        assertThat(d2, is("0x983b3a1ee6b74a5ba07109966f86189d2adf108a25fd9b456030f684bffa8f84"));
         String d12 = concatAndSha256(depositRootBefore, d2);
+        assertThat(d12, is("0xa33a32b7b710705118b37d5fa7684a26e63840e7b5b88326177e7ec4ee7be253"));
 
         assertThat(bridge.gasDepositRoot(), is(d12));
 
@@ -544,12 +548,17 @@ public class BridgeTest {
     @Test
     @Order(20)
     public void testWithdrawal_1() throws Throwable {
-        Hash160 to = alice.getScriptHash();
-        BigInteger amount = minGasDeposit;
-        BigInteger nonce = incrementAndGetWithdrawalNonce();
+        // This test only works if it is the first test in the order of withdrawals, due to the use of raw data for the
+        // nonce, to and amount.
+        BigInteger nonce = BigInteger.ONE;
+        incrementAndGetWithdrawalNonce(); // Necessary if other tests are run besides this one.
+        Hash160 to = new Hash160("0x6472bf811b33b87f7872e31439cdbd16871d8cad");
+        BigInteger amount = new BigInteger("200000000");
 
         String d1 = createDepositHash(nonce, to, amount);
+        assertThat(d1, is("0x9d532058b0e607e4767a9c6b6915d1c97019adfcb50cafe1001904cbbaf6a3bb"));
         String root = concatAndSha256(Hash256.ZERO.toString(), d1);
+        assertThat(root, is("0x177604db278d7680e254218a72dcc06043600f9c9cb6eb56055cd17fb81fa0b9"));
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nonce), integer(amount), hash160(to)));
         Hash256 txHash = bridge.withdrawGas(root, signMsg(validators, root), withdrawal);
@@ -563,19 +572,25 @@ public class BridgeTest {
     @Test
     @Order(21)
     public void testWithdrawal_2() throws Throwable {
-        Hash160 to1 = alice.getScriptHash();
-        BigInteger amount1 = minGasDeposit;
-        BigInteger nonce1 = incrementAndGetWithdrawalNonce();
-        Hash160 to2 = charlie.getScriptHash();
-        BigInteger amount2 = minGasDeposit;
-        BigInteger nonce2 = incrementAndGetWithdrawalNonce();
+        BigInteger nonce1 = new BigInteger("2");
+        Hash160 to1 = new Hash160("0x9f20eee56cc5abe5955ee5e15835dc45344c368d");
+        BigInteger amount1 = new BigInteger("100000000");
+        incrementAndGetWithdrawalNonce();
+        BigInteger nonce2 = new BigInteger("3");
+        Hash160 to2 = new Hash160("0xa71fbffad1f175bfddb1e81a63962212d2e72e8f");
+        BigInteger amount2 = new BigInteger("100000000");
+        incrementAndGetWithdrawalNonce();
 
         String withdrawRootBefore = bridge.gasWithdrawRoot();
 
         String d1 = createDepositHash(nonce1, to1, amount1);
+        assertThat(d1, is("0x32a41a5e3d27d9308a10d85281a0cee7e0f9bbfe5ac417fa21cf0ec8464be5bb"));
         String root1 = concatAndSha256(withdrawRootBefore, d1);
+        assertThat(root1, is("0x38d6ba25f87e2a128ab82f815b5f1f84191da961cf4b58029eee2d33e9640a3a"));
         String d2 = createDepositHash(nonce2, to2, amount2);
+        assertThat(d2, is("0x5355bdf08f3429f0ca6c15bea7d6bc147a7fb5072c782ff72e350e25ee683ad1"));
         String newRoot = concatAndSha256(root1, d2);
+        assertThat(newRoot, is("0x005bac323a5f98e0ba3d41d71573853e37cc28649cd95ea703ab0f9e462573bd"));
 
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal =
@@ -627,10 +642,10 @@ public class BridgeTest {
         // withdrawn from Neo X. Nevertheless, the proper functionality of adding a claimable if a transfer fails is
         // tested here.
         assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), lessThan(new BigInteger("1400000000")));
-        assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), greaterThanOrEqualTo(new BigInteger("700000000")));
+        assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), greaterThanOrEqualTo(new BigInteger("600000000")));
         BigInteger amount1 = minGasDeposit.multiply(new BigInteger("2"));
         BigInteger amount2 = minGasDeposit.multiply(new BigInteger("12"));
-        BigInteger amount3 = minGasDeposit.multiply(new BigInteger("5"));
+        BigInteger amount3 = minGasDeposit.multiply(new BigInteger("4"));
         BigInteger amount4 = minGasDeposit.multiply(new BigInteger("9"));
         BigInteger nonce1 = incrementAndGetWithdrawalNonce();
         BigInteger nonce2 = incrementAndGetWithdrawalNonce();
