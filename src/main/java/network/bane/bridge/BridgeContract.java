@@ -244,6 +244,7 @@ public class BridgeContract {
             GasBridge gasBridge = new GasBridge(false, newDepositState, newWithdrawalState, deploymentData.gasConfig);
             ByteString serialize = new StdLib().serialize(gasBridge);
             baseMap.put(KEY_GAS_BRIDGE, serialize);
+            baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
 
             if (!checkWitness(managementContract().owner())) {
                 abort("Owner must witness the deployment.");
