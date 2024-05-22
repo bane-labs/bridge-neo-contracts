@@ -4,6 +4,7 @@ import io.neow3j.crypto.ECKeyPair;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.types.Hash160;
+import network.bane.util.helper.SmartContractHelper;
 
 import java.io.IOException;
 import java.util.List;

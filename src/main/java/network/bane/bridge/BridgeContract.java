@@ -68,6 +68,14 @@ import static network.bane.bridge.StorageConstants.PREFIX_BASE;
 @ManifestExtra(key = "Target", value = "Neo X TestNet T3")
 @ManifestExtra(key = "Description", value = "Contract for bridging GAS and tokens between Neo N3 and Neo X.")
 public class BridgeContract {
+
+    // This needs to be here due to the neow3j compiler. Technically, the Java compiler does not see this as a
+    // constant value during compile time because it uses an instantiation with new. Static fields that are not
+    // considered final must be in the main contract file.
+    static final byte[] PREFIX_TOKEN_CLAIMABLES = new byte[]{StorageConstants.PREFIX_TOKEN_CLAIMABLES};
+
+    // region static contract values
+
     static final StorageContext ctx = Storage.getStorageContext();
     static final CryptoLib cryptoLib = new CryptoLib();
     static final GasToken gasToken = new GasToken();
@@ -76,11 +84,7 @@ public class BridgeContract {
     // pause status.
     static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
 
-    // This needs to be here due to the neow3j compiler. Technically, the Java compiler does not see this as a
-    // constant value during compile time because it uses an instantiation with new. Static fields that are not
-    // considered final must be in the main contract file.
-    static final byte[] PREFIX_TOKEN_CLAIMABLES = new byte[]{StorageConstants.PREFIX_TOKEN_CLAIMABLES};
-
+    // endregion
     // region events
     // region gas bridge events
 
@@ -363,35 +367,8 @@ public class BridgeContract {
     }
 
     // endregion
+    // region gas bridge configuration/state
     // region gas bridge configuration
-
-    public static void setGasDepositFee(int newFee) {
-        onlyGovernor();
-        if (newFee < 0) abort("New deposit fee must be nonnegative.");
-        GasBridge gasBridge = getGasBridge();
-        gasBridge.config.depositFee = newFee;
-        baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
-        onGasDepositFeeChange.fire(newFee);
-    }
-
-    public static void setMinGasDeposit(int newMinAmount) {
-        onlyGovernor();
-        if (newMinAmount < 0) abort("Minimum deposit must be nonnegative.");
-        GasBridge gasBridge = getGasBridge();
-        if (newMinAmount > gasBridge.config.maxAmount) abort("Minimum must be less than the maximum amount.");
-        gasBridge.config.minAmount = newMinAmount;
-        baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
-        onMinGasDepositChange.fire(newMinAmount);
-    }
-
-    public static void setMaxGasDeposit(int newMaxAmount) {
-        onlyGovernor();
-        GasBridge gasBridge = getGasBridge();
-        if (newMaxAmount < gasBridge.config.minAmount) abort("Maximum must be greater than the minimum amount.");
-        gasBridge.config.maxAmount = newMaxAmount;
-        baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
-        onMaxGasDepositChange.fire(newMaxAmount);
-    }
 
     @Safe
     public static GasBridge getGasBridge() {
@@ -404,15 +381,46 @@ public class BridgeContract {
         return getGasBridge().config.depositFee;
     }
 
+    public static void setGasDepositFee(int newFee) {
+        onlyGovernor();
+        if (newFee < 0) abort("New deposit fee must be nonnegative.");
+        GasBridge gasBridge = getGasBridge();
+        gasBridge.config.depositFee = newFee;
+        baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
+        onGasDepositFeeChange.fire(newFee);
+    }
+
     @Safe
     public static int minGasDeposit() {
         return getGasBridge().config.minAmount;
+    }
+
+    public static void setMinGasDeposit(int newMinAmount) {
+        onlyGovernor();
+        if (newMinAmount < 0) abort("Minimum deposit must be nonnegative.");
+        GasBridge gasBridge = getGasBridge();
+        if (newMinAmount > gasBridge.config.maxAmount) abort("Minimum must be less than the maximum amount.");
+        gasBridge.config.minAmount = newMinAmount;
+        baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
+        onMinGasDepositChange.fire(newMinAmount);
     }
 
     @Safe
     public static int maxGasDeposit() {
         return getGasBridge().config.maxAmount;
     }
+
+    public static void setMaxGasDeposit(int newMaxAmount) {
+        onlyGovernor();
+        GasBridge gasBridge = getGasBridge();
+        if (newMaxAmount < gasBridge.config.minAmount) abort("Maximum must be greater than the minimum amount.");
+        gasBridge.config.maxAmount = newMaxAmount;
+        baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
+        onMaxGasDepositChange.fire(newMaxAmount);
+    }
+
+    // endregion
+    // region gas bridge state
 
     @Safe
     public static int gasDepositNonce() {
@@ -436,8 +444,14 @@ public class BridgeContract {
 
     // endregion
     // endregion
+    // endregion
     // region token bridge
     // region token registration
+
+    @Safe
+    public static TokenBridge getTokenBridge(Hash160 token) {
+        return TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
+    }
 
     public static void registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
         onlyGovernor();
@@ -493,7 +507,13 @@ public class BridgeContract {
     }
 
     // endregion
-    // region token bridge configuration setters
+    // region token bridge configuration/state
+    // region token bridge configuration
+
+    @Safe
+    public static int tokenDepositFee(Hash160 token) {
+        return getTokenBridge(token).config.fee;
+    }
 
     public static void setTokenDepositFee(List<Hash160> tokens, List<Integer> newDepositFees) {
         onlyGovernor();
@@ -510,14 +530,19 @@ public class BridgeContract {
         }
     }
 
-    public static void setTokenMinAmount(List<Hash160> tokens, List<Integer> newMinAmounts) {
+    @Safe
+    public static int minTokenDeposit(Hash160 token) {
+        return getTokenBridge(token).config.minAmount;
+    }
+
+    public static void setMinTokenDeposit(List<Hash160> tokens, List<Integer> newMinDeposits) {
         onlyGovernor();
         int nrTokens = tokens.size();
-        if (nrTokens != newMinAmounts.size()) abort("Length mismatch.");
+        if (nrTokens != newMinDeposits.size()) abort("Length mismatch.");
         StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
         for (int i = 0; i < nrTokens; i++) {
             Hash160 token = tokens.get(i);
-            int newMinAmount = newMinAmounts.get(i);
+            int newMinAmount = newMinDeposits.get(i);
             TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
             tokenBridge.config.minAmount = newMinAmount;
             tokenBridgesMap.put(token, new StdLib().serialize(tokenBridge));
@@ -525,14 +550,19 @@ public class BridgeContract {
         }
     }
 
-    public static void setTokenMaxAmount(List<Hash160> tokens, List<Integer> newMaxAmounts) {
+    @Safe
+    public static int maxTokenDeposit(Hash160 token) {
+        return getTokenBridge(token).config.maxAmount;
+    }
+
+    public static void setMaxTokenDeposit(List<Hash160> tokens, List<Integer> newMaxDeposits) {
         onlyGovernor();
         int nrTokens = tokens.size();
-        if (nrTokens != newMaxAmounts.size()) abort("Length mismatch.");
+        if (nrTokens != newMaxDeposits.size()) abort("Length mismatch.");
         StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
         for (int i = 0; i < nrTokens; i++) {
             Hash160 token = tokens.get(i);
-            int newMaxAmount = newMaxAmounts.get(i);
+            int newMaxAmount = newMaxDeposits.get(i);
             TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
             tokenBridge.config.maxAmount = newMaxAmount;
             tokenBridgesMap.put(token, new StdLib().serialize(tokenBridge));
@@ -540,7 +570,12 @@ public class BridgeContract {
         }
     }
 
-    public static void setTokenMaxWithdrawals(List<Hash160> tokens, List<Integer> newMaxWithdrawals) {
+    @Safe
+    public static int maxTokenWithdrawals(Hash160 token) {
+        return getTokenBridge(token).config.maxWithdrawals;
+    }
+
+    public static void setMaxTokenWithdrawals(List<Hash160> tokens, List<Integer> newMaxWithdrawals) {
         onlyGovernor();
         int nrTokens = tokens.size();
         if (nrTokens != newMaxWithdrawals.size()) abort("Length mismatch.");
@@ -556,24 +591,38 @@ public class BridgeContract {
     }
 
     // endregion
-    // region token bridge getters
+    // region token bridge state
 
     @Safe
-    public static TokenBridge getTokenBridge(Hash160 token) {
-        return TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
+    public static int tokenDepositNonce(Hash160 token) {
+        return getTokenBridge(token).depositState.nonce;
+    }
+
+    @Safe
+    public static ByteString tokenDepositRoot(Hash160 token) {
+        return getTokenBridge(token).depositState.root;
+    }
+
+    @Safe
+    public static int tokenWithdrawalNonce(Hash160 token) {
+        return getTokenBridge(token).withdrawalState.nonce;
+    }
+
+    @Safe
+    public static ByteString tokenWithdrawalRoot(Hash160 token) {
+        return getTokenBridge(token).withdrawalState.root;
     }
 
     // endregion
     // endregion
-    // region getters
-    // region bridge getters
+    // endregion
+    // region bridge management
 
     @Safe
     public static Hash160 management() {
         return baseMap.getHash160(KEY_BRIDGE_MANAGEMENT);
     }
 
-    // endregion
     // endregion
 
 }
