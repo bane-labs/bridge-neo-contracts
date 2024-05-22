@@ -179,10 +179,8 @@ public class TokenBridgeImpl {
                 addTokenClaimable(token, withdrawal);
                 BridgeContract.onTokenClaimable.fire(token, withdrawal.nonce, withdrawal.to, withdrawal.amount);
             } else {
-                if (new FungibleToken(token).transfer(executingScriptHash, withdrawal.to, withdrawal.amount,
-                        null)) {
-                    BridgeContract.onTokenWithdrawal.fire(token, withdrawal.nonce, withdrawal.to,
-                            withdrawal.amount);
+                if (new FungibleToken(token).transfer(executingScriptHash, withdrawal.to, withdrawal.amount, null)) {
+                    BridgeContract.onTokenWithdrawal.fire(token, withdrawal.nonce, withdrawal.to, withdrawal.amount);
                 } else {
                     // If the transfer was unsuccessful, add the withdrawal to the claimable map.
                     addTokenClaimable(token, withdrawal);

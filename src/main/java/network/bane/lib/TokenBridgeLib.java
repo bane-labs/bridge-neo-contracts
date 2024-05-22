@@ -34,8 +34,8 @@ public class TokenBridgeLib {
         return new ByteString(concatenated);
     }
 
-    public static ByteString computeNewTopRoot(CryptoLib cryptoLib, ByteString formerRoot,
-            Hash160 token, Hash160 neoXToken, List<Withdrawal> withdrawals) {
+    public static ByteString computeNewTopRoot(CryptoLib cryptoLib, ByteString formerRoot, Hash160 token,
+            Hash160 neoXToken, List<Withdrawal> withdrawals) {
         ByteString parent = formerRoot;
         for (int i = 0; i < withdrawals.size(); i++) {
             Withdrawal withdrawal = withdrawals.get(i);
