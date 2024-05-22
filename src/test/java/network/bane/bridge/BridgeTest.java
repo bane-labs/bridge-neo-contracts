@@ -101,8 +101,10 @@ import static network.bane.util.TestHelper.validator7PubKey;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -271,10 +273,11 @@ public class BridgeTest {
     @Test
     @Order(0)
     public void testDeployment_deploymentDataSetCorrectly() throws IOException {
-        assertThat(bridge.findStorage("0x0a"), hasSize(3));
+        assertThat(bridge.findStorage("0x0a"), hasSize(4));
         ContractStorageEntry managementEntry = bridge.findStorage("0x0a").get(0);
         ContractStorageEntry pauseEntry = bridge.findStorage("0x0a").get(1);
         ContractStorageEntry gasBridgeEntry = bridge.findStorage("0x0a").get(2);
+        ContractStorageEntry unclaimedRewardsEntry = bridge.findStorage("0x0a").get(3);
 
         assertThat(managementEntry.getKeyHex(), is("0x0a01"));
         assertArrayEquals(managementEntry.getValue(), managementContractHash.toLittleEndianArray());
@@ -308,6 +311,8 @@ public class BridgeTest {
         assertThat(bridge.gasDepositRoot(), is(Numeric.toHexString(Hash256.ZERO.toArray())));
         assertThat(bridge.gasWithdrawalNonce(), is(BigInteger.ZERO));
         assertThat(bridge.gasWithdrawRoot(), is(Numeric.toHexString(Hash256.ZERO.toArray())));
+
+        assertThat(unclaimedRewardsEntry.getValueHex(), is("0x"));
     }
 
     // endregion
@@ -401,16 +406,22 @@ public class BridgeTest {
     @Test
     @Order(11)
     public void testRootComputation_1() throws Throwable {
+        // This test only works if it is the first test in the order of deposits, due to the use of raw data for the
+        // nonce, to and amount.
         Account from = alice;
-        Hash160 to = recipient1;
-        BigInteger amount = new BigInteger("10000000000");
-        BigInteger nextNonce = incrementAndGetDepositNonce();
+        incrementAndGetDepositNonce(); // Necessary if other tests are run besides this one.
+        BigInteger nextNonce = BigInteger.ONE;
+        Hash160 to = new Hash160("0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
+        BigInteger amount = new BigInteger("100000000");
 
         String depositRootBefore = bridge.gasDepositRoot();
         Hash256 txHash = depositGasUsingDepositMethod(from, to, amount);
 
         String d1 = createDepositHash(nextNonce, to, amount);
+        // Raw deposit hash and root. The same inputs and the same deposit and root hash are used in a Neo X test.
+        assertThat(d1, is("0x20aad97e2860b1934184ffb2b04ea45d49af5145fa43cb212027f9e8e728baea"));
         String newRoot = concatAndSha256(depositRootBefore, d1);
+        assertThat(newRoot, is("0xdda77cac690580c1e5220d377cd807b4d2ed89751e4078525ee54297182d3d88"));
         assertThat(bridge.gasDepositRoot(), is(newRoot));
 
         TestHelper.DepositEvent depositEvent = getDepositEvent(txHash, neow3j);
@@ -607,6 +618,16 @@ public class BridgeTest {
         Hash160 to2 = recipient1;
         Hash160 to3 = recipient2;
         Hash160 to4 = recipient3;
+        // The following two assertions will make sure that:
+        // - the first withdrawal is successful, leaving a contract balance of less than 12 but more than 5 gas.
+        // - the second withdrawal is not successful due to insufficient funds.
+        // - the third withdrawal is successful, leaving a contract balance of less than 5 gas.
+        // - the fourth withdrawal is not successful due to insufficient funds.
+        // This scenario should never happen since the contract should hold all the gas that was deposited and can be
+        // withdrawn from Neo X. Nevertheless, the proper functionality of adding a claimable if a transfer fails is
+        // tested here.
+        assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), lessThan(new BigInteger("1400000000")));
+        assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), greaterThanOrEqualTo(new BigInteger("700000000")));
         BigInteger amount1 = minGasDeposit.multiply(new BigInteger("2"));
         BigInteger amount2 = minGasDeposit.multiply(new BigInteger("12"));
         BigInteger amount3 = minGasDeposit.multiply(new BigInteger("5"));
@@ -634,11 +655,16 @@ public class BridgeTest {
                 array(integer(nonce4), integer(amount4), hash160(to4))
         );
         Hash256 txHash = bridge.withdrawGas(root, signMsg(validators, root), withdrawals);
-        printTransactionFee(neow3j, "tx with 4 withdrawals", txHash);
 
         assertThat(bridge.gasWithdrawRoot(), is(root));
         NeoApplicationLog appLog = neow3j.getApplicationLog(txHash).send().getApplicationLog();
-        assertThat(appLog.getFirstExecution().getNotifications(), hasSize(8));
+        assertThat(appLog.getFirstExecution().getNotifications(), hasSize(6));
+        assertThat(appLog.getFirstExecution().getNotification(0).getEventName(), is("Transfer"));
+        assertThat(appLog.getFirstExecution().getNotification(1).getEventName(), is("GasWithdrawal"));
+        assertThat(appLog.getFirstExecution().getNotification(2).getEventName(), is("GasClaimable"));
+        assertThat(appLog.getFirstExecution().getNotification(3).getEventName(), is("Transfer"));
+        assertThat(appLog.getFirstExecution().getNotification(4).getEventName(), is("GasWithdrawal"));
+        assertThat(appLog.getFirstExecution().getNotification(5).getEventName(), is("GasClaimable"));
     }
 
     @Test
