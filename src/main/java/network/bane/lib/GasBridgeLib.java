@@ -16,14 +16,14 @@ import static network.bane.lib.BridgeLib.computeNewRoot;
 
 public class GasBridgeLib {
 
-    public static ByteString hashGasBridgeOp(CryptoLib cryptoLib, int nonce, int amount, Hash160 to) {
-        return cryptoLib.sha256(concatGasBridgeOpData(nonce, amount, to));
+    public static ByteString hashGasBridgeOp(CryptoLib cryptoLib, int nonce, Hash160 to, int amount) {
+        return cryptoLib.sha256(concatGasBridgeOpData(nonce, to, amount));
     }
 
-    private static ByteString concatGasBridgeOpData(int nonce, int amount, Hash160 to) {
+    private static ByteString concatGasBridgeOpData(int nonce, Hash160 to, int amount) {
         byte[] nonceP = padToBytes(toByteArray(nonce), UINT256_SIZE);
         byte[] amountP = padToBytes(toByteArray(amount), UINT256_SIZE);
-        byte[] concatenated = concat(concat(to.toByteArray(), amountP), nonceP);
+        byte[] concatenated = concat(concat(amountP, to.toByteString()), nonceP);
         reverse(concatenated);
         return new ByteString(concatenated);
     }
@@ -33,9 +33,10 @@ public class GasBridgeLib {
         for (int i = 0; i < withdrawals.size(); i++) {
             Withdrawal withdrawal = withdrawals.get(i);
             if (!Withdrawal.isValid(withdrawal)) abort("Invalid withdrawal provided.");
-            ByteString withdrawalHash = hashGasBridgeOp(cryptoLib, withdrawal.nonce, withdrawal.amount, withdrawal.to);
+            ByteString withdrawalHash = hashGasBridgeOp(cryptoLib, withdrawal.nonce, withdrawal.to, withdrawal.amount);
             parent = computeNewRoot(cryptoLib, parent, withdrawalHash);
         }
         return parent;
     }
+
 }

@@ -99,20 +99,20 @@ public class BridgeContract {
     static Event onGasBridgeUnpause;
 
     @DisplayName("GasDeposit")
-    @EventParameterNames({"Nonce", "Amount", "Recipient", "Depositor", "DepositHash", "NewDepositRoot"})
-    static Event6Args<Integer, Integer, Hash160, Hash160, ByteString, ByteString> onGasDeposit;
+    @EventParameterNames({"Nonce", "Recipient", "Amount", "Depositor", "DepositHash", "NewDepositRoot"})
+    static Event6Args<Integer, Hash160, Integer, Hash160, ByteString, ByteString> onGasDeposit;
 
     @DisplayName("GasClaimable")
-    @EventParameterNames({"Nonce", "Amount", "Recipient"})
-    static Event3Args<Integer, Integer, Hash160> onGasClaimable;
+    @EventParameterNames({"Nonce", "Recipient", "Amount"})
+    static Event3Args<Integer, Hash160, Integer> onGasClaimable;
 
     @DisplayName("GasClaim")
-    @EventParameterNames({"Nonce", "Amount", "Recipient"})
-    static Event3Args<Integer, Integer, Hash160> onGasClaim;
+    @EventParameterNames({"Nonce", "Recipient", "Amount"})
+    static Event3Args<Integer, Hash160, Integer> onGasClaim;
 
     @DisplayName("GasWithdrawal")
-    @EventParameterNames({"Nonce", "Amount", "Recipient"})
-    static Event3Args<Integer, Integer, Hash160> onGasWithdrawal;
+    @EventParameterNames({"Nonce", "Recipient", "Amount"})
+    static Event3Args<Integer, Hash160, Integer> onGasWithdrawal;
 
     @DisplayName("GasDepositFeeChange")
     @EventParameterNames({"NewFee"})
@@ -146,19 +146,19 @@ public class BridgeContract {
     static Event1Arg<Hash160> onTokenBridgeUnpause;
 
     @DisplayName("TokenDeposit")
-    @EventParameterNames({"TokenHash", "Nonce", "To", "Value", "Depositor", "DepositHash", "NewDepositRoot"})
+    @EventParameterNames({"TokenHash", "Nonce", "Recipient", "Value", "Depositor", "DepositHash", "NewDepositRoot"})
     static Event7Args<Hash160, Integer, Hash160, Integer, Hash160, ByteString, ByteString> onTokenDeposit;
 
     @DisplayName("TokenClaimable")
-    @EventParameterNames({"TokenHash", "Nonce", "To", "Value"})
+    @EventParameterNames({"TokenHash", "Nonce", "Recipient", "Value"})
     static Event4Args<Hash160, Integer, Hash160, Integer> onTokenClaimable;
 
     @DisplayName("TokenClaim")
-    @EventParameterNames({"TokenHash", "Nonce", "To", "Value"})
-    static Event4Args<Hash160, Integer, Integer, Hash160> onTokenClaim;
+    @EventParameterNames({"TokenHash", "Nonce", "Recipient", "Value"})
+    static Event4Args<Hash160, Integer, Hash160, Integer> onTokenClaim;
 
     @DisplayName("TokenWithdrawal")
-    @EventParameterNames({"TokenHash", "Nonce", "To", "Value"})
+    @EventParameterNames({"TokenHash", "Nonce", "Recipient", "Value"})
     static Event4Args<Hash160, Integer, Hash160, Integer> onTokenWithdrawal;
 
     @DisplayName("TokenDepositFeeChange")
