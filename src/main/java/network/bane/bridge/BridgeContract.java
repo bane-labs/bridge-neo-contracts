@@ -282,13 +282,29 @@ public class BridgeContract {
     // region OnNEP17Payment
 
     /**
-     * Generally any token payment of a registered token is accepted regardless of the provided sender, amount or data.
+     * This function is called if a NEP-17 token is sent to this contract. If the sent token is the GAS token, the
+     * behaviour of this function is special (refer to the GAS token handling below). If the sent token is not the
+     * GAS token, the function checks if the token is registered and if the {@code data} parameter is null. If either
+     * is not the case, the payment is aborted. If both are true, the payment is considered a bridge operation
+     * originating from an invocation of the {@code depositToken()} method and no further action is taken.
      * <p>
-     * If the token sent is the GAS token, the payment is always accepted if the {@code from} parameter is null. If
-     * this is not the case it is only accepted if either the {@code data} parameter is null, or the {@code data}
-     * parameter is an array of a valid non-zero {@link Hash160} value and an integer. In the latter case, a bridge
-     * deposit is initiated, resulting in an updated deposit state of the GasBridge. This is an advanced case. Usual
-     * bridge deposits should happen using the depositGas method.
+     * If the token sent is the GAS token, the following three cases are handled differently.
+     * <p>
+     * (1) If the {@code from} parameter is null, the payment is a reward for holding NEO and potentially
+     * participating in the Neo N3 Governance (based on the GasToken implementation). The amount is added to the
+     * unclaimed rewards of the bridge operators.
+     * <p>
+     * (2) If the {@code from} parameter is not null and the {@code data} parameter is null, the payment is considered a
+     * fee payment for a bridge operation (e.g., deposit, withdrawal). The fee is added to the unclaimed rewards of the
+     * bridge operators. This also means that it is possible for anyone to send GAS to the bridge without triggering a
+     * bridge operation, and it will be considered a fee payment for bridge operators.
+     * <p>
+     * (3) If the {@code from} and the {@code data} parameters are both not null, the {@code data} parameter is
+     * expected to be matching a {@link GasBridgePaymentData} object. If it is not, the payment is aborted. If it is,
+     * the payment is considered a direct bridge deposit. The {@code minBridgeAmount} of the payment data is checked
+     * against the amount sent minus the current deposit fee. If the amount is below the minimum, the payment is
+     * aborted. Otherwise, the payment triggers a bridge deposit and the deposit state of the GasBridge is updated
+     * accordingly.
      *
      * @param from   the sender.
      * @param amount the amount.
