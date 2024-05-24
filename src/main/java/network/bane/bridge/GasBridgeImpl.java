@@ -93,10 +93,12 @@ public class GasBridgeImpl {
         if (!managementContract().verifyValidatorSignatures(signatures, withdrawalRoot)) {
             abort("Invalid validator signatures provided.");
         }
-
+        // Update the gas bridge state
         gasBridge.withdrawalState.nonce += withdrawalsSize;
         gasBridge.withdrawalState.root = withdrawalRoot;
         BridgeContract.baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
+        BridgeContract.onGasWithdrawalRootUpdate.fire(gasBridge.withdrawalState.nonce, gasBridge.withdrawalState.root);
+        // Execute the Gas transfers
         executeGasTransfers(withdrawals);
     }
 

@@ -114,6 +114,10 @@ public class BridgeContract {
     @EventParameterNames({"Nonce", "Recipient", "Amount"})
     static Event3Args<Integer, Hash160, Integer> onGasWithdrawal;
 
+    @DisplayName("GasWithdrawalRootUpdate")
+    @EventParameterNames({"Nonce", "WithdrawalRoot"})
+    static Event2Args<Integer, ByteString> onGasWithdrawalRootUpdate;
+
     @DisplayName("GasDepositFeeChange")
     @EventParameterNames({"NewFee"})
     static Event1Arg<Integer> onGasDepositFeeChange;
@@ -160,6 +164,10 @@ public class BridgeContract {
     @DisplayName("TokenWithdrawal")
     @EventParameterNames({"TokenHash", "Nonce", "Recipient", "Value"})
     static Event4Args<Hash160, Integer, Hash160, Integer> onTokenWithdrawal;
+
+    @DisplayName("TokenWithdrawalRootUpdate")
+    @EventParameterNames({"NeoN3Token", "NeoXToken","Nonce", "WithdrawalRoot"})
+    static Event4Args<Hash160, Hash160, Integer, ByteString> onTokenWithdrawalRootUpdate;
 
     @DisplayName("TokenDepositFeeChange")
     @EventParameterNames({"TokenHash", "NewFee"})

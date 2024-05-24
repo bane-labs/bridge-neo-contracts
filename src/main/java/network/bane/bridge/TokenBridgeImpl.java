@@ -99,7 +99,7 @@ public class TokenBridgeImpl {
         // Update the token state
         tokenBridge.depositState.nonce++;
         ByteString depositHash =
-                TokenBridgeLib.hashTokenBridgeOp(BridgeContract.cryptoLib, token, tokenBridge.config.neoXTokenHash,
+                TokenBridgeLib.hashTokenBridgeOp(BridgeContract.cryptoLib, token, tokenBridge.config.neoXToken,
                         tokenBridge.depositState.nonce, to, amount);
         ByteString newRoot =
                 BridgeLib.computeNewRoot(BridgeContract.cryptoLib, tokenBridge.depositState.root, depositHash);
@@ -113,17 +113,17 @@ public class TokenBridgeImpl {
     // endregion
     // region withdrawal
 
-    static void withdrawToken(Hash160 token, ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
+    static void withdrawToken(Hash160 neoN3Token, ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
         // Token registration is checked within getTokenBridge
-        TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(token);
+        TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(neoN3Token);
         int withdrawalsSize = withdrawals.size();
         if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
         if (!subsequentNonces(withdrawals, tokenBridge.withdrawalState.nonce)) {
             abort("Provided withdrawals are not subsequent.");
         }
-        if (!TokenBridgeLib.computeNewTopRoot(BridgeContract.cryptoLib, tokenBridge.withdrawalState.root, token,
-                tokenBridge.config.neoXTokenHash, withdrawals).equals(withdrawalRoot)) {
+        if (!TokenBridgeLib.computeNewTopRoot(BridgeContract.cryptoLib, tokenBridge.withdrawalState.root, neoN3Token,
+                tokenBridge.config.neoXToken, withdrawals).equals(withdrawalRoot)) {
             abort("Invalid root.");
         }
         if (!managementContract().verifyValidatorSignatures(signatures, withdrawalRoot)) {
@@ -133,9 +133,11 @@ public class TokenBridgeImpl {
         tokenBridge.withdrawalState.nonce = withdrawals.get(withdrawalsSize - 1).nonce;
         tokenBridge.withdrawalState.root = withdrawalRoot;
         assert tokenBridge.withdrawalState.root == withdrawalRoot : "Root was not set correctly.";
-        new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
+        new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(neoN3Token, new StdLib().serialize(tokenBridge));
+        BridgeContract.onTokenWithdrawalRootUpdate.fire(neoN3Token, tokenBridge.config.neoXToken,
+                tokenBridge.withdrawalState.nonce, tokenBridge.withdrawalState.root);
         // Execute the token transfers
-        executeTokenTransfers(token, tokenBridge.config.tokenType, withdrawals);
+        executeTokenTransfers(neoN3Token, tokenBridge.config.tokenType, withdrawals);
     }
 
     // endregion
