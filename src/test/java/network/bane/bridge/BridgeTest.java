@@ -11,8 +11,10 @@ import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.ContractStorageEntry;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
+import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.ArrayStackItem;
 import io.neow3j.protocol.core.stackitem.IntegerStackItem;
+import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
@@ -60,14 +62,14 @@ import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.string;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static java.util.Arrays.asList;
+import static network.bane.util.TestHelper.getClaimEvents;
 import static network.bane.util.helper.NetworkSettingsHelper.updateNetworkSettings;
 import static network.bane.util.helper.PrintHelper.printTransactionFee;
 import static network.bane.util.TestHelper.concatAndSha256;
 import static network.bane.util.TestHelper.createDepositHash;
-import static network.bane.util.TestHelper.getClaimEvent;
-import static network.bane.util.TestHelper.getClaimableEvent;
-import static network.bane.util.TestHelper.getDepositEvent;
-import static network.bane.util.TestHelper.getWithdrawEvent;
+import static network.bane.util.TestHelper.getClaimableEvents;
+import static network.bane.util.TestHelper.getDepositEvents;
+import static network.bane.util.TestHelper.getWithdrawEvents;
 import static network.bane.util.TestHelper.governorPubKey;
 import static network.bane.util.TestHelper.hasFiredEvent;
 import static network.bane.util.TestHelper.owner;
@@ -424,7 +426,9 @@ public class BridgeTest {
         assertThat(newRoot, is("0xdda77cac690580c1e5220d377cd807b4d2ed89751e4078525ee54297182d3d88"));
         assertThat(bridge.gasDepositRoot(), is(newRoot));
 
-        TestHelper.DepositEvent depositEvent = getDepositEvent(txHash, neow3j);
+        List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
+        assertThat(depositEvents, hasSize(1));
+        TestHelper.DepositEvent depositEvent = depositEvents.get(0);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
@@ -457,7 +461,9 @@ public class BridgeTest {
 
         assertThat(bridge.gasDepositRoot(), is(d12));
 
-        TestHelper.DepositEvent depositEvent = getDepositEvent(txHash, neow3j);
+        List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
+        assertThat(depositEvents, hasSize(1));
+        TestHelper.DepositEvent depositEvent = depositEvents.get(0);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
@@ -482,7 +488,9 @@ public class BridgeTest {
 
         assertThat(bridge.gasDepositRoot(), is(d12d3));
 
-        TestHelper.DepositEvent depositEvent = getDepositEvent(txHash, neow3j);
+        List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
+        assertThat(depositEvents, hasSize(1));
+        TestHelper.DepositEvent depositEvent = depositEvents.get(0);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
@@ -508,7 +516,9 @@ public class BridgeTest {
 
         assertThat(bridge.gasDepositRoot(), is(d1234));
 
-        TestHelper.DepositEvent depositEvent = getDepositEvent(txHash, neow3j);
+        List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
+        assertThat(depositEvents, hasSize(1));
+        TestHelper.DepositEvent depositEvent = depositEvents.get(0);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
@@ -563,7 +573,9 @@ public class BridgeTest {
         ContractParameter withdrawal = array(array(integer(nonce), integer(amount), hash160(to)));
         Hash256 txHash = bridge.withdrawGas(root, signMsg(validators, root), withdrawal);
         printTransactionFee(neow3j, "tx with 1 withdrawals", txHash);
-        TestHelper.WithdrawEvent withdrawEvent = getWithdrawEvent(txHash, neow3j);
+        List<TestHelper.WithdrawEvent> withdrawEvents = getWithdrawEvents(txHash, neow3j, bridge.getScriptHash());
+        assertThat(withdrawEvents, hasSize(1));
+        TestHelper.WithdrawEvent withdrawEvent = withdrawEvents.get(0);
         assertThat(withdrawEvent.nonce, is(nonce));
         assertThat(withdrawEvent.to, is(to));
         assertThat(withdrawEvent.amount, is(amount));
@@ -598,10 +610,16 @@ public class BridgeTest {
                         hash160(to2)));
         Hash256 txHash = bridge.withdrawGas(newRoot, signMsg(validators, newRoot), withdrawal);
         printTransactionFee(neow3j, "tx with 2 withdrawals", txHash);
-        TestHelper.WithdrawEvent withdrawEvent = getWithdrawEvent(txHash, neow3j);
-        assertThat(withdrawEvent.nonce, is(nonce1));
-        assertThat(withdrawEvent.to, is(to1));
-        assertThat(withdrawEvent.amount, is(amount1));
+        List<TestHelper.WithdrawEvent> withdrawEvents = getWithdrawEvents(txHash, neow3j, bridge.getScriptHash());
+        assertThat(withdrawEvents, hasSize(2));
+        TestHelper.WithdrawEvent withdrawEvent1 = withdrawEvents.get(0);
+        assertThat(withdrawEvent1.nonce, is(nonce1));
+        assertThat(withdrawEvent1.to, is(to1));
+        assertThat(withdrawEvent1.amount, is(amount1));
+        TestHelper.WithdrawEvent withdrawEvent2 = withdrawEvents.get(1);
+        assertThat(withdrawEvent2.nonce, is(nonce2));
+        assertThat(withdrawEvent2.to, is(to2));
+        assertThat(withdrawEvent2.amount, is(amount2));
     }
 
     @Test
@@ -620,7 +638,9 @@ public class BridgeTest {
         Hash256 txHash = bridge.withdrawGas(root, signMsg(validators, root), withdrawal);
         printTransactionFee(neow3j, "tx with 1 withdrawals to claim", txHash);
 
-        TestHelper.ClaimableEvent claimableEvent = getClaimableEvent(txHash, neow3j);
+        List<TestHelper.ClaimableEvent> claimableEvents = getClaimableEvents(txHash, neow3j, bridge.getScriptHash());
+        assertThat(claimableEvents, hasSize(1));
+        TestHelper.ClaimableEvent claimableEvent = claimableEvents.get(0);
         assertThat(claimableEvent.nonce, is(nonce));
         assertThat(claimableEvent.to, is(to));
         assertThat(claimableEvent.amount, is(amount));
@@ -673,13 +693,20 @@ public class BridgeTest {
 
         assertThat(bridge.gasWithdrawRoot(), is(root));
         NeoApplicationLog appLog = neow3j.getApplicationLog(txHash).send().getApplicationLog();
-        assertThat(appLog.getFirstExecution().getNotifications(), hasSize(6));
-        assertThat(appLog.getFirstExecution().getNotification(0).getEventName(), is("Transfer"));
-        assertThat(appLog.getFirstExecution().getNotification(1).getEventName(), is("GasWithdrawal"));
-        assertThat(appLog.getFirstExecution().getNotification(2).getEventName(), is("GasClaimable"));
-        assertThat(appLog.getFirstExecution().getNotification(3).getEventName(), is("Transfer"));
-        assertThat(appLog.getFirstExecution().getNotification(4).getEventName(), is("GasWithdrawal"));
-        assertThat(appLog.getFirstExecution().getNotification(5).getEventName(), is("GasClaimable"));
+        assertThat(appLog.getFirstExecution().getNotifications(), hasSize(7));
+        Notification firstNotification = appLog.getFirstExecution().getNotification(0);
+        assertThat(firstNotification.getEventName(), is("GasWithdrawalRootUpdate"));
+        assertThat(firstNotification.getContract(), is(bridge.getScriptHash()));
+        List<StackItem> withdrawalRootUpdateEvent = firstNotification.getState().getList();
+        assertThat(withdrawalRootUpdateEvent, hasSize(2));
+        assertThat(withdrawalRootUpdateEvent.get(0).getInteger(), is(nonce4));
+        assertThat(withdrawalRootUpdateEvent.get(1).getHexString(), is(Numeric.cleanHexPrefix(root)));
+        assertThat(appLog.getFirstExecution().getNotification(1).getEventName(), is("Transfer"));
+        assertThat(appLog.getFirstExecution().getNotification(2).getEventName(), is("GasWithdrawal"));
+        assertThat(appLog.getFirstExecution().getNotification(3).getEventName(), is("GasClaimable"));
+        assertThat(appLog.getFirstExecution().getNotification(4).getEventName(), is("Transfer"));
+        assertThat(appLog.getFirstExecution().getNotification(5).getEventName(), is("GasWithdrawal"));
+        assertThat(appLog.getFirstExecution().getNotification(6).getEventName(), is("GasClaimable"));
     }
 
     @Test
@@ -699,7 +726,9 @@ public class BridgeTest {
         depositGasUsingDepositMethod(alice, to, amount);
 
         Hash256 txHash = bridge.claimGas(alice, nextNonce);
-        TestHelper.ClaimEvent claimEvent = getClaimEvent(txHash, neow3j);
+        List<TestHelper.ClaimEvent> claimEvents = getClaimEvents(txHash, neow3j, bridge.getScriptHash());
+        assertThat(claimEvents, hasSize(1));
+        TestHelper.ClaimEvent claimEvent = claimEvents.get(0);
         assertThat(claimEvent.nonce, is(nextNonce));
         assertThat(claimEvent.to, is(to));
         assertThat(claimEvent.amount, is(amount));
