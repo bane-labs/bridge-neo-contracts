@@ -5,7 +5,6 @@ import io.neow3j.crypto.ECKeyPair.ECPublicKey;
 import io.neow3j.crypto.Hash;
 import io.neow3j.crypto.Sign;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.response.ContractStorageEntry;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.StackItem;
@@ -20,12 +19,9 @@ import io.neow3j.wallet.Account;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
@@ -244,9 +240,9 @@ public class TestHelper {
 
     public static byte[] concatDepositData(BigInteger nonce, Hash160 recipient, BigInteger amount) {
         byte[] noncePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
-        byte[] amountPadded = BigIntegers.toLittleEndianByteArrayZeroPadded(amount, UINT256_SIZE);
         byte[] recipientArray = ArrayUtils.reverseArray(recipient.toArray());
-        byte[] concatenated =  concatenate(concatenate(recipientArray, amountPadded), noncePadded);
+        byte[] amountPadded = BigIntegers.toLittleEndianByteArrayZeroPadded(amount, UINT256_SIZE);
+        byte[] concatenated =  concatenate(concatenate(amountPadded, recipientArray), noncePadded);
         concatenated =  ArrayUtils.reverseArray(concatenated);
         return concatenated;
     }
@@ -328,15 +324,15 @@ public class TestHelper {
     public static DepositEvent depositEventFromNotification(Notification depositEvent) {
         List<StackItem> state = depositEvent.getState().getList();
         BigInteger nonce = state.get(0).getInteger();
-        BigInteger amount = state.get(1).getInteger();
-        Hash160 to = Hash160.fromAddress(state.get(2).getAddress());
+        Hash160 to = Hash160.fromAddress(state.get(1).getAddress());
+        BigInteger amount = state.get(2).getInteger();
         Hash160 from = Hash160.fromAddress(state.get(3).getAddress());
         if (state.size() > 4) {
             String depositHash = prependHexPrefix(state.get(4).getHexString());
             String rootHash = prependHexPrefix(state.get(5).getHexString());
-            return new DepositEvent(nonce, amount, to, from, depositHash, rootHash);
+            return new DepositEvent(nonce, to, amount, from, depositHash, rootHash);
         }
-        return new DepositEvent(nonce, amount, to, from);
+        return new DepositEvent(nonce, to, amount, from);
     }
 
     private static TransferEvent transferEventFromNotification(Notification depositEvent) {
@@ -350,50 +346,50 @@ public class TestHelper {
     private static WithdrawEvent withdrawEventFromNotification(Notification depositEvent) {
         List<StackItem> state = depositEvent.getState().getList();
         BigInteger nonce = state.get(0).getInteger();
-        BigInteger amount = state.get(1).getInteger();
-        Hash160 to = Hash160.fromAddress(state.get(2).getAddress());
-        return new WithdrawEvent(nonce, amount, to);
+        Hash160 to = Hash160.fromAddress(state.get(1).getAddress());
+        BigInteger amount = state.get(2).getInteger();
+        return new WithdrawEvent(nonce, to, amount);
     }
 
     private static ClaimableEvent claimableEventFromNotification(Notification claimableEvent) {
         List<StackItem> state = claimableEvent.getState().getList();
         BigInteger nonce = state.get(0).getInteger();
-        BigInteger amount = state.get(1).getInteger();
-        Hash160 to = Hash160.fromAddress(state.get(2).getAddress());
-        return new ClaimableEvent(nonce, amount, to);
+        Hash160 to = Hash160.fromAddress(state.get(1).getAddress());
+        BigInteger amount = state.get(2).getInteger();
+        return new ClaimableEvent(nonce, to, amount);
     }
 
     private static ClaimEvent claimEventFromNotification(Notification claimEvent) {
         List<StackItem> state = claimEvent.getState().getList();
         BigInteger nonce = state.get(0).getInteger();
-        BigInteger amount = state.get(1).getInteger();
-        Hash160 to = Hash160.fromAddress(state.get(2).getAddress());
-        return new ClaimEvent(nonce, amount, to);
+        Hash160 to = Hash160.fromAddress(state.get(1).getAddress());
+        BigInteger amount = state.get(2).getInteger();
+        return new ClaimEvent(nonce, to, amount);
     }
 
     public static class DepositEvent {
         public BigInteger nonce;
-        public Hash160 from;
         public Hash160 to;
         public BigInteger amount;
+        public Hash160 from;
         public String depositHashHex;
         public String rootHashHex;
 
-        public DepositEvent(BigInteger nonce, BigInteger amount, Hash160 to, Hash160 from, String depositHashHex,
+        public DepositEvent(BigInteger nonce, Hash160 to, BigInteger amount, Hash160 from, String depositHashHex,
                 String rootHashHex) {
             this.nonce = nonce;
-            this.from = from;
             this.to = to;
             this.amount = amount;
+            this.from = from;
             this.depositHashHex = depositHashHex;
             this.rootHashHex = rootHashHex;
         }
 
-        public DepositEvent(BigInteger nonce, BigInteger amount, Hash160 to, Hash160 from) {
+        public DepositEvent(BigInteger nonce, Hash160 to, BigInteger amount, Hash160 from) {
             this.nonce = nonce;
-            this.from = from;
             this.to = to;
             this.amount = amount;
+            this.from = from;
         }
 
         @Override
@@ -402,9 +398,9 @@ public class TestHelper {
             if (!(o instanceof DepositEvent)) return false;
             DepositEvent that = (DepositEvent) o;
             return nonce.equals(that.nonce) &&
-                    from.equals(that.from) &&
                     to.equals(that.to) &&
                     amount.equals(that.amount) &&
+                    from.equals(that.from) &&
                     depositHashHex.equals(that.depositHashHex) &&
                     rootHashHex.equals(that.rootHashHex);
         }
@@ -427,7 +423,7 @@ public class TestHelper {
         public Hash160 to;
         public BigInteger amount;
 
-        public WithdrawEvent(BigInteger nonce, BigInteger amount, Hash160 to) {
+        public WithdrawEvent(BigInteger nonce, Hash160 to, BigInteger amount) {
             this.nonce = nonce;
             this.to = to;
             this.amount = amount;
@@ -489,7 +485,7 @@ public class TestHelper {
         public Hash160 to;
         public BigInteger amount;
 
-        public ClaimableEvent(BigInteger nonce, BigInteger amount, Hash160 to) {
+        public ClaimableEvent(BigInteger nonce, Hash160 to, BigInteger amount) {
             this.nonce = nonce;
             this.to = to;
             this.amount = amount;
@@ -520,7 +516,7 @@ public class TestHelper {
         public Hash160 to;
         public BigInteger amount;
 
-        public ClaimEvent(BigInteger nonce, BigInteger amount, Hash160 to) {
+        public ClaimEvent(BigInteger nonce, Hash160 to, BigInteger amount) {
             this.nonce = nonce;
             this.to = to;
             this.amount = amount;

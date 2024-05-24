@@ -100,7 +100,7 @@ public class TokenBridgeImpl {
         tokenBridge.depositState.nonce++;
         ByteString depositHash =
                 TokenBridgeLib.hashTokenBridgeOp(BridgeContract.cryptoLib, token, tokenBridge.config.neoXTokenHash,
-                        tokenBridge.depositState.nonce, amount, to);
+                        tokenBridge.depositState.nonce, to, amount);
         ByteString newRoot =
                 BridgeLib.computeNewRoot(BridgeContract.cryptoLib, tokenBridge.depositState.root, depositHash);
         tokenBridge.depositState.root = newRoot;
@@ -158,7 +158,7 @@ public class TokenBridgeImpl {
         tokenClaimableMap.delete(nonce);
         assert token != BridgeContract.gasToken.getHash() : "Token cannot be the gas token.";
         if (new FungibleToken(token).transfer(getExecutingScriptHash(), to, amount, null)) {
-            BridgeContract.onTokenClaim.fire(token, nonce, amount, to);
+            BridgeContract.onTokenClaim.fire(token, nonce, to, amount);
         } else {
             abort("Claim transfer failed.");
         }
@@ -179,10 +179,8 @@ public class TokenBridgeImpl {
                 addTokenClaimable(token, withdrawal);
                 BridgeContract.onTokenClaimable.fire(token, withdrawal.nonce, withdrawal.to, withdrawal.amount);
             } else {
-                if (new FungibleToken(token).transfer(executingScriptHash, withdrawal.to, withdrawal.amount,
-                        null)) {
-                    BridgeContract.onTokenWithdrawal.fire(token, withdrawal.nonce, withdrawal.to,
-                            withdrawal.amount);
+                if (new FungibleToken(token).transfer(executingScriptHash, withdrawal.to, withdrawal.amount, null)) {
+                    BridgeContract.onTokenWithdrawal.fire(token, withdrawal.nonce, withdrawal.to, withdrawal.amount);
                 } else {
                     // If the transfer was unsuccessful, add the withdrawal to the claimable map.
                     addTokenClaimable(token, withdrawal);

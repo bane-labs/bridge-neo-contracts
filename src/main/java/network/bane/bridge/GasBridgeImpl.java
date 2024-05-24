@@ -67,11 +67,11 @@ public class GasBridgeImpl {
         if (amount < gasBridge.config.minAmount) abort("Deposit amount is too low.");
         if (amount > gasBridge.config.maxAmount) abort("Deposit amount is too high.");
         gasBridge.depositState.nonce++;
-        ByteString depositHash = hashGasBridgeOp(BridgeContract.cryptoLib, gasBridge.depositState.nonce, amount, to);
+        ByteString depositHash = hashGasBridgeOp(BridgeContract.cryptoLib, gasBridge.depositState.nonce, to, amount);
         gasBridge.depositState.root =
                 computeNewRoot(BridgeContract.cryptoLib, gasBridge.depositState.root, depositHash);
         BridgeContract.baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
-        BridgeContract.onGasDeposit.fire(gasBridge.depositState.nonce, amount, to, from, depositHash,
+        BridgeContract.onGasDeposit.fire(gasBridge.depositState.nonce, to, amount, from, depositHash,
                 gasBridge.depositState.root);
     }
 
@@ -114,7 +114,7 @@ public class GasBridgeImpl {
         gasClaimableMap.delete(nonce);
 
         if (BridgeContract.gasToken.transfer(getExecutingScriptHash(), to, amount, null)) {
-            BridgeContract.onGasClaim.fire(nonce, amount, to);
+            BridgeContract.onGasClaim.fire(nonce, to, amount);
         } else {
             abort("Claim transfer failed.");
         }
@@ -136,14 +136,14 @@ public class GasBridgeImpl {
             // If the to address is a contract, add the withdrawal to the claimable map, otherwise exeucte the transfer.
             if (BridgeHelper.isContract(withdrawal.to)) {
                 addGasClaimable(withdrawal);
-                BridgeContract.onGasClaimable.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
+                BridgeContract.onGasClaimable.fire(withdrawal.nonce, withdrawal.to, withdrawal.amount);
             } else {
                 if (BridgeContract.gasToken.transfer(executingScriptHash, withdrawal.to, withdrawal.amount, null)) {
-                    BridgeContract.onGasWithdrawal.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
+                    BridgeContract.onGasWithdrawal.fire(withdrawal.nonce, withdrawal.to, withdrawal.amount);
                 } else {
                     // If the transfer was unsuccessful, add the withdrawal to the claimable map.
                     addGasClaimable(withdrawal);
-                    BridgeContract.onGasClaimable.fire(withdrawal.nonce, withdrawal.amount, withdrawal.to);
+                    BridgeContract.onGasClaimable.fire(withdrawal.nonce, withdrawal.to, withdrawal.amount);
                 }
             }
         }

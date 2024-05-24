@@ -15,17 +15,18 @@ import static network.bane.lib.BridgeLib.UINT256_SIZE;
 import static network.bane.lib.BridgeLib.computeNewRoot;
 
 public class TokenBridgeLib {
+
     public static ByteString hashTokenBridgeOp(CryptoLib cryptoLib, Hash160 token, Hash160 neoXToken, int nonce,
-            int amount, Hash160 to) {
-        return cryptoLib.sha256(concatTokenBridgeOpData(token, neoXToken, nonce, amount, to));
+            Hash160 to, int amount) {
+        return cryptoLib.sha256(concatTokenBridgeOpData(token, neoXToken, nonce, to, amount));
     }
 
-    private static ByteString concatTokenBridgeOpData(Hash160 token, Hash160 neoXToken, int nonce, int value,
-            Hash160 to) {
+    private static ByteString concatTokenBridgeOpData(Hash160 token, Hash160 neoXToken, int nonce, Hash160 to,
+            int value) {
         byte[] nonceP = padToBytes(toByteArray(nonce), UINT256_SIZE);
         byte[] valueP = padToBytes(toByteArray(value), UINT256_SIZE);
         byte[] concatenated = concat(concat(concat(
-                                concat(to.toByteArray(), valueP),
+                                concat(valueP, to.toByteString()),
                                 nonceP),
                         neoXToken.toByteString()),
                 token.toByteString());
@@ -33,16 +34,17 @@ public class TokenBridgeLib {
         return new ByteString(concatenated);
     }
 
-    public static ByteString computeNewTopRoot(CryptoLib cryptoLib, ByteString formerRoot,
-            Hash160 token, Hash160 neoXToken, List<Withdrawal> withdrawals) {
+    public static ByteString computeNewTopRoot(CryptoLib cryptoLib, ByteString formerRoot, Hash160 token,
+            Hash160 neoXToken, List<Withdrawal> withdrawals) {
         ByteString parent = formerRoot;
         for (int i = 0; i < withdrawals.size(); i++) {
             Withdrawal withdrawal = withdrawals.get(i);
             if (!Withdrawal.isValid(withdrawal)) abort("Invalid withdrawal provided.");
-            ByteString withdrawalHash = hashTokenBridgeOp(cryptoLib, token, neoXToken, withdrawal.nonce,
-                    withdrawal.amount, withdrawal.to);
+            ByteString withdrawalHash = hashTokenBridgeOp(cryptoLib, token, neoXToken, withdrawal.nonce, withdrawal.to,
+                    withdrawal.amount);
             parent = computeNewRoot(cryptoLib, parent, withdrawalHash);
         }
         return parent;
     }
+
 }
