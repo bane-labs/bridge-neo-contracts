@@ -27,7 +27,7 @@ import io.neow3j.devpack.events.Event2Args;
 import io.neow3j.devpack.events.Event3Args;
 import io.neow3j.devpack.events.Event4Args;
 import io.neow3j.devpack.events.Event6Args;
-import io.neow3j.devpack.events.Event7Args;
+import io.neow3j.devpack.events.Event8Args;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.GasBridge;
 import network.bane.structs.GasBridgePaymentData;
@@ -114,6 +114,10 @@ public class BridgeContract {
     @EventParameterNames({"Nonce", "Recipient", "Amount"})
     static Event3Args<Integer, Hash160, Integer> onGasWithdrawal;
 
+    @DisplayName("GasWithdrawalRootUpdate")
+    @EventParameterNames({"Nonce", "WithdrawalRoot"})
+    static Event2Args<Integer, ByteString> onGasWithdrawalRootUpdate;
+
     @DisplayName("GasDepositFeeChange")
     @EventParameterNames({"NewFee"})
     static Event1Arg<Integer> onGasDepositFeeChange;
@@ -130,51 +134,56 @@ public class BridgeContract {
     // region token bridge events
 
     @DisplayName("TokenRegister")
-    @EventParameterNames({"TokenHash", "TokenConfig"})
+    @EventParameterNames({"NeoN3Token", "TokenConfig"})
     static Event2Args<Hash160, TokenBridge.TokenConfig> onTokenRegister;
 
     @DisplayName("TokenUnregister")
-    @EventParameterNames({"TokenHash"})
-    static Event1Arg<Hash160> onTokenUnregister;
+    @EventParameterNames({"NeoN3Token", "NeoXToken"})
+    static Event2Args<Hash160, Hash160> onTokenUnregister;
 
     @DisplayName("TokenBridgePause")
-    @EventParameterNames({"TokenHash"})
-    static Event1Arg<Hash160> onTokenBridgePause;
+    @EventParameterNames({"NeoN3Token", "NeoXToken"})
+    static Event2Args<Hash160, Hash160> onTokenBridgePause;
 
     @DisplayName("TokenBridgeUnpause")
-    @EventParameterNames({"TokenHash"})
-    static Event1Arg<Hash160> onTokenBridgeUnpause;
+    @EventParameterNames({"NeoN3Token", "NeoXToken"})
+    static Event2Args<Hash160, Hash160> onTokenBridgeUnpause;
 
     @DisplayName("TokenDeposit")
-    @EventParameterNames({"TokenHash", "Nonce", "Recipient", "Value", "Depositor", "DepositHash", "NewDepositRoot"})
-    static Event7Args<Hash160, Integer, Hash160, Integer, Hash160, ByteString, ByteString> onTokenDeposit;
+    @EventParameterNames({"NeoN3Token", "NeoXToken", "Nonce", "Recipient", "Value", "Depositor", "DepositHash",
+            "NewDepositRoot"})
+    static Event8Args<Hash160, Hash160, Integer, Hash160, Integer, Hash160, ByteString, ByteString> onTokenDeposit;
 
     @DisplayName("TokenClaimable")
-    @EventParameterNames({"TokenHash", "Nonce", "Recipient", "Value"})
+    @EventParameterNames({"NeoN3Token", "Nonce", "Recipient", "Value"})
     static Event4Args<Hash160, Integer, Hash160, Integer> onTokenClaimable;
 
     @DisplayName("TokenClaim")
-    @EventParameterNames({"TokenHash", "Nonce", "Recipient", "Value"})
+    @EventParameterNames({"NeoN3Token", "Nonce", "Recipient", "Value"})
     static Event4Args<Hash160, Integer, Hash160, Integer> onTokenClaim;
 
     @DisplayName("TokenWithdrawal")
-    @EventParameterNames({"TokenHash", "Nonce", "Recipient", "Value"})
+    @EventParameterNames({"NeoN3Token", "Nonce", "Recipient", "Value"})
     static Event4Args<Hash160, Integer, Hash160, Integer> onTokenWithdrawal;
 
+    @DisplayName("TokenWithdrawalRootUpdate")
+    @EventParameterNames({"NeoN3Token", "NeoXToken","Nonce", "WithdrawalRoot"})
+    static Event4Args<Hash160, Hash160, Integer, ByteString> onTokenWithdrawalRootUpdate;
+
     @DisplayName("TokenDepositFeeChange")
-    @EventParameterNames({"TokenHash", "NewFee"})
+    @EventParameterNames({"NeoN3Token", "NewFee"})
     static Event2Args<Hash160, Integer> onTokenDepositFeeChange;
 
     @DisplayName("MinTokenDepositChange")
-    @EventParameterNames({"TokenHash", "NewMinDeposit"})
+    @EventParameterNames({"NeoN3Token", "NewMinDeposit"})
     static Event2Args<Hash160, Integer> onMinTokenDepositChange;
 
     @DisplayName("MaxTokenDepositChange")
-    @EventParameterNames({"TokenHash", "NewMaxDeposit"})
+    @EventParameterNames({"NeoN3Token", "NewMaxDeposit"})
     static Event2Args<Hash160, Integer> onMaxTokenDepositChange;
 
     @DisplayName("MaxTokenWithdrawalsChange")
-    @EventParameterNames({"TokenHash", "NewMaxWithdrawals"})
+    @EventParameterNames({"NeoN3Token", "NewMaxWithdrawals"})
     static Event2Args<Hash160, Integer> onMaxTokenWithdrawalsChange;
 
     // endregion
@@ -536,28 +545,31 @@ public class BridgeContract {
         onTokenRegister.fire(token, tokenConfig);
     }
 
-    public static void unregisterToken(Hash160 token) {
+    public static void unregisterToken(Hash160 neoN3Token) {
         onlyGovernor();
-        onlyTokenBridgePaused(token);
-        TokenBridgeImpl.unregisterToken(token);
-        onTokenUnregister.fire(token);
+        onlyTokenBridgePaused(neoN3Token);
+        Hash160 neoXToken = getTokenBridge(neoN3Token).config.neoXToken;
+        TokenBridgeImpl.unregisterToken(neoN3Token);
+        onTokenUnregister.fire(neoN3Token, neoXToken);
     }
 
     // endregion
     // region token pausing
 
-    public static void pauseTokenBridge(Hash160 token) {
+    public static void pauseTokenBridge(Hash160 neoN3Token) {
         onlySecurityGuard();
-        onlyTokenBridgeUnpaused(token);
-        TokenBridgeImpl.pauseTokenBridge(token);
-        onTokenBridgePause.fire(token);
+        onlyTokenBridgeUnpaused(neoN3Token);
+        Hash160 neoXToken = getTokenBridge(neoN3Token).config.neoXToken;
+        TokenBridgeImpl.pauseTokenBridge(neoN3Token);
+        onTokenBridgePause.fire(neoN3Token, neoXToken);
     }
 
-    public static void unpauseTokenBridge(Hash160 token) {
+    public static void unpauseTokenBridge(Hash160 neoN3Token) {
         onlyGovernor();
-        onlyTokenBridgePaused(token);
-        TokenBridgeImpl.unpauseTokenBridge(token);
-        onTokenBridgeUnpause.fire(token);
+        onlyTokenBridgePaused(neoN3Token);
+        Hash160 neoXToken = getTokenBridge(neoN3Token).config.neoXToken;
+        TokenBridgeImpl.unpauseTokenBridge(neoN3Token);
+        onTokenBridgeUnpause.fire(neoN3Token, neoXToken);
     }
 
     // endregion

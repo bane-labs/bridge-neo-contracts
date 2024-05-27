@@ -27,7 +27,7 @@ public class TokenBridge {
 
     @Struct
     public static class TokenConfig {
-        public Hash160 neoXTokenHash;
+        public Hash160 neoXToken;
         public int fee;
         public int minAmount;
         public int maxAmount;
@@ -35,9 +35,9 @@ public class TokenBridge {
         public int tokenType;
         public int addDecimals;
 
-        public TokenConfig(Hash160 neoXTokenHash, int fee, int minAmount, int maxAmount, int maxWithdrawals,
+        public TokenConfig(Hash160 neoXToken, int fee, int minAmount, int maxAmount, int maxWithdrawals,
                 int tokenType, int addDecimals) {
-            this.neoXTokenHash = neoXTokenHash;
+            this.neoXToken = neoXToken;
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
@@ -49,9 +49,9 @@ public class TokenBridge {
         public static boolean isValid(TokenConfig config) {
             int minAmount = config.minAmount;
             int tokenType = config.tokenType;
-            return config.neoXTokenHash != null &&
-                    config.neoXTokenHash.isZero() &&
-                    Hash160.isValid(config.neoXTokenHash) &&
+            return config.neoXToken != null &&
+                    config.neoXToken.isZero() &&
+                    Hash160.isValid(config.neoXToken) &&
                     config.fee >= 0 &&
                     minAmount >= 0 &&
                     config.maxAmount > minAmount &&
