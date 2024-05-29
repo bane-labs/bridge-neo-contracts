@@ -583,6 +583,7 @@ public class BridgeContract {
 
     public static void withdrawToken(Hash160 token, ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
+        onlyRelayer();
         onlyUnpaused();
         onlyTokenBridgeUnpaused(token);
         TokenBridgeImpl.withdrawToken(token, withdrawalRoot, signatures, withdrawals);
