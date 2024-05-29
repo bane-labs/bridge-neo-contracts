@@ -2,7 +2,7 @@ package network.bane.structs;
 
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.annotations.Struct;
-import network.bane.bridge.TokenTypeConstants;
+import network.bane.bridge.ExecutionTypes;
 
 @Struct
 public class TokenBridge {
@@ -32,23 +32,23 @@ public class TokenBridge {
         public int minAmount;
         public int maxAmount;
         public int maxWithdrawals;
-        public int tokenType;
+        public int executionType;
         public int addDecimals;
 
         public TokenConfig(Hash160 neoXToken, int fee, int minAmount, int maxAmount, int maxWithdrawals,
-                int tokenType, int addDecimals) {
+                int executionType, int addDecimals) {
             this.neoXToken = neoXToken;
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
             this.maxWithdrawals = maxWithdrawals;
-            this.tokenType = tokenType;
+            this.executionType = executionType;
             this.addDecimals = addDecimals;
         }
 
         public static boolean isValid(TokenConfig config) {
             int minAmount = config.minAmount;
-            int tokenType = config.tokenType;
+            int executionType = config.executionType;
             return config.neoXToken != null &&
                     config.neoXToken.isZero() &&
                     Hash160.isValid(config.neoXToken) &&
@@ -56,8 +56,8 @@ public class TokenBridge {
                     minAmount >= 0 &&
                     config.maxAmount > minAmount &&
                     config.maxWithdrawals > 0 &&
-                    tokenType >= 0 &&
-                    tokenType <= TokenTypeConstants.MAX_TOKEN_TYPE_INT_VALUE;
+                    executionType >= 0 &&
+                    executionType <= ExecutionTypes.MAX_EXECUTION_TYPE_VALUE;
         }
     }
 }

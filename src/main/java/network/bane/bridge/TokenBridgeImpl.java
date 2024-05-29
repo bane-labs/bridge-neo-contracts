@@ -137,7 +137,7 @@ public class TokenBridgeImpl {
         BridgeContract.onTokenWithdrawalRootUpdate.fire(neoN3Token, tokenBridge.config.neoXToken,
                 tokenBridge.withdrawalState.nonce, tokenBridge.withdrawalState.root);
         // Execute the token transfers
-        executeTokenTransfers(neoN3Token, tokenBridge.config.tokenType, withdrawals);
+        executeTokenTransfers(neoN3Token, tokenBridge.config.executionType, withdrawals);
     }
 
     // endregion
@@ -169,9 +169,9 @@ public class TokenBridgeImpl {
     // endregion
     // region transfer execution
 
-    private static void executeTokenTransfers(Hash160 neoN3Token, int tokenType, List<Withdrawal> withdrawals) {
-        assert tokenType == TokenTypeConstants.NEO ||
-                tokenType == TokenTypeConstants.NEP17_CAPPED : "Invalid token type.";
+    private static void executeTokenTransfers(Hash160 neoN3Token, int executionType, List<Withdrawal> withdrawals) {
+        assert executionType == ExecutionTypes.NEO ||
+                executionType == ExecutionTypes.NEP17 : "Invalid token type.";
         Hash160 executingScriptHash = getExecutingScriptHash();
         int withdrawalsSize = withdrawals.size();
         for (int i = 0; i < withdrawalsSize; i++) {

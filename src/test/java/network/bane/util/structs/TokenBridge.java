@@ -23,17 +23,17 @@ public class TokenBridge {
         public BigInteger minAmount;
         public BigInteger maxAmount;
         public BigInteger maxWithdrawals;
-        public BigInteger tokenType;
+        public BigInteger executionType;
         public BigInteger addDecimals;
 
         public TokenConfig(Hash160 neoXTokenHash, BigInteger fee, BigInteger minAmount, BigInteger maxAmount, BigInteger maxWithdrawals,
-                BigInteger tokenType, BigInteger addDecimals) {
+                BigInteger executionType, BigInteger addDecimals) {
             this.neoXTokenHash = neoXTokenHash;
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
             this.maxWithdrawals = maxWithdrawals;
-            this.tokenType = tokenType;
+            this.executionType = executionType;
             this.addDecimals = addDecimals;
         }
     }
