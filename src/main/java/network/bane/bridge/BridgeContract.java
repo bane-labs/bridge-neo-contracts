@@ -90,6 +90,15 @@ public class BridgeContract {
 
     // endregion
     // region events
+    // region bridge events
+
+    @DisplayName("BridgePause")
+    static Event onBridgePause;
+
+    @DisplayName("BridgeUnpause")
+    static Event onBridgeUnpause;
+
+    // endregion
     // region gas bridge events
 
     @DisplayName("GasBridgePause")
@@ -270,16 +279,18 @@ public class BridgeContract {
     // endregion
     // region pause/unpause
 
-    public static void pause() {
+    public static void pauseBridge() {
         onlyUnpaused();
         onlySecurityGuard();
         baseMap.put(KEY_BRIDGE_PAUSE, true);
+        onBridgePause.fire();
     }
 
-    public static void unpause() {
+    public static void unpauseBridge() {
         onlyPaused();
         onlyGovernor();
         baseMap.put(KEY_BRIDGE_PAUSE, false);
+        onBridgeUnpause.fire();
     }
 
     @Safe
