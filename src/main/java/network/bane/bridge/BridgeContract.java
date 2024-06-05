@@ -66,8 +66,7 @@ import static network.bane.bridge.StorageConstants.OLD_KEY_PAUSED;
 import static network.bane.bridge.StorageConstants.PREFIX_BASE;
 
 @DisplayName("NeoXBridge")
-@Permission(nativeContract = NativeContract.GasToken, methods = "transfer")
-@Permission(nativeContract = NativeContract.ContractManagement, methods = "update")
+@Permission(contract = "*")
 @ManifestExtra(key = "Author", value = "BaneLabs")
 @ManifestExtra(key = "Target", value = "Neo X TestNet T3")
 @ManifestExtra(key = "Description", value = "Contract for bridging GAS and tokens between Neo N3 and Neo X.")
