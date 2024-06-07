@@ -4,6 +4,7 @@ import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.Hash256;
+import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
 import io.neow3j.devpack.Storage;
@@ -16,7 +17,6 @@ import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.OnNEP17Payment;
 import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
-import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
@@ -546,6 +546,16 @@ public class BridgeContract {
     @Safe
     public static TokenBridge getTokenBridge(Hash160 token) {
         return TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
+    }
+
+    @Safe
+    public static Iterator<Hash160> getRegisteredTokensIterator() {
+        return TokenBridgeImpl.getTokenBridgeTokensIterator();
+    }
+
+    @Safe
+    public static List<Hash160> getRegisteredTokens() {
+        return TokenBridgeImpl.getTokenBridgeTokens();
     }
 
     public static void registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
