@@ -16,7 +16,7 @@ public class BridgeLib {
         return cryptoLib.sha256(leftRight);
     }
 
-    private static byte[] padToBytes(byte[] data, int padToSize) {
+    static byte[] padToBytes(byte[] data, int padToSize) {
         int dataSize = data.length;
         int toPad = padToSize - dataSize;
         assert toPad >= 0 : "Data is too long.";

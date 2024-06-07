@@ -10,9 +10,9 @@ import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Helper.reverse;
 import static io.neow3j.devpack.Helper.toByteArray;
-import static network.bane.TestPaddingContract.padToBytes;
 import static network.bane.lib.BridgeLib.UINT256_SIZE;
 import static network.bane.lib.BridgeLib.computeNewRoot;
+import static network.bane.lib.BridgeLib.padToBytes;
 
 public class GasBridgeLib {
 
