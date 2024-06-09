@@ -4,9 +4,11 @@ import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.Hash256;
+import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
 import io.neow3j.devpack.StorageMap;
+import io.neow3j.devpack.constants.FindOptions;
 import io.neow3j.devpack.contracts.FungibleToken;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.lib.BridgeLib;
@@ -190,6 +192,20 @@ public class TokenBridgeImpl {
                 }
             }
         }
+    }
+
+    public static Iterator<Hash160> getTokenBridgeTokensIterator() {
+        return (Iterator<Hash160>) new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES)
+                .find(FindOptions.KeysOnly | FindOptions.RemovePrefix);
+    }
+
+    public static List<Hash160> getTokenBridgeTokens() {
+        Iterator<Hash160> it = getTokenBridgeTokensIterator();
+        List<Hash160> tokenList = new List<>();
+        while (it.next()) {
+            tokenList.add(it.get());
+        }
+        return tokenList;
     }
 
     // endregion
