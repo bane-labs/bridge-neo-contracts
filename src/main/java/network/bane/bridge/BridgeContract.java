@@ -54,14 +54,6 @@ import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgeUnpaused;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_MANAGEMENT;
-import static network.bane.bridge.StorageConstants.OLD_KEY_GAS_DEPOSIT_FEE;
-import static network.bane.bridge.StorageConstants.OLD_KEY_GAS_DEPOSIT_MAX_AMOUNT;
-import static network.bane.bridge.StorageConstants.OLD_KEY_GAS_DEPOSIT_MIN_AMOUNT;
-import static network.bane.bridge.StorageConstants.OLD_KEY_GAS_DEPOSIT_NONCE;
-import static network.bane.bridge.StorageConstants.OLD_KEY_GAS_DEPOSIT_ROOT;
-import static network.bane.bridge.StorageConstants.OLD_KEY_GAS_WITHDRAWAL_NONCE;
-import static network.bane.bridge.StorageConstants.OLD_KEY_GAS_WITHDRAWAL_ROOT;
-import static network.bane.bridge.StorageConstants.OLD_KEY_PAUSED;
 import static network.bane.bridge.StorageConstants.PREFIX_BASE;
 
 @DisplayName("NeoXBridge")
@@ -229,10 +221,10 @@ public class BridgeContract {
         }
     }
 
-    public static void update(ByteString nef, String manifest) {
+    public static void update(ByteString nef, String manifest, Object data) {
         onlyPaused();
         if (!checkWitness(managementContract().owner())) abort("Only the owner can update this contract.");
-        new ContractManagement().update(nef, manifest);
+        new ContractManagement().update(nef, manifest, data);
     }
 
     // endregion
