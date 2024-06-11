@@ -29,8 +29,8 @@ public class MigrationImpl_V1ToV2 {
      * Once that contract update is done, this method will be removed from this contract.
      */
     static void migrateT3_v1Tov2() {
-        if (!baseMap.getBoolean(OLD_KEY_PAUSED)) abort("Contract must be paused for migration.");
         if (baseMap.get(KEY_MIGRATED) != null) abort("Already migrated.");
+        if (!baseMap.getBoolean(OLD_KEY_PAUSED)) abort("Contract must be paused for migration.");
         baseMap.put(KEY_MIGRATED, 1);
 
         Integer gasDepositFee = baseMap.getInt(OLD_KEY_GAS_DEPOSIT_FEE);
