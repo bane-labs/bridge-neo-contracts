@@ -191,33 +191,32 @@ public class BridgeContract {
 
     @OnDeployment
     public static void deploy(Object data, boolean isUpdate) {
-        if (isUpdate) {
+        if (!isUpdate) {
+            BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
+            if (deploymentData.bridgeManagementContract == null ||
+                    !Hash160.isValid(deploymentData.bridgeManagementContract))
+                abort("Invalid bridge management contract hash.");
+
+            baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.bridgeManagementContract);
+            baseMap.put(KEY_BRIDGE_PAUSE, false);
+
+            if (!GasConfig.isValid(deploymentData.gasConfig)) abort("Invalid gas config.");
+            ByteString zeroHash = Hash256.zero().toByteString();
+            State newDepositState = new State(0, zeroHash);
+            State newWithdrawalState = new State(0, zeroHash);
+            GasBridge gasBridge = new GasBridge(false, newDepositState, newWithdrawalState, deploymentData.gasConfig);
+            ByteString serialize = new StdLib().serialize(gasBridge);
+            baseMap.put(KEY_GAS_BRIDGE, serialize);
+            baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
+
+            // Make sure the owner witnesses the deployment.
+            if (!checkWitness(managementContract().owner())) {
+                abort("Owner must witness the deployment.");
+            }
+        } else {
             if (baseMap.get(KEY_MIGRATED) == null) {
                 MigrationImpl_V1ToV2.migrateT3_v1Tov2();
             }
-            return;
-        }
-
-        BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
-        if (deploymentData.bridgeManagementContract == null ||
-                !Hash160.isValid(deploymentData.bridgeManagementContract))
-            abort("Invalid bridge management contract hash.");
-
-        baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.bridgeManagementContract);
-        baseMap.put(KEY_BRIDGE_PAUSE, false);
-
-        if (!GasConfig.isValid(deploymentData.gasConfig)) abort("Invalid gas config.");
-        ByteString zeroHash = Hash256.zero().toByteString();
-        State newDepositState = new State(0, zeroHash);
-        State newWithdrawalState = new State(0, zeroHash);
-        GasBridge gasBridge = new GasBridge(false, newDepositState, newWithdrawalState, deploymentData.gasConfig);
-        ByteString serialize = new StdLib().serialize(gasBridge);
-        baseMap.put(KEY_GAS_BRIDGE, serialize);
-        baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
-
-        // Make sure the owner witnesses the deployment.
-        if (!checkWitness(managementContract().owner())) {
-            abort("Owner must witness the deployment.");
         }
     }
 

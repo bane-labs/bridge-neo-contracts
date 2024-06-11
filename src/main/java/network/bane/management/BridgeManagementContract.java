@@ -74,38 +74,36 @@ public class BridgeManagementContract {
 
     @OnDeployment
     public static void deploy(Object data, boolean isUpdate) {
-        if (isUpdate) {
-            return;
+        if (!isUpdate) {
+            ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
+
+            ECPoint owner = deploymentData.owner;
+            if (owner == null || !ECPoint.isValid(owner)) abort("Invalid public key provided for owner.");
+            ECPoint relayer = deploymentData.relayer;
+            if (relayer == null || !ECPoint.isValid(relayer)) abort("Invalid public key provided for relayer.");
+            List<ECPoint> validators = deploymentData.validators;
+            int validatorSize = validators.size();
+            int validatorThreshold = deploymentData.validatorThreshold;
+            if (validatorSize < validatorThreshold) abort("Not enough validators.");
+            ECPoint governor = deploymentData.governor;
+            if (governor == null || !ECPoint.isValid(governor)) abort("Invalid public key provided for governor.");
+            ECPoint securityGuard = deploymentData.securityGuard;
+            if (securityGuard == null || !ECPoint.isValid(securityGuard))
+                abort("Invalid public key provided for security guard.");
+
+            baseMap.put(key_owner, owner);
+            baseMap.put(key_relayer, relayer);
+            for (int i = 0; i < validatorSize; i++) {
+                ECPoint validator = validators.get(i);
+                if (!ECPoint.isValid(validator)) abort("Invalid public key provided for validator.");
+                validatorMap.put(validator, true);
+            }
+            baseMap.put(key_validator_threshold, validatorThreshold);
+            baseMap.put(key_governor, governor);
+            baseMap.put(key_securityguard, securityGuard);
+
+            if (!checkWitness(owner())) abort("Owner must witness the deployment.");
         }
-
-        ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
-
-        ECPoint owner = deploymentData.owner;
-        if (owner == null || !ECPoint.isValid(owner)) abort("Invalid public key provided for owner.");
-        ECPoint relayer = deploymentData.relayer;
-        if (relayer == null || !ECPoint.isValid(relayer)) abort("Invalid public key provided for relayer.");
-        List<ECPoint> validators = deploymentData.validators;
-        int validatorSize = validators.size();
-        int validatorThreshold = deploymentData.validatorThreshold;
-        if (validatorSize < validatorThreshold) abort("Not enough validators.");
-        ECPoint governor = deploymentData.governor;
-        if (governor == null || !ECPoint.isValid(governor)) abort("Invalid public key provided for governor.");
-        ECPoint securityGuard = deploymentData.securityGuard;
-        if (securityGuard == null || !ECPoint.isValid(securityGuard))
-            abort("Invalid public key provided for security guard.");
-
-        baseMap.put(key_owner, owner);
-        baseMap.put(key_relayer, relayer);
-        for (int i = 0; i < validatorSize; i++) {
-            ECPoint validator = validators.get(i);
-            if (!ECPoint.isValid(validator)) abort("Invalid public key provided for validator.");
-            validatorMap.put(validator, true);
-        }
-        baseMap.put(key_validator_threshold, validatorThreshold);
-        baseMap.put(key_governor, governor);
-        baseMap.put(key_securityguard, securityGuard);
-
-        if (!checkWitness(owner())) abort("Owner must witness the deployment.");
     }
 
     // endregion
