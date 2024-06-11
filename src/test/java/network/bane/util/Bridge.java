@@ -1,6 +1,5 @@
 package network.bane.util;
 
-import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
 import io.neow3j.protocol.Neow3j;
@@ -253,8 +252,7 @@ public class Bridge extends SmartContractHelper {
                 tokenConfigList.get(2).getInteger(),
                 tokenConfigList.get(3).getInteger(),
                 tokenConfigList.get(4).getInteger(),
-                tokenConfigList.get(5).getInteger(),
-                tokenConfigList.get(6).getInteger()
+                tokenConfigList.get(5).getInteger()
         );
         return new TokenBridge(paused, depositState, withdrawalState, tokenConfig);
     }
@@ -345,8 +343,7 @@ public class Bridge extends SmartContractHelper {
                 response.get(2).getInteger(),
                 response.get(3).getInteger(),
                 response.get(4).getInteger(),
-                response.get(5).getInteger(),
-                response.get(6).getInteger()
+                response.get(5).getInteger()
         );
     }
 
