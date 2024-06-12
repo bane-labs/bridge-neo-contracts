@@ -33,17 +33,15 @@ public class TokenBridge {
         public int maxAmount;
         public int maxWithdrawals;
         public int executionType;
-        public int addDecimals;
 
         public TokenConfig(Hash160 neoXToken, int fee, int minAmount, int maxAmount, int maxWithdrawals,
-                int executionType, int addDecimals) {
+                int executionType) {
             this.neoXToken = neoXToken;
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
             this.maxWithdrawals = maxWithdrawals;
             this.executionType = executionType;
-            this.addDecimals = addDecimals;
         }
 
         public static boolean isValid(TokenConfig config) {
