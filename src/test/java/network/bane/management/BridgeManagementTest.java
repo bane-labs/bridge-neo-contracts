@@ -618,7 +618,7 @@ public class BridgeManagementTest {
         byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
 
         NeoSendRawTransaction response =
-                management.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes))
+                management.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes), any(null))
                         .signers(AccountSigner.calledByEntry(owner))
                         .sign()
                         .send();
@@ -632,7 +632,7 @@ public class BridgeManagementTest {
     @Order(0)
     public void testContractUpdate_notOwner() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("update", byteArrayFromString(""), string(""))
+                () -> management.invokeFunction("update", byteArrayFromString(""), string(""), any(null))
                         .signers(calledByEntry(relayer))
                         .sign()
         );

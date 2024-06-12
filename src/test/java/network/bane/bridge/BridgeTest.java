@@ -55,6 +55,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
+import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
@@ -125,7 +126,7 @@ public class BridgeTest {
     private static final BigInteger maxGasDeposit = new BigInteger("1000000000000");
     private static final BigInteger maxWithdrawals = new BigInteger("100");
 
-    private static final Hash160 managementContractHash = new Hash160("8863a5617efaa07f13f92308165b197633cd53b6");
+    private static final Hash160 managementContractHash = new Hash160("0xca8712e460271350dfd32603db945eb50440a6c3");
 
     private static Bridge bridge;
     private static Management management;
@@ -904,9 +905,9 @@ public class BridgeTest {
             manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
         }
         byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
-        bridge.pause();
+        bridge.pauseBridge();
         NeoSendRawTransaction response =
-                bridge.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes))
+                bridge.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes), any(null))
                         .signers(AccountSigner.calledByEntry(owner))
                         .sign()
                         .send();
@@ -919,9 +920,9 @@ public class BridgeTest {
     @Test
     @Order(0)
     public void testUpdateContract_notOwner() throws Throwable {
-        bridge.pause();
+        bridge.pauseBridge();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.invokeFunction("update", byteArray(""), string(""))
+                () -> bridge.invokeFunction("update", byteArray(""), string(""), any(null))
                         .signers(AccountSigner.calledByEntry(alice))
                         .sign());
 
@@ -935,7 +936,7 @@ public class BridgeTest {
     public void testUpdate_unpaused() throws IOException {
         assertFalse(bridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.invokeFunction("update", byteArray(""), string(""))
+                () -> bridge.invokeFunction("update", byteArray(""), string(""), any(null))
                         .signers(AccountSigner.calledByEntry(owner))
                         .sign());
         assertThat(thrown.getMessage(),
@@ -947,9 +948,9 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testPause_onlySecurityGuard() {
+    public void testPauseBridge_onlySecurityGuard() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.invokeFunction("pause").signers(calledByEntry(relayer)).sign());
+                () -> bridge.invokeFunction("pauseBridge").signers(calledByEntry(relayer)).sign());
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Only the security guard can call this method"));
     }
@@ -957,10 +958,10 @@ public class BridgeTest {
     @Test
     @Order(0)
     public void testUnpause_onlyGovernor() throws Throwable {
-        bridge.pause();
+        bridge.pauseBridge();
         assertTrue(bridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.invokeFunction("unpause").signers(calledByEntry(relayer)).sign());
+                () -> bridge.invokeFunction("unpauseBridge").signers(calledByEntry(relayer)).sign());
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Only the governor can call this" +
                 " method."));
         bridge.unpause();
@@ -968,8 +969,8 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testPause() throws Throwable {
-        bridge.pause();
+    public void testPauseBridge() throws Throwable {
+        bridge.pauseBridge();
         assertTrue(bridge.isPaused());
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
@@ -985,7 +986,7 @@ public class BridgeTest {
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
 
         thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.pause(securityGuard));
+                () -> bridge.pauseBridge(securityGuard));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
         bridge.unpause();
     }
@@ -1001,8 +1002,8 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testPause_withdrawal() throws Throwable {
-        bridge.pause();
+    public void testPauseBridge_withdrawal() throws Throwable {
+        bridge.pauseBridge();
         HashMap<ContractParameter, ContractParameter> map = new HashMap<>();
         // Map content doesn't matter for this test, just required to have at least one entry.
         map.put(integer(0), integer(0));

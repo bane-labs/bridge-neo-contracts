@@ -88,7 +88,8 @@ public class BridgeManagementContract {
             ECPoint governor = deploymentData.governor;
             if (governor == null || !ECPoint.isValid(governor)) abort("Invalid public key provided for governor.");
             ECPoint securityGuard = deploymentData.securityGuard;
-            if (securityGuard == null || !ECPoint.isValid(securityGuard)) abort("Invalid public key provided for security guard.");
+            if (securityGuard == null || !ECPoint.isValid(securityGuard))
+                abort("Invalid public key provided for security guard.");
 
             baseMap.put(key_owner, owner);
             baseMap.put(key_relayer, relayer);
@@ -237,9 +238,9 @@ public class BridgeManagementContract {
     // endregion
     // region update
 
-    public static void update(ByteString nef, String manifest) {
+    public static void update(ByteString nef, String manifest, Object data) {
         onlyOwner();
-        new ContractManagement().update(nef, manifest);
+        new ContractManagement().update(nef, manifest, data);
     }
 
     // endregion

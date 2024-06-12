@@ -1,6 +1,5 @@
 package network.bane.util;
 
-import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
 import io.neow3j.protocol.Neow3j;
@@ -26,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
+import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
@@ -50,7 +50,6 @@ public class Bridge extends SmartContractHelper {
     }
 
     public Hash256 update(Account sender, NefFile newNefFile, ContractManifest newManifest, ContractParameter data) throws Throwable {
-        Signer signer = AccountSigner.calledByEntry(sender);
         if (newNefFile == null) {
             throw new IllegalArgumentException("The NEF file cannot be null.");
         } else if (newManifest == null) {
@@ -62,7 +61,7 @@ public class Bridge extends SmartContractHelper {
                         "was %d bytes big, but a max of %d bytes is allowed.", manifestBytes.length, 65535));
             } else {
                 TransactionBuilder b = data == null ?
-                        invokeFunction("update", byteArray(newNefFile.toArray()), byteArray(manifestBytes)) :
+                        invokeFunction("update", byteArray(newNefFile.toArray()), byteArray(manifestBytes), any(null)) :
                         invokeFunction("update", byteArray(newNefFile.toArray()), byteArray(manifestBytes), data);
                 return sendAndAwaitExecution(b.signers(calledByEntry(sender)));
             }
@@ -72,13 +71,13 @@ public class Bridge extends SmartContractHelper {
     // endregion
     // region pause/unpause
 
-    public Hash256 pause() throws Throwable {
-        return pause(securityGuard);
+    public Hash256 pauseBridge() throws Throwable {
+        return pauseBridge(securityGuard);
     }
 
-    public Hash256 pause(Account sender) throws Throwable {
+    public Hash256 pauseBridge(Account sender) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("pause").signers(signer));
+        return sendAndAwaitExecution(invokeFunction("pauseBridge").signers(signer));
     }
 
     public Hash256 unpause() throws Throwable {
@@ -87,7 +86,7 @@ public class Bridge extends SmartContractHelper {
 
     public Hash256 unpause(Account sender) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("unpause").signers(signer));
+        return sendAndAwaitExecution(invokeFunction("unpauseBridge").signers(signer));
     }
 
     public boolean isPaused() throws IOException {
