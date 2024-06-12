@@ -51,15 +51,16 @@ public class GasBridgeImpl {
     static void depositGas(Hash160 from, Hash160 to, int amount) {
         if (to == null || !Hash160.isValid(to) || to.isZero()) abort("Invalid recipient.");
         if (from == null || !Hash160.isValid(from) || from.isZero()) abort("Invalid sender.");
-        int depositFee = BridgeContract.getGasBridge().config.depositFee;
         Hash160 executingScriptHash = getExecutingScriptHash();
         if (executingScriptHash.equals(from)) abort("Invalid sender.");
 
-        int transferAmount = amount + depositFee;
-        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, transferAmount, null)) {
+        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, amount, null)) {
             abort("Gas transfer failed.");
         }
-        updateGasDepositState(from, to, amount);
+
+        // The depositAmount is the amount minus the deposit fee. It is the amount that will be distributed on Neo X.
+        int depositAmount = amount - BridgeContract.getGasBridge().config.depositFee;
+        updateGasDepositState(from, to, depositAmount);
     }
 
     static void updateGasDepositState(Hash160 from, Hash160 to, int amount) {

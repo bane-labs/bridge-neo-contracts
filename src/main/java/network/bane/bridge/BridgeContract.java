@@ -365,7 +365,8 @@ public class BridgeContract {
      *
      * @param from   the sender.
      * @param to     the recipient on Neo X.
-     * @param amount the amount of GAS to deposit to Neo X.
+     * @param amount the amount of GAS to deposit to Neo X. The provided amount includes the deposit fee. The value
+     *               that will be distributed on Neo X is this amount minus the deposit fee.
      */
     public static void depositGas(Hash160 from, Hash160 to, int amount) {
         onlyUnpaused();
@@ -432,6 +433,7 @@ public class BridgeContract {
         onlyGovernor();
         if (newFee < 0) abort("New deposit fee must be nonnegative.");
         GasBridge gasBridge = getGasBridge();
+        if (newFee >= gasBridge.config.minAmount) abort("Deposit fee must be less than the minimum deposit amount.");
         gasBridge.config.depositFee = newFee;
         baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
         onGasDepositFeeChange.fire(newFee);
@@ -444,8 +446,8 @@ public class BridgeContract {
 
     public static void setMinGasDeposit(int newMinAmount) {
         onlyGovernor();
-        if (newMinAmount < 0) abort("Minimum deposit must be nonnegative.");
         GasBridge gasBridge = getGasBridge();
+        if (newMinAmount <= gasBridge.config.depositFee) abort("Minimum deposit must be greater than the deposit fee.");
         if (newMinAmount > gasBridge.config.maxAmount) abort("Minimum must be less than the maximum amount.");
         gasBridge.config.minAmount = newMinAmount;
         baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
