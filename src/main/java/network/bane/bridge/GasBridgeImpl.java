@@ -48,18 +48,22 @@ public class GasBridgeImpl {
     // endregion
     // region deposit
 
-    static void depositGas(Hash160 from, Hash160 to, int amount) {
+    static void depositGas(Hash160 from, Hash160 to, int amount, int maxFee) {
         if (to == null || !Hash160.isValid(to) || to.isZero()) abort("Invalid recipient.");
         if (from == null || !Hash160.isValid(from) || from.isZero()) abort("Invalid sender.");
         Hash160 executingScriptHash = getExecutingScriptHash();
         if (executingScriptHash.equals(from)) abort("Invalid sender.");
+
+        // If the max fee is higher than the configured deposit fee, abort.
+        int depositFee = BridgeContract.getGasBridge().config.depositFee;
+        if (depositFee > maxFee) abort("Max fee exceeded.");
 
         if (!BridgeContract.gasToken.transfer(from, executingScriptHash, amount, null)) {
             abort("Gas transfer failed.");
         }
 
         // The depositAmount is the amount minus the deposit fee. It is the amount that will be distributed on Neo X.
-        int depositAmount = amount - BridgeContract.getGasBridge().config.depositFee;
+        int depositAmount = amount - depositFee;
         updateGasDepositState(from, to, depositAmount);
     }
 
