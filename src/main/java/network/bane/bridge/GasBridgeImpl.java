@@ -54,8 +54,12 @@ public class GasBridgeImpl {
         Hash160 executingScriptHash = getExecutingScriptHash();
         if (executingScriptHash.equals(from)) abort("Invalid sender.");
 
+        GasBridge gasBridge = BridgeContract.getGasBridge();
+        if (amount < gasBridge.config.minAmount) abort("Deposit amount is too low.");
+        if (amount > gasBridge.config.maxAmount) abort("Deposit amount is too high.");
+
         // If the max fee is higher than the configured deposit fee, abort.
-        int depositFee = BridgeContract.getGasBridge().config.depositFee;
+        int depositFee = gasBridge.config.depositFee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
 
         if (!BridgeContract.gasToken.transfer(from, executingScriptHash, amount, null)) {
@@ -64,13 +68,10 @@ public class GasBridgeImpl {
 
         // The depositAmount is the amount minus the deposit fee. It is the amount that will be distributed on Neo X.
         int depositAmount = amount - depositFee;
-        updateGasDepositState(from, to, depositAmount);
+        updateGasDepositState(gasBridge, from, to, depositAmount);
     }
 
-    static void updateGasDepositState(Hash160 from, Hash160 to, int amount) {
-        GasBridge gasBridge = BridgeContract.getGasBridge();
-        if (amount < gasBridge.config.minAmount) abort("Deposit amount is too low.");
-        if (amount > gasBridge.config.maxAmount) abort("Deposit amount is too high.");
+    static void updateGasDepositState(GasBridge gasBridge, Hash160 from, Hash160 to, int amount) {
         gasBridge.depositState.nonce++;
         ByteString depositHash = hashGasBridgeOp(BridgeContract.cryptoLib, gasBridge.depositState.nonce, to, amount);
         gasBridge.depositState.root =

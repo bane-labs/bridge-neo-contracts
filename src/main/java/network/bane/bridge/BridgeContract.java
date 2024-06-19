@@ -303,10 +303,11 @@ public class BridgeContract {
                 GasBridgePaymentData paymentData = (GasBridgePaymentData) data;
                 if (!GasBridgePaymentData.isValid(paymentData)) abort("Invalid payment data.");
                 GasBridge gasBridge = getGasBridge();
-                int bridgeAmount = amount - gasBridge.config.depositFee;
-                BridgeImpl.addToUnclaimedRewards(gasBridge.config.depositFee);
+                int depositFee = gasBridge.config.depositFee;
+                int bridgeAmount = amount - depositFee;
+                BridgeImpl.addToUnclaimedRewards(depositFee);
                 if (bridgeAmount < paymentData.minBridgeAmount) abort("Amount below defined minimum.");
-                GasBridgeImpl.updateGasDepositState(from, paymentData.to, bridgeAmount);
+                GasBridgeImpl.updateGasDepositState(gasBridge, from, paymentData.to, bridgeAmount);
             }
             return;
         } else if (new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(callingScriptHash) != null) {
