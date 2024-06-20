@@ -303,10 +303,11 @@ public class BridgeContract {
                 GasBridgePaymentData paymentData = (GasBridgePaymentData) data;
                 if (!GasBridgePaymentData.isValid(paymentData)) abort("Invalid payment data.");
                 GasBridge gasBridge = getGasBridge();
-                int bridgeAmount = amount - gasBridge.config.depositFee;
-                BridgeImpl.addToUnclaimedRewards(gasBridge.config.depositFee);
+                int depositFee = gasBridge.config.depositFee;
+                int bridgeAmount = amount - depositFee;
+                BridgeImpl.addToUnclaimedRewards(depositFee);
                 if (bridgeAmount < paymentData.minBridgeAmount) abort("Amount below defined minimum.");
-                GasBridgeImpl.updateGasDepositState(from, paymentData.to, bridgeAmount);
+                GasBridgeImpl.updateGasDepositState(gasBridge, from, paymentData.to, bridgeAmount);
             }
             return;
         } else if (new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(callingScriptHash) != null) {
@@ -367,11 +368,13 @@ public class BridgeContract {
      * @param to     the recipient on Neo X.
      * @param amount the amount of GAS to deposit to Neo X. The provided amount includes the deposit fee. The value
      *               that will be distributed on Neo X is this amount minus the deposit fee.
+     * @param maxFee the maximum fee that the depositor is willing to pay for the deposit. If the actual fee is higher
+     *               than this value, the deposit is aborted.
      */
-    public static void depositGas(Hash160 from, Hash160 to, int amount) {
+    public static void depositGas(Hash160 from, Hash160 to, int amount, int maxFee) {
         onlyUnpaused();
         onlyGasBridgeUnpaused();
-        GasBridgeImpl.depositGas(from, to, amount);
+        GasBridgeImpl.depositGas(from, to, amount, maxFee);
     }
 
     /**
@@ -549,12 +552,38 @@ public class BridgeContract {
     // endregion
     // region token deposit/withdrawal/claim
 
-    public static void depositToken(Hash160 token, Hash160 from, Hash160 to, int amount) {
+    /**
+     * Deposit a token to Neo X.
+     *
+     * @param token  the token to deposit.
+     * @param from   the sender.
+     * @param to     the recipient on Neo X.
+     * @param amount the amount of the token to deposit to Neo X.
+     * @param maxFee the maximum fee (GAS) that the depositor is willing to pay for the deposit. If the actual fee is
+     *               higher than this value, the deposit is aborted.
+     */
+    public static void depositToken(Hash160 token, Hash160 from, Hash160 to, int amount, int maxFee) {
         onlyUnpaused();
         onlyTokenBridgeUnpaused(token);
-        TokenBridgeImpl.depositToken(token, from, to, amount);
+        TokenBridgeImpl.depositToken(token, from, to, amount, maxFee);
     }
 
+    /**
+     * Withdraws tokens from the contract (i.e., from Neo X) to the provided recipients.
+     * <p>
+     * Requires the signatures of the validators. The signatures must sign the provided withdrawal root, while the
+     * provided withdrawal root must be the computed root based on the current root in storage and the provided
+     * withdrawals, all corresponding to the bridge of the specified token.
+     * <p>
+     * Withdrawals to contracts are made available for claiming and are not directly transferred due to uncertain
+     * computation costs. Additionaly, if a transfer fails, the withdrawal is also made available for claiming. This
+     * should never happen as long as the deposited token funds are held in this contract.
+     *
+     * @param token          the token to withdraw.
+     * @param withdrawalRoot the new withdrawal root.
+     * @param signatures     the signatures of the validators.
+     * @param withdrawals    the withdrawals to execute.
+     */
     public static void withdrawToken(Hash160 token, ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
         onlyRelayer();
@@ -563,6 +592,17 @@ public class BridgeContract {
         TokenBridgeImpl.withdrawToken(token, withdrawalRoot, signatures, withdrawals);
     }
 
+    /**
+     * Claim tokens that have been withdrawn from Neo X.
+     * <p>
+     * Only withdrawals that have a contract as recipient or for which the transfer has failed (should never happen
+     * as long as the deposited token funds are held in this contract) are available to claim.
+     * <p>
+     * In order to claim a withdrawal, provide the nonce of the withdrawal and the amount will be transferred to the
+     * already specified recipient.
+     *
+     * @param nonce the nonce of the withdrawal that is claimable.
+     */
     public static void claimToken(Hash160 token, int nonce) {
         onlyUnpaused();
         onlyTokenBridgeUnpaused(token);

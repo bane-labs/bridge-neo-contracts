@@ -81,7 +81,7 @@ public class TokenBridgeImpl {
     // endregion
     // region deposit
 
-    static void depositToken(Hash160 neoN3Token, Hash160 from, Hash160 to, int amount) {
+    static void depositToken(Hash160 neoN3Token, Hash160 from, Hash160 to, int amount, int maxFee) {
         if (to == null || !Hash160.isValid(to) || to.isZero()) abort("Invalid to parameter.");
         if (from == null || !Hash160.isValid(from) || from.isZero()) abort("Invalid from parameter.");
         Hash160 executingScriptHash = getExecutingScriptHash();
@@ -91,8 +91,12 @@ public class TokenBridgeImpl {
         if (amount < tokenBridge.config.minAmount) abort("Amount below minimum.");
         if (amount > tokenBridge.config.maxAmount) abort("Amount above maximum.");
 
+        // If the actual deposit fee is higher than the specified max fee, abort.
+        int depositFee = tokenBridge.config.fee;
+        if (depositFee > maxFee) abort("Max fee exceeded.");
+
         // Pay the fee and transfer the token
-        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, tokenBridge.config.fee, null)) {
+        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, depositFee, null)) {
             abort("Fee transfer failed.");
         }
         if (!new FungibleToken(neoN3Token).transfer(from, executingScriptHash, amount, null)) {

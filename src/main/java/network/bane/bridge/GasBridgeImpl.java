@@ -48,25 +48,30 @@ public class GasBridgeImpl {
     // endregion
     // region deposit
 
-    static void depositGas(Hash160 from, Hash160 to, int amount) {
+    static void depositGas(Hash160 from, Hash160 to, int amount, int maxFee) {
         if (to == null || !Hash160.isValid(to) || to.isZero()) abort("Invalid recipient.");
         if (from == null || !Hash160.isValid(from) || from.isZero()) abort("Invalid sender.");
         Hash160 executingScriptHash = getExecutingScriptHash();
         if (executingScriptHash.equals(from)) abort("Invalid sender.");
+
+        GasBridge gasBridge = BridgeContract.getGasBridge();
+        if (amount < gasBridge.config.minAmount) abort("Deposit amount is too low.");
+        if (amount > gasBridge.config.maxAmount) abort("Deposit amount is too high.");
+
+        // If the deposit fee is higher than the specified max fee, abort.
+        int depositFee = gasBridge.config.depositFee;
+        if (depositFee > maxFee) abort("Max fee exceeded.");
 
         if (!BridgeContract.gasToken.transfer(from, executingScriptHash, amount, null)) {
             abort("Gas transfer failed.");
         }
 
         // The depositAmount is the amount minus the deposit fee. It is the amount that will be distributed on Neo X.
-        int depositAmount = amount - BridgeContract.getGasBridge().config.depositFee;
-        updateGasDepositState(from, to, depositAmount);
+        int depositAmount = amount - depositFee;
+        updateGasDepositState(gasBridge, from, to, depositAmount);
     }
 
-    static void updateGasDepositState(Hash160 from, Hash160 to, int amount) {
-        GasBridge gasBridge = BridgeContract.getGasBridge();
-        if (amount < gasBridge.config.minAmount) abort("Deposit amount is too low.");
-        if (amount > gasBridge.config.maxAmount) abort("Deposit amount is too high.");
+    static void updateGasDepositState(GasBridge gasBridge, Hash160 from, Hash160 to, int amount) {
         gasBridge.depositState.nonce++;
         ByteString depositHash = hashGasBridgeOp(BridgeContract.cryptoLib, gasBridge.depositState.nonce, to, amount);
         gasBridge.depositState.root =
