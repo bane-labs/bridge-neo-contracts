@@ -58,7 +58,7 @@ public class GasBridgeImpl {
         if (amount < gasBridge.config.minAmount) abort("Deposit amount is too low.");
         if (amount > gasBridge.config.maxAmount) abort("Deposit amount is too high.");
 
-        // If the max fee is higher than the configured deposit fee, abort.
+        // If the deposit fee is higher than the specified max fee, abort.
         int depositFee = gasBridge.config.depositFee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
 

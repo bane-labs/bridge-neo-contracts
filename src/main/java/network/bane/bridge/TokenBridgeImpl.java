@@ -91,7 +91,7 @@ public class TokenBridgeImpl {
         if (amount < tokenBridge.config.minAmount) abort("Amount below minimum.");
         if (amount > tokenBridge.config.maxAmount) abort("Amount above maximum.");
 
-        // If the max fee is higher than the configured deposit fee, abort.
+        // If the actual deposit fee is higher than the specified max fee, abort.
         int depositFee = tokenBridge.config.fee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
 
