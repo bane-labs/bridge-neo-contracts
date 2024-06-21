@@ -1,21 +1,25 @@
-package network.bane;
+package network.bane.management;
 
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
+import io.neow3j.devpack.Runtime;
 import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
+import io.neow3j.devpack.annotations.EventParameterNames;
 import io.neow3j.devpack.annotations.ManifestExtra;
 import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.constants.FindOptions;
+import io.neow3j.devpack.constants.NamedCurve;
 import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.ContractManagement;
+import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
 import network.bane.structs.ManagementDeploymentData;
@@ -43,23 +47,26 @@ public class BridgeManagementContract {
 
     private static final int key_validator_threshold = 0x10;
 
-    private static final int const_max_validators = 21;
-
     // region events
 
-    @DisplayName("SetOwner")
+    @DisplayName("OwnerChange")
+    @EventParameterNames({"NewOwner"})
     public static Event1Arg<ECPoint> onOwnerSet;
 
-    @DisplayName("SetRelayer")
+    @DisplayName("RelayerChange")
+    @EventParameterNames({"NewRelayer"})
     public static Event1Arg<ECPoint> onRelayerSet;
 
-    @DisplayName("SetValidators")
+    @DisplayName("ValidatorsChange")
+    @EventParameterNames({"NewValidators", "NewThreshold"})
     public static Event2Args<List<ECPoint>, Integer> onValidatorsSet;
 
-    @DisplayName("SetGovernor")
+    @DisplayName("GovernorChange")
+    @EventParameterNames({"NewGovernor"})
     public static Event1Arg<ECPoint> onGovernorSet;
 
-    @DisplayName("SetSecurityGuard")
+    @DisplayName("SecurityGuardChange")
+    @EventParameterNames({"NewSecurityGuard"})
     public static Event1Arg<ECPoint> onSecurityGuardSet;
 
     // endregion
@@ -70,54 +77,67 @@ public class BridgeManagementContract {
         if (!isUpdate) {
             ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
 
-            if (!ECPoint.isValid(deploymentData.owner)) abort("Invalid public key provided for owner.");
-            if (!ECPoint.isValid(deploymentData.relayer)) abort("Invalid public key provided for relayer.");
+            ECPoint owner = deploymentData.owner;
+            if (owner == null || !ECPoint.isValid(owner)) abort("Invalid public key provided for owner.");
+            ECPoint relayer = deploymentData.relayer;
+            if (relayer == null || !ECPoint.isValid(relayer)) abort("Invalid public key provided for relayer.");
             List<ECPoint> validators = deploymentData.validators;
             int validatorSize = validators.size();
-            if (validatorSize > const_max_validators) abort("Too many validators provided.");
-            if (validatorSize < deploymentData.validatorThreshold) abort("Not enough validators.");
+            int validatorThreshold = deploymentData.validatorThreshold;
+            if (validatorSize < validatorThreshold) abort("Not enough validators.");
+            ECPoint governor = deploymentData.governor;
+            if (governor == null || !ECPoint.isValid(governor)) abort("Invalid public key provided for governor.");
+            ECPoint securityGuard = deploymentData.securityGuard;
+            if (securityGuard == null || !ECPoint.isValid(securityGuard))
+                abort("Invalid public key provided for security guard.");
 
-            baseMap.put(key_owner, deploymentData.owner);
-            baseMap.put(key_relayer, deploymentData.relayer);
+            baseMap.put(key_owner, owner);
+            baseMap.put(key_relayer, relayer);
             for (int i = 0; i < validatorSize; i++) {
                 ECPoint validator = validators.get(i);
                 if (!ECPoint.isValid(validator)) abort("Invalid public key provided for validator.");
                 validatorMap.put(validator, true);
             }
-            baseMap.put(key_validator_threshold, deploymentData.validatorThreshold);
-            baseMap.put(key_governor, deploymentData.governor);
-            baseMap.put(key_securityguard, deploymentData.securityGuard);
+            baseMap.put(key_validator_threshold, validatorThreshold);
+            baseMap.put(key_governor, governor);
+            baseMap.put(key_securityguard, securityGuard);
+
+            if (!checkWitness(owner())) abort("Owner must witness the deployment.");
         }
     }
 
     // endregion
     // region setters
 
-    public static void setOwner(ECPoint owner) {
+    public static void setOwner(ECPoint newOwner) {
         onlyOwner();
-        baseMap.put(key_owner, owner);
-        onOwnerSet.fire(owner);
+        if (newOwner == null || !ECPoint.isValid(newOwner)) abort("Invalid public key provided.");
+        if (!Runtime.checkWitness(newOwner)) abort("New owner must be witness to the transaction.");
+        baseMap.put(key_owner, newOwner);
+        onOwnerSet.fire(newOwner);
     }
 
-    public static void setRelayer(ECPoint relayer) {
+    public static void setRelayer(ECPoint newRelayer) {
         onlyOwner();
-        baseMap.put(key_relayer, relayer);
-        onRelayerSet.fire(relayer);
+        if (newRelayer == null || !ECPoint.isValid(newRelayer)) abort("Invalid public key provided.");
+        baseMap.put(key_relayer, newRelayer);
+        onRelayerSet.fire(newRelayer);
     }
 
     public static void setValidators(List<ECPoint> validators, int threshold) {
         onlyOwner();
         if (hasDuplicates(validators)) abort("Duplicate validators provided.");
-        if (validators.size() < threshold) abort("Not enough validators.");
+        int validatorsSize = validators.size();
         if (threshold <= 0) abort("Threshold must be greater than 0.");
+        if (validatorsSize < threshold) abort("Not enough validators.");
         Iterator<ByteString> it = validatorMap.find(FindOptions.RemovePrefix | FindOptions.KeysOnly);
         while (it.next()) {
             ByteString key = it.get();
             validatorMap.delete(key);
         }
-        for (int i = 0; i < validators.size(); i++) {
+        for (int i = 0; i < validatorsSize; i++) {
             ECPoint validator = validators.get(i);
-            if (!ECPoint.isValid(validator)) abort("Invalid validator public key provided.");
+            if (validator == null || !ECPoint.isValid(validator)) abort("Invalid validator public key provided.");
             validatorMap.put(validator, true);
         }
         baseMap.put(key_validator_threshold, threshold);
@@ -126,22 +146,25 @@ public class BridgeManagementContract {
 
     private static boolean hasDuplicates(List<ECPoint> validators) {
         Map<ECPoint, Boolean> map = new Map<>();
-        for (int i = 0; i < validators.size(); i++) {
+        int validatorsSize = validators.size();
+        for (int i = 0; i < validatorsSize; i++) {
             map.put(validators.get(i), true);
         }
-        return map.keys().length != validators.size();
+        return map.keys().length != validatorsSize;
     }
 
-    public static void setGovernor(ECPoint governor) {
+    public static void setGovernor(ECPoint newGovernor) {
         onlyOwner();
-        baseMap.put(key_governor, governor);
-        onGovernorSet.fire(governor);
+        if (newGovernor == null || !ECPoint.isValid(newGovernor)) abort("Invalid public key provided.");
+        baseMap.put(key_governor, newGovernor);
+        onGovernorSet.fire(newGovernor);
     }
 
-    public static void setSecurityGuard(ECPoint securityGuard) {
+    public static void setSecurityGuard(ECPoint newSecurityGuard) {
         onlyOwner();
-        baseMap.put(key_securityguard, securityGuard);
-        onSecurityGuardSet.fire(securityGuard);
+        if (newSecurityGuard == null || !ECPoint.isValid(newSecurityGuard)) abort("Invalid public key provided.");
+        baseMap.put(key_securityguard, newSecurityGuard);
+        onSecurityGuardSet.fire(newSecurityGuard);
     }
 
     // endregion
@@ -173,6 +196,29 @@ public class BridgeManagementContract {
     }
 
     @Safe
+    public static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, ByteString root) {
+        int threshold = validatorThreshold();
+        if (signatures.keys().length < threshold) abort("Not enough signatures provided.");
+        CryptoLib cryptoLib = new CryptoLib();
+        List<ECPoint> validators = validators();
+
+        ByteString msg = cryptoLib.sha256(root);
+        int covered = 0;
+        int validatorsSize = validators.size();
+        for (int i = 0; i < validatorsSize; i++) {
+            ECPoint validator = validators.get(i);
+            if (signatures.containsKey(validator)) {
+                boolean verified =
+                        cryptoLib.verifyWithECDsa(msg, validator, signatures.get(validator), NamedCurve.Secp256r1);
+                if (verified) {
+                    covered++;
+                }
+            }
+        }
+        return covered >= threshold;
+    }
+
+    @Safe
     public static ECPoint governor() {
         return baseMap.getECPoint(key_governor);
     }
@@ -192,9 +238,9 @@ public class BridgeManagementContract {
     // endregion
     // region update
 
-    public static void update(ByteString nef, String manifest) {
+    public static void update(ByteString nef, String manifest, Object data) {
         onlyOwner();
-        new ContractManagement().update(nef, manifest);
+        new ContractManagement().update(nef, manifest, data);
     }
 
     // endregion

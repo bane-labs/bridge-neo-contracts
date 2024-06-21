@@ -5,7 +5,6 @@ import io.neow3j.crypto.ECKeyPair.ECPublicKey;
 import io.neow3j.crypto.Hash;
 import io.neow3j.crypto.Sign;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.response.ContractStorageEntry;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.StackItem;
@@ -20,11 +19,9 @@ import io.neow3j.wallet.Account;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static io.neow3j.devpack.Helper.concat;
@@ -40,10 +37,10 @@ import static io.neow3j.utils.Numeric.prependHexPrefix;
 import static io.neow3j.utils.Numeric.toHexString;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 
 public class TestHelper {
+
+    private static final byte UINT256_SIZE = 32;
 
     // Account names available in the neo-express config file.
     public static final String ALICE = "NM7Aky765FG8NhhwtxjXRx7jEL1cnw7PBP";
@@ -165,7 +162,7 @@ public class TestHelper {
 
     public static Hash256 setDepositFee(Bridge bridge, Neow3j neow3j, BigInteger fee) throws Throwable {
         Transaction transaction =
-                bridge.invokeFunction("setDepositFee", integer(fee))
+                bridge.invokeFunction("setGasDepositFee", integer(fee))
                         .signers(calledByEntry(governor))
                         .sign();
         Hash256 txHash = transaction.getTxId();
@@ -176,7 +173,7 @@ public class TestHelper {
 
     public static Hash256 setMinDeposit(Bridge bridge, Neow3j neow3j, BigInteger minDeposit) throws Throwable {
         Transaction transaction =
-                bridge.invokeFunction("setMinDeposit", integer(minDeposit))
+                bridge.invokeFunction("setMinGasDeposit", integer(minDeposit))
                         .signers(calledByEntry(governor))
                         .sign();
         Hash256 txHash = transaction.getTxId();
@@ -185,9 +182,9 @@ public class TestHelper {
         return txHash;
     }
 
-    public static Hash256 setMaxDeposit(Bridge bridge, Neow3j neow3j, BigInteger maxDeposit) throws Throwable {
+    public static Hash256 setMaxGasDeposit(Bridge bridge, Neow3j neow3j, BigInteger maxDeposit) throws Throwable {
         Transaction transaction =
-                bridge.invokeFunction("setMaxDeposit", integer(maxDeposit))
+                bridge.invokeFunction("setMaxGasDeposit", integer(maxDeposit))
                         .signers(calledByEntry(governor))
                         .sign();
         Hash256 txHash = transaction.getTxId();
@@ -203,9 +200,9 @@ public class TestHelper {
     public static boolean hasFiredEvent(Neow3j neow3j, Hash256 txHash, Hash160 contract, String eventName,
             StackItem state) throws IOException {
         return getEvents(txHash, neow3j).stream()
-                        .filter(e -> e.getEventName().equals(eventName))
-                        .filter(e -> e.getContract().equals(contract))
-                        .anyMatch(e -> e.getState().equals(state));
+                .filter(e -> e.getEventName().equals(eventName))
+                .filter(e -> e.getContract().equals(contract))
+                .anyMatch(e -> e.getState().equals(state));
     }
 
     // region concat and sha256 functions
@@ -228,7 +225,7 @@ public class TestHelper {
 
     public static Map<ContractParameter, ContractParameter> signMsg(List<Account> validators, String root) {
         String msg = sha256Hex(hexStringToByteArray(root));
-        Map<ContractParameter, ContractParameter> signatures  = new HashMap<>();
+        Map<ContractParameter, ContractParameter> signatures = new HashMap<>();
         for (int i = 0; i < validators.size(); i++) {
             ECKeyPair validator = validators.get(i).getECKeyPair();
             signatures.put(publicKey(validator.getPublicKey()), signature(Sign.signHexMessage(msg, validator)));
@@ -241,11 +238,11 @@ public class TestHelper {
     }
 
     public static byte[] concatDepositData(BigInteger nonce, Hash160 recipient, BigInteger amount) {
-        byte[] noncePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(nonce, 8);
-        byte[] amountPadded = BigIntegers.toLittleEndianByteArrayZeroPadded(amount, 8);
+        byte[] noncePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
         byte[] recipientArray = ArrayUtils.reverseArray(recipient.toArray());
-        byte[] concatenated =  concatenate(concatenate(recipientArray, amountPadded), noncePadded);
-        concatenated =  ArrayUtils.reverseArray(concatenated);
+        byte[] amountPadded = BigIntegers.toLittleEndianByteArrayZeroPadded(amount, UINT256_SIZE);
+        byte[] concatenated = concatenate(concatenate(amountPadded, recipientArray), noncePadded);
+        concatenated = ArrayUtils.reverseArray(concatenated);
         return concatenated;
     }
 
@@ -283,115 +280,103 @@ public class TestHelper {
         return neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getNotifications();
     }
 
-    public static DepositEvent getDepositEvent(Hash256 txHash, Neow3j neow3j) throws IOException {
+    public static List<DepositEvent> getDepositEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge) throws IOException {
         // GasToken Transfer is first notification, OnDeposit is second notification.
-        Notification depositEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
-                .getFirstExecution().getNotification(1);
-        assertThat(depositEvent.getEventName(), is("Deposit"));
-        return depositEventFromNotification(depositEvent);
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution().getNotifications().stream()
+                .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("GasDeposit"))
+                .map(TestHelper::depositEventFromNotification)
+                .collect(Collectors.toList());
     }
 
-    public static TransferEvent getTransferEvent(Hash256 txHash, Neow3j neow3j, int index) throws IOException {
+    public static List<WithdrawEvent> getWithdrawEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge) throws IOException {
         // GasToken Transfer is first notification, onWithdrawal is second notification.
-        Notification transferEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
-                .getFirstExecution().getNotification(index);
-        assertThat(transferEvent.getEventName(), is("Transfer"));
-        return transferEventFromNotification(transferEvent);
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution().getNotifications().stream()
+                .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("GasWithdrawal"))
+                .map(TestHelper::getWithdrawEventFromNotification)
+                .collect(Collectors.toList());
     }
 
-    public static WithdrawEvent getWithdrawEvent(Hash256 txHash, Neow3j neow3j) throws IOException {
-        // GasToken Transfer is first notification, onWithdrawal is second notification.
-        Notification withdrawalEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
-                .getFirstExecution().getNotification(1);
-        assertThat(withdrawalEvent.getEventName(), is("Withdrawal"));
-        return withdrawEventFromNotification(withdrawalEvent);
-    }
-
-    public static ClaimableEvent getClaimableEvent(Hash256 txHash, Neow3j neow3j) throws IOException {
+    public static List<ClaimableEvent> getClaimableEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge) throws IOException {
         // GasToken Transfer is first notification, onClaimable is second notification.
-        Notification withdrawalEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
-                .getFirstExecution().getNotification(0);
-        assertThat(withdrawalEvent.getEventName(), is("Claimable"));
-        return claimableEventFromNotification(withdrawalEvent);
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution().getNotifications().stream()
+                .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("GasClaimable"))
+                .map(TestHelper::claimableEventFromNotification)
+                .collect(Collectors.toList());
     }
 
-    public static ClaimEvent getClaimEvent(Hash256 txHash, Neow3j neow3j) throws IOException {
+    public static List<ClaimEvent> getClaimEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge) throws IOException {
         // GasToken Transfer is first notification, onClaimable is second notification.
-        Notification claimEvent = neow3j.getApplicationLog(txHash).send().getApplicationLog()
-                .getFirstExecution().getNotification(1);
-        assertThat(claimEvent.getEventName(), is("Claimed"));
-        return claimEventFromNotification(claimEvent);
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution().getNotifications().stream()
+                .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("GasClaim"))
+                .map(TestHelper::claimEventFromNotification)
+                .collect(Collectors.toList());
     }
 
-    private static DepositEvent depositEventFromNotification(Notification depositEvent) {
+    public static DepositEvent depositEventFromNotification(Notification depositEvent) {
         List<StackItem> state = depositEvent.getState().getList();
         BigInteger nonce = state.get(0).getInteger();
-        BigInteger amount = state.get(1).getInteger();
-        Hash160 to = Hash160.fromAddress(state.get(2).getAddress());
+        Hash160 to = Hash160.fromAddress(state.get(1).getAddress());
+        BigInteger amount = state.get(2).getInteger();
         Hash160 from = Hash160.fromAddress(state.get(3).getAddress());
         if (state.size() > 4) {
             String depositHash = prependHexPrefix(state.get(4).getHexString());
             String rootHash = prependHexPrefix(state.get(5).getHexString());
-            return new DepositEvent(nonce, amount, to, from, depositHash, rootHash);
+            return new DepositEvent(nonce, to, amount, from, depositHash, rootHash);
         }
-        return new DepositEvent(nonce, amount, to, from);
+        return new DepositEvent(nonce, to, amount, from);
     }
 
-    private static TransferEvent transferEventFromNotification(Notification depositEvent) {
-        List<StackItem> state = depositEvent.getState().getList();
-        Hash160 from = Hash160.fromAddress(state.get(0).getAddress());
-        Hash160 to = Hash160.fromAddress(state.get(1).getAddress());
-        BigInteger amount = state.get(2).getInteger();
-        return new TransferEvent(from, to, amount);
-    }
-
-    private static WithdrawEvent withdrawEventFromNotification(Notification depositEvent) {
+    private static WithdrawEvent getWithdrawEventFromNotification(Notification depositEvent) {
         List<StackItem> state = depositEvent.getState().getList();
         BigInteger nonce = state.get(0).getInteger();
-        BigInteger amount = state.get(1).getInteger();
-        Hash160 to = Hash160.fromAddress(state.get(2).getAddress());
-        return new WithdrawEvent(nonce, amount, to);
+        Hash160 to = Hash160.fromAddress(state.get(1).getAddress());
+        BigInteger amount = state.get(2).getInteger();
+        return new WithdrawEvent(nonce, to, amount);
     }
 
     private static ClaimableEvent claimableEventFromNotification(Notification claimableEvent) {
         List<StackItem> state = claimableEvent.getState().getList();
         BigInteger nonce = state.get(0).getInteger();
-        BigInteger amount = state.get(1).getInteger();
-        Hash160 to = Hash160.fromAddress(state.get(2).getAddress());
-        return new ClaimableEvent(nonce, amount, to);
+        Hash160 to = Hash160.fromAddress(state.get(1).getAddress());
+        BigInteger amount = state.get(2).getInteger();
+        return new ClaimableEvent(nonce, to, amount);
     }
 
     private static ClaimEvent claimEventFromNotification(Notification claimEvent) {
         List<StackItem> state = claimEvent.getState().getList();
         BigInteger nonce = state.get(0).getInteger();
-        BigInteger amount = state.get(1).getInteger();
-        Hash160 to = Hash160.fromAddress(state.get(2).getAddress());
-        return new ClaimEvent(nonce, amount, to);
+        Hash160 to = Hash160.fromAddress(state.get(1).getAddress());
+        BigInteger amount = state.get(2).getInteger();
+        return new ClaimEvent(nonce, to, amount);
     }
 
     public static class DepositEvent {
         public BigInteger nonce;
-        public Hash160 from;
         public Hash160 to;
         public BigInteger amount;
+        public Hash160 from;
         public String depositHashHex;
         public String rootHashHex;
 
-        public DepositEvent(BigInteger nonce, BigInteger amount, Hash160 to, Hash160 from, String depositHashHex,
+        public DepositEvent(BigInteger nonce, Hash160 to, BigInteger amount, Hash160 from, String depositHashHex,
                 String rootHashHex) {
             this.nonce = nonce;
-            this.from = from;
             this.to = to;
             this.amount = amount;
+            this.from = from;
             this.depositHashHex = depositHashHex;
             this.rootHashHex = rootHashHex;
         }
 
-        public DepositEvent(BigInteger nonce, BigInteger amount, Hash160 to, Hash160 from) {
+        public DepositEvent(BigInteger nonce, Hash160 to, BigInteger amount, Hash160 from) {
             this.nonce = nonce;
-            this.from = from;
             this.to = to;
             this.amount = amount;
+            this.from = from;
         }
 
         @Override
@@ -400,9 +385,9 @@ public class TestHelper {
             if (!(o instanceof DepositEvent)) return false;
             DepositEvent that = (DepositEvent) o;
             return nonce.equals(that.nonce) &&
-                    from.equals(that.from) &&
                     to.equals(that.to) &&
                     amount.equals(that.amount) &&
+                    from.equals(that.from) &&
                     depositHashHex.equals(that.depositHashHex) &&
                     rootHashHex.equals(that.rootHashHex);
         }
@@ -420,53 +405,12 @@ public class TestHelper {
         }
     }
 
-    public static void printDepositStorage(Bridge bridge, Neow3j neow3j, Hash256 txHash, List<String> proof) throws IOException {
-        Optional<Notification> onDepositOpt =
-                neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution()
-                        .getNotifications().stream()
-                        .filter(n -> n.getContract().equals(bridge.getScriptHash()) &&
-                                n.getEventName().equals("OnDeposit"))
-                        .findFirst();
-        if (onDepositOpt.isPresent()) {
-            Notification depositNotification = onDepositOpt.get();
-            DepositEvent depositEvent = depositEventFromNotification(depositNotification);
-            BigInteger nonce = depositEvent.nonce;
-            Hash160 to = depositEvent.to;
-            BigInteger amount = depositEvent.amount;
-            String root = depositEvent.rootHashHex;
-            System.out.printf("new DepositProof(" +
-                            "%sn," +
-                            "\"%s\"," +
-                            "%sn," +
-                            "[%s]," +
-                            "\"%s\"" +
-                            ")%n",
-                    nonce, prependHexPrefix(to.toString()), amount, wrapWithQuotesAndJoin(proof), root);
-        }
-    }
-
-    private static String wrapWithQuotesAndJoin(List<String> strings) {
-        String joined = strings.stream().collect(Collectors.joining("\", \"", "\"", "\""));
-        if (joined.length() == 2) {
-            return "";
-        } else {
-            return joined;
-        }
-    }
-
-    public static List<String> getProofFromStorage(Bridge bridge) throws IOException {
-        List<ContractStorageEntry> foundStorageEntries = bridge.findStorage("0x0b");
-        List<String> proof = new ArrayList<>();
-        foundStorageEntries.forEach(e -> proof.add(e.getValueHex()));
-        return proof;
-    }
-
     public static class WithdrawEvent {
         public BigInteger nonce;
         public Hash160 to;
         public BigInteger amount;
 
-        public WithdrawEvent(BigInteger nonce, BigInteger amount, Hash160 to) {
+        public WithdrawEvent(BigInteger nonce, Hash160 to, BigInteger amount) {
             this.nonce = nonce;
             this.to = to;
             this.amount = amount;
@@ -497,7 +441,7 @@ public class TestHelper {
         public Hash160 to;
         public BigInteger amount;
 
-        public TransferEvent( Hash160 from, Hash160 to, BigInteger amount) {
+        public TransferEvent(Hash160 from, Hash160 to, BigInteger amount) {
             this.from = from;
             this.to = to;
             this.amount = amount;
@@ -528,7 +472,7 @@ public class TestHelper {
         public Hash160 to;
         public BigInteger amount;
 
-        public ClaimableEvent(BigInteger nonce, BigInteger amount, Hash160 to) {
+        public ClaimableEvent(BigInteger nonce, Hash160 to, BigInteger amount) {
             this.nonce = nonce;
             this.to = to;
             this.amount = amount;
@@ -559,7 +503,7 @@ public class TestHelper {
         public Hash160 to;
         public BigInteger amount;
 
-        public ClaimEvent(BigInteger nonce, BigInteger amount, Hash160 to) {
+        public ClaimEvent(BigInteger nonce, Hash160 to, BigInteger amount) {
             this.nonce = nonce;
             this.to = to;
             this.amount = amount;

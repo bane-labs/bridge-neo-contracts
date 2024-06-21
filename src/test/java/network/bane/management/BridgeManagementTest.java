@@ -1,4 +1,4 @@
-package network.bane;
+package network.bane.management;
 
 import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.NefFile;
@@ -19,6 +19,9 @@ import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
+import io.neow3j.transaction.witnessrule.CalledByContractCondition;
+import io.neow3j.transaction.witnessrule.WitnessAction;
+import io.neow3j.transaction.witnessrule.WitnessRule;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
@@ -40,6 +43,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
+import static io.neow3j.transaction.AccountSigner.none;
+import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.byteArrayFromString;
@@ -156,6 +161,11 @@ public class BridgeManagementTest {
                         securityGuardPubKey
                 )
         );
+        AccountSigner deploySigner = AccountSigner.none(owner);
+        WitnessRule deployWitnessRule = new WitnessRule(WitnessAction.ALLOW,
+                new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
+        deploySigner.setRules(deployWitnessRule);
+        config.setSigner(deploySigner);
         return config;
     }
 
@@ -165,7 +175,7 @@ public class BridgeManagementTest {
     @Order(0)
     public void testManifestMethods() throws IOException {
         assertThat(management.getManifest().getName(), is("NeoXBridgeManagement"));
-        assertThat(management.getManifest().getAbi().getMethods(), hasSize(14));
+        assertThat(management.getManifest().getAbi().getMethods(), hasSize(15));
         assertThat(management.getManifest().getAbi().getEvents(), hasSize(5));
         assertThat(management.getManifest().getSupportedStandards(), hasSize(0));
         assertThat(management.getManifest().getPermissions(), hasSize(1));
@@ -240,7 +250,7 @@ public class BridgeManagementTest {
         assertThat(management.owner(), is(ownerPubKey));
 
         Transaction tx = management.invokeFunction("setOwner", publicKey(alicePubKey))
-                .signers(calledByEntry(owner))
+                .signers(calledByEntry(owner), none(alice).setAllowedContracts(management.getScriptHash()))
                 .sign();
         NeoSendRawTransaction response = tx.send();
         assertFalse(response.hasError());
@@ -248,7 +258,7 @@ public class BridgeManagementTest {
 
         Notification expected = new Notification(
                 management.getScriptHash(),
-                "SetOwner",
+                "OwnerChange",
                 new ArrayStackItem(asList(new ByteStringStackItem(alicePubKey.toArray())))
         );
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
@@ -265,13 +275,31 @@ public class BridgeManagementTest {
 
         // reverse set owner
         response = management.invokeFunction("setOwner", publicKey(ownerPubKey))
-                .signers(calledByEntry(alice))
+                .signers(calledByEntry(alice), none(owner).setAllowedContracts(management.getScriptHash()))
                 .sign()
                 .send();
         assertFalse(response.hasError());
         waitUntilTransactionIsExecuted(response, neow3j);
 
         assertThat(management.owner(), is(ownerPubKey));
+    }
+
+    @Test
+    @Order(0)
+    public void testSetOwner_InvalidParameters() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setOwner", any(null))
+                        .signers(calledByEntry(owner))
+                        .sign()
+        );
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key provided."));
+
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("setOwner", byteArrayFromString("invalid"))
+                        .signers(calledByEntry(owner))
+                        .sign()
+        );
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key provided."));
     }
 
     @Test
@@ -303,7 +331,7 @@ public class BridgeManagementTest {
 
         Notification expected = new Notification(
                 management.getScriptHash(),
-                "SetRelayer",
+                "RelayerChange",
                 new ArrayStackItem(asList(new ByteStringStackItem(bobPubKey.toArray())))
         );
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
@@ -362,7 +390,7 @@ public class BridgeManagementTest {
 
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
         Notification notification = tx.getApplicationLog().getFirstExecution().getFirstNotification();
-        assertThat(notification.getEventName(), is("SetValidators"));
+        assertThat(notification.getEventName(), is("ValidatorsChange"));
         assertThat(notification.getContract(), is(management.getScriptHash()));
         List<StackItem> stateList = notification.getState().getList();
         assertThat(stateList, hasSize(2));
@@ -494,7 +522,7 @@ public class BridgeManagementTest {
 
         Notification expected = new Notification(
                 management.getScriptHash(),
-                "SetGovernor",
+                "GovernorChange",
                 new ArrayStackItem(asList(new ByteStringStackItem(bobPubKey.toArray())))
         );
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
@@ -542,7 +570,7 @@ public class BridgeManagementTest {
 
         Notification expected = new Notification(
                 management.getScriptHash(),
-                "SetSecurityGuard",
+                "SecurityGuardChange",
                 new ArrayStackItem(asList(new ByteStringStackItem(florianPubKey.toArray())))
         );
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
@@ -590,7 +618,7 @@ public class BridgeManagementTest {
         byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
 
         NeoSendRawTransaction response =
-                management.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes))
+                management.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes), any(null))
                         .signers(AccountSigner.calledByEntry(owner))
                         .sign()
                         .send();
@@ -604,7 +632,7 @@ public class BridgeManagementTest {
     @Order(0)
     public void testContractUpdate_notOwner() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("update", byteArrayFromString(""), string(""))
+                () -> management.invokeFunction("update", byteArrayFromString(""), string(""), any(null))
                         .signers(calledByEntry(relayer))
                         .sign()
         );
