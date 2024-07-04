@@ -266,7 +266,11 @@ public class BridgeTest {
     // region helper gas
 
     private Hash256 depositGasUsingDepositMethod(Account from, Hash160 to, BigInteger amount) throws Throwable {
-        Hash256 txHash = bridge.depositGas(from, to, amount);
+        return depositGasUsingDepositMethod(from, to, amount, DEFAULT_GAS_DEPOSIT_FEE);
+    }
+
+    private Hash256 depositGasUsingDepositMethod(Account from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
+        Hash256 txHash = bridge.depositGas(from, to, amount, maxFee);
         printTransactionFee(neow3j, "deposit", txHash);
         return txHash;
     }
@@ -992,7 +996,7 @@ public class BridgeTest {
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
 
         thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.depositGas(relayer, recipient0, BigInteger.TEN));
+                () -> bridge.depositGas(relayer, recipient0, BigInteger.TEN, DEFAULT_MIN_GAS_DEPOSIT));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
 
         thrown = assertThrows(TransactionConfigurationException.class,

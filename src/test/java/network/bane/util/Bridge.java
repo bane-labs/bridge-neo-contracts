@@ -36,6 +36,8 @@ import static network.bane.util.TestHelper.governor;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.securityGuard;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_GAS_DEPOSIT_FEE;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_GAS_DEPOSIT;
 
 public class Bridge extends SmartContractHelper {
 
@@ -115,22 +117,36 @@ public class Bridge extends SmartContractHelper {
     // region gas deposit/withdraw/claim
 
     public Hash256 depositGas(Account from, Hash160 to, BigInteger amount) throws Throwable {
-        return depositGas(from, from.getScriptHash(), to, amount);
+        return depositGas(from, to, amount, DEFAULT_MIN_GAS_DEPOSIT);
+    }
+
+    public Hash256 depositGas(Account from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
+        return depositGas(from, from.getScriptHash(), to, amount, maxFee);
     }
 
     public Hash256 depositGas(Account sender, Hash160 from, Hash160 to, BigInteger amount) throws Throwable {
+        return depositGas(sender, from, to, amount, DEFAULT_GAS_DEPOSIT_FEE);
+    }
+
+    public Hash256 depositGas(Account sender, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
         Signer signer = AccountSigner.none(sender).setAllowedContracts(GasToken.SCRIPT_HASH);
-        return sendAndAwaitExecution(invokeFunction("depositGas", hash160(from), hash160(to), integer(amount))
-                .signers(signer));
+        return sendAndAwaitExecution(
+                invokeFunction("depositGas",
+                        hash160(from),
+                        hash160(to),
+                        integer(amount),
+                        integer(maxFee)
+                ).signers(signer));
     }
 
     public Hash256 withdrawGas(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
             ContractParameter withdrawals) throws Throwable {
-        Hash256 txHash = sendAndAwaitExecution(invokeFunction("withdrawGas",
-                byteArray(withdrawalRoot),
-                map(signatures),
-                withdrawals
-        ).signers(calledByEntry(relayer)));
+        Hash256 txHash = sendAndAwaitExecution(
+                invokeFunction("withdrawGas",
+                        byteArray(withdrawalRoot),
+                        map(signatures),
+                        withdrawals
+                ).signers(calledByEntry(relayer)));
         return txHash;
     }
 
