@@ -23,7 +23,7 @@ import static network.bane.util.helper.TestHelper.setup;
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class TokenBridgeRegistrationTest {
+public class TokenBridgeWithdrawalTest {
 
     @RegisterExtension
     public static final ContractTestExtension ext = new ContractTestExtension();
@@ -31,6 +31,9 @@ public class TokenBridgeRegistrationTest {
     @BeforeAll
     public static void setUp() throws Throwable {
         setup(ext);
+        // TODO: Deploy simple NEP-17
+        // TODO: Register simple NEP-17 in token bridge
+        // TODO: Allocate funds of the simple NEP-17 to the bridge contract
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -47,20 +50,25 @@ public class TokenBridgeRegistrationTest {
 
     @Order(0)
     @Test
-    public void testTokenBridgeRegistration() {
-        // TODO: Register a token bridge and check the thrown event matches the provided config
+    public void testTokenWithdrawalToEOA() {
+        // TODO: Use withdrawToken() with the deployed NEP-17 token and to as an EOA (not a contract) -> check event
+        //  TokenWithdrawal
     }
 
-    // TODO: Test getTokenBridge(Hash160)
-    // TODO: Test getRegisteredTokens()
-    // TODO: Test getRegisteredTokensIterator()
+    // TODO: Use withdrawToken() with the deployed NEP-17 token and to a contract -> check event TokenClaimable
+    // TODO: Use withdrawToken() with withdrawals that exceed the bridge's balance -> check event TokenClaimable
+    // TODO: Check event GasWithdrawalRootUpdate for a successful withdrawal
+    // TODO: Check updated root and nonce after a successful withdrawal
 
     // endregion
     // region invalid test cases
 
-    // TODO: Fail if governor does not sign registration transaction
-    // TODO: Fail if the token config parameter is an invalid configuration
-    // TODO: Fail if for the token an already registered token bridge exists
+    // TODO: Fail to withdraw if token bridge is not registered
+    // TODO: Fail to withdraw if withdrawals list parameter has size 0
+    // TODO: Fail if first withdrawal in withdrawals list parameter has not the next nonce
+    // TODO: Fail if withdrawals in withdrawals list parameter have no subsequent nonces
+    // TODO: Fail if provided withdrawalRoot is not equal the computed new root
+    // TODO: Fail if verifyValidatorSignatures() returns false (e.g., not enough signatures)
 
     // endregion
 

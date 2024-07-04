@@ -23,7 +23,7 @@ import static network.bane.util.helper.TestHelper.setup;
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class TokenBridgeRegistrationTest {
+public class TokenBridgePauseTest {
 
     @RegisterExtension
     public static final ContractTestExtension ext = new ContractTestExtension();
@@ -47,20 +47,23 @@ public class TokenBridgeRegistrationTest {
 
     @Order(0)
     @Test
-    public void testTokenBridgeRegistration() {
-        // TODO: Register a token bridge and check the thrown event matches the provided config
+    public void testTokenBridgePause() {
+        // TODO: Pause a token bridge and check its event TokenBridgePause and paused entry in getTokenBridge(Hash160)
     }
 
-    // TODO: Test getTokenBridge(Hash160)
-    // TODO: Test getRegisteredTokens()
-    // TODO: Test getRegisteredTokensIterator()
+    // TODO: Once paused, check pause state of token bridge
+    // TODO: Unpause a paused token bridge and check its event TokenBridgeUnpause and paused entry in getTokenBridge(Hash160)
 
     // endregion
     // region invalid test cases
 
-    // TODO: Fail if governor does not sign registration transaction
-    // TODO: Fail if the token config parameter is an invalid configuration
-    // TODO: Fail if for the token an already registered token bridge exists
+    // TODO: Fail to use pauseTokenBridge() if not security guard
+    // TODO: Fail to use unpauseTokenBridge() if not governor
+    // TODO: Fail to use pauseTokenBridge() if the token bridge is already paused
+    // TODO: Fail to use unpauseTokenBridge() if the token bridge is already unpaused
+    // TODO: Fail to use depositToken() if token bridge is paused - expect abort
+    // TODO: Fail to use withdrawToken() if token bridge is paused - expect abort
+    // TODO: Fail to use claimToken() if token bridge is paused - expect abort
 
     // endregion
 

@@ -23,7 +23,7 @@ import static network.bane.util.helper.TestHelper.setup;
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class TokenBridgeRegistrationTest {
+public class TokenBridgeDepositTest {
 
     @RegisterExtension
     public static final ContractTestExtension ext = new ContractTestExtension();
@@ -31,6 +31,8 @@ public class TokenBridgeRegistrationTest {
     @BeforeAll
     public static void setUp() throws Throwable {
         setup(ext);
+        // TODO: Deploy simple NEP-17
+        // TODO: Register simple NEP-17 in token bridge
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -47,20 +49,24 @@ public class TokenBridgeRegistrationTest {
 
     @Order(0)
     @Test
-    public void testTokenBridgeRegistration() {
-        // TODO: Register a token bridge and check the thrown event matches the provided config
+    public void testTokenDeposit() {
+        // TODO: Use depositToken() with the deployed NEP-17 token
     }
 
-    // TODO: Test getTokenBridge(Hash160)
-    // TODO: Test getRegisteredTokens()
-    // TODO: Test getRegisteredTokensIterator()
+    // TODO: Check emitted event TokenDeposit and its parameters
+    // TODO: Check updated deposit nonce and root
 
     // endregion
     // region invalid test cases
 
-    // TODO: Fail if governor does not sign registration transaction
-    // TODO: Fail if the token config parameter is an invalid configuration
-    // TODO: Fail if for the token an already registered token bridge exists
+    // TODO: Fail to deposit if to is null/invalid/zero
+    // TODO: Fail to deposit if from is null/invalid/zero
+    // TODO: Fail if from is bridge contract's script hash
+    // TODO: Fail if amount is lower than minimum in config
+    // TODO: Fail if amount is greater than maximum in config
+    // TODO: Fail if maxFee is lower than fee in config
+    // TODO: Fail if from has insufficient gas to pay bridge fee
+    // TODO: Fail if NEP-17 transfer returns false
 
     // endregion
 

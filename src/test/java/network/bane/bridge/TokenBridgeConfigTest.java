@@ -23,14 +23,14 @@ import static network.bane.util.helper.TestHelper.setup;
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class TokenBridgeRegistrationTest {
-
+public class TokenBridgeConfigTest {
     @RegisterExtension
     public static final ContractTestExtension ext = new ContractTestExtension();
 
     @BeforeAll
     public static void setUp() throws Throwable {
         setup(ext);
+        // TODO: Register a dummy token bridge
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -43,24 +43,17 @@ public class TokenBridgeRegistrationTest {
         return createBridgeDeployConfig();
     }
 
-    // region successful test cases
+    // region test cases
 
     @Order(0)
     @Test
-    public void testTokenBridgeRegistration() {
-        // TODO: Register a token bridge and check the thrown event matches the provided config
+    public void testDepositFee() {
+        // TODO: Test getter and setter for tokenDepositFee
     }
 
-    // TODO: Test getTokenBridge(Hash160)
-    // TODO: Test getRegisteredTokens()
-    // TODO: Test getRegisteredTokensIterator()
-
-    // endregion
-    // region invalid test cases
-
-    // TODO: Fail if governor does not sign registration transaction
-    // TODO: Fail if the token config parameter is an invalid configuration
-    // TODO: Fail if for the token an already registered token bridge exists
+    // TODO: Test getter and setter for minTokenDeposit
+    // TODO: Test getter and setter for maxTokenDeposit
+    // TODO: Test getter and setter for maxTokenWithdrawals
 
     // endregion
 

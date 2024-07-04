@@ -1,11 +1,6 @@
 package network.bane.bridge;
 
-import io.neow3j.contract.ContractManagement;
-import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
-import io.neow3j.contract.NeoToken;
-import io.neow3j.contract.PolicyContract;
-import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.ContractStorageEntry;
@@ -21,9 +16,6 @@ import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
-import io.neow3j.transaction.witnessrule.CalledByContractCondition;
-import io.neow3j.transaction.witnessrule.WitnessAction;
-import io.neow3j.transaction.witnessrule.WitnessRule;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -33,9 +25,7 @@ import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
-import network.bane.util.Bridge;
 import network.bane.util.structs.GasBridge;
-import network.bane.util.Management;
 import network.bane.util.structs.State;
 import network.bane.util.TestHelper;
 import org.junit.jupiter.api.BeforeAll;
@@ -69,43 +59,44 @@ import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HAS
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_GAS_DEPOSIT;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_WITHDRAWALS;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_GAS_DEPOSIT;
-import static network.bane.util.helper.NetworkSettingsHelper.updateNetworkSettings;
 import static network.bane.util.helper.PrintHelper.printTransactionFee;
 import static network.bane.util.TestHelper.concatAndSha256;
 import static network.bane.util.TestHelper.createDepositHash;
 import static network.bane.util.TestHelper.getClaimableEvents;
 import static network.bane.util.TestHelper.getDepositEvents;
 import static network.bane.util.TestHelper.getWithdrawEvents;
-import static network.bane.util.TestHelper.governorPubKey;
 import static network.bane.util.TestHelper.hasFiredEvent;
 import static network.bane.util.TestHelper.owner;
-import static network.bane.util.TestHelper.ownerPubKey;
-import static network.bane.util.TestHelper.prepareManagementDeployParameter;
 import static network.bane.util.TestHelper.recipient0;
 import static network.bane.util.TestHelper.recipient1;
 import static network.bane.util.TestHelper.recipient2;
 import static network.bane.util.TestHelper.recipient3;
 import static network.bane.util.TestHelper.recipient4;
 import static network.bane.util.TestHelper.relayer;
-import static network.bane.util.TestHelper.relayerPubKey;
 import static network.bane.util.TestHelper.securityGuard;
-import static network.bane.util.TestHelper.securityGuardPubKey;
 import static network.bane.util.TestHelper.setDepositFee;
 import static network.bane.util.TestHelper.setMaxGasDeposit;
 import static network.bane.util.TestHelper.setMinDeposit;
 import static network.bane.util.TestHelper.signMsg;
 import static network.bane.util.TestHelper.validator1;
-import static network.bane.util.TestHelper.validator1PubKey;
 import static network.bane.util.TestHelper.validator2;
-import static network.bane.util.TestHelper.validator2PubKey;
 import static network.bane.util.TestHelper.validator3;
-import static network.bane.util.TestHelper.validator3PubKey;
 import static network.bane.util.TestHelper.validator4;
-import static network.bane.util.TestHelper.validator4PubKey;
 import static network.bane.util.TestHelper.validator5;
-import static network.bane.util.TestHelper.validator5PubKey;
-import static network.bane.util.TestHelper.validator6PubKey;
-import static network.bane.util.TestHelper.validator7PubKey;
+import static network.bane.util.helper.TestHelper.alice;
+import static network.bane.util.helper.TestHelper.bob;
+import static network.bane.util.helper.TestHelper.bridge;
+import static network.bane.util.helper.TestHelper.charlie;
+import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
+import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
+import static network.bane.util.helper.TestHelper.denise;
+import static network.bane.util.helper.TestHelper.gasToken;
+import static network.bane.util.helper.TestHelper.incrementAndGetDepositNonce;
+import static network.bane.util.helper.TestHelper.incrementAndGetWithdrawalNonce;
+import static network.bane.util.helper.TestHelper.neoToken;
+import static network.bane.util.helper.TestHelper.neow3j;
+import static network.bane.util.helper.TestHelper.setup;
+import static network.bane.util.helper.TestHelper.testContract;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
@@ -126,143 +117,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class BridgeTest {
-    private static Bridge bridge;
-
-    private static Hash160 testContract;
-
-    private static Neow3j neow3j;
-    private static GasToken gasToken;
-    private static NeoToken neoToken;
-    public static PolicyContract policyContract;
-
-    private static BigInteger withdrawalNonce = BigInteger.ZERO;
-    private static BigInteger depositNonce = BigInteger.ZERO;
-
-    public static Account alice;
-    private static Account bob;
-    private static Account charlie;
-    private static Account denise;
-    private static Account eve;
-    private static Account florian;
-    private static Account gabriel;
-    private static Account henry;
-    private static Account isabella;
-
-    public static Account committee;
 
     @RegisterExtension
     public static final ContractTestExtension ext = new ContractTestExtension();
 
-    // region setup
-
     @BeforeAll
     public static void setUp() throws Throwable {
-        neow3j = ext.getNeow3j();
-
-        gasToken = new GasToken(neow3j);
-        neoToken = new NeoToken(neow3j);
-        policyContract = new PolicyContract(neow3j);
-        Management management =
-                new Management(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
-        assert management.getScriptHash().equals(MANAGEMENT_CONTRACT_HASH) :
-                "BridgeManagement Contract or its deployer has changed. Change the contract hash in this test to " +
-                        management.getScriptHash() + ".";
-        bridge = new Bridge(ext.getDeployedContract(BridgeContract.class).getScriptHash(), neow3j);
-        testContract = ext.getDeployedContract(TestContract.class).getScriptHash();
-        alice = ext.getAccount(TestHelper.ALICE);
-        committee = Account.createMultiSigAccount(asList(alice.getECKeyPair().getPublicKey()), 1);
-        bob = ext.getAccount(TestHelper.BOB);
-        charlie = ext.getAccount(TestHelper.CHARLIE);
-        denise = ext.getAccount(TestHelper.DENISE);
-        eve = ext.getAccount(TestHelper.EVE);
-        florian = ext.getAccount(TestHelper.FLORIAN);
-        gabriel = ext.getAccount(TestHelper.GABRIEL);
-        henry = ext.getAccount(TestHelper.HENRY);
-        isabella = ext.getAccount(TestHelper.ISABELLA);
-
-        updateNetworkSettings(neow3j, committee, alice);
+        setup(ext);
     }
-
-    // endregion
-    // region deploy config
 
     @DeployConfig(BridgeManagementContract.class)
     public static DeployConfiguration deployConfigManagement() {
-        DeployConfiguration config = new DeployConfiguration();
-        config.setDeployParam(
-                prepareManagementDeployParameter(
-                        ownerPubKey,
-                        relayerPubKey,
-                        asList(
-                                validator1PubKey,
-                                validator2PubKey,
-                                validator3PubKey,
-                                validator4PubKey,
-                                validator5PubKey,
-                                validator6PubKey,
-                                validator7PubKey
-                        ),
-                        5,
-                        governorPubKey,
-                        securityGuardPubKey
-                )
-        );
-        AccountSigner deploySigner = AccountSigner.none(owner);
-        WitnessRule deployWitnessRule = new WitnessRule(WitnessAction.ALLOW,
-                new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
-        deploySigner.setRules(deployWitnessRule);
-        config.setSigner(deploySigner);
-        return config;
+        return createBridgeManagementDeployConfig();
     }
 
     @DeployConfig(BridgeContract.class)
     public static DeployConfiguration deployConfigBridge() {
-        DeployConfiguration config = new DeployConfiguration();
-        config.setDeployParam(
-                prepareBridgeDeployParameter(
-                        MANAGEMENT_CONTRACT_HASH,
-                        DEFAULT_GAS_DEPOSIT_FEE,
-                        DEFAULT_MIN_GAS_DEPOSIT,
-                        DEFAULT_MAX_GAS_DEPOSIT,
-                        DEFAULT_MAX_WITHDRAWALS
-                )
-        );
-        AccountSigner deploySigner = AccountSigner.none(owner);
-        WitnessRule deployWitnessRule = new WitnessRule(WitnessAction.ALLOW,
-                new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
-        deploySigner.setRules(deployWitnessRule);
-        config.setSigner(deploySigner);
-        return config;
+        return createBridgeDeployConfig();
     }
 
-    private static ContractParameter prepareBridgeDeployParameter(Hash160 managementContractHash,
-            BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit, BigInteger maxWithdrawals) {
-        return array(
-                hash160(managementContractHash),
-                array(
-                        integer(depositFee),
-                        integer(minDeposit),
-                        integer(maxDeposit),
-                        integer(maxWithdrawals)
-                )
-        );
-    }
-
-    // endregion
-    // region helper
-    // region helper general
-
-    private static BigInteger incrementAndGetWithdrawalNonce() {
-        withdrawalNonce = withdrawalNonce.add(BigInteger.ONE);
-        return withdrawalNonce;
-    }
-
-    private static BigInteger incrementAndGetDepositNonce() {
-        depositNonce = depositNonce.add(BigInteger.ONE);
-        return depositNonce;
-    }
-
-    // endregion
     // region helper gas
 
     private Hash256 depositGasUsingDepositMethod(Account from, Hash160 to, BigInteger amount) throws Throwable {

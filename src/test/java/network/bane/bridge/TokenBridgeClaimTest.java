@@ -23,7 +23,7 @@ import static network.bane.util.helper.TestHelper.setup;
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class TokenBridgeRegistrationTest {
+public class TokenBridgeClaimTest {
 
     @RegisterExtension
     public static final ContractTestExtension ext = new ContractTestExtension();
@@ -31,6 +31,12 @@ public class TokenBridgeRegistrationTest {
     @BeforeAll
     public static void setUp() throws Throwable {
         setup(ext);
+        // TODO: Deploy simple NEP-17
+        // TODO: Register simple NEP-17 in token bridge
+        // TODO: Allocate funds of the simple NEP-17 to the bridge contract
+        // TODO: Use withdrawToken() with to as a contract
+        // (TODO: Use withdrawToken() with to as an EOA (not a contract) and the bridge contract having insufficient
+        //  balance for the provided amount leading to a failed transfer)
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -43,24 +49,28 @@ public class TokenBridgeRegistrationTest {
         return createBridgeDeployConfig();
     }
 
-    // region successful test cases
+    // endregion
+    // region successful cases
 
+    // Suggestion: Give the unsuccessful test cases a lower order than the successful cases in this test file, so that
+    // the existing claimable can be tested and does not be "created" again.
     @Order(0)
     @Test
-    public void testTokenBridgeRegistration() {
-        // TODO: Register a token bridge and check the thrown event matches the provided config
+    public void testTokenClaimToContract() {
+        // TODO: Use claimToken for (1) and check event TokenClaim
     }
 
-    // TODO: Test getTokenBridge(Hash160)
-    // TODO: Test getRegisteredTokens()
-    // TODO: Test getRegisteredTokensIterator()
+    // TODO: Use claimToken for (2) and check event TokenClaim (in order to do this, make the NEP-17 allocate more
+    //  funds to the bridge to make a claim transfer successful)
 
     // endregion
-    // region invalid test cases
+    // region test invalid token bridge registrations
 
-    // TODO: Fail if governor does not sign registration transaction
-    // TODO: Fail if the token config parameter is an invalid configuration
-    // TODO: Fail if for the token an already registered token bridge exists
+    // TODO: Fail to claim if bridge is paused
+    // TODO: Fail to claim if token bridge is paused
+    // TODO: Fail to claim if token bridge is not registered
+    // TODO: Fail to claim if there's nothing to claim for the provided nonce
+    // TODO: Fail to claim if NEP-17 transfer returns false
 
     // endregion
 
