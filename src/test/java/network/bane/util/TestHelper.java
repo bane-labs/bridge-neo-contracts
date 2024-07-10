@@ -242,12 +242,53 @@ public class TestHelper {
         byte[] recipientArray = ArrayUtils.reverseArray(recipient.toArray());
         byte[] amountPadded = BigIntegers.toLittleEndianByteArrayZeroPadded(amount, UINT256_SIZE);
         byte[] concatenated = concatenate(concatenate(amountPadded, recipientArray), noncePadded);
-        concatenated = ArrayUtils.reverseArray(concatenated);
-        return concatenated;
+        return ArrayUtils.reverseArray(concatenated);
     }
 
     public static String createDepositHashNoPrefix(BigInteger nonce, Hash160 to, BigInteger amount) {
         return cleanHexPrefix(createDepositHash(nonce, to, amount));
+    }
+
+    public static byte[] concatTokenOpData(Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce, Hash160 recipient,
+            BigInteger value) {
+        byte[] neoN3TokenArray = ArrayUtils.reverseArray(neoN3Token.toArray());
+        byte[] neoXTokenArray = ArrayUtils.reverseArray(neoXToken.toArray());
+        byte[] noncePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
+        byte[] recipientArray = ArrayUtils.reverseArray(recipient.toArray());
+        byte[] valuePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(value, UINT256_SIZE);
+        byte[] concatenated = concatenate(
+                concatenate(
+                        concatenate(
+                                concatenate(
+                                        valuePadded, recipientArray
+                                ), noncePadded
+                        ), neoXTokenArray
+                ), neoN3TokenArray
+        );
+        return ArrayUtils.reverseArray(concatenated);
+    }
+
+    public static String createTokenOpHash(Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce, Hash160 recipient,
+            BigInteger value) {
+        return sha256Hex(concatTokenOpData(neoN3Token, neoXToken, nonce, recipient, value));
+    }
+
+    public static String createTokenOpHashNoPrefix(Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce,
+            Hash160 recipient, BigInteger value) {
+        return cleanHexPrefix(createTokenOpHash(neoN3Token, neoXToken, nonce, recipient, value));
+    }
+
+    public static String computeNewTokenRootNoPrefix(String previousRoot, Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce,
+            Hash160 recipient, BigInteger value) {
+        return cleanHexPrefix(computeNewTokenRoot(previousRoot, neoN3Token, neoXToken, nonce, recipient, value));
+    }
+
+    public static String computeNewTokenRoot(String previousRoot, Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce,
+            Hash160 recipient, BigInteger value) {
+        return concatAndSha256(
+                previousRoot,
+                createTokenOpHashNoPrefix(neoN3Token, neoXToken, nonce, recipient, value)
+        );
     }
 
     private static byte[] padToBytes(byte[] data, int padToSize) {

@@ -13,13 +13,18 @@ import io.neow3j.transaction.witnessrule.WitnessAction;
 import io.neow3j.transaction.witnessrule.WitnessRule;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
+import io.neow3j.types.Hash256;
+import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
 import network.bane.bridge.BridgeContract;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
 import network.bane.util.Bridge;
 import network.bane.util.Management;
+import network.bane.util.structs.ExecutionType;
+import network.bane.util.structs.TokenBridge;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 
 import static io.neow3j.types.ContractParameter.array;
@@ -53,6 +58,8 @@ public class TestHelper {
     public static Management management;
 
     public static Hash160 testContract;
+    public static final Hash160 neoXNeoTokenHash = new Hash160("0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f");
+    public static final Hash160 neoN3NeoTokenHash = NeoToken.SCRIPT_HASH;
 
     public static Neow3j neow3j;
     public static GasToken gasToken;
@@ -171,6 +178,19 @@ public class TestHelper {
     public static BigInteger incrementAndGetDepositNonce() {
         depositNonce = depositNonce.add(BigInteger.ONE);
         return depositNonce;
+    }
+
+    public static void registerNeoTokenBridge() throws Throwable {
+        BigInteger fee = gasToken.toFractions(new BigDecimal("0.1"));
+        BigInteger minAmount = BigInteger.ONE;
+        BigInteger maxAmount = new BigInteger("1000");
+        int maxWithdrawals = 100;
+        ExecutionType executionType = ExecutionType.NEO;
+        TokenBridge.TokenConfig config = new TokenBridge.TokenConfig(neoXNeoTokenHash, fee, minAmount, maxAmount,
+                maxWithdrawals, executionType);
+
+        Hash256 txHash = bridge.registerToken(neoN3NeoTokenHash, config);
+        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
     }
 
 }
