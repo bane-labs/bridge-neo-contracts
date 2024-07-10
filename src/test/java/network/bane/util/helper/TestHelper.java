@@ -80,12 +80,6 @@ public class TestHelper {
         gasToken = new GasToken(neow3j);
         neoToken = new NeoToken(neow3j);
         policyContract = new PolicyContract(neow3j);
-        management = new Management(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
-        assert management.getScriptHash().equals(MANAGEMENT_CONTRACT_HASH) :
-                "BridgeManagement Contract or its deployer has changed. Change the contract hash in this test to " +
-                        management.getScriptHash() + ".";
-        bridge = new Bridge(ext.getDeployedContract(BridgeContract.class).getScriptHash(), neow3j);
-        testContract = ext.getDeployedContract(TestContract.class).getScriptHash();
         alice = ext.getAccount(network.bane.util.TestHelper.ALICE);
         committee = Account.createMultiSigAccount(asList(alice.getECKeyPair().getPublicKey()), 1);
         bob = ext.getAccount(network.bane.util.TestHelper.BOB);
@@ -98,6 +92,15 @@ public class TestHelper {
         isabella = ext.getAccount(network.bane.util.TestHelper.ISABELLA);
 
         updateNetworkSettings(neow3j, committee, alice);
+    }
+
+    public static void setupBridge(ContractTestExtension ext) {
+        management = new Management(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
+        assert management.getScriptHash().equals(MANAGEMENT_CONTRACT_HASH) :
+                "BridgeManagement Contract or its deployer has changed. Change the contract hash in this test to " +
+                        management.getScriptHash() + ".";
+        bridge = new Bridge(ext.getDeployedContract(BridgeContract.class).getScriptHash(), neow3j);
+        testContract = ext.getDeployedContract(TestContract.class).getScriptHash();
     }
 
     public static DeployConfiguration createBridgeManagementDeployConfig() {

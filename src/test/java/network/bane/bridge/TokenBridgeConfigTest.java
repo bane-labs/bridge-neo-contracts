@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
 import static network.bane.util.helper.TestHelper.setup;
+import static network.bane.util.helper.TestHelper.setupBridge;
 
 @ContractTest(
         blockTime = 1,
@@ -30,6 +31,7 @@ public class TokenBridgeConfigTest {
     @BeforeAll
     public static void setUp() throws Throwable {
         setup(ext);
+        setupBridge(ext);
         // TODO: Register a dummy token bridge
     }
 

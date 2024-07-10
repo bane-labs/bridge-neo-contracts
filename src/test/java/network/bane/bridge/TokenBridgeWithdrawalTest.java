@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
 import static network.bane.util.helper.TestHelper.setup;
+import static network.bane.util.helper.TestHelper.setupBridge;
 
 @ContractTest(
         blockTime = 1,
@@ -31,6 +32,7 @@ public class TokenBridgeWithdrawalTest {
     @BeforeAll
     public static void setUp() throws Throwable {
         setup(ext);
+        setupBridge(ext);
         // TODO: Deploy simple NEP-17
         // TODO: Register simple NEP-17 in token bridge
         // TODO: Allocate funds of the simple NEP-17 to the bridge contract
