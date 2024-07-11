@@ -96,6 +96,7 @@ import static network.bane.util.helper.TestHelper.incrementAndGetWithdrawalNonce
 import static network.bane.util.helper.TestHelper.neoToken;
 import static network.bane.util.helper.TestHelper.neow3j;
 import static network.bane.util.helper.TestHelper.setup;
+import static network.bane.util.helper.TestHelper.setupBridge;
 import static network.bane.util.helper.TestHelper.testContract;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -124,6 +125,7 @@ public class BridgeTest {
     @BeforeAll
     public static void setUp() throws Throwable {
         setup(ext);
+        setupBridge(ext);
     }
 
     @DeployConfig(BridgeManagementContract.class)

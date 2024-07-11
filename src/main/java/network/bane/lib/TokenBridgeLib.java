@@ -21,7 +21,7 @@ public class TokenBridgeLib {
         return cryptoLib.sha256(concatTokenBridgeOpData(token, neoXToken, nonce, to, amount));
     }
 
-    private static ByteString concatTokenBridgeOpData(Hash160 token, Hash160 neoXToken, int nonce, Hash160 to,
+    public static ByteString concatTokenBridgeOpData(Hash160 token, Hash160 neoXToken, int nonce, Hash160 to,
             int value) {
         byte[] nonceP = padToBytes(toByteArray(nonce), UINT256_SIZE);
         byte[] valueP = padToBytes(toByteArray(value), UINT256_SIZE);

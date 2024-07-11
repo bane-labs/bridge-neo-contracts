@@ -38,6 +38,7 @@ import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.securityGuard;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_GAS_DEPOSIT_FEE;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_GAS_DEPOSIT;
+import static network.bane.util.structs.TokenBridge.getAsContractParameter;
 
 public class Bridge extends SmartContractHelper {
 
@@ -263,33 +264,27 @@ public class Bridge extends SmartContractHelper {
         );
         List<StackItem> tokenConfigList = response.get(3).getList();
         TokenBridge.TokenConfig tokenConfig = new TokenBridge.TokenConfig(
-                new Hash160(tokenConfigList.get(0).getByteArray()),
+                Hash160.fromAddress(tokenConfigList.get(0).getAddress()),
                 tokenConfigList.get(1).getInteger(),
                 tokenConfigList.get(2).getInteger(),
                 tokenConfigList.get(3).getInteger(),
-                tokenConfigList.get(4).getInteger(),
-                tokenConfigList.get(5).getInteger()
+                tokenConfigList.get(4).getInteger().intValue(),
+                TokenBridge.TokenConfig.fromValue(tokenConfigList.get(5).getInteger().intValue())
         );
         return new TokenBridge(paused, depositState, withdrawalState, tokenConfig);
     }
 
-    public Hash256 registerToken(Hash160 tokenHash, Hash160 tokenBridgeHash) throws Throwable {
-        return registerToken(governor, tokenHash, tokenBridgeHash);
+    public Hash256 registerToken(Hash160 neoN3TokenHash, TokenBridge.TokenConfig config) throws Throwable {
+        return registerToken(governor, neoN3TokenHash, config);
     }
 
-    public Hash256 registerToken(Account sender, Hash160 tokenHash, Hash160 tokenBridgeHash) throws Throwable {
+    public Hash256 registerToken(Account sender, Hash160 neoN3TokenHash, TokenBridge.TokenConfig config) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("registerToken", hash160(tokenHash), hash160(tokenBridgeHash))
-                .signers(signer));
-    }
-
-    public Hash256 unregisterToken(Hash160 tokenHash) throws Throwable {
-        return unregisterToken(governor, tokenHash);
-    }
-
-    public Hash256 unregisterToken(Account sender, Hash160 tokenHash) throws Throwable {
-        Signer signer = AccountSigner.calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("unregisterToken", hash160(tokenHash)).signers(signer));
+        return sendAndAwaitExecution(
+                invokeFunction("registerToken",
+                        hash160(neoN3TokenHash),
+                        getAsContractParameter(config)
+                ).signers(signer));
     }
 
     // endregion
@@ -321,9 +316,16 @@ public class Bridge extends SmartContractHelper {
     }
 
     public Hash256 depositToken(Account sender, Hash160 from, Hash160 tokenHash, Hash160 to, BigInteger amount) throws Throwable {
-        Signer signer = AccountSigner.none(sender).setAllowedContracts(tokenHash);
-        return sendAndAwaitExecution(invokeFunction("depositToken", hash160(from), hash160(tokenHash), hash160(to),
-                integer(amount)).signers(signer));
+        Signer signer = AccountSigner.none(sender).setAllowedContracts(tokenHash, GasToken.SCRIPT_HASH);
+        BigInteger fee = getTokenConfig(tokenHash).fee;
+        return sendAndAwaitExecution(
+                invokeFunction("depositToken",
+                        hash160(tokenHash),
+                        hash160(from),
+                        hash160(to),
+                        integer(amount),
+                        integer(fee)
+                ).signers(signer));
     }
 
     public Hash256 withdrawToken(Hash160 tokenHash, String withdrawalRoot,
@@ -351,16 +353,7 @@ public class Bridge extends SmartContractHelper {
     // region token bridge configuration
 
     public TokenBridge.TokenConfig getTokenConfig(Hash160 tokenHash) throws IOException {
-        List<StackItem> response = callInvokeFunction("getTokenConfig", asList(hash160(tokenHash)))
-                .getInvocationResult().getFirstStackItem().getList();
-        return new TokenBridge.TokenConfig(
-                new Hash160(response.get(0).getByteArray()),
-                response.get(1).getInteger(),
-                response.get(2).getInteger(),
-                response.get(3).getInteger(),
-                response.get(4).getInteger(),
-                response.get(5).getInteger()
-        );
+        return getTokenBridge(tokenHash).config;
     }
 
     public BigInteger tokenDepositFee(Hash160 tokenHash) throws IOException {
@@ -447,6 +440,10 @@ public class Bridge extends SmartContractHelper {
 
     public Hash160 management() throws IOException {
         return callFunctionReturningScriptHash("management");
+    }
+
+    public BigInteger unclaimedRewards() throws IOException {
+        return callFunctionReturningInt("unclaimedRewards");
     }
 
     // endregion

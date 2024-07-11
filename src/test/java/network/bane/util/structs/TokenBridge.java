@@ -1,8 +1,13 @@
 package network.bane.util.structs;
 
+import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 
 import java.math.BigInteger;
+
+import static io.neow3j.types.ContractParameter.array;
+import static io.neow3j.types.ContractParameter.hash160;
+import static io.neow3j.types.ContractParameter.integer;
 
 public class TokenBridge {
     public boolean paused;
@@ -17,22 +22,64 @@ public class TokenBridge {
         this.config = config;
     }
 
+    public static ContractParameter getAsContractParameter(TokenConfig config) {
+        return array(
+                hash160(config.neoXTokenHash),
+                integer(config.fee),
+                integer(config.minAmount),
+                integer(config.maxAmount),
+                integer(config.maxWithdrawals),
+                integer(config.executionType.getValue())
+        );
+    }
+
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TokenBridge that = (TokenBridge) o;
+        return paused == that.paused &&
+                depositState.equals(that.depositState) &&
+                withdrawalState.equals(that.withdrawalState) &&
+                config.equals(that.config);
+    }
+
     public static class TokenConfig {
         public Hash160 neoXTokenHash;
         public BigInteger fee;
         public BigInteger minAmount;
         public BigInteger maxAmount;
-        public BigInteger maxWithdrawals;
-        public BigInteger executionType;
+        public int maxWithdrawals;
+        public ExecutionType executionType;
 
-        public TokenConfig(Hash160 neoXTokenHash, BigInteger fee, BigInteger minAmount, BigInteger maxAmount, BigInteger maxWithdrawals,
-                BigInteger executionType) {
+        public TokenConfig(Hash160 neoXTokenHash, BigInteger fee, BigInteger minAmount, BigInteger maxAmount,
+                int maxWithdrawals, ExecutionType executionType) {
             this.neoXTokenHash = neoXTokenHash;
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
             this.maxWithdrawals = maxWithdrawals;
             this.executionType = executionType;
+        }
+
+        public static ExecutionType fromValue(int value) {
+            for (ExecutionType e : ExecutionType.values()) {
+                if (e.getValue() == value) {
+                    return e;
+                }
+            }
+            throw new IllegalArgumentException();
+        }
+
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            TokenConfig that = (TokenConfig) o;
+            return maxWithdrawals == that.maxWithdrawals &&
+                    neoXTokenHash.equals(that.neoXTokenHash) &&
+                    fee.equals(that.fee) &&
+                    minAmount.equals(that.minAmount) &&
+                    maxAmount.equals(that.maxAmount) &&
+                    executionType == that.executionType;
         }
     }
 }
