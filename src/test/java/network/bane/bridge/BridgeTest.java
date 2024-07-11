@@ -469,7 +469,7 @@ public class BridgeTest {
         String root = concatAndSha256(Hash256.ZERO.toString(), d1);
         assertThat(root, is("0x177604db278d7680e254218a72dcc06043600f9c9cb6eb56055cd17fb81fa0b9"));
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter withdrawal = array(array(integer(nonce), integer(amount), hash160(to)));
+        ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
         Hash256 txHash = bridge.withdrawGas(root, signMsg(validators, root), withdrawal);
         printTransactionFee(neow3j, "tx with 1 withdrawals", txHash);
         List<TestHelper.WithdrawEvent> withdrawEvents = getWithdrawEvents(txHash, neow3j, bridge.getScriptHash());
@@ -504,9 +504,10 @@ public class BridgeTest {
         assertThat(newRoot, is("0x005bac323a5f98e0ba3d41d71573853e37cc28649cd95ea703ab0f9e462573bd"));
 
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter withdrawal =
-                array(array(integer(nonce1), integer(amount1), hash160(to1)), array(integer(nonce2), integer(amount2),
-                        hash160(to2)));
+        ContractParameter withdrawal = array(
+                array(integer(nonce1), hash160(to1), integer(amount1)),
+                array(integer(nonce2), hash160(to2), integer(amount2))
+        );
         Hash256 txHash = bridge.withdrawGas(newRoot, signMsg(validators, newRoot), withdrawal);
         printTransactionFee(neow3j, "tx with 2 withdrawals", txHash);
         List<TestHelper.WithdrawEvent> withdrawEvents = getWithdrawEvents(txHash, neow3j, bridge.getScriptHash());
@@ -532,7 +533,7 @@ public class BridgeTest {
         String d1 = createDepositHash(nonce, to, amount);
         String root = concatAndSha256(withdrawRootBefore, d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter withdrawal = array(array(integer(nonce), integer(amount), hash160(to)));
+        ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
 
         Hash256 txHash = bridge.withdrawGas(root, signMsg(validators, root), withdrawal);
         printTransactionFee(neow3j, "tx with 1 withdrawals to claim", txHash);
@@ -583,10 +584,10 @@ public class BridgeTest {
 
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawals = array(
-                array(integer(nonce1), integer(amount1), hash160(to1)),
-                array(integer(nonce2), integer(amount2), hash160(to2)),
-                array(integer(nonce3), integer(amount3), hash160(to3)),
-                array(integer(nonce4), integer(amount4), hash160(to4))
+                array(integer(nonce1), hash160(to1), integer(amount1)),
+                array(integer(nonce2), hash160(to2), integer(amount2)),
+                array(integer(nonce3), hash160(to3), integer(amount3)),
+                array(integer(nonce4), hash160(to4), integer(amount4))
         );
         Hash256 txHash = bridge.withdrawGas(root, signMsg(validators, root), withdrawals);
 
@@ -619,7 +620,7 @@ public class BridgeTest {
         String d1 = createDepositHash(nextNonce, to, amount);
         String root = concatAndSha256(withdrawRootBefore, d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter withdrawal = array(array(integer(nextNonce), integer(amount), hash160(to)));
+        ContractParameter withdrawal = array(array(integer(nextNonce), hash160(to), integer(amount)));
         bridge.withdrawGas(root, signMsg(validators, root), withdrawal); // fund the contract if this test is executed
         // alone
         depositGasUsingDepositMethod(alice, to, amount);
