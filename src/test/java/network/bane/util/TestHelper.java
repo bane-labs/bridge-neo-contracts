@@ -339,12 +339,30 @@ public class TestHelper {
                 .collect(Collectors.toList());
     }
 
+    public static List<ClaimableEvent> getTokenClaimableEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge) throws IOException {
+        // GasToken Transfer is first notification, onClaimable is second notification.
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution().getNotifications().stream()
+                .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("TokenClaimable"))
+                .map(TestHelper::claimableTokenEventFromNotification)
+                .collect(Collectors.toList());
+    }
+
     public static List<ClaimableEvent> getClaimableEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge) throws IOException {
         // GasToken Transfer is first notification, onClaimable is second notification.
         return neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution().getNotifications().stream()
                 .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("GasClaimable"))
                 .map(TestHelper::claimableEventFromNotification)
+                .collect(Collectors.toList());
+    }
+
+    public static List<ClaimEvent> getTokenClaimEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge) throws IOException {
+        // GasToken Transfer is first notification, onClaimable is second notification.
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution().getNotifications().stream()
+                .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("TokenClaim"))
+                .map(TestHelper::claimTokenEventFromNotification)
                 .collect(Collectors.toList());
     }
 
@@ -379,12 +397,30 @@ public class TestHelper {
         return new WithdrawEvent(nonce, to, amount);
     }
 
+    private static ClaimableEvent claimableTokenEventFromNotification(Notification claimableEvent) {
+        List<StackItem> state = claimableEvent.getState().getList();
+        Hash160 neoN3Token = Hash160.fromAddress(state.get(0).getAddress());
+        BigInteger nonce = state.get(1).getInteger();
+        Hash160 to = Hash160.fromAddress(state.get(2).getAddress());
+        BigInteger amount = state.get(3).getInteger();
+        return new ClaimableEvent(neoN3Token, nonce, to, amount);
+    }
+
     private static ClaimableEvent claimableEventFromNotification(Notification claimableEvent) {
         List<StackItem> state = claimableEvent.getState().getList();
         BigInteger nonce = state.get(0).getInteger();
         Hash160 to = Hash160.fromAddress(state.get(1).getAddress());
         BigInteger amount = state.get(2).getInteger();
         return new ClaimableEvent(nonce, to, amount);
+    }
+
+    private static ClaimEvent claimTokenEventFromNotification(Notification claimEvent) {
+        List<StackItem> state = claimEvent.getState().getList();
+        Hash160 neoN3Token = Hash160.fromAddress(state.get(0).getAddress());
+        BigInteger nonce = state.get(1).getInteger();
+        Hash160 to = Hash160.fromAddress(state.get(2).getAddress());
+        BigInteger amount = state.get(3).getInteger();
+        return new ClaimEvent(neoN3Token, nonce, to, amount);
     }
 
     private static ClaimEvent claimEventFromNotification(Notification claimEvent) {
@@ -509,6 +545,7 @@ public class TestHelper {
     }
 
     public static class ClaimableEvent {
+        public Hash160 neoN3Token;
         public BigInteger nonce;
         public Hash160 to;
         public BigInteger amount;
@@ -519,27 +556,17 @@ public class TestHelper {
             this.amount = amount;
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof ClaimableEvent)) return false;
-            ClaimableEvent that = (ClaimableEvent) o;
-            return nonce.equals(that.nonce) &&
-                    to.equals(that.to) &&
-                    amount.equals(that.amount);
+        public ClaimableEvent(Hash160 neoN3Token, BigInteger nonce, Hash160 to, BigInteger amount) {
+            this.neoN3Token = neoN3Token;
+            this.nonce = nonce;
+            this.to = to;
+            this.amount = amount;
         }
 
-        @Override
-        public String toString() {
-            return "\nClaimableEvent\n" +
-                    "\n  nonce=" + nonce +
-                    "\n  to=" + to +
-                    "\n  amount=" + amount +
-                    "\n";
-        }
     }
 
     public static class ClaimEvent {
+        public Hash160 neoN3Token;
         public BigInteger nonce;
         public Hash160 to;
         public BigInteger amount;
@@ -550,23 +577,11 @@ public class TestHelper {
             this.amount = amount;
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof ClaimEvent)) return false;
-            ClaimEvent that = (ClaimEvent) o;
-            return nonce.equals(that.nonce) &&
-                    to.equals(that.to) &&
-                    amount.equals(that.amount);
-        }
-
-        @Override
-        public String toString() {
-            return "\nClaimEvent\n" +
-                    "\n  nonce=" + nonce +
-                    "\n  to=" + to +
-                    "\n  amount=" + amount +
-                    "\n";
+        public ClaimEvent(Hash160 neoN3Token, BigInteger nonce, Hash160 to, BigInteger amount) {
+            this.neoN3Token = neoN3Token;
+            this.nonce = nonce;
+            this.to = to;
+            this.amount = amount;
         }
     }
 }

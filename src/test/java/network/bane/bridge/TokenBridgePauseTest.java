@@ -5,7 +5,7 @@ import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
 import network.bane.management.BridgeManagementContract;
-import network.bane.testhelper.TestContract;
+import network.bane.testhelper.Nep17TokenContract;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -20,7 +20,7 @@ import static network.bane.util.helper.TestHelper.setupBridge;
 
 @ContractTest(
         blockTime = 1,
-        contracts = {BridgeManagementContract.class, BridgeContract.class, TestContract.class},
+        contracts = {BridgeManagementContract.class, BridgeContract.class, Nep17TokenContract.class},
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)

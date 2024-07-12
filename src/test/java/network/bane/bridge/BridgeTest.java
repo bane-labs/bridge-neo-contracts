@@ -23,8 +23,8 @@ import io.neow3j.types.NeoVMStateType;
 import io.neow3j.utils.Await;
 import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
-import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
+import network.bane.management.BridgeManagementContract;
 import network.bane.util.structs.GasBridge;
 import network.bane.util.structs.State;
 import network.bane.util.TestHelper;
@@ -83,21 +83,7 @@ import static network.bane.util.TestHelper.validator2;
 import static network.bane.util.TestHelper.validator3;
 import static network.bane.util.TestHelper.validator4;
 import static network.bane.util.TestHelper.validator5;
-import static network.bane.util.helper.TestHelper.alice;
-import static network.bane.util.helper.TestHelper.bob;
-import static network.bane.util.helper.TestHelper.bridge;
-import static network.bane.util.helper.TestHelper.charlie;
-import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
-import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
-import static network.bane.util.helper.TestHelper.denise;
-import static network.bane.util.helper.TestHelper.gasToken;
-import static network.bane.util.helper.TestHelper.incrementAndGetDepositNonce;
-import static network.bane.util.helper.TestHelper.incrementAndGetWithdrawalNonce;
-import static network.bane.util.helper.TestHelper.neoToken;
-import static network.bane.util.helper.TestHelper.neow3j;
-import static network.bane.util.helper.TestHelper.setup;
-import static network.bane.util.helper.TestHelper.setupBridge;
-import static network.bane.util.helper.TestHelper.testContract;
+import static network.bane.util.helper.TestHelper.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
@@ -113,7 +99,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ContractTest(
         blockTime = 1,
-        contracts = {BridgeManagementContract.class, BridgeContract.class, TestContract.class},
+        contracts = {BridgeManagementContract.class, BridgeContract.class,  TestContract.class},
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)

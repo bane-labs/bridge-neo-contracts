@@ -2,6 +2,7 @@ package network.bane.util;
 
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
+import io.neow3j.devpack.ByteString;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
@@ -287,6 +288,14 @@ public class Bridge extends SmartContractHelper {
                 ).signers(signer));
     }
 
+    public Hash256 unregisterToken(Hash160 neoN3TokenHash) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(governor);
+        return sendAndAwaitExecution(
+                invokeFunction("unregisterToken",
+                        hash160(neoN3TokenHash)
+                ).signers(signer));
+    }
+
     // endregion
     // region token pausing
 
@@ -430,7 +439,7 @@ public class Bridge extends SmartContractHelper {
     }
 
     public String tokenWithdrawalRoot(Hash160 tokenHash) throws IOException {
-        return callFunctionReturningString("tokenWithdrawalRoot", hash160(tokenHash));
+        return Numeric.toHexString(getTokenBridge(tokenHash).withdrawalState.root.toArray());
     }
 
     // endregion

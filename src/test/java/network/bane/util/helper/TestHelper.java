@@ -16,9 +16,10 @@ import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
+import network.bane.testhelper.TestContract;
 import network.bane.bridge.BridgeContract;
 import network.bane.management.BridgeManagementContract;
-import network.bane.testhelper.TestContract;
+import network.bane.util.Nep17Token;
 import network.bane.util.Bridge;
 import network.bane.util.Management;
 import network.bane.util.structs.ExecutionType;
@@ -31,19 +32,7 @@ import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static java.util.Arrays.asList;
-import static network.bane.util.TestHelper.governorPubKey;
-import static network.bane.util.TestHelper.owner;
-import static network.bane.util.TestHelper.ownerPubKey;
-import static network.bane.util.TestHelper.prepareManagementDeployParameter;
-import static network.bane.util.TestHelper.relayerPubKey;
-import static network.bane.util.TestHelper.securityGuardPubKey;
-import static network.bane.util.TestHelper.validator1PubKey;
-import static network.bane.util.TestHelper.validator2PubKey;
-import static network.bane.util.TestHelper.validator3PubKey;
-import static network.bane.util.TestHelper.validator4PubKey;
-import static network.bane.util.TestHelper.validator5PubKey;
-import static network.bane.util.TestHelper.validator6PubKey;
-import static network.bane.util.TestHelper.validator7PubKey;
+import static network.bane.util.TestHelper.*;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
 import static network.bane.util.helper.NetworkSettingsHelper.updateNetworkSettings;
 
@@ -57,7 +46,9 @@ public class TestHelper {
     public static Bridge bridge;
     public static Management management;
 
+    public static Nep17Token nep17Token;
     public static Hash160 testContract;
+    public static final Hash160 nep17TokenXTokenHash = new Hash160("0x8095581030409afc716d5f35ce5172e13d7ba316");
     public static final Hash160 neoXNeoTokenHash = new Hash160("0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f");
     public static final Hash160 neoN3NeoTokenHash = NeoToken.SCRIPT_HASH;
 
@@ -157,6 +148,17 @@ public class TestHelper {
         return config;
     }
 
+    public static DeployConfiguration createTestDeployConfig() {
+        DeployConfiguration config = new DeployConfiguration();
+        config.setDeployParam( hash160(ownerScriptHash));
+        AccountSigner deploySigner = AccountSigner.none(owner);
+        WitnessRule deployWitnessRule = new WitnessRule(WitnessAction.ALLOW,
+                new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
+        deploySigner.setRules(deployWitnessRule);
+        config.setSigner(deploySigner);
+        return config;
+    }
+
     private static ContractParameter prepareBridgeDeployParameter(Hash160 managementContractHash,
             BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit, BigInteger maxWithdrawals) {
         return array(
@@ -190,6 +192,24 @@ public class TestHelper {
                 maxWithdrawals, executionType);
 
         Hash256 txHash = bridge.registerToken(neoN3NeoTokenHash, config);
+        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
+    }
+
+    public static void registerTokenBridge(Hash160 token) throws Throwable {
+        BigInteger fee = gasToken.toFractions(new BigDecimal("0.1"));
+        BigInteger minAmount = BigInteger.ONE;
+        BigInteger maxAmount = new BigInteger("1000");
+        int maxWithdrawals = 100;
+        ExecutionType executionType = ExecutionType.NEP17;
+        TokenBridge.TokenConfig config = new TokenBridge.TokenConfig(nep17TokenXTokenHash, fee, minAmount, maxAmount,
+                maxWithdrawals, executionType);
+
+        Hash256 txHash = bridge.registerToken(token, config);
+        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
+    }
+
+    public static void unregisterTokenBridge(Hash160 token) throws Throwable {
+        Hash256 txHash = bridge.unregisterToken(token);
         Await.waitUntilTransactionIsExecuted(txHash, neow3j);
     }
 

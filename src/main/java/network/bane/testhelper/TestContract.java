@@ -13,5 +13,4 @@ public class TestContract {
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
     }
-
 }

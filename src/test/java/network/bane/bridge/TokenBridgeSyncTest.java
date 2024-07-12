@@ -14,7 +14,7 @@ import io.neow3j.types.NeoVMStateType;
 import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
-import network.bane.testhelper.TestContract;
+import network.bane.testhelper.Nep17TokenContract;
 import network.bane.testhelper.TokenTestContract;
 import network.bane.util.structs.State;
 import org.junit.jupiter.api.BeforeAll;
@@ -64,7 +64,7 @@ import static org.hamcrest.Matchers.is;
  */
 @ContractTest(
         blockTime = 1,
-        contracts = {BridgeManagementContract.class, BridgeContract.class, TokenTestContract.class, TestContract.class},
+        contracts = {BridgeManagementContract.class, BridgeContract.class, TokenTestContract.class, Nep17TokenContract.class},
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
