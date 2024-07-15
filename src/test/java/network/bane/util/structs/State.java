@@ -17,13 +17,11 @@ public class State {
         return new State(BigInteger.ZERO, Hash256.ZERO);
     }
 
-    public boolean equals(State other) {
-        if (other == null) {
-            return false;
-        }
-        if (this == other) {
-            return true;
-        }
-        return this.nonce.equals(other.nonce) && this.root.equals(other.root);
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        State state = (State) o;
+        return nonce.equals(state.nonce) &&
+                root.equals(state.root);
     }
 }
