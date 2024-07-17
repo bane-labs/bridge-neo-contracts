@@ -57,6 +57,6 @@ tasks.named('run') {
         throw new GradleException('The "mainClass" property is not specified. Please provide it using -PmainClass=your.main.Class')
     } else {
         // If the property is provided, set it as the main class name to run
-        application.mainClassName = project.mainClass
+        project.mainClassName = project.mainClass
     }
 }
