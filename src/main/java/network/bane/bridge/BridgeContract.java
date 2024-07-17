@@ -214,10 +214,6 @@ public class BridgeContract {
             if (!checkWitness(managementContract().owner())) {
                 abort("Owner must witness the deployment.");
             }
-        } else {
-            if (baseMap.get(KEY_MIGRATED) == null) {
-                MigrationImpl_V1ToV2.migrateT3_v1Tov2();
-            }
         }
     }
 
