@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
+import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.publicKey;
 import static io.neow3j.types.ContractParameter.signature;
@@ -54,11 +55,9 @@ public class TestHelper {
     public static final String ISABELLA = "NQ71wQ2GJbQhQr9Je66YVPmAwckkMGRu74";
 
     public static final Account owner = Account.fromWIF("KxmdmDryNcxiAjk4QTVgei11251NxJhZmN25q5H3QYrwfJJ1Tyrs");
-    public static final ECPublicKey ownerPubKey = owner.getECKeyPair().getPublicKey();
     public static final Hash160 ownerScriptHash = owner.getScriptHash();
 
     public static final Account relayer = Account.fromWIF("L5iiAW1NicU3znJfcBAbDgFyVy9dudd1HjBLeNtacaG73JcjMymU");
-    public static final ECPublicKey relayerPubKey = relayer.getECKeyPair().getPublicKey();
     public static final Hash160 relayerScriptHash = relayer.getScriptHash();
 
     public static final Account validator1 = Account.fromWIF("L46dW4Z8KEvURXaE1YrqsgNSaQ4G2B4uN97uNeyhJp1VL7UjLUpb");
@@ -95,11 +94,9 @@ public class TestHelper {
     public static int defaultValidatorThreshold = 5;
 
     public static final Account governor = Account.fromWIF("L31FLxpHiSuZLzjzJAVY5z9gSu25pZxRB2yBCzqjc3JDUz2GkLBH");
-    public static final ECPublicKey governorPubKey = governor.getECKeyPair().getPublicKey();
     public static final Hash160 governorScriptHash = governor.getScriptHash();
 
     public static final Account securityGuard = Account.fromWIF("L287EDF2W9Eq7ojFtC5dWvnsLDNGCjMR2hBX3qa1FkfWt5Uzkf9Y");
-    public static final ECPublicKey securityGuardPubKey = securityGuard.getECKeyPair().getPublicKey();
     public static final Hash160 securityGuardScriptHash = securityGuard.getScriptHash();
 
     public static final Account account0 = Account.fromWIF("Kzczq8Bd3h6ukXs4tgTkGd6jDeETcm18VTx3gS8ZcC5DobB25sGm");
@@ -126,16 +123,16 @@ public class TestHelper {
     public static final Hash160 recipient9 = new Hash160("0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199");
 
     public static ContractParameter prepareManagementDeployParameter(
-            ECPublicKey owner,
-            ECPublicKey relayer,
+            Hash160 owner,
+            Hash160 relayer,
             List<ECPublicKey> validators,
             Integer threshold,
-            ECPublicKey governor,
-            ECPublicKey securityGuard
+            Hash160 governor,
+            Hash160 securityGuard
     ) {
         return array(
-                publicKey(owner),
-                publicKey(relayer),
+                hash160(owner),
+                hash160(relayer),
                 array(
                         publicKey(validators.get(0)),
                         publicKey(validators.get(1)),
@@ -146,8 +143,8 @@ public class TestHelper {
                         publicKey(validators.get(6))
                 ),
                 integer(threshold),
-                publicKey(governor),
-                publicKey(securityGuard)
+                hash160(governor),
+                hash160(securityGuard)
         );
     }
 

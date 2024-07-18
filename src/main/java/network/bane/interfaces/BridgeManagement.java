@@ -15,10 +15,10 @@ public class BridgeManagement extends ContractInterface {
     }
 
     @CallFlags(io.neow3j.devpack.constants.CallFlags.ReadStates)
-    public native ECPoint owner();
+    public native Hash160 owner();
 
     @CallFlags(io.neow3j.devpack.constants.CallFlags.ReadStates)
-    public native ECPoint relayer();
+    public native Hash160 relayer();
 
     @CallFlags(io.neow3j.devpack.constants.CallFlags.ReadStates)
     public native int validatorThreshold();
@@ -30,8 +30,8 @@ public class BridgeManagement extends ContractInterface {
     public native boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, ByteString root);
 
     @CallFlags(io.neow3j.devpack.constants.CallFlags.ReadStates)
-    public native ECPoint governor();
+    public native Hash160 governor();
 
     @CallFlags(io.neow3j.devpack.constants.CallFlags.ReadStates)
-    public native ECPoint securityGuard();
+    public native Hash160 securityGuard();
 }
