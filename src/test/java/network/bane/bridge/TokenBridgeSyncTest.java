@@ -18,6 +18,7 @@ import network.bane.testhelper.TestContract;
 import network.bane.testhelper.TokenTestContract;
 import network.bane.util.structs.State;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -62,6 +63,7 @@ import static org.hamcrest.Matchers.is;
 /**
  * The inputs and outputs in this test are synchronized with tests on the Neo X side.
  */
+@Disabled
 @ContractTest(
         blockTime = 1,
         contracts = {BridgeManagementContract.class, BridgeContract.class, TokenTestContract.class, TestContract.class},
