@@ -136,9 +136,6 @@ public class BridgeContract {
     @EventParameterNames({"NeoN3Token", "TokenConfig"})
     static Event2Args<Hash160, TokenBridge.TokenConfig> onTokenRegister;
 
-    @DisplayName("TokenUnregister")
-    @EventParameterNames({"NeoN3Token", "NeoXToken"})
-    static Event2Args<Hash160, Hash160> onTokenUnregister;
 
     @DisplayName("TokenBridgePause")
     @EventParameterNames({"NeoN3Token", "NeoXToken"})
@@ -515,14 +512,6 @@ public class BridgeContract {
         if (!TokenBridge.TokenConfig.isValid(tokenConfig)) abort("Invalid token configuration.");
         TokenBridgeImpl.registerToken(token, tokenConfig);
         onTokenRegister.fire(token, tokenConfig);
-    }
-
-    public static void unregisterToken(Hash160 neoN3Token) {
-        onlyGovernor();
-        onlyTokenBridgePaused(neoN3Token);
-        Hash160 neoXToken = getTokenBridge(neoN3Token).config.neoXToken;
-        TokenBridgeImpl.unregisterToken(neoN3Token);
-        onTokenUnregister.fire(neoN3Token, neoXToken);
     }
 
     // endregion
