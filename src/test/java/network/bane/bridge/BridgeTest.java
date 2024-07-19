@@ -55,6 +55,7 @@ import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.getClaimEvents;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_GAS_DEPOSIT_FEE;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_TOTAL_MAX_DEPOSITED_GAS;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_GAS_DEPOSIT;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_WITHDRAWALS;
@@ -180,29 +181,32 @@ public class BridgeTest {
         assertThat(pauseEntry.getKeyHex(), is("0x0a02"));
         assertArrayEquals(pauseEntry.getValue(), new byte[]{});
         assertThat(gasBridgeEntry.getKeyHex(), is("0x0a03"));
-        String expectedStorageValue = "0x4004" + // array size 4
+        String expectedStorageValue = "0x4005" + // array size 5
                 "2100" + // integer - pause
+                "2100" + // integer - total gas deposited
                 "4002" + // array size 2 - deposit state
                 "2100" + // integer 0
                 "28200000000000000000000000000000000000000000000000000000000000000000" + // bytestring size 32
                 "4002" + // array size 2 - withdrawal state
                 "2100" +
                 "28200000000000000000000000000000000000000000000000000000000000000000" + // bytestring size 32
-                "4004" + // array size 4 - config
-                "210480969800" + // integer 10000000
-                "210400e1f505" + // integer 100000000
-                "21060010a5d4e800" + // integer 1000000000000
-                "210164"; // integer 100
+                "4005" + // array size 5 - config
+                "210480969800" + // integer 0_10000000
+                "210400e1f505" + // integer 1_00000000
+                "21060010a5d4e800" + // integer 10000_00000000
+                "210164" + // integer 100
+                "210600a0724e1809"; // integer 100'000_00000000
         assertThat(gasBridgeEntry.getValueHex(), is(expectedStorageValue));
 
         assertThat(bridge.management(), is(MANAGEMENT_CONTRACT_HASH));
 
-        GasBridge expectedGasBridge = new GasBridge(false, State.newState(), State.newState(),
+        GasBridge expectedGasBridge = new GasBridge(false, BigInteger.ZERO, State.newState(), State.newState(),
                 new GasBridge.GasConfig(
                         DEFAULT_GAS_DEPOSIT_FEE,
                         DEFAULT_MIN_GAS_DEPOSIT,
                         DEFAULT_MAX_GAS_DEPOSIT,
-                        DEFAULT_MAX_WITHDRAWALS)
+                        DEFAULT_MAX_WITHDRAWALS,
+                        DEFAULT_TOTAL_MAX_DEPOSITED_GAS)
         );
         assertTrue(bridge.getGasBridge().equals(expectedGasBridge));
         assertThat(bridge.gasDepositFee(), is(DEFAULT_GAS_DEPOSIT_FEE));
@@ -768,6 +772,30 @@ public class BridgeTest {
                         newMaxDeposit));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Maximum must be greater than the minimum amount."));
+    }
+
+    @Test
+    @Order(0)
+    public void testSetMaxGasDeposit_equalOrGreaterThanMaxTotalDepositedGas() throws Throwable {
+        BigInteger initialMaxGasDeposit = bridge.maxGasDeposit();
+        BigInteger maxTotalDepositedGas = bridge.maxTotalDepositedGas();
+        assertThat(initialMaxGasDeposit, lessThan(maxTotalDepositedGas));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> setMaxGasDeposit(bridge, neow3j, maxTotalDepositedGas));
+        assertThat(thrown.getMessage(),
+                containsString("Value must be less than the maximum total deposited amount."));
+
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> setMaxGasDeposit(bridge, neow3j, maxTotalDepositedGas.add(BigInteger.ONE)));
+        assertThat(thrown.getMessage(),
+                containsString("Value must be less than the maximum total deposited amount."));
+
+        BigInteger maxTotalDepositedGas_minusOne = bridge.maxTotalDepositedGas().subtract(BigInteger.ONE);
+        bridge.setMaxGasDeposit(maxTotalDepositedGas_minusOne);
+        assertThat(bridge.maxGasDeposit(), is(maxTotalDepositedGas_minusOne));
+
+        // Reset the max gas deposit to the initial value.
+        bridge.setMaxGasDeposit(initialMaxGasDeposit);
     }
 
     @Test

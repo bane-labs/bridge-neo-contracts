@@ -11,5 +11,6 @@ public class DefaultTestValues {
     public static final BigInteger DEFAULT_MIN_GAS_DEPOSIT = new BigInteger("100000000");
     public static final BigInteger DEFAULT_MAX_GAS_DEPOSIT = new BigInteger("1000000000000");
     public static final BigInteger DEFAULT_MAX_WITHDRAWALS = new BigInteger("100");
+    public static final BigInteger DEFAULT_TOTAL_MAX_DEPOSITED_GAS = new BigInteger("10000000000000");
 
 }
