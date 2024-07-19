@@ -49,7 +49,6 @@ import static network.bane.bridge.GasBridgeImpl.onlyGasBridgePaused;
 import static network.bane.bridge.GasBridgeImpl.onlyGasBridgeUnpaused;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
-import static network.bane.bridge.StorageConstants.KEY_MIGRATED;
 import static network.bane.bridge.StorageConstants.KEY_UNCLAIMED_REWARDS;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
