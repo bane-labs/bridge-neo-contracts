@@ -266,10 +266,10 @@ public class BridgeManagementTest {
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
         assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
 
-        assertThat(management.owner(), is(alicePubKey));
+        assertThat(management.owner(), is(alice.getScriptHash()));
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setOwner", publicKey(bobPubKey))
+                () -> management.invokeFunction("setOwner", hash160(bob))
                         .signers(calledByEntry(owner))
                         .sign()
         );
