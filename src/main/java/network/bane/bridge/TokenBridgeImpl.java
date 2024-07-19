@@ -45,10 +45,6 @@ public class TokenBridgeImpl {
         ));
     }
 
-    static void unregisterToken(Hash160 token) {
-        new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).delete(token);
-    }
-
     static TokenBridge checkRegisteredAndGetTokenBridge(Hash160 token) {
         ByteString serializedTokenBridge = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(token);
         if (serializedTokenBridge == null) abort("Token not registered.");
