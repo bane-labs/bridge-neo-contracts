@@ -224,6 +224,16 @@ public class BridgeContract {
         new ContractManagement().update(nef, manifest, data);
     }
 
+    public static void updateGasConfig(Object data) {
+        if (!checkWitness(managementContract().owner())) {
+            abort("Owner must witness updateGasConfig.");
+        }
+            GasBridge gasBridge = (GasBridge) data;        
+            if (!GasBridge.isValid(gasBridge)) abort("Invalid gas bridge.");
+            ByteString serialize = new StdLib().serialize(gasBridge);
+            baseMap.put(KEY_GAS_BRIDGE, serialize);
+      
+    }
     // endregion
     // region pause/unpause
 
