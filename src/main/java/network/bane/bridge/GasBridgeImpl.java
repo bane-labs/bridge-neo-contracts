@@ -128,7 +128,8 @@ public class GasBridgeImpl {
      */
     private static int computeTotalWithdrawnAmount(List<Withdrawal> withdrawals) {
         int totalWithdrawnAmount = 0;
-        for (int i = 0; i < withdrawals.size(); i++) {
+        int nrWithdrawals = withdrawals.size();
+        for (int i = 0; i < nrWithdrawals; i++) {
             totalWithdrawnAmount += withdrawals.get(i).amount;
         }
         return totalWithdrawnAmount;
