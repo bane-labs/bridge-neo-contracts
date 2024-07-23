@@ -23,6 +23,7 @@ import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
+import network.bane.management.MigrationT4V1ToV2;
 import network.bane.structs.ManagementDeploymentData;
 
 import static io.neow3j.devpack.Helper.abort;
@@ -37,16 +38,18 @@ public class BridgeManagementContract {
     private static final StorageContext ctx = Storage.getStorageContext();
 
     private static final byte prefix_base = 0x0a;
-    private static final StorageMap baseMap = new StorageMap(ctx, prefix_base);
+    static final StorageMap baseMap = new StorageMap(ctx, prefix_base);
     private static final byte prefix_validator = 0x0b;
     private static final StorageMap validatorMap = new StorageMap(ctx, prefix_validator);
 
-    private static final int key_owner = 0x00;
-    private static final int key_relayer = 0x01;
-    private static final int key_governor = 0x02;
-    private static final int key_securityguard = 0x03;
+    static final int key_owner = 0x00;
+    static final int key_relayer = 0x01;
+    static final int key_governor = 0x02;
+    static final int key_securityguard = 0x03;
 
     private static final int key_validator_threshold = 0x10;
+
+    private static final int key_migrated = 0xff;
 
     // region events
 
@@ -104,6 +107,10 @@ public class BridgeManagementContract {
             baseMap.put(key_securityguard, securityGuard);
 
             if (!checkWitness(owner())) abort("Owner must witness the deployment.");
+        } else {
+            if (baseMap.get(key_migrated) == null) {
+                MigrationT4V1ToV2.migrate();
+            }
         }
     }
 
