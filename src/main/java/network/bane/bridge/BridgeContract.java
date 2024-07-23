@@ -31,7 +31,6 @@ import io.neow3j.devpack.events.Event8Args;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.GasBridge;
 import network.bane.structs.GasBridgePaymentData;
-import network.bane.structs.GasConfig;
 import network.bane.structs.State;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
@@ -214,6 +213,11 @@ public class BridgeContract {
             // Make sure the owner witnesses the deployment.
             if (!checkWitness(managementContract().owner())) {
                 abort("Owner must witness the deployment.");
+            }
+        } else {
+            if (baseMap.get(StorageConstants.KEY_MIGRATED) == null) {
+                MigrationT4V1ToV2.MigrationInfo migrationInfo = (MigrationT4V1ToV2.MigrationInfo) data;
+                MigrationT4V1ToV2.migrateV1(migrationInfo);
             }
         }
     }
