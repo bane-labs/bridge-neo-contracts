@@ -62,13 +62,13 @@ public class GasBridgeImpl {
         int depositFee = gasBridge.config.depositFee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
 
-        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, amount, null)) {
-            abort("Gas transfer failed.");
-        }
-
         // The depositAmount is the amount minus the deposit fee. It is the amount that will be distributed on Neo X.
         int depositAmount = amount - depositFee;
         updateGasDepositState(gasBridge, from, to, depositAmount);
+
+        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, amount, null)) {
+            abort("Gas transfer failed.");
+        }
     }
 
     static void updateGasDepositState(GasBridge gasBridge, Hash160 from, Hash160 to, int amount) {
