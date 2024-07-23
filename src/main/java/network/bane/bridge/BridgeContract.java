@@ -216,8 +216,9 @@ public class BridgeContract {
             }
         } else {
             if (baseMap.get(StorageConstants.KEY_MIGRATED) == null) {
-                MigrationT4V1ToV2.MigrationInfo migrationInfo = (MigrationT4V1ToV2.MigrationInfo) data;
-                MigrationT4V1ToV2.migrateV1(migrationInfo);
+                // Should be equal to 5500001_00000000 minus the current balance of the bridge contract on Neo X.
+                int totalDeposited = (int) data;
+                MigrationT4V1ToV2.migrateV1(totalDeposited);
             }
         }
     }

@@ -112,7 +112,7 @@ public class BridgeManagementContract {
                 MigrationT4V1ToV2.migrate();
             }
             // This is to verify that the owner storage change is working.
-            if (!checkWitness(owner())) abort("Owner must witness the deployment.");
+            if (!checkWitness(owner())) abort("Owner must witness the migration.");
         }
     }
 

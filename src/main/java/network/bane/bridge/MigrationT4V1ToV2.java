@@ -1,7 +1,7 @@
 package network.bane.bridge;
 
 import io.neow3j.devpack.ByteString;
-import io.neow3j.devpack.annotations.Struct;
+import io.neow3j.devpack.Helper;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.structs.GasBridge;
 import network.bane.structs.GasBridgeV1;
@@ -14,26 +14,19 @@ import static network.bane.bridge.StorageConstants.KEY_MIGRATED;
 
 public class MigrationT4V1ToV2 {
 
-    @Struct
-    static class MigrationInfo {
-        public int totalDeposited;
-        public int maxTotalDeposited;
-
-        public MigrationInfo(int totalDeposited, int maxTotalDeposited) {
-            this.totalDeposited = totalDeposited;
-            this.maxTotalDeposited = maxTotalDeposited;
-        }
-    }
-
-    static void migrateV1(MigrationInfo migrationInfo) {
+    static void migrateV1(int totalDeposited) {
         ByteString serialized = BridgeContract.baseMap.get(KEY_GAS_BRIDGE);
         GasBridgeV1 gasBridgeV1 = (GasBridgeV1) new StdLib().deserialize(serialized);
         GasConfigV1 gasConfigV1 = gasBridgeV1.config;
+
+        // (10^14 + 10^13) * 5 = 5'500'000_00000000
+        int maxTotalDeposited = (Helper.pow(10, 14) + Helper.pow(10, 13)) * 5;
+
         GasConfig newGasConfig = new GasConfig(gasConfigV1.depositFee, gasConfigV1.minAmount, gasConfigV1.maxAmount,
-                gasConfigV1.maxWithdrawals, migrationInfo.maxTotalDeposited);
+                gasConfigV1.maxWithdrawals, maxTotalDeposited);
         GasBridge newGasBridge = new GasBridge(
                 gasBridgeV1.paused,
-                migrationInfo.totalDeposited,
+                totalDeposited,
                 gasBridgeV1.depositState,
                 gasBridgeV1.withdrawalState,
                 newGasConfig);
@@ -42,7 +35,7 @@ public class MigrationT4V1ToV2 {
             abort("Invalid gas bridge state.");
         }
         BridgeContract.baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(newGasBridge));
-        BridgeContract.baseMap.put(KEY_MIGRATED, 1);
+        BridgeContract.baseMap.put(KEY_MIGRATED, 0);
     }
 
 }
