@@ -4,6 +4,7 @@ import io.neow3j.devpack.Account;
 import io.neow3j.devpack.Hash160;
 
 import static network.bane.management.BridgeManagementContract.key_governor;
+import static network.bane.management.BridgeManagementContract.key_migrated;
 import static network.bane.management.BridgeManagementContract.key_owner;
 import static network.bane.management.BridgeManagementContract.key_relayer;
 import static network.bane.management.BridgeManagementContract.key_securityguard;
@@ -23,6 +24,7 @@ public class MigrationT4V1ToV2 {
         Hash160 newSecurityGuard =
                 Account.createStandardAccount(BridgeManagementContract.baseMap.getECPoint(key_securityguard));
         BridgeManagementContract.baseMap.put(key_securityguard, newSecurityGuard);
+        BridgeManagementContract.baseMap.put(key_migrated, 1);
     }
 
 }

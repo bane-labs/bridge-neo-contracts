@@ -49,7 +49,7 @@ public class BridgeManagementContract {
 
     private static final int key_validator_threshold = 0x10;
 
-    private static final int key_migrated = 0xff;
+    static final int key_migrated = 0xff;
 
     // region events
 
@@ -111,6 +111,8 @@ public class BridgeManagementContract {
             if (baseMap.get(key_migrated) == null) {
                 MigrationT4V1ToV2.migrate();
             }
+            // This is to verify that the owner storage change is working.
+            if (!checkWitness(owner())) abort("Owner must witness the deployment.");
         }
     }
 

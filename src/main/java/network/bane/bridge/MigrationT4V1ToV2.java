@@ -10,6 +10,7 @@ import network.bane.structs.GasConfigV1;
 
 import static io.neow3j.devpack.Helper.abort;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
+import static network.bane.bridge.StorageConstants.KEY_MIGRATED;
 
 public class MigrationT4V1ToV2 {
 
@@ -41,6 +42,7 @@ public class MigrationT4V1ToV2 {
             abort("Invalid gas bridge state.");
         }
         BridgeContract.baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(newGasBridge));
+        BridgeContract.baseMap.put(KEY_MIGRATED, 1);
     }
 
 }
