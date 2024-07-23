@@ -48,6 +48,7 @@ import static network.bane.bridge.GasBridgeImpl.onlyGasBridgePaused;
 import static network.bane.bridge.GasBridgeImpl.onlyGasBridgeUnpaused;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
+import static network.bane.bridge.StorageConstants.KEY_VERSION;
 import static network.bane.bridge.StorageConstants.KEY_UNCLAIMED_REWARDS;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
@@ -210,13 +211,20 @@ public class BridgeContract {
             baseMap.put(KEY_GAS_BRIDGE, serialize);
             baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
 
+            baseMap.put(KEY_VERSION, 1);
+
             // Make sure the owner witnesses the deployment.
             if (!checkWitness(managementContract().owner())) {
                 abort("Owner must witness the deployment.");
             }
         } else {
-            if (baseMap.get(StorageConstants.KEY_MIGRATED) == null) {
+            ByteString version = baseMap.get(KEY_VERSION);
+            if (version != null) {
+                abort("Contract is already updated.");
+            }
+            if (version == null) {
                 // Should be equal to 5500001_00000000 minus the current balance of the bridge contract on Neo X.
+                if (data == null) abort("Total deposited amount must be provided.");
                 int totalDeposited = (int) data;
                 MigrationT4V1ToV2.migrateV1(totalDeposited);
             }
