@@ -112,7 +112,6 @@ public class BridgeManagementContract {
     public static void setOwner(ECPoint newOwner) {
         onlyOwner();
         if (newOwner == null || !ECPoint.isValid(newOwner)) abort("Invalid public key provided.");
-        if (!Runtime.checkWitness(newOwner)) abort("New owner must be witness to the transaction.");
         baseMap.put(key_owner, newOwner);
         onOwnerSet.fire(newOwner);
     }
