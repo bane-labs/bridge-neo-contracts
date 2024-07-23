@@ -91,13 +91,6 @@ public class TokenBridgeImpl {
         int depositFee = tokenBridge.config.fee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
 
-        // Pay the fee and transfer the token
-        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, depositFee, null)) {
-            abort("Fee transfer failed.");
-        }
-        if (!new FungibleToken(neoN3Token).transfer(from, executingScriptHash, amount, null)) {
-            abort("Token transfer failed.");
-        }
         // Update the token state
         tokenBridge.depositState.nonce++;
         ByteString depositHash =
@@ -110,6 +103,14 @@ public class TokenBridgeImpl {
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(neoN3Token, new StdLib().serialize(tokenBridge));
         BridgeContract.onTokenDeposit.fire(neoN3Token, tokenBridge.config.neoXToken, tokenBridge.depositState.nonce,
                 to, amount, from, depositHash, newRoot);
+
+        // Pay the fee and transfer the token
+        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, depositFee, null)) {
+            abort("Fee transfer failed.");
+        }
+        if (!new FungibleToken(neoN3Token).transfer(from, executingScriptHash, amount, null)) {
+            abort("Token transfer failed.");
+        }
     }
 
     // endregion
