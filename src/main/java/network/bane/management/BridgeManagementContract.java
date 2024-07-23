@@ -48,6 +48,8 @@ public class BridgeManagementContract {
 
     private static final int key_validator_threshold = 0x10;
 
+    private static final int key_version = 0x7f;
+
     // region events
 
     @DisplayName("OwnerChange")
@@ -102,6 +104,8 @@ public class BridgeManagementContract {
             baseMap.put(key_validator_threshold, validatorThreshold);
             baseMap.put(key_governor, governor);
             baseMap.put(key_securityguard, securityGuard);
+
+            baseMap.put(key_version, 1);
 
             if (!checkWitness(owner())) abort("Owner must witness the deployment.");
         }

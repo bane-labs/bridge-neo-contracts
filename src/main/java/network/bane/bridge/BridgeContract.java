@@ -31,7 +31,6 @@ import io.neow3j.devpack.events.Event8Args;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.GasBridge;
 import network.bane.structs.GasBridgePaymentData;
-import network.bane.structs.GasConfig;
 import network.bane.structs.State;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
@@ -49,6 +48,7 @@ import static network.bane.bridge.GasBridgeImpl.onlyGasBridgePaused;
 import static network.bane.bridge.GasBridgeImpl.onlyGasBridgeUnpaused;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
+import static network.bane.bridge.StorageConstants.KEY_VERSION;
 import static network.bane.bridge.StorageConstants.KEY_UNCLAIMED_REWARDS;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
@@ -210,6 +210,8 @@ public class BridgeContract {
             ByteString serialize = new StdLib().serialize(gasBridge);
             baseMap.put(KEY_GAS_BRIDGE, serialize);
             baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
+
+            baseMap.put(KEY_VERSION, 1);
 
             // Make sure the owner witnesses the deployment.
             if (!checkWitness(managementContract().owner())) {

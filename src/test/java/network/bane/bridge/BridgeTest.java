@@ -170,11 +170,12 @@ public class BridgeTest {
     @Test
     @Order(0)
     public void testDeployment_deploymentDataSetCorrectly() throws IOException {
-        assertThat(bridge.findStorage("0x0a"), hasSize(4));
+        assertThat(bridge.findStorage("0x0a"), hasSize(5));
         ContractStorageEntry managementEntry = bridge.findStorage("0x0a").get(0);
         ContractStorageEntry pauseEntry = bridge.findStorage("0x0a").get(1);
         ContractStorageEntry gasBridgeEntry = bridge.findStorage("0x0a").get(2);
         ContractStorageEntry unclaimedRewardsEntry = bridge.findStorage("0x0a").get(3);
+        ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(4);
 
         assertThat(managementEntry.getKeyHex(), is("0x0a01"));
         assertArrayEquals(managementEntry.getValue(), MANAGEMENT_CONTRACT_HASH.toLittleEndianArray());
@@ -218,6 +219,9 @@ public class BridgeTest {
         assertThat(bridge.gasWithdrawRoot(), is(Numeric.toHexString(Hash256.ZERO.toArray())));
 
         assertThat(unclaimedRewardsEntry.getValueHex(), is("0x"));
+
+        assertThat(versionEntry.getKeyHex(), is("0x0a7f"));
+        assertThat(versionEntry.getValueHex(), is("0x"));
     }
 
     // endregion
