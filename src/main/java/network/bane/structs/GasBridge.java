@@ -5,6 +5,8 @@ import io.neow3j.devpack.annotations.Struct;
 @Struct
 public class GasBridge {
     public boolean paused;
+    // Note: If a future version of the bridge contract should contain a verify method, the computation of this value
+    // should be kept in mind (and adapted), since otherwise the actual balance might differ from this accounting here.
     public int totalDeposited;
     public State depositState;
     public State withdrawalState;
