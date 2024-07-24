@@ -53,6 +53,7 @@ public class TestHelper {
     public static final BigInteger minGasDeposit = new BigInteger("100000000");
     public static final BigInteger maxGasDeposit = new BigInteger("1000000000000");
     public static final BigInteger maxWithdrawals = new BigInteger("100");
+    public static final BigInteger maxTotalGasDepositAmount = new BigInteger("10000000000000");
 
     public static Bridge bridge;
     public static Management management;
@@ -143,7 +144,8 @@ public class TestHelper {
                         gasDepositFee,
                         minGasDeposit,
                         maxGasDeposit,
-                        maxWithdrawals
+                        maxWithdrawals,
+                        maxTotalGasDepositAmount
                 )
         );
         AccountSigner deploySigner = AccountSigner.none(owner);
@@ -154,15 +156,17 @@ public class TestHelper {
         return config;
     }
 
-    private static ContractParameter prepareBridgeDeployParameter(Hash160 managementContractHash,
-            BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit, BigInteger maxWithdrawals) {
+    public static ContractParameter prepareBridgeDeployParameter(Hash160 managementContractHash,
+            BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit, BigInteger maxWithdrawals,
+            BigInteger maxTotalDepositAmount) {
         return array(
                 hash160(managementContractHash),
                 array(
                         integer(depositFee),
                         integer(minDeposit),
                         integer(maxDeposit),
-                        integer(maxWithdrawals)
+                        integer(maxWithdrawals),
+                        integer(maxTotalDepositAmount)
                 )
         );
     }

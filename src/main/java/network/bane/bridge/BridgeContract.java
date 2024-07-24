@@ -31,7 +31,6 @@ import io.neow3j.devpack.events.Event8Args;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.GasBridge;
 import network.bane.structs.GasBridgePaymentData;
-import network.bane.structs.GasConfig;
 import network.bane.structs.State;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
@@ -49,6 +48,7 @@ import static network.bane.bridge.GasBridgeImpl.onlyGasBridgePaused;
 import static network.bane.bridge.GasBridgeImpl.onlyGasBridgeUnpaused;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
+import static network.bane.bridge.StorageConstants.KEY_VERSION;
 import static network.bane.bridge.StorageConstants.KEY_UNCLAIMED_REWARDS;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
 import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
@@ -129,6 +129,10 @@ public class BridgeContract {
     @EventParameterNames({"NewMaxDeposit"})
     static Event1Arg<Integer> onMaxGasDepositChange;
 
+    @DisplayName("MaxTotalDepositedGasChange")
+    @EventParameterNames({"NewMaxTotalDepositedGas"})
+    static Event1Arg<Integer> onMaxTotalDepositedGasChange;
+
     // endregion
     // region token bridge events
 
@@ -197,14 +201,17 @@ public class BridgeContract {
             baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.bridgeManagementContract);
             baseMap.put(KEY_BRIDGE_PAUSE, false);
 
-            if (!GasConfig.isValid(deploymentData.gasConfig)) abort("Invalid gas config.");
             ByteString zeroHash = Hash256.zero().toByteString();
             State newDepositState = new State(0, zeroHash);
             State newWithdrawalState = new State(0, zeroHash);
-            GasBridge gasBridge = new GasBridge(false, newDepositState, newWithdrawalState, deploymentData.gasConfig);
+            GasBridge gasBridge = new GasBridge(false, 0, newDepositState, newWithdrawalState,
+                    deploymentData.gasConfig);
+            if (!GasBridge.isValid(gasBridge)) abort("Invalid gas bridge.");
             ByteString serialize = new StdLib().serialize(gasBridge);
             baseMap.put(KEY_GAS_BRIDGE, serialize);
             baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
+
+            baseMap.put(KEY_VERSION, 1);
 
             // Make sure the owner witnesses the deployment.
             if (!checkWitness(managementContract().owner())) {
@@ -458,9 +465,22 @@ public class BridgeContract {
         onlyGovernor();
         GasBridge gasBridge = getGasBridge();
         if (newMaxAmount < gasBridge.config.minAmount) abort("Maximum must be greater than the minimum amount.");
+        if (newMaxAmount >= gasBridge.config.maxTotalDeposited)
+            abort("Value must be less than the maximum total deposited amount.");
         gasBridge.config.maxAmount = newMaxAmount;
         baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
         onMaxGasDepositChange.fire(newMaxAmount);
+    }
+
+    @Safe
+    public static int maxTotalDepositedGas() {
+        return getGasBridge().config.maxTotalDeposited;
+    }
+
+    public static void setMaxTotalDepositedGas(int newMaxTotalDeposited) {
+        onlyGovernor();
+        GasBridgeImpl.setMaxTotalDepositedGas(newMaxTotalDeposited);
+        onMaxTotalDepositedGasChange.fire(newMaxTotalDeposited);
     }
 
     // endregion

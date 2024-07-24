@@ -164,24 +164,26 @@ public class Bridge extends SmartContractHelper {
         List<StackItem> gasBridgeList = callInvokeFunction("getGasBridge")
                 .getInvocationResult().getFirstStackItem().getList();
         boolean paused = gasBridgeList.get(0).getBoolean();
-        List<StackItem> depositStateList = gasBridgeList.get(1).getList();
+        BigInteger totalDeposited = gasBridgeList.get(1).getInteger();
+        List<StackItem> depositStateList = gasBridgeList.get(2).getList();
         State depositState = new State(
                 depositStateList.get(0).getInteger(),
                 new Hash256(depositStateList.get(1).getByteArray())
         );
-        List<StackItem> withdrawalStateList = gasBridgeList.get(2).getList();
+        List<StackItem> withdrawalStateList = gasBridgeList.get(3).getList();
         State withdrawalState = new State(
                 withdrawalStateList.get(0).getInteger(),
                 new Hash256(withdrawalStateList.get(1).getByteArray())
         );
-        List<StackItem> gasConfigList = gasBridgeList.get(3).getList();
+        List<StackItem> gasConfigList = gasBridgeList.get(4).getList();
         GasBridge.GasConfig gasConfig = new GasBridge.GasConfig(
                 gasConfigList.get(0).getInteger(),
                 gasConfigList.get(1).getInteger(),
                 gasConfigList.get(2).getInteger(),
-                gasConfigList.get(3).getInteger()
+                gasConfigList.get(3).getInteger(),
+                gasConfigList.get(4).getInteger()
         );
-        return new GasBridge(paused, depositState, withdrawalState, gasConfig);
+        return new GasBridge(paused, totalDeposited, depositState, withdrawalState, gasConfig);
     }
 
     public BigInteger gasDepositFee() throws IOException {
@@ -221,6 +223,19 @@ public class Bridge extends SmartContractHelper {
     public Hash256 setMaxGasDeposit(Account sender, BigInteger newMax) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
         return sendAndAwaitExecution(invokeFunction("setMaxGasDeposit", integer(newMax)).signers(signer));
+    }
+
+    public BigInteger maxTotalDepositedGas() throws IOException {
+        return getGasBridge().config.maxTotalDeposit;
+    }
+
+    public Hash256 setMaxTotalDepositedGas(BigInteger newMax) throws Throwable {
+        return setMaxTotalDepositedGas(governor, newMax);
+    }
+
+    public Hash256 setMaxTotalDepositedGas(Account sender, BigInteger newMax) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("setMaxTotalDepositedGas", integer(newMax)).signers(signer));
     }
 
     // endregion

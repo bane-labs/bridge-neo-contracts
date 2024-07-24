@@ -62,17 +62,21 @@ public class GasBridgeImpl {
         int depositFee = gasBridge.config.depositFee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
 
-        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, amount, null)) {
-            abort("Gas transfer failed.");
-        }
-
         // The depositAmount is the amount minus the deposit fee. It is the amount that will be distributed on Neo X.
         int depositAmount = amount - depositFee;
         updateGasDepositState(gasBridge, from, to, depositAmount);
+
+        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, amount, null)) {
+            abort("Gas transfer failed.");
+        }
     }
 
     static void updateGasDepositState(GasBridge gasBridge, Hash160 from, Hash160 to, int amount) {
         gasBridge.depositState.nonce++;
+        gasBridge.totalDeposited += amount;
+        if (gasBridge.totalDeposited > gasBridge.config.maxTotalDeposited) {
+            abort("Max total deposited gas exceeded. Await governor to increase.");
+        }
         ByteString depositHash = hashGasBridgeOp(BridgeContract.cryptoLib, gasBridge.depositState.nonce, to, amount);
         gasBridge.depositState.root =
                 computeNewRoot(BridgeContract.cryptoLib, gasBridge.depositState.root, depositHash);
@@ -102,10 +106,33 @@ public class GasBridgeImpl {
         // Update the gas bridge state
         gasBridge.withdrawalState.nonce += withdrawalsSize;
         gasBridge.withdrawalState.root = withdrawalRoot;
+        gasBridge.totalDeposited -= computeTotalWithdrawnAmount(withdrawals);
         BridgeContract.baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
         BridgeContract.onGasWithdrawalRootUpdate.fire(gasBridge.withdrawalState.nonce, gasBridge.withdrawalState.root);
         // Execute the Gas transfers
         executeGasTransfers(withdrawals);
+    }
+
+    /**
+     * Loops through the withdrawals and computes the total amount that is withdrawn.
+     * <p>
+     * An alternative would have been utilizing the executeGasTransfers method looping through the withdrawals and
+     * accumulating the total amount that will be withdrawn. However, this would have meant that the gasBridge state
+     * is updated only after the transfers have been executed, which is not good practice. Also, the number of
+     * batched withdrawals is limited and looping twice does not incur a significant increase in transaction cost
+     * (less than 2300 datoshi per withdrawal with network settings at the time of writing, and it's decreasing,
+     * e.g., it becomes less than 600 datoshi per withdrawal if there are 50 withdrawals batched).
+     *
+     * @param withdrawals the withdrawals.
+     * @return the total amount that will be withdrawn.
+     */
+    private static int computeTotalWithdrawnAmount(List<Withdrawal> withdrawals) {
+        int totalWithdrawnAmount = 0;
+        int nrWithdrawals = withdrawals.size();
+        for (int i = 0; i < nrWithdrawals; i++) {
+            totalWithdrawnAmount += withdrawals.get(i).amount;
+        }
+        return totalWithdrawnAmount;
     }
 
     // endregion
@@ -155,6 +182,15 @@ public class GasBridgeImpl {
                 }
             }
         }
+    }
+
+    static void setMaxTotalDepositedGas(int newMaxTotalDeposited) {
+        GasBridge gasBridge = BridgeContract.getGasBridge();
+        if (newMaxTotalDeposited < gasBridge.totalDeposited) {
+            abort("New value must be greater or equal to the total amount deposited.");
+        }
+        gasBridge.config.maxTotalDeposited = newMaxTotalDeposited;
+        BridgeContract.baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
     }
 
     // endregion
