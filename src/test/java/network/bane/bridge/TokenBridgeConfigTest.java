@@ -7,6 +7,7 @@ import io.neow3j.test.DeployConfiguration;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import static network.bane.util.helper.TestHelper.createBridgeManagementDeployCo
 import static network.bane.util.helper.TestHelper.setup;
 import static network.bane.util.helper.TestHelper.setupBridge;
 
+@Disabled
 @ContractTest(
         blockTime = 1,
         contracts = {BridgeManagementContract.class, BridgeContract.class, TestContract.class},

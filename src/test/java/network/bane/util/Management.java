@@ -16,12 +16,12 @@ public class Management extends SmartContractHelper {
         super(scriptHash, neow3j);
     }
 
-    public ECKeyPair.ECPublicKey owner() throws IOException {
-        return new ECKeyPair.ECPublicKey(callInvokeFunction("owner").getInvocationResult().getFirstStackItem().getByteArray());
+    public Hash160 owner() throws IOException {
+        return callFunctionReturningScriptHash("owner");
     }
 
-    public ECKeyPair.ECPublicKey relayer() throws IOException {
-        return new ECKeyPair.ECPublicKey(callInvokeFunction("relayer").getInvocationResult().getFirstStackItem().getByteArray());
+    public Hash160 relayer() throws IOException {
+        return callFunctionReturningScriptHash("relayer");
     }
 
     public List<ECKeyPair.ECPublicKey> validators() throws IOException {
@@ -39,12 +39,12 @@ public class Management extends SmartContractHelper {
         return callInvokeFunction("validatorThreshold").getInvocationResult().getFirstStackItem().getInteger().intValue();
     }
 
-    public ECKeyPair.ECPublicKey governor() throws IOException {
-        return new ECKeyPair.ECPublicKey(callInvokeFunction("governor").getInvocationResult().getFirstStackItem().getByteArray());
+    public Hash160 governor() throws IOException {
+        return callFunctionReturningScriptHash("governor");
     }
 
-    public ECKeyPair.ECPublicKey securityGuard() throws IOException {
-        return new ECKeyPair.ECPublicKey(callInvokeFunction("securityGuard").getInvocationResult().getFirstStackItem().getByteArray());
+    public Hash160 securityGuard() throws IOException {
+        return callFunctionReturningScriptHash("securityGuard");
     }
 
 }

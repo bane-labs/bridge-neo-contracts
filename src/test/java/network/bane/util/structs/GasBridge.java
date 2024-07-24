@@ -3,13 +3,16 @@ package network.bane.util.structs;
 import java.math.BigInteger;
 
 public class GasBridge {
-    boolean paused;
+    public boolean paused;
+    public BigInteger totalDeposited;
     public State depositState;
     public State withdrawalState;
     public GasConfig config;
 
-    public GasBridge(boolean paused, State depositState, State withdrawalState, GasConfig config) {
+    public GasBridge(boolean paused, BigInteger totalDeposited, State depositState, State withdrawalState,
+            GasConfig config) {
         this.paused = paused;
+        this.totalDeposited = totalDeposited;
         this.depositState = depositState;
         this.withdrawalState = withdrawalState;
         this.config = config;
@@ -23,6 +26,7 @@ public class GasBridge {
             return true;
         }
         return this.paused == other.paused &&
+                this.totalDeposited.equals(other.totalDeposited) &&
                 this.depositState.equals(other.depositState) &&
                 this.withdrawalState.equals(other.withdrawalState) &&
                 this.config.equals(other.config);
@@ -33,12 +37,14 @@ public class GasBridge {
         public BigInteger minAmount;
         public BigInteger maxAmount;
         public BigInteger maxWithdrawals;
+        public BigInteger maxTotalDeposit;
 
-        public GasConfig(BigInteger fee, BigInteger minAmount, BigInteger maxAmount, BigInteger maxWithdrawals) {
+        public GasConfig(BigInteger fee, BigInteger minAmount, BigInteger maxAmount, BigInteger maxWithdrawals, BigInteger maxTotalDeposit) {
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
             this.maxWithdrawals = maxWithdrawals;
+            this.maxTotalDeposit = maxTotalDeposit;
         }
 
         public boolean equals(GasConfig other) {
@@ -51,7 +57,8 @@ public class GasBridge {
             return this.fee.equals(other.fee) &&
                     this.minAmount.equals(other.minAmount) &&
                     this.maxAmount.equals(other.maxAmount) &&
-                    this.maxWithdrawals.equals(other.maxWithdrawals);
+                    this.maxWithdrawals.equals(other.maxWithdrawals) &&
+                    this.maxTotalDeposit.equals(other.maxTotalDeposit);
         }
     }
 }

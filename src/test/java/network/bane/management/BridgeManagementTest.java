@@ -23,6 +23,7 @@ import io.neow3j.transaction.witnessrule.CalledByContractCondition;
 import io.neow3j.transaction.witnessrule.WitnessAction;
 import io.neow3j.transaction.witnessrule.WitnessRule;
 import io.neow3j.types.ContractParameter;
+import io.neow3j.types.Hash160;
 import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
 import network.bane.util.Management;
@@ -48,6 +49,7 @@ import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.byteArrayFromString;
+import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.publicKey;
 import static io.neow3j.types.ContractParameter.string;
@@ -58,13 +60,13 @@ import static io.neow3j.utils.Numeric.prependHexPrefix;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.defaultValidatorThreshold;
 import static network.bane.util.TestHelper.defaultValidators;
-import static network.bane.util.TestHelper.governorPubKey;
+import static network.bane.util.TestHelper.governorScriptHash;
 import static network.bane.util.TestHelper.owner;
-import static network.bane.util.TestHelper.ownerPubKey;
+import static network.bane.util.TestHelper.ownerScriptHash;
 import static network.bane.util.TestHelper.prepareManagementDeployParameter;
 import static network.bane.util.TestHelper.relayer;
-import static network.bane.util.TestHelper.relayerPubKey;
-import static network.bane.util.TestHelper.securityGuardPubKey;
+import static network.bane.util.TestHelper.relayerScriptHash;
+import static network.bane.util.TestHelper.securityGuardScriptHash;
 import static network.bane.util.TestHelper.setDefaultValidators;
 import static network.bane.util.TestHelper.validator1PubKey;
 import static network.bane.util.TestHelper.validator2PubKey;
@@ -145,8 +147,8 @@ public class BridgeManagementTest {
         DeployConfiguration config = new DeployConfiguration();
         config.setDeployParam(
                 prepareManagementDeployParameter(
-                        ownerPubKey,
-                        relayerPubKey,
+                        ownerScriptHash,
+                        relayerScriptHash,
                         asList(
                                 validator1PubKey,
                                 validator2PubKey,
@@ -157,8 +159,8 @@ public class BridgeManagementTest {
                                 validator7PubKey
                         ),
                         5,
-                        governorPubKey,
-                        securityGuardPubKey
+                        governorScriptHash,
+                        securityGuardScriptHash
                 )
         );
         AccountSigner deploySigner = AccountSigner.none(owner);
@@ -197,7 +199,7 @@ public class BridgeManagementTest {
 
         assertThat(result.getStack(), hasSize(1));
         assertThat(result.getFirstStackItem().getType(), is(BYTE_STRING));
-        assertThat(result.getFirstStackItem().getByteArray(), is(ownerPubKey.toArray()));
+        assertThat(Hash160.fromAddress(result.getFirstStackItem().getAddress()), is(ownerScriptHash));
     }
 
     @Test
@@ -207,7 +209,7 @@ public class BridgeManagementTest {
 
         assertThat(result.getStack(), hasSize(1));
         assertThat(result.getFirstStackItem().getType(), is(BYTE_STRING));
-        assertThat(result.getFirstStackItem().getByteArray(), is(relayerPubKey.toArray()));
+        assertThat(Hash160.fromAddress(result.getFirstStackItem().getAddress()), is(relayerScriptHash));
     }
 
     @Test
@@ -247,9 +249,9 @@ public class BridgeManagementTest {
     @Test
     @Order(0)
     public void testSetOwner() throws Throwable {
-        assertThat(management.owner(), is(ownerPubKey));
+        assertThat(management.owner(), is(ownerScriptHash));
 
-        Transaction tx = management.invokeFunction("setOwner", publicKey(alicePubKey))
+        Transaction tx = management.invokeFunction("setOwner", hash160(alice))
                 .signers(calledByEntry(owner), none(alice).setAllowedContracts(management.getScriptHash()))
                 .sign();
         NeoSendRawTransaction response = tx.send();
@@ -259,29 +261,29 @@ public class BridgeManagementTest {
         Notification expected = new Notification(
                 management.getScriptHash(),
                 "OwnerChange",
-                new ArrayStackItem(asList(new ByteStringStackItem(alicePubKey.toArray())))
+                new ArrayStackItem(asList(new ByteStringStackItem(alice.getScriptHash().toLittleEndianArray())))
         );
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
         assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
 
-        assertThat(management.owner(), is(alicePubKey));
+        assertThat(management.owner(), is(alice.getScriptHash()));
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setOwner", publicKey(bobPubKey))
+                () -> management.invokeFunction("setOwner", hash160(bob))
                         .signers(calledByEntry(owner))
                         .sign()
         );
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
 
         // reverse set owner
-        response = management.invokeFunction("setOwner", publicKey(ownerPubKey))
+        response = management.invokeFunction("setOwner", hash160(ownerScriptHash))
                 .signers(calledByEntry(alice), none(owner).setAllowedContracts(management.getScriptHash()))
                 .sign()
                 .send();
         assertFalse(response.hasError());
         waitUntilTransactionIsExecuted(response, neow3j);
 
-        assertThat(management.owner(), is(ownerPubKey));
+        assertThat(management.owner(), is(ownerScriptHash));
     }
 
     @Test
@@ -292,22 +294,22 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(owner))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key provided."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid script hash provided."));
 
         thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("setOwner", byteArrayFromString("invalid"))
                         .signers(calledByEntry(owner))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key provided."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid script hash provided."));
     }
 
     @Test
     @Order(0)
     public void testSetOwner_unauthorized() throws IOException {
-        assertThat(management.owner(), is(ownerPubKey));
+        assertThat(management.owner(), is(ownerScriptHash));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setOwner", publicKey(ownerPubKey))
+                () -> management.invokeFunction("setOwner", hash160(ownerScriptHash))
                         .signers(calledByEntry(alice))
                         .sign()
         );
@@ -320,9 +322,9 @@ public class BridgeManagementTest {
     @Test
     @Order(0)
     public void testSetRelayer() throws Throwable {
-        assertThat(management.relayer(), is(relayerPubKey));
+        assertThat(management.relayer(), is(relayerScriptHash));
 
-        Transaction tx = management.invokeFunction("setRelayer", publicKey(bobPubKey))
+        Transaction tx = management.invokeFunction("setRelayer", hash160(bob))
                 .signers(calledByEntry(owner))
                 .sign();
         NeoSendRawTransaction response = tx.send();
@@ -332,30 +334,30 @@ public class BridgeManagementTest {
         Notification expected = new Notification(
                 management.getScriptHash(),
                 "RelayerChange",
-                new ArrayStackItem(asList(new ByteStringStackItem(bobPubKey.toArray())))
+                new ArrayStackItem(asList(new ByteStringStackItem(bob.getScriptHash().toLittleEndianArray())))
         );
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
         assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
 
-        assertThat(management.relayer(), is(bobPubKey));
+        assertThat(management.relayer(), is(bob.getScriptHash()));
 
         // reverse set owner
-        response = management.invokeFunction("setRelayer", publicKey(relayerPubKey))
+        response = management.invokeFunction("setRelayer", hash160(relayerScriptHash))
                 .signers(calledByEntry(owner))
                 .sign()
                 .send();
         assertFalse(response.hasError());
         waitUntilTransactionIsExecuted(response, neow3j);
 
-        assertThat(management.relayer(), is(relayerPubKey));
+        assertThat(management.relayer(), is(relayerScriptHash));
     }
 
     @Test
     @Order(0)
     public void testSetRelayer_unauthorized() throws IOException {
-        assertThat(management.relayer(), is(relayerPubKey));
+        assertThat(management.relayer(), is(relayerScriptHash));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setRelayer", publicKey(charliePubKey))
+                () -> management.invokeFunction("setRelayer", hash160(charlie))
                         .signers(calledByEntry(alice))
                         .sign()
         );
@@ -511,9 +513,9 @@ public class BridgeManagementTest {
     @Test
     @Order(0)
     public void testSetGovernor() throws Throwable {
-        assertThat(management.governor(), is(governorPubKey));
+        assertThat(management.governor(), is(governorScriptHash));
 
-        Transaction tx = management.invokeFunction("setGovernor", publicKey(bobPubKey))
+        Transaction tx = management.invokeFunction("setGovernor", hash160(bob))
                 .signers(calledByEntry(owner))
                 .sign();
         NeoSendRawTransaction response = tx.send();
@@ -523,28 +525,28 @@ public class BridgeManagementTest {
         Notification expected = new Notification(
                 management.getScriptHash(),
                 "GovernorChange",
-                new ArrayStackItem(asList(new ByteStringStackItem(bobPubKey.toArray())))
+                new ArrayStackItem(asList(new ByteStringStackItem(bob.getScriptHash().toLittleEndianArray())))
         );
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
         assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
 
-        assertThat(management.governor(), is(bobPubKey));
+        assertThat(management.governor(), is(bob.getScriptHash()));
 
         // reverse set owner
-        response = management.invokeFunction("setGovernor", publicKey(governorPubKey))
+        response = management.invokeFunction("setGovernor", hash160(governorScriptHash))
                 .signers(calledByEntry(owner))
                 .sign()
                 .send();
         assertFalse(response.hasError());
         waitUntilTransactionIsExecuted(response, neow3j);
 
-        assertThat(management.governor(), is(governorPubKey));
+        assertThat(management.governor(), is(governorScriptHash));
     }
 
     @Test
     @Order(0)
     public void testSetGovernor_unauthorized() throws IOException {
-        assertThat(management.governor(), is(governorPubKey));
+        assertThat(management.governor(), is(governorScriptHash));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("setGovernor", publicKey(charliePubKey))
                         .signers(calledByEntry(alice))
@@ -559,9 +561,9 @@ public class BridgeManagementTest {
     @Test
     @Order(0)
     public void testSetSecurityGuard() throws Throwable {
-        assertThat(management.securityGuard(), is(securityGuardPubKey));
+        assertThat(management.securityGuard(), is(securityGuardScriptHash));
 
-        Transaction tx = management.invokeFunction("setSecurityGuard", publicKey(florianPubKey))
+        Transaction tx = management.invokeFunction("setSecurityGuard", hash160(florian))
                 .signers(calledByEntry(owner))
                 .sign();
         NeoSendRawTransaction response = tx.send();
@@ -571,28 +573,28 @@ public class BridgeManagementTest {
         Notification expected = new Notification(
                 management.getScriptHash(),
                 "SecurityGuardChange",
-                new ArrayStackItem(asList(new ByteStringStackItem(florianPubKey.toArray())))
+                new ArrayStackItem(asList(new ByteStringStackItem(florian.getScriptHash().toLittleEndianArray())))
         );
         assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
         assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
 
-        assertThat(management.securityGuard(), is(florianPubKey));
+        assertThat(management.securityGuard(), is(florian.getScriptHash()));
 
         // reverse set owner
-        response = management.invokeFunction("setSecurityGuard", publicKey(securityGuardPubKey))
+        response = management.invokeFunction("setSecurityGuard", hash160(securityGuardScriptHash))
                 .signers(calledByEntry(owner))
                 .sign()
                 .send();
         assertFalse(response.hasError());
         waitUntilTransactionIsExecuted(response, neow3j);
 
-        assertThat(management.securityGuard(), is(securityGuardPubKey));
+        assertThat(management.securityGuard(), is(securityGuardScriptHash));
     }
 
     @Test
     @Order(0)
     public void testSetSecurityGuard_unauthorized() throws IOException {
-        assertThat(management.securityGuard(), is(securityGuardPubKey));
+        assertThat(management.securityGuard(), is(securityGuardScriptHash));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("setSecurityGuard", publicKey(charliePubKey))
                         .signers(calledByEntry(alice))

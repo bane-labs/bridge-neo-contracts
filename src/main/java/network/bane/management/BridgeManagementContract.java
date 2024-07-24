@@ -2,6 +2,7 @@ package network.bane.management;
 
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
+import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
@@ -47,15 +48,17 @@ public class BridgeManagementContract {
 
     private static final int key_validator_threshold = 0x10;
 
+    private static final int key_version = 0x7f;
+
     // region events
 
     @DisplayName("OwnerChange")
     @EventParameterNames({"NewOwner"})
-    public static Event1Arg<ECPoint> onOwnerSet;
+    public static Event1Arg<Hash160> onOwnerSet;
 
     @DisplayName("RelayerChange")
     @EventParameterNames({"NewRelayer"})
-    public static Event1Arg<ECPoint> onRelayerSet;
+    public static Event1Arg<Hash160> onRelayerSet;
 
     @DisplayName("ValidatorsChange")
     @EventParameterNames({"NewValidators", "NewThreshold"})
@@ -63,11 +66,11 @@ public class BridgeManagementContract {
 
     @DisplayName("GovernorChange")
     @EventParameterNames({"NewGovernor"})
-    public static Event1Arg<ECPoint> onGovernorSet;
+    public static Event1Arg<Hash160> onGovernorSet;
 
     @DisplayName("SecurityGuardChange")
     @EventParameterNames({"NewSecurityGuard"})
-    public static Event1Arg<ECPoint> onSecurityGuardSet;
+    public static Event1Arg<Hash160> onSecurityGuardSet;
 
     // endregion
     // region deployment
@@ -77,19 +80,19 @@ public class BridgeManagementContract {
         if (!isUpdate) {
             ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
 
-            ECPoint owner = deploymentData.owner;
-            if (owner == null || !ECPoint.isValid(owner)) abort("Invalid public key provided for owner.");
-            ECPoint relayer = deploymentData.relayer;
-            if (relayer == null || !ECPoint.isValid(relayer)) abort("Invalid public key provided for relayer.");
+            Hash160 owner = deploymentData.owner;
+            if (owner == null || !Hash160.isValid(owner)) abort("Invalid script hash provided for owner.");
+            Hash160 relayer = deploymentData.relayer;
+            if (relayer == null || !Hash160.isValid(relayer)) abort("Invalid script hash provided for relayer.");
             List<ECPoint> validators = deploymentData.validators;
             int validatorSize = validators.size();
             int validatorThreshold = deploymentData.validatorThreshold;
             if (validatorSize < validatorThreshold) abort("Not enough validators.");
-            ECPoint governor = deploymentData.governor;
-            if (governor == null || !ECPoint.isValid(governor)) abort("Invalid public key provided for governor.");
-            ECPoint securityGuard = deploymentData.securityGuard;
-            if (securityGuard == null || !ECPoint.isValid(securityGuard))
-                abort("Invalid public key provided for security guard.");
+            Hash160 governor = deploymentData.governor;
+            if (governor == null || !Hash160.isValid(governor)) abort("Invalid script hash provided for governor.");
+            Hash160 securityGuard = deploymentData.securityGuard;
+            if (securityGuard == null || !Hash160.isValid(securityGuard))
+                abort("Invalid script hash provided for security guard.");
 
             baseMap.put(key_owner, owner);
             baseMap.put(key_relayer, relayer);
@@ -102,6 +105,8 @@ public class BridgeManagementContract {
             baseMap.put(key_governor, governor);
             baseMap.put(key_securityguard, securityGuard);
 
+            baseMap.put(key_version, 1);
+
             if (!checkWitness(owner())) abort("Owner must witness the deployment.");
         }
     }
@@ -109,17 +114,17 @@ public class BridgeManagementContract {
     // endregion
     // region setters
 
-    public static void setOwner(ECPoint newOwner) {
+    public static void setOwner(Hash160 newOwner) {
         onlyOwner();
-        if (newOwner == null || !ECPoint.isValid(newOwner)) abort("Invalid public key provided.");
+        if (newOwner == null || !Hash160.isValid(newOwner)) abort("Invalid script hash provided.");
         if (!Runtime.checkWitness(newOwner)) abort("New owner must be witness to the transaction.");
         baseMap.put(key_owner, newOwner);
         onOwnerSet.fire(newOwner);
     }
 
-    public static void setRelayer(ECPoint newRelayer) {
+    public static void setRelayer(Hash160 newRelayer) {
         onlyOwner();
-        if (newRelayer == null || !ECPoint.isValid(newRelayer)) abort("Invalid public key provided.");
+        if (newRelayer == null || !Hash160.isValid(newRelayer)) abort("Invalid script hash provided.");
         baseMap.put(key_relayer, newRelayer);
         onRelayerSet.fire(newRelayer);
     }
@@ -153,16 +158,16 @@ public class BridgeManagementContract {
         return map.keys().length != validatorsSize;
     }
 
-    public static void setGovernor(ECPoint newGovernor) {
+    public static void setGovernor(Hash160 newGovernor) {
         onlyOwner();
-        if (newGovernor == null || !ECPoint.isValid(newGovernor)) abort("Invalid public key provided.");
+        if (newGovernor == null || !Hash160.isValid(newGovernor)) abort("Invalid script hash provided.");
         baseMap.put(key_governor, newGovernor);
         onGovernorSet.fire(newGovernor);
     }
 
-    public static void setSecurityGuard(ECPoint newSecurityGuard) {
+    public static void setSecurityGuard(Hash160 newSecurityGuard) {
         onlyOwner();
-        if (newSecurityGuard == null || !ECPoint.isValid(newSecurityGuard)) abort("Invalid public key provided.");
+        if (newSecurityGuard == null || !Hash160.isValid(newSecurityGuard)) abort("Invalid script hash provided.");
         baseMap.put(key_securityguard, newSecurityGuard);
         onSecurityGuardSet.fire(newSecurityGuard);
     }
@@ -171,13 +176,13 @@ public class BridgeManagementContract {
     // region getters
 
     @Safe
-    public static ECPoint owner() {
-        return baseMap.getECPoint(key_owner);
+    public static Hash160 owner() {
+        return baseMap.getHash160(key_owner);
     }
 
     @Safe
-    public static ECPoint relayer() {
-        return baseMap.getECPoint(key_relayer);
+    public static Hash160 relayer() {
+        return baseMap.getHash160(key_relayer);
     }
 
     @Safe
@@ -219,13 +224,13 @@ public class BridgeManagementContract {
     }
 
     @Safe
-    public static ECPoint governor() {
-        return baseMap.getECPoint(key_governor);
+    public static Hash160 governor() {
+        return baseMap.getHash160(key_governor);
     }
 
     @Safe
-    public static ECPoint securityGuard() {
-        return baseMap.getECPoint(key_securityguard);
+    public static Hash160 securityGuard() {
+        return baseMap.getHash160(key_securityguard);
     }
 
     // endregion

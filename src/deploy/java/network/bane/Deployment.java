@@ -32,17 +32,21 @@ import static io.neow3j.types.ContractParameter.publicKey;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 
+/**
+ * This class is used to create the deployment transactions for the Bridge Management and Bridge in a private net.
+ */
 public class Deployment {
 
-    private static final String NODE = getEnvVariableOrDefault("NEON3_JSON_RPC", "");
+    private static final String NODE = getEnvVariableOrDefault("NEON3_JSON_RPC", "http://127.0.0.1:40332");
 
-    private static final Account deployer = Account.fromWIF(getEnvVariableOrDefault("NEON3_DEPLOYER_WIF", ""));
+    private static final Account deployerAcc = Account.fromWIF(getEnvVariableOrDefault("NEON3_DEPLOYER_WIF", ""));
+    private static final Hash160 deployer = deployerAcc.getScriptHash();
 
-    private static final ECPublicKey owner = new ECPublicKey(
-            getEnvVariableOrDefault("NEON3_OWNER_PUBKEY", "03bc3ee039d7a9e52161ada97500ef682ba241c092548dcac1fa9692466b1e3476"));
+    private static final Account ownerAcc = Account.fromWIF(getEnvVariableOrDefault("NEON3_OWNER_WIF", ""));
+    private static final Hash160 owner = ownerAcc.getScriptHash();
 
-    private static final ECPublicKey relayer = new ECPublicKey(
-            getEnvVariableOrDefault("NEON3_RELAYER_PUBKEY", "03aa2942dcc6fc61caccf34c830fe1a6964b3a512059972ba90028e133fbddbcd2"));
+    private static final Hash160 relayer = new Hash160(
+            getEnvVariableOrDefault("NEON3_RELAYER", "0x77ddabed5b98bef73b1592cb588118d2b8ab4a4c"));
 
     private static final ECPublicKey validator_1 = new ECPublicKey(
             getEnvVariableOrDefault("NEON3_VALIDATOR1_PUBKEY", "021fed0d208f2c4b2fe425571c36aea1d465159c93af349581896fe38553dffae1"));
@@ -61,11 +65,11 @@ public class Deployment {
 
     private static final int validator_threshold = Integer.parseInt(getEnvVariableOrDefault("NEON3_VALIDATOR_THRESHOLD", "5"));
 
-    private static final ECPublicKey governor = new ECPublicKey(
-            getEnvVariableOrDefault("NEON3_GOVERNOR_PUBKEY", "03c0b3f7cfe36fe06fbdb157d72746ed772fe06a09e094f3ea052536cd1fd330bb"));
+    private static final Hash160 governor = new Hash160(
+            getEnvVariableOrDefault("NEON3_GOVERNOR", "0x6d992a5e281480ba61dee66d3d008d774fa761ac"));
 
-    private static final ECPublicKey securityGuard = new ECPublicKey(
-            getEnvVariableOrDefault("NEON3_SECURITYGUARD_PUBKEY", "0342ad9cdea8142af0ac4b5496a7f5baca72b4173c10b357f3ff3e54e9998ae9ec"));
+    private static final Hash160 securityGuard = new Hash160(
+            getEnvVariableOrDefault("NEON3_SECURITYGUARD", "0x84bd782e66c5fde259f000f7208de674f8ceaf00"));
 
     // Parameters
 
@@ -79,16 +83,16 @@ public class Deployment {
     }
 
     public static ContractParameter prepareManagementDeployParameter(
-            ECPublicKey owner,
-            ECPublicKey relayer,
+            Hash160 owner,
+            Hash160 relayer,
             List<ECKeyPair.ECPublicKey> validators,
             Integer threshold,
-            ECPublicKey governor,
-            ECPublicKey securityGuard
+            Hash160 governor,
+            Hash160 securityGuard
     ) {
         return array(
-                publicKey(owner),
-                publicKey(relayer),
+                hash160(owner),
+                hash160(relayer),
                 array(
                         publicKey(validators.get(0)),
                         publicKey(validators.get(1)),
@@ -99,8 +103,8 @@ public class Deployment {
                         publicKey(validators.get(6))
                 ),
                 integer(threshold),
-                publicKey(governor),
-                publicKey(securityGuard)
+                hash160(governor),
+                hash160(securityGuard)
         );
     }
 
@@ -108,15 +112,23 @@ public class Deployment {
             BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit) {
         return array(
                 hash160(managementContractHash),
-                integer(depositFee),
-                integer(minDeposit),
-                integer(maxDeposit)
+                array(
+                        integer(depositFee),
+                        integer(minDeposit),
+                        integer(maxDeposit),
+                        integer(100)
+                )
         );
     }
 
     public static void main(String[] args) throws Throwable {
-        Neow3j neow3j = Neow3j.build(new HttpService(NODE));
+        Neow3j neow3j = Neow3j.build(new HttpService(NODE, true));
 
+        Hash160 managementHash = compileAndPrintManagementDeploymentTxData(neow3j);
+        compileAndPrintBridgeDeploymentTxData(neow3j, managementHash);
+    }
+
+    private static Hash160 compileAndPrintManagementDeploymentTxData(Neow3j neow3j) throws Throwable {
         // Compile the Bridge Management contract
         CompilationUnit managementCompUnit = new Compiler().compile(BridgeManagementContract.class.getCanonicalName());
 
@@ -138,61 +150,80 @@ public class Deployment {
                 securityGuard
         );
 
+        Hash160 managementContractHash = SmartContract.calcContractHash(deployer,
+                managementCompUnit.getNefFile().getCheckSumAsInteger(),
+                managementCompUnit.getManifest().getName());
+
         // Deploy the management contract
         Transaction managementDeploymentTx = new ContractManagement(neow3j)
                 .deploy(
                         managementCompUnit.getNefFile(),
                         managementCompUnit.getManifest(),
                         managementDeployParameter)
-                .signers(AccountSigner.none(deployer))
+                .signers(
+                        AccountSigner.none(deployerAcc),
+                        AccountSigner.none(ownerAcc).setAllowedContracts(managementContractHash)
+                )
                 .sign();
         NeoSendRawTransaction managementDeploymentTxResponse = managementDeploymentTx.send();
         if (managementDeploymentTxResponse.hasError()) {
-            throw new Exception("Sent transaction resulted in an error: " + managementDeploymentTxResponse.getError().getMessage());
+            throw new Exception("Sent transaction resulted in an error: " +
+                    managementDeploymentTxResponse.getError().getMessage());
         }
 
         Hash256 managementDeploymentTxHash = managementDeploymentTxResponse.getResult().getHash();
         Await.waitUntilTransactionIsExecuted(managementDeploymentTxHash, neow3j);
-        NeoApplicationLog bridgeManagementDeployLog = neow3j.getApplicationLog(managementDeploymentTxHash).send().getApplicationLog();
+        NeoApplicationLog bridgeManagementDeployLog =
+                neow3j.getApplicationLog(managementDeploymentTxHash).send().getApplicationLog();
         if (bridgeManagementDeployLog.getExecutions().get(0).getState().equals(NeoVMStateType.FAULT)) {
             throw new Exception(format("Failed to deploy contract. NeoVM error message: %s",
                     bridgeManagementDeployLog.getExecutions().get(0).getException()));
         }
-        System.out.println("Management contract deployed successfully in transaction: " + managementDeploymentTxHash);
 
         // Get the contract hash from the deployment transaction
-        Hash160 managementHash =
-                SmartContract.calcContractHash(deployer.getScriptHash(), managementCompUnit.getNefFile().getCheckSumAsInteger(), managementCompUnit.getManifest().getName());
-        System.out.println("Management contract hash: " + managementHash);
-        ContractState managementState = neow3j.getContractState(managementHash).send().getContractState();
+        ContractState managementState = neow3j.getContractState(managementContractHash).send().getContractState();
         if (!managementState.getNef().getChecksum().equals(managementCompUnit.getNefFile().getCheckSumAsInteger())) {
             throw new Exception("Management contract NEF checksum mismatch");
         }
-        if (!managementHash.equals(managementState.getHash())) {
+        if (!managementContractHash.equals(managementState.getHash())) {
             throw new Exception("Management contract hash mismatch");
         }
 
+        System.out.println("Management contract deployed successfully in transaction: " + managementDeploymentTxHash);
+        System.out.println("Management contract hash: " + managementContractHash);
+        return managementContractHash;
+    }
+
+    private static void compileAndPrintBridgeDeploymentTxData(Neow3j neow3j, Hash160 managementContractHash) throws Throwable {
         // Compile the Bridge Management contract
         CompilationUnit bridgeCompUnit = new Compiler().compile(BridgeContract.class.getCanonicalName());
 
         // Prepare the deployment parameter for the bridge contract
         ContractParameter bridgeDeploymentParameter = prepareBridgeDeployParameter(
-                managementHash,
+                managementContractHash,
                 depositFee,
                 minDepositAmount,
                 maxDepositAmount
         );
 
-
+        Hash160 bridgeContractHash = SmartContract.calcContractHash(deployer,
+                bridgeCompUnit.getNefFile().getCheckSumAsInteger(),
+                bridgeCompUnit.getManifest().getName());
         // Build the deployment transaction
         Transaction bridgeDeploymentTx = new ContractManagement(neow3j)
                 .deploy(bridgeCompUnit.getNefFile(), bridgeCompUnit.getManifest(), bridgeDeploymentParameter)
-                .signers(AccountSigner.none(deployer))
+                .signers(
+                        AccountSigner.none(deployerAcc),
+                        AccountSigner.none(ownerAcc).setAllowedContracts(bridgeContractHash)
+                )
                 .sign();
+
         NeoSendRawTransaction bridgeDeploymentTxResponse = bridgeDeploymentTx.send();
         if (bridgeDeploymentTxResponse.hasError()) {
-            throw new Exception("Sent transaction resulted in an error: " + bridgeDeploymentTxResponse.getError().getMessage());
+            throw new Exception("Sent transaction resulted in an error: " +
+                    bridgeDeploymentTxResponse.getError().getMessage());
         }
+
         Hash256 bridgeDeploymentTxHash = bridgeDeploymentTxResponse.getResult().getHash();
         Await.waitUntilTransactionIsExecuted(bridgeDeploymentTxHash, neow3j);
         NeoApplicationLog bridgeDeployLog = neow3j.getApplicationLog(bridgeDeploymentTxHash).send().getApplicationLog();
@@ -202,18 +233,16 @@ public class Deployment {
         }
 
         // Get the contract hash from the deployment transaction
-        Hash160 bridgeHash =
-                SmartContract.calcContractHash(deployer.getScriptHash(), bridgeCompUnit.getNefFile().getCheckSumAsInteger(), bridgeCompUnit.getManifest().getName());
-        System.out.println("Bridge contract hash: " + bridgeHash);
-        ContractState bridgeState = neow3j.getContractState(bridgeHash).send().getContractState();
-        if (!bridgeState.getNef().getChecksum().equals(bridgeCompUnit.getNefFile().getCheckSumAsInteger())) {
+        ContractState bridgeContractState = neow3j.getContractState(bridgeContractHash).send().getContractState();
+        if (!bridgeContractState.getNef().getChecksum().equals(bridgeCompUnit.getNefFile().getCheckSumAsInteger())) {
             throw new Exception("Bridge contract NEF checksum mismatch");
         }
-        if (!bridgeHash.equals(bridgeState.getHash())) {
+        if (!bridgeContractHash.equals(bridgeContractState.getHash())) {
             throw new Exception("Bridge contract hash mismatch");
         }
 
         System.out.println("Bridge contract deployed successfully in transaction: " + bridgeDeploymentTxHash);
+        System.out.println("Bridge Contract Script Hash: " + bridgeContractHash);
     }
 
 }

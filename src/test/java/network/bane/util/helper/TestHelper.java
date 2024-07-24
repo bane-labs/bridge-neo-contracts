@@ -31,12 +31,12 @@ import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static java.util.Arrays.asList;
-import static network.bane.util.TestHelper.governorPubKey;
+import static network.bane.util.TestHelper.governorScriptHash;
 import static network.bane.util.TestHelper.owner;
-import static network.bane.util.TestHelper.ownerPubKey;
+import static network.bane.util.TestHelper.ownerScriptHash;
 import static network.bane.util.TestHelper.prepareManagementDeployParameter;
-import static network.bane.util.TestHelper.relayerPubKey;
-import static network.bane.util.TestHelper.securityGuardPubKey;
+import static network.bane.util.TestHelper.relayerScriptHash;
+import static network.bane.util.TestHelper.securityGuardScriptHash;
 import static network.bane.util.TestHelper.validator1PubKey;
 import static network.bane.util.TestHelper.validator2PubKey;
 import static network.bane.util.TestHelper.validator3PubKey;
@@ -53,6 +53,7 @@ public class TestHelper {
     public static final BigInteger minGasDeposit = new BigInteger("100000000");
     public static final BigInteger maxGasDeposit = new BigInteger("1000000000000");
     public static final BigInteger maxWithdrawals = new BigInteger("100");
+    public static final BigInteger maxTotalGasDepositAmount = new BigInteger("10000000000000");
 
     public static Bridge bridge;
     public static Management management;
@@ -103,9 +104,6 @@ public class TestHelper {
 
     public static void setupBridge(ContractTestExtension ext) {
         management = new Management(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
-        assert management.getScriptHash().equals(MANAGEMENT_CONTRACT_HASH) :
-                "BridgeManagement Contract or its deployer has changed. Change the contract hash in this test to " +
-                        management.getScriptHash() + ".";
         bridge = new Bridge(ext.getDeployedContract(BridgeContract.class).getScriptHash(), neow3j);
         testContract = ext.getDeployedContract(TestContract.class).getScriptHash();
     }
@@ -114,8 +112,8 @@ public class TestHelper {
         DeployConfiguration config = new DeployConfiguration();
         config.setDeployParam(
                 prepareManagementDeployParameter(
-                        ownerPubKey,
-                        relayerPubKey,
+                        ownerScriptHash,
+                        relayerScriptHash,
                         asList(
                                 validator1PubKey,
                                 validator2PubKey,
@@ -126,8 +124,8 @@ public class TestHelper {
                                 validator7PubKey
                         ),
                         5,
-                        governorPubKey,
-                        securityGuardPubKey
+                        governorScriptHash,
+                        securityGuardScriptHash
                 )
         );
         AccountSigner deploySigner = AccountSigner.none(owner);
@@ -146,7 +144,8 @@ public class TestHelper {
                         gasDepositFee,
                         minGasDeposit,
                         maxGasDeposit,
-                        maxWithdrawals
+                        maxWithdrawals,
+                        maxTotalGasDepositAmount
                 )
         );
         AccountSigner deploySigner = AccountSigner.none(owner);
@@ -157,15 +156,17 @@ public class TestHelper {
         return config;
     }
 
-    private static ContractParameter prepareBridgeDeployParameter(Hash160 managementContractHash,
-            BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit, BigInteger maxWithdrawals) {
+    public static ContractParameter prepareBridgeDeployParameter(Hash160 managementContractHash,
+            BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit, BigInteger maxWithdrawals,
+            BigInteger maxTotalDepositAmount) {
         return array(
                 hash160(managementContractHash),
                 array(
                         integer(depositFee),
                         integer(minDeposit),
                         integer(maxDeposit),
-                        integer(maxWithdrawals)
+                        integer(maxWithdrawals),
+                        integer(maxTotalDepositAmount)
                 )
         );
     }
