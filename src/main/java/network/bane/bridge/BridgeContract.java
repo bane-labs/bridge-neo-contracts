@@ -44,9 +44,12 @@ import static network.bane.bridge.BridgeHelper.onlyPaused;
 import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlySecurityGuard;
 import static network.bane.bridge.BridgeHelper.onlyUnpaused;
+import static network.bane.bridge.BridgeImpl.enteringNonReentrant;
+import static network.bane.bridge.BridgeImpl.exiting;
 import static network.bane.bridge.GasBridgeImpl.onlyGasBridgePaused;
 import static network.bane.bridge.GasBridgeImpl.onlyGasBridgeUnpaused;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
+import static network.bane.bridge.StorageConstants.KEY_ENTERED;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
 import static network.bane.bridge.StorageConstants.KEY_VERSION;
 import static network.bane.bridge.StorageConstants.KEY_UNCLAIMED_REWARDS;
@@ -211,7 +214,8 @@ public class BridgeContract {
             baseMap.put(KEY_GAS_BRIDGE, serialize);
             baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
 
-            baseMap.put(KEY_VERSION, 1);
+            BridgeContract.baseMap.put(KEY_ENTERED, false);
+            baseMap.put(KEY_VERSION, 0);
 
             // Make sure the owner witnesses the deployment.
             if (!checkWitness(managementContract().owner())) {
@@ -567,9 +571,11 @@ public class BridgeContract {
      *               higher than this value, the deposit is aborted.
      */
     public static void depositToken(Hash160 token, Hash160 from, Hash160 to, int amount, int maxFee) {
+        enteringNonReentrant();
         onlyUnpaused();
         onlyTokenBridgeUnpaused(token);
         TokenBridgeImpl.depositToken(token, from, to, amount, maxFee);
+        exiting();
     }
 
     /**
