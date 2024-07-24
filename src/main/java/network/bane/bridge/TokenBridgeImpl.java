@@ -101,7 +101,7 @@ public class TokenBridgeImpl {
         // Compare the balance before and after the transfer and use the difference as the depositing amount used for
         // the deposit hash computation.
         int bridgeBalanceAfter = tokenContract.balanceOf(executingScriptHash);
-        if (bridgeBalanceAfter > bridgeBalanceBefore) abort("Invalid transfer.");
+        if (bridgeBalanceAfter < bridgeBalanceBefore) abort("Invalid transfer.");
         int receivedAmount = bridgeBalanceAfter - bridgeBalanceBefore;
         if (receivedAmount < tokenBridge.config.minAmount) abort("Amount below minimum.");
         if (receivedAmount > tokenBridge.config.maxAmount) abort("Amount above maximum.");
