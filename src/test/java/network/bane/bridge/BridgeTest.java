@@ -170,12 +170,13 @@ public class BridgeTest {
     @Test
     @Order(0)
     public void testDeployment_deploymentDataSetCorrectly() throws IOException {
-        assertThat(bridge.findStorage("0x0a"), hasSize(5));
+        assertThat(bridge.findStorage("0x0a"), hasSize(6));
         ContractStorageEntry managementEntry = bridge.findStorage("0x0a").get(0);
         ContractStorageEntry pauseEntry = bridge.findStorage("0x0a").get(1);
         ContractStorageEntry gasBridgeEntry = bridge.findStorage("0x0a").get(2);
         ContractStorageEntry unclaimedRewardsEntry = bridge.findStorage("0x0a").get(3);
-        ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(4);
+        ContractStorageEntry enteredEntry = bridge.findStorage("0x0a").get(4);
+        ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(5);
 
         assertThat(managementEntry.getKeyHex(), is("0x0a01"));
         assertArrayEquals(managementEntry.getValue(), MANAGEMENT_CONTRACT_HASH.toLittleEndianArray());
@@ -220,6 +221,9 @@ public class BridgeTest {
 
         assertThat(unclaimedRewardsEntry.getValueHex(), is("0x"));
 
+        assertThat(enteredEntry.getKeyHex(), is("0x0a70"));
+        assertThat(enteredEntry.getValueHex(), is("0x"));
+
         assertThat(versionEntry.getKeyHex(), is("0x0a7f"));
         assertThat(versionEntry.getValueHex(), is("0x"));
     }
@@ -237,7 +241,7 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testDeposit_assertFailIfInvalidRecipientData() {
+    public void testDeposit_assertFailIfDirectTransferWithData() {
         ContractParameter dataParam = integer(42_000);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () ->
                 gasToken.transfer(alice, bridge.getScriptHash(), BigInteger.ONE, dataParam).sign().send());

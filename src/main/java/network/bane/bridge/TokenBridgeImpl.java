@@ -22,6 +22,7 @@ import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 import static network.bane.bridge.BridgeHelper.managementContract;
+import static network.bane.bridge.StorageConstants.KEY_ENTERED;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
 import static network.bane.lib.BridgeLib.subsequentNonces;
 
@@ -84,33 +85,39 @@ public class TokenBridgeImpl {
         if (executingScriptHash.equals(from)) abort("Invalid from parameter.");
 
         TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(neoN3Token);
-        if (amount < tokenBridge.config.minAmount) abort("Amount below minimum.");
-        if (amount > tokenBridge.config.maxAmount) abort("Amount above maximum.");
-
         // If the actual deposit fee is higher than the specified max fee, abort.
         int depositFee = tokenBridge.config.fee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
+
+        // Pay the fee and transfer the token
+        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, depositFee, null)) {
+            abort("Fee transfer failed.");
+        }
+        FungibleToken tokenContract = new FungibleToken(neoN3Token);
+        int bridgeBalanceBefore = tokenContract.balanceOf(executingScriptHash);
+        if (!tokenContract.transfer(from, executingScriptHash, amount, null)) {
+            abort("Token transfer failed.");
+        }
+        // Compare the balance before and after the transfer and use the difference as the depositing amount used for
+        // the deposit hash computation.
+        int bridgeBalanceAfter = tokenContract.balanceOf(executingScriptHash);
+        if (bridgeBalanceAfter < bridgeBalanceBefore) abort("Invalid transfer.");
+        int receivedAmount = bridgeBalanceAfter - bridgeBalanceBefore;
+        if (receivedAmount < tokenBridge.config.minAmount) abort("Amount below minimum.");
+        if (receivedAmount > tokenBridge.config.maxAmount) abort("Amount above maximum.");
 
         // Update the token state
         tokenBridge.depositState.nonce++;
         ByteString depositHash =
                 TokenBridgeLib.hashTokenBridgeOp(BridgeContract.cryptoLib, neoN3Token, tokenBridge.config.neoXToken,
-                        tokenBridge.depositState.nonce, to, amount);
+                        tokenBridge.depositState.nonce, to, receivedAmount);
         ByteString newRoot =
                 BridgeLib.computeNewRoot(BridgeContract.cryptoLib, tokenBridge.depositState.root, depositHash);
         tokenBridge.depositState.root = newRoot;
         assert tokenBridge.depositState.root == newRoot : "Root was not set correctly.";
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(neoN3Token, new StdLib().serialize(tokenBridge));
         BridgeContract.onTokenDeposit.fire(neoN3Token, tokenBridge.config.neoXToken, tokenBridge.depositState.nonce,
-                to, amount, from, depositHash, newRoot);
-
-        // Pay the fee and transfer the token
-        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, depositFee, null)) {
-            abort("Fee transfer failed.");
-        }
-        if (!new FungibleToken(neoN3Token).transfer(from, executingScriptHash, amount, null)) {
-            abort("Token transfer failed.");
-        }
+                to, receivedAmount, from, depositHash, newRoot);
     }
 
     // endregion
