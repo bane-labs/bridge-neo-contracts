@@ -2,6 +2,20 @@
 
 This repository is used for the development of the Neo contracts for the bridge between Neo N3 and Bane.
 
+## Mainnet
+
+| Contract             | Hash                                         |
+| -------------------- | -------------------------------------------- |
+| NeoXBridgeManagement | `0x148b3e0ca4f77476252862645e58f06b2562c414` |
+| NeoXBridge           | `0xbb19cfc864b73159277e1fd39694b3fd5fc613d2` |
+
+## Testnet (for Neo X T4)
+
+| Contract             | Hash                                         |
+| -------------------- | -------------------------------------------- |
+| NeoXBridgeManagement | `0x7c83816fb00b95b87119f7e28f7b044e4ac7bac8` |
+| NeoXBridge           | `0x2ba94444d43c9a084a5660982a9f95f43f07422e` |
+
 ## Quickstart
 
 [Java 8](https://adoptium.net/) (or higher) is required.  
