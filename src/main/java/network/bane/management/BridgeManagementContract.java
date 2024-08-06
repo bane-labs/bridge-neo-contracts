@@ -207,7 +207,7 @@ public class BridgeManagementContract {
         CryptoLib cryptoLib = new CryptoLib();
         List<ECPoint> validators = validators();
 
-        ByteString msg = cryptoLib.sha256(root);
+        ByteString msg = cryptoLib.keccak256(root);
         int covered = 0;
         int validatorsSize = validators.size();
         for (int i = 0; i < validatorsSize; i++) {

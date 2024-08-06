@@ -13,7 +13,7 @@ public class BridgeLib {
 
     public static ByteString computeNewRoot(CryptoLib cryptoLib, ByteString left, ByteString right) {
         ByteString leftRight = new ByteString(concat(left.toByteArray(), right));
-        return cryptoLib.sha256(leftRight);
+        return cryptoLib.keccak256(leftRight);
     }
 
     static byte[] padToBytes(byte[] data, int padToSize) {

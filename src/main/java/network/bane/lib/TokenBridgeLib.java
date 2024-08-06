@@ -18,7 +18,7 @@ public class TokenBridgeLib {
 
     public static ByteString hashTokenBridgeOp(CryptoLib cryptoLib, Hash160 token, Hash160 neoXToken, int nonce,
             Hash160 to, int amount) {
-        return cryptoLib.sha256(concatTokenBridgeOpData(token, neoXToken, nonce, to, amount));
+        return cryptoLib.keccak256(concatTokenBridgeOpData(token, neoXToken, nonce, to, amount));
     }
 
     public static ByteString concatTokenBridgeOpData(Hash160 token, Hash160 neoXToken, int nonce, Hash160 to,
