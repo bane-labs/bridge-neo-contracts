@@ -33,7 +33,7 @@ import java.util.List;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.integer;
 import static java.util.Arrays.asList;
-import static network.bane.util.TestHelper.concatAndSha256;
+import static network.bane.util.TestHelper.concatAndKeccak256;
 import static network.bane.util.TestHelper.createDepositHash;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.recipient0;
@@ -126,7 +126,7 @@ public class GasBridgeTotalDepositedTest {
         Hash160 to = recipient0;
         BigInteger amount = gasToken.toFractions(new BigDecimal("50"));
         String currentWithdrawalRoot = currentWithdrawalState.root.toString();
-        String newWithdrawalRoot = concatAndSha256(
+        String newWithdrawalRoot = concatAndKeccak256(
                 currentWithdrawalRoot,
                 createDepositHash(nextNonce, to, amount)
         );
