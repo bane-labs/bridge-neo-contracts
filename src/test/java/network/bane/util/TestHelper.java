@@ -239,7 +239,6 @@ public class TestHelper {
         byte[] recipientArray = ArrayUtils.reverseArray(recipient.toArray());
         byte[] amountPadded = BigIntegers.toLittleEndianByteArrayZeroPadded(amount, UINT256_SIZE);
         byte[] concatenated = concatenate(concatenate(amountPadded, recipientArray), noncePadded);
-        System.out.println("concatenated: " + toHexString(concatenated));
         return ArrayUtils.reverseArray(concatenated);
     }
 
