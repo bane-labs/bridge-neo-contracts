@@ -22,7 +22,6 @@ import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 import static network.bane.bridge.BridgeHelper.managementContract;
-import static network.bane.bridge.StorageConstants.KEY_ENTERED;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
 import static network.bane.lib.BridgeLib.subsequentNonces;
 
@@ -55,11 +54,11 @@ public class TokenBridgeImpl {
     // endregion
     // region pausing
 
-    static void onlyTokenBridgePaused(Hash160 token) {
-        if (!BridgeContract.getTokenBridge(token).paused) abort("Token bridge is unpaused.");
+    static void onlyWhenTokenBridgePaused(Hash160 token) {
+        if (!BridgeContract.getTokenBridge(token).paused) abort("Token bridge is not paused.");
     }
 
-    static void onlyTokenBridgeUnpaused(Hash160 token) {
+    static void onlyWhenTokenBridgeNotPaused(Hash160 token) {
         if (BridgeContract.getTokenBridge(token).paused) abort("Token bridge is paused.");
     }
 

@@ -23,7 +23,7 @@ public class BridgeImpl {
         BridgeContract.baseMap.put(KEY_ENTERED, true);
     }
 
-    static void exiting() {
+    static void exitingNonReentrant() {
         BridgeContract.baseMap.put(KEY_ENTERED, false);
     }
 

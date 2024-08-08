@@ -10,11 +10,11 @@ import static network.bane.bridge.StorageConstants.KEY_BRIDGE_MANAGEMENT;
 
 public class BridgeHelper {
 
-    static void onlyPaused() {
+    static void onlyWhenPaused() {
         if (!BridgeContract.isPaused()) abort("Contract is not paused.");
     }
 
-    static void onlyUnpaused() {
+    static void onlyWhenNotPaused() {
         if (BridgeContract.isPaused()) abort("Contract is paused.");
     }
 

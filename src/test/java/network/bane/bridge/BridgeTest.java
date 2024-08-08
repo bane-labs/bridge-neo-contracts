@@ -890,7 +890,7 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testUpdate_unpaused() throws IOException {
+    public void testUpdate_not_paused() throws IOException {
         assertFalse(bridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.invokeFunction("update", byteArray(""), string(""), any(null))

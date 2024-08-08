@@ -40,22 +40,22 @@ import static io.neow3j.devpack.Runtime.checkWitness;
 import static io.neow3j.devpack.Runtime.getCallingScriptHash;
 import static network.bane.bridge.BridgeHelper.managementContract;
 import static network.bane.bridge.BridgeHelper.onlyGovernor;
-import static network.bane.bridge.BridgeHelper.onlyPaused;
+import static network.bane.bridge.BridgeHelper.onlyWhenPaused;
 import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlySecurityGuard;
-import static network.bane.bridge.BridgeHelper.onlyUnpaused;
+import static network.bane.bridge.BridgeHelper.onlyWhenNotPaused;
 import static network.bane.bridge.BridgeImpl.enteringNonReentrant;
-import static network.bane.bridge.BridgeImpl.exiting;
-import static network.bane.bridge.GasBridgeImpl.onlyGasBridgePaused;
-import static network.bane.bridge.GasBridgeImpl.onlyGasBridgeUnpaused;
+import static network.bane.bridge.BridgeImpl.exitingNonReentrant;
+import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgePaused;
+import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgeNotPaused;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
 import static network.bane.bridge.StorageConstants.KEY_VERSION;
 import static network.bane.bridge.StorageConstants.KEY_UNCLAIMED_REWARDS;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
-import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgePaused;
-import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgeUnpaused;
+import static network.bane.bridge.TokenBridgeImpl.onlyWhenTokenBridgePaused;
+import static network.bane.bridge.TokenBridgeImpl.onlyWhenTokenBridgeNotPaused;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_MANAGEMENT;
 import static network.bane.bridge.StorageConstants.PREFIX_BASE;
 
@@ -225,7 +225,7 @@ public class BridgeContract {
     }
 
     public static void update(ByteString nef, String manifest, Object data) {
-        onlyPaused();
+        onlyWhenPaused();
         if (!checkWitness(managementContract().owner())) abort("Only the owner can update this contract.");
         new ContractManagement().update(nef, manifest, data);
     }
@@ -234,14 +234,14 @@ public class BridgeContract {
     // region pause/unpause
 
     public static void pauseBridge() {
-        onlyUnpaused();
+        onlyWhenNotPaused();
         onlySecurityGuard();
         baseMap.put(KEY_BRIDGE_PAUSE, true);
         onBridgePause.fire();
     }
 
     public static void unpauseBridge() {
-        onlyPaused();
+        onlyWhenPaused();
         onlyGovernor();
         baseMap.put(KEY_BRIDGE_PAUSE, false);
         onBridgeUnpause.fire();
@@ -301,8 +301,8 @@ public class BridgeContract {
                 return;
             } else {
                 // If there's data provided in a GAS transfer, it is handled as a bridge deposit.
-                onlyUnpaused();
-                onlyGasBridgeUnpaused();
+                onlyWhenNotPaused();
+                onlyWhenGasBridgeNotPaused();
                 GasBridgePaymentData paymentData = (GasBridgePaymentData) data;
                 if (!GasBridgePaymentData.isValid(paymentData)) abort("Invalid payment data.");
                 GasBridge gasBridge = getGasBridge();
@@ -349,14 +349,14 @@ public class BridgeContract {
 
     public static void pauseGasBridge() {
         onlySecurityGuard();
-        onlyGasBridgeUnpaused();
+        onlyWhenGasBridgeNotPaused();
         GasBridgeImpl.pauseGasBridge();
         onGasBridgePause.fire();
     }
 
     public static void unpauseGasBridge() {
         onlyGovernor();
-        onlyGasBridgePaused();
+        onlyWhenGasBridgePaused();
         GasBridgeImpl.unpauseGasBridge();
         onGasBridgeUnpause.fire();
     }
@@ -375,8 +375,8 @@ public class BridgeContract {
      *               than this value, the deposit is aborted.
      */
     public static void depositGas(Hash160 from, Hash160 to, int amount, int maxFee) {
-        onlyUnpaused();
-        onlyGasBridgeUnpaused();
+        onlyWhenNotPaused();
+        onlyWhenGasBridgeNotPaused();
         GasBridgeImpl.depositGas(from, to, amount, maxFee);
     }
 
@@ -398,8 +398,8 @@ public class BridgeContract {
     public static void withdrawGas(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
         onlyRelayer();
-        onlyUnpaused();
-        onlyGasBridgeUnpaused();
+        onlyWhenNotPaused();
+        onlyWhenGasBridgeNotPaused();
         GasBridgeImpl.withdrawGas(withdrawalRoot, signatures, withdrawals);
     }
 
@@ -415,8 +415,8 @@ public class BridgeContract {
      * @param nonce the nonce of the withdrawal that is claimable.
      */
     public static void claimGas(int nonce) {
-        onlyUnpaused();
-        onlyGasBridgeUnpaused();
+        onlyWhenNotPaused();
+        onlyWhenGasBridgeNotPaused();
         GasBridgeImpl.claimGas(nonce);
     }
 
@@ -543,7 +543,7 @@ public class BridgeContract {
 
     public static void pauseTokenBridge(Hash160 neoN3Token) {
         onlySecurityGuard();
-        onlyTokenBridgeUnpaused(neoN3Token);
+        onlyWhenTokenBridgeNotPaused(neoN3Token);
         Hash160 neoXToken = getTokenBridge(neoN3Token).config.neoXToken;
         TokenBridgeImpl.pauseTokenBridge(neoN3Token);
         onTokenBridgePause.fire(neoN3Token, neoXToken);
@@ -551,7 +551,7 @@ public class BridgeContract {
 
     public static void unpauseTokenBridge(Hash160 neoN3Token) {
         onlyGovernor();
-        onlyTokenBridgePaused(neoN3Token);
+        onlyWhenTokenBridgePaused(neoN3Token);
         Hash160 neoXToken = getTokenBridge(neoN3Token).config.neoXToken;
         TokenBridgeImpl.unpauseTokenBridge(neoN3Token);
         onTokenBridgeUnpause.fire(neoN3Token, neoXToken);
@@ -572,10 +572,10 @@ public class BridgeContract {
      */
     public static void depositToken(Hash160 token, Hash160 from, Hash160 to, int amount, int maxFee) {
         enteringNonReentrant();
-        onlyUnpaused();
-        onlyTokenBridgeUnpaused(token);
+        onlyWhenNotPaused();
+        onlyWhenTokenBridgeNotPaused(token);
         TokenBridgeImpl.depositToken(token, from, to, amount, maxFee);
-        exiting();
+        exitingNonReentrant();
     }
 
     /**
@@ -597,8 +597,8 @@ public class BridgeContract {
     public static void withdrawToken(Hash160 token, ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
         onlyRelayer();
-        onlyUnpaused();
-        onlyTokenBridgeUnpaused(token);
+        onlyWhenNotPaused();
+        onlyWhenTokenBridgeNotPaused(token);
         TokenBridgeImpl.withdrawToken(token, withdrawalRoot, signatures, withdrawals);
     }
 
@@ -614,8 +614,8 @@ public class BridgeContract {
      * @param nonce the nonce of the withdrawal that is claimable.
      */
     public static void claimToken(Hash160 token, int nonce) {
-        onlyUnpaused();
-        onlyTokenBridgeUnpaused(token);
+        onlyWhenNotPaused();
+        onlyWhenTokenBridgeNotPaused(token);
         TokenBridgeImpl.claimToken(token, nonce);
     }
 

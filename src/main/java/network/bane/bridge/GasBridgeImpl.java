@@ -25,11 +25,11 @@ public class GasBridgeImpl {
 
     // region pause
 
-    static void onlyGasBridgePaused() {
-        if (!BridgeContract.getGasBridge().paused) abort("Gas bridge is unpaused.");
+    static void onlyWhenGasBridgePaused() {
+        if (!BridgeContract.getGasBridge().paused) abort("Gas bridge is not paused.");
     }
 
-    static void onlyGasBridgeUnpaused() {
+    static void onlyWhenGasBridgeNotPaused() {
         if (BridgeContract.getGasBridge().paused) abort("Gas bridge is paused.");
     }
 
