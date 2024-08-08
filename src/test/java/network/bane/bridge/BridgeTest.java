@@ -54,6 +54,7 @@ import static io.neow3j.types.ContractParameter.string;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.getClaimEvents;
+import static network.bane.util.TestHelper.governor;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_GAS_DEPOSIT_FEE;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_TOTAL_MAX_DEPOSITED_GAS;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
@@ -910,6 +911,14 @@ public class BridgeTest {
                 () -> bridge.invokeFunction("pauseBridge").signers(calledByEntry(relayer)).sign());
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Only the security guard can call this method"));
+    }
+
+    @Test
+    @Order(0)
+    public void testPauseBridge_governorAllowed() throws Throwable {
+        bridge.pauseBridge(governor);
+        assertTrue(bridge.isPaused());
+        bridge.unpause(governor);
     }
 
     @Test

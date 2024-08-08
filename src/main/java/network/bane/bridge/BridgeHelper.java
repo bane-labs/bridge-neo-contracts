@@ -30,6 +30,12 @@ public class BridgeHelper {
         }
     }
 
+    static void onlyGovernorOrSecurityGuard() {
+        if (!checkWitness(managementContract().governor()) && !checkWitness(managementContract().securityGuard())) {
+            abort("Only the governor or security guard can call this method.");
+        }
+    }
+
     static void onlySecurityGuard() {
         if (!checkWitness(managementContract().securityGuard())) {
             abort("Only the security guard can call this method.");
