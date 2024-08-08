@@ -17,7 +17,7 @@ import static network.bane.lib.BridgeLib.padToBytes;
 public class GasBridgeLib {
 
     public static ByteString hashGasBridgeOp(CryptoLib cryptoLib, int nonce, Hash160 to, int amount) {
-        return cryptoLib.sha256(concatGasBridgeOpData(nonce, to, amount));
+        return cryptoLib.keccak256(concatGasBridgeOpData(nonce, to, amount));
     }
 
     private static ByteString concatGasBridgeOpData(int nonce, Hash160 to, int amount) {

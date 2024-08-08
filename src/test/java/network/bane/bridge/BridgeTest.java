@@ -61,7 +61,7 @@ import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_GAS_DEPOSIT
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_WITHDRAWALS;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_GAS_DEPOSIT;
 import static network.bane.util.helper.PrintHelper.printTransactionFee;
-import static network.bane.util.TestHelper.concatAndSha256;
+import static network.bane.util.TestHelper.concatAndKeccak256;
 import static network.bane.util.TestHelper.createDepositHash;
 import static network.bane.util.TestHelper.getClaimableEvents;
 import static network.bane.util.TestHelper.getDepositEvents;
@@ -331,11 +331,17 @@ public class BridgeTest {
         Hash256 txHash = depositGasUsingDepositMethod(from, to, amount);
 
         assertThat(bridge.gasDepositFee(), is(new BigInteger("10000000")));
+
+        // hex values and concatenation for the first deposit
+        // 0000000000000000000000000000000000000000000000000000000000000001
+        // 70997970C51812dc3A010C7d01b50e0d17dc79C8
+        // 0000000000000000000000000000000000000000000000000000000005f5e100
+        // 000000000000000000000000000000000000000000000000000000000000000170997970C51812dc3A010C7d01b50e0d17dc79C80000000000000000000000000000000000000000000000000000000005f5e100
         String d1 = createDepositHash(nextNonce, to, amount.subtract(bridge.gasDepositFee()));
         // Raw deposit hash and root. The same inputs and the same deposit and root hash are used in a Neo X test.
-        assertThat(d1, is("0x20aad97e2860b1934184ffb2b04ea45d49af5145fa43cb212027f9e8e728baea"));
-        String newRoot = concatAndSha256(depositRootBefore, d1);
-        assertThat(newRoot, is("0xdda77cac690580c1e5220d377cd807b4d2ed89751e4078525ee54297182d3d88"));
+        assertThat(d1, is("0x7ed36781b8366a590ce568db6712d377c031b9f1a21c44cda2493182b0ff92e5"));
+        String newRoot = concatAndKeccak256(depositRootBefore, d1);
+        assertThat(newRoot, is("0x70789f5bdb108a6b6dc7d7aa0d31649ab5fa980bbbfd1868eb17821b1f61e0ac"));
         assertThat(bridge.gasDepositRoot(), is(newRoot));
 
         List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
@@ -366,10 +372,15 @@ public class BridgeTest {
         // operation. In this case, the deposit fee is deducted from the sent amount and the remaining amount is
         // used for the deposit to Neo X.
         BigInteger resultingBridgeAmount = sentAmount.subtract(bridge.gasDepositFee());
+
+        // hex values and concatenation for the second deposit
+        // 0000000000000000000000000000000000000000000000000000000000000002
+        // 89FC6B042B146F373CEC4CA4A1B112697763360F
+        // 0000000000000000000000000000000000000000000000000000000005F5E100
         String d2 = createDepositHash(nextNonce, to, resultingBridgeAmount);
-        assertThat(d2, is("0x983b3a1ee6b74a5ba07109966f86189d2adf108a25fd9b456030f684bffa8f84"));
-        String d12 = concatAndSha256(depositRootBefore, d2);
-        assertThat(d12, is("0xa33a32b7b710705118b37d5fa7684a26e63840e7b5b88326177e7ec4ee7be253"));
+        assertThat(d2, is("0xcba84a7e0f42d61e4510f0b13ae53c138cb1864b97f598d273c9fb3a9fe8d51a"));
+        String d12 = concatAndKeccak256(depositRootBefore, d2);
+        assertThat(d12, is("0xa15d5e4d94b19c1c4c8aa07157bb03a121e5b886c76e5ec7cecab139eb342236"));
 
         assertThat(bridge.gasDepositRoot(), is(d12));
 
@@ -396,7 +407,7 @@ public class BridgeTest {
         Hash256 txHash = depositGasUsingDepositMethod(from, to, amount);
 
         String d3 = createDepositHash(nextNonce, to, amount.subtract(bridge.gasDepositFee()));
-        String d12d3 = concatAndSha256(depositRootBefore, d3);
+        String d12d3 = concatAndKeccak256(depositRootBefore, d3);
 
         assertThat(bridge.gasDepositRoot(), is(d12d3));
 
@@ -424,7 +435,7 @@ public class BridgeTest {
         Hash256 txHash = depositGasUsingDepositMethod(from, to, amount);
 
         String depositHashOffChain = createDepositHash(nextNonce, to, amount.subtract(bridge.gasDepositFee()));
-        String d1234 = concatAndSha256(depositRootBefore, depositHashOffChain);
+        String d1234 = concatAndKeccak256(depositRootBefore, depositHashOffChain);
 
         assertThat(bridge.gasDepositRoot(), is(d1234));
 
@@ -476,10 +487,15 @@ public class BridgeTest {
         Hash160 to = new Hash160("0x6472bf811b33b87f7872e31439cdbd16871d8cad");
         BigInteger amount = new BigInteger("200000000");
 
+        // hex values and concatenation for the first withdrawal
+        // 0000000000000000000000000000000000000000000000000000000000000001
+        // 6472bf811b33b87f7872e31439cdbd16871d8cad
+        // 000000000000000000000000000000000000000000000000000000000bebc200
+        // 00000000000000000000000000000000000000000000000000000000000000016472bf811b33b87f7872e31439cdbd16871d8cad000000000000000000000000000000000000000000000000000000000bebc200
         String d1 = createDepositHash(nonce, to, amount);
-        assertThat(d1, is("0x9d532058b0e607e4767a9c6b6915d1c97019adfcb50cafe1001904cbbaf6a3bb"));
-        String root = concatAndSha256(Hash256.ZERO.toString(), d1);
-        assertThat(root, is("0x177604db278d7680e254218a72dcc06043600f9c9cb6eb56055cd17fb81fa0b9"));
+        assertThat(d1, is("0xe9b5d0fab709134768203ee7ad13daf4ecf24a261aa26ed371c3b546db89a789"));
+        String root = concatAndKeccak256(Hash256.ZERO.toString(), d1);
+        assertThat(root, is("0x295226ccd2cee4e7fef5bc9d18677c6228052b46109731fc25dbcd6982074a0e"));
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
         Hash256 txHash = bridge.withdrawGas(root, signMsg(validators, root), withdrawal);
@@ -506,14 +522,25 @@ public class BridgeTest {
 
         String withdrawRootBefore = bridge.gasWithdrawRoot();
 
+        // hex values and concatenation for the second withdrawal
+        // 0000000000000000000000000000000000000000000000000000000000000002
+        // 9f20eee56cc5abe5955ee5e15835dc45344c368d
+        // 0000000000000000000000000000000000000000000000000000000005f5e100
+        // 00000000000000000000000000000000000000000000000000000000000000029f20eee56cc5abe5955ee5e15835dc45344c368d0000000000000000000000000000000000000000000000000000000005f5e100
         String d1 = createDepositHash(nonce1, to1, amount1);
-        assertThat(d1, is("0x32a41a5e3d27d9308a10d85281a0cee7e0f9bbfe5ac417fa21cf0ec8464be5bb"));
-        String root1 = concatAndSha256(withdrawRootBefore, d1);
-        assertThat(root1, is("0x38d6ba25f87e2a128ab82f815b5f1f84191da961cf4b58029eee2d33e9640a3a"));
+        assertThat(d1, is("0x66d8930f95244dea0f75d753436dec89c9a44e07352afcad710f56c89a777231"));
+        String root1 = concatAndKeccak256(withdrawRootBefore, d1);
+        assertThat(root1, is("0x8d5f2274902ff1095ac6ff8b7b6b8e21d7a2ff7dbb43664a35454a8069bb438b"));
+
+        // hex values and concatenation for the third withdrawal
+        // 0000000000000000000000000000000000000000000000000000000000000003
+        // a71fbffad1f175bfddb1e81a63962212d2e72e8f
+        // 0000000000000000000000000000000000000000000000000000000005f5e100
+        // 0000000000000000000000000000000000000000000000000000000000000003a71fbffad1f175bfddb1e81a63962212d2e72e8f0000000000000000000000000000000000000000000000000000000005f5e100
         String d2 = createDepositHash(nonce2, to2, amount2);
-        assertThat(d2, is("0x5355bdf08f3429f0ca6c15bea7d6bc147a7fb5072c782ff72e350e25ee683ad1"));
-        String newRoot = concatAndSha256(root1, d2);
-        assertThat(newRoot, is("0x005bac323a5f98e0ba3d41d71573853e37cc28649cd95ea703ab0f9e462573bd"));
+        assertThat(d2, is("0x127ca7356d1430f75d9e587efa590436c7e161e0b099067e38200de73973d14c"));
+        String newRoot = concatAndKeccak256(root1, d2);
+        assertThat(newRoot, is("0x3e94c8faca61ac1e24921638d4a6068f17ee3ae13f13fa60647643763d15ff6c"));
 
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(
@@ -543,7 +570,7 @@ public class BridgeTest {
 
         String withdrawRootBefore = bridge.gasWithdrawRoot();
         String d1 = createDepositHash(nonce, to, amount);
-        String root = concatAndSha256(withdrawRootBefore, d1);
+        String root = concatAndKeccak256(withdrawRootBefore, d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
 
@@ -586,13 +613,13 @@ public class BridgeTest {
 
         String rootBefore = bridge.gasWithdrawRoot();
         String d1 = createDepositHash(nonce1, to1, amount1);
-        String root = concatAndSha256(rootBefore, d1);
+        String root = concatAndKeccak256(rootBefore, d1);
         String d2 = createDepositHash(nonce2, to2, amount2);
-        root = concatAndSha256(root, d2);
+        root = concatAndKeccak256(root, d2);
         String d3 = createDepositHash(nonce3, to3, amount3);
-        root = concatAndSha256(root, d3);
+        root = concatAndKeccak256(root, d3);
         String d4 = createDepositHash(nonce4, to4, amount4);
-        root = concatAndSha256(root, d4);
+        root = concatAndKeccak256(root, d4);
 
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawals = array(
@@ -630,7 +657,7 @@ public class BridgeTest {
 
         String withdrawRootBefore = bridge.gasWithdrawRoot();
         String d1 = createDepositHash(nextNonce, to, amount);
-        String root = concatAndSha256(withdrawRootBefore, d1);
+        String root = concatAndKeccak256(withdrawRootBefore, d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nextNonce), hash160(to), integer(amount)));
         bridge.withdrawGas(root, signMsg(validators, root), withdrawal); // fund the contract if this test is executed

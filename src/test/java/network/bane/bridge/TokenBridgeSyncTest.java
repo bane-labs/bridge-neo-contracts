@@ -18,7 +18,6 @@ import network.bane.testhelper.TestContract;
 import network.bane.testhelper.TokenTestContract;
 import network.bane.util.structs.State;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -37,7 +36,7 @@ import static io.neow3j.utils.Numeric.prependHexPrefix;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.computeNewTokenRootNoPrefix;
-import static network.bane.util.TestHelper.sha256HexNoPrefix;
+import static network.bane.util.TestHelper.keccak256HexNoPrefix;
 import static network.bane.util.TestHelper.signMsg;
 import static network.bane.util.TestHelper.validator1;
 import static network.bane.util.TestHelper.validator3;
@@ -63,7 +62,6 @@ import static org.hamcrest.Matchers.is;
 /**
  * The inputs and outputs in this test are synchronized with tests on the Neo X side.
  */
-@Disabled
 @ContractTest(
         blockTime = 1,
         contracts = {BridgeManagementContract.class, BridgeContract.class, TokenTestContract.class, TestContract.class},
@@ -121,8 +119,8 @@ public class TokenBridgeSyncTest {
         String hashed = tokenTestContract.callInvokeFunction("hashTokenBridge",
                         asList(hash160(neoN3Token), hash160(neoXToken), integer(nonce), hash160(to), integer(value)))
                 .getInvocationResult().getFirstStackItem().getHexString();
-        assertThat(hashed, is(sha256HexNoPrefix(hexStringToByteArray(expectedConcatenatedData))));
-        assertThat(hashed, is("5dcc8d59cfb9446288dc79f3e2a776d05e7bce0b82efe28ec554d6dcb08acda4"));
+        assertThat(hashed, is(keccak256HexNoPrefix(hexStringToByteArray(expectedConcatenatedData))));
+        assertThat(hashed, is("5df56ac9c1a3c018a83c763c211f89c7c5c5dc4b121c960452f8cfe802cdc631"));
     }
 
     @Order(0)
@@ -157,8 +155,24 @@ public class TokenBridgeSyncTest {
         assertThat(depositState.get(1).getAddress(), is(neoXNeoTokenHash.toAddress()));
         assertThat(depositState.get(2).getInteger(), is(new BigInteger("2")));
 
+        // token hashes
+        // ef4073a0f2b305a38ec4050e4d3d28bc40ea63f5
+        // 5615deb798bb3e4dfa0139dfa1b3d433cc23b72f
+
+        // hex values and concatenation of the first deposit
+        // 0000000000000000000000000000000000000000000000000000000000000001
+        // F3D4D6320dd41f14B8Fa6550a6F33c46c6F44407
+        // 0000000000000000000000000000000000000000000000000000000000000163
+        // ef4073a0f2b305a38ec4050e4d3d28bc40ea63f55615deb798bb3e4dfa0139dfa1b3d433cc23b72f0000000000000000000000000000000000000000000000000000000000000001F3D4D6320dd41f14B8Fa6550a6F33c46c6F444070000000000000000000000000000000000000000000000000000000000000163
+
+        // hex values and concatenation of the second deposit
+        // 0000000000000000000000000000000000000000000000000000000000000002
+        // 3220a7ee654E1f84f13E8021B7E2b09775E1BDf2
+        // 00000000000000000000000000000000000000000000000000000000000001bd
+        // ef4073a0f2b305a38ec4050e4d3d28bc40ea63f55615deb798bb3e4dfa0139dfa1b3d433cc23b72f00000000000000000000000000000000000000000000000000000000000000023220a7ee654E1f84f13E8021B7E2b09775E1BDf200000000000000000000000000000000000000000000000000000000000001bd
+
         String tokenDepositRoot = prependHexPrefix(depositState.get(7).getHexString());
-        assertThat(tokenDepositRoot, is("0x6c995cd010e797f62716b58053fbfbf4834c68d96c5f0361bf49186cbef6d457"));
+        assertThat(tokenDepositRoot, is("0x30bd66fcd30d5e4759d2a5af3833f418c2960e3552bf93e9f296b433257b2134"));
 
         BigInteger collectedFees = bridge.tokenDepositFee(neoN3NeoTokenHash).multiply(BigInteger.valueOf(2));
         assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), greaterThan(collectedFees));
@@ -178,6 +192,37 @@ public class TokenBridgeSyncTest {
         Hash160 recipientOnNeoN3_3 = new Hash160("0x278bc15652D2cBF8a1a098843a659Cf300760e2e");
         BigInteger amount_3 = new BigInteger("196");
 
+        // token hashes
+        // ef4073a0f2b305a38ec4050e4d3d28bc40ea63f5
+        // 5615deb798bb3e4dfa0139dfa1b3d433cc23b72f
+
+        // hex values and concatenation of the first deposit
+        // nonce: 0000000000000000000000000000000000000000000000000000000000000001
+        // to: DA1fE5cf6Eb14785aA9d4dCC7bc87aab7DEcb625
+        // amount: 000000000000000000000000000000000000000000000000000000000000000c
+        // conatenated: ef4073a0f2b305a38ec4050e4d3d28bc40ea63f55615deb798bb3e4dfa0139dfa1b3d433cc23b72f0000000000000000000000000000000000000000000000000000000000000001DA1fE5cf6Eb14785aA9d4dCC7bc87aab7DEcb625000000000000000000000000000000000000000000000000000000000000000c
+        // hashed and prepended with previous root:
+        // 000000000000000000000000000000000000000000000000000000000000000050582d7b0808a6fb39f40d269d441ee8087dd740bf804862976180c88e88c9f2
+        // new root: 960beea9593869e777ce234a69bcce025f5b33841da2c03080347ee44dd86a11
+
+        // hex values and concatenation of the second deposit
+        // nonce: 0000000000000000000000000000000000000000000000000000000000000002
+        // to: C17940c0bf2A801266f3669c19E0c594e751f868
+        // amount: 0000000000000000000000000000000000000000000000000000000000000001
+        // conatenated: ef4073a0f2b305a38ec4050e4d3d28bc40ea63f55615deb798bb3e4dfa0139dfa1b3d433cc23b72f0000000000000000000000000000000000000000000000000000000000000002C17940c0bf2A801266f3669c19E0c594e751f8680000000000000000000000000000000000000000000000000000000000000001
+        // hashed and prepended with previous root:
+        // 960beea9593869e777ce234a69bcce025f5b33841da2c03080347ee44dd86a119ffdff3852dcd2382a028cd601981d060735f46db9456f235999dba0e2ca8a93
+        // new root: aa91fded735d8efef1bdeef80cc23301f155f854fdd393a213c5a4a78ce9bb93
+
+        // hex values and concatenation of the third deposit
+        // nonce: 0000000000000000000000000000000000000000000000000000000000000003
+        // to: 278bc15652D2cBF8a1a098843a659Cf300760e2e
+        // amount: 00000000000000000000000000000000000000000000000000000000000000c4
+        // concatenated: ef4073a0f2b305a38ec4050e4d3d28bc40ea63f55615deb798bb3e4dfa0139dfa1b3d433cc23b72f0000000000000000000000000000000000000000000000000000000000000003278bc15652D2cBF8a1a098843a659Cf300760e2e00000000000000000000000000000000000000000000000000000000000000c4
+        // hashed and prepended with previous root:
+        // aa91fded735d8efef1bdeef80cc23301f155f854fdd393a213c5a4a78ce9bb931448e87e1a9a403b40b09099aecf9e568f4c8518065c6c1ac9ace2978d0e1e7d
+        // new root: e7bcedec3503f013e96c2656b3ea841f62787a06afd3a3df004635ec9a1432e7
+
         State withdrawalState_before = bridge.getTokenBridge(neoN3NeoTokenHash).withdrawalState;
         String newRoot_1 = computeNewTokenRootNoPrefix(withdrawalState_before.root.toString(), neoN3NeoTokenHash,
                 neoXNeoTokenHash, BigInteger.ONE, recipientOnNeoN3_1, amount_1);
@@ -187,7 +232,7 @@ public class TokenBridgeSyncTest {
                 BigInteger.valueOf(3), recipientOnNeoN3_3, amount_3);
 
         assertThat(prependHexPrefix(newRoot_3),
-                is("0x2b1eb8388620f2ba81eeecda0b88c41a35d8aef678cb1eb22ecc488b087d9c99"));
+                is("0xe7bcedec3503f013e96c2656b3ea841f62787a06afd3a3df004635ec9a1432e7"));
 
         List<Account> signingValidators = asList(validator1, validator3, validator4, validator5, validator7);
         Hash256 withdrawalTxHash = bridge.withdrawToken(neoN3NeoTokenHash, newRoot_3,
