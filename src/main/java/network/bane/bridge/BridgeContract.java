@@ -47,6 +47,7 @@ import static network.bane.bridge.BridgeHelper.onlyWhenNotPaused;
 import static network.bane.bridge.BridgeImpl.enteringNonReentrant;
 import static network.bane.bridge.BridgeImpl.exitingNonReentrant;
 import static network.bane.bridge.GasBridgeImpl.onlyWhenDepositsNotPaused;
+import static network.bane.bridge.GasBridgeImpl.onlyWhenDepositsPaused;
 import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgePaused;
 import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgeNotPaused;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_DEPOSIT_PAUSE;
@@ -287,12 +288,14 @@ public class BridgeContract {
      * contract is updated.
      */
     public static void pauseDeposits() {
+        onlyWhenDepositsNotPaused();
         onlyGovernor();
         baseMap.put(KEY_BRIDGE_DEPOSIT_PAUSE, true);
         onBridgeDepositPause.fire();
     }
 
     public static void unpauseDeposits() {
+        onlyWhenDepositsPaused();
         onlyGovernor();
         baseMap.put(KEY_BRIDGE_DEPOSIT_PAUSE, false);
         onBridgeDepositUnpause.fire();
