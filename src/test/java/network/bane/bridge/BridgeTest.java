@@ -171,13 +171,14 @@ public class BridgeTest {
     @Test
     @Order(0)
     public void testDeployment_deploymentDataSetCorrectly() throws IOException {
-        assertThat(bridge.findStorage("0x0a"), hasSize(6));
+        assertThat(bridge.findStorage("0x0a"), hasSize(7));
         ContractStorageEntry managementEntry = bridge.findStorage("0x0a").get(0);
         ContractStorageEntry pauseEntry = bridge.findStorage("0x0a").get(1);
         ContractStorageEntry gasBridgeEntry = bridge.findStorage("0x0a").get(2);
         ContractStorageEntry unclaimedRewardsEntry = bridge.findStorage("0x0a").get(3);
-        ContractStorageEntry enteredEntry = bridge.findStorage("0x0a").get(4);
-        ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(5);
+        ContractStorageEntry depositsPausedEntry = bridge.findStorage("0x0a").get(4);
+        ContractStorageEntry enteredEntry = bridge.findStorage("0x0a").get(5);
+        ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(6);
 
         assertThat(managementEntry.getKeyHex(), is("0x0a01"));
         assertArrayEquals(managementEntry.getValue(), MANAGEMENT_CONTRACT_HASH.toLittleEndianArray());
@@ -220,7 +221,11 @@ public class BridgeTest {
         assertThat(bridge.gasWithdrawalNonce(), is(BigInteger.ZERO));
         assertThat(bridge.gasWithdrawRoot(), is(Numeric.toHexString(Hash256.ZERO.toArray())));
 
+        assertThat(unclaimedRewardsEntry.getKeyHex(), is("0x0a04"));
         assertThat(unclaimedRewardsEntry.getValueHex(), is("0x"));
+
+        assertThat(depositsPausedEntry.getKeyHex(), is("0x0a05"));
+        assertThat(depositsPausedEntry.getValueHex(), is("0x"));
 
         assertThat(enteredEntry.getKeyHex(), is("0x0a70"));
         assertThat(enteredEntry.getValueHex(), is("0x"));
