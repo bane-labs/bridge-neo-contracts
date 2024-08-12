@@ -61,6 +61,8 @@ import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HAS
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_GAS_DEPOSIT;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_WITHDRAWALS;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_GAS_DEPOSIT;
+import static network.bane.util.helper.DepositHelper.depositGasUsingDepositMethod;
+import static network.bane.util.helper.DepositHelper.depositGasWithDirectTransfer;
 import static network.bane.util.helper.PrintHelper.printTransactionFee;
 import static network.bane.util.TestHelper.concatAndKeccak256;
 import static network.bane.util.TestHelper.createDepositHash;
@@ -140,31 +142,6 @@ public class BridgeTest {
         return createBridgeDeployConfig();
     }
 
-    // region helper gas
-
-    private Hash256 depositGasUsingDepositMethod(Account from, Hash160 to, BigInteger amount) throws Throwable {
-        return depositGasUsingDepositMethod(from, to, amount, DEFAULT_GAS_DEPOSIT_FEE);
-    }
-
-    private Hash256 depositGasUsingDepositMethod(Account from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
-        Hash256 txHash = bridge.depositGas(from, to, amount, maxFee);
-        printTransactionFee(neow3j, "deposit", txHash);
-        return txHash;
-    }
-
-    private Hash256 depositGasWithDirectTransfer(Account from, Hash160 to, BigInteger amount,
-            BigInteger minBridgeAmount) throws Throwable {
-        NeoSendRawTransaction response = gasToken.transfer(from, bridge.getScriptHash(), amount, array(hash160(to),
-                        integer(minBridgeAmount)))
-                .sign()
-                .send();
-        Hash256 txHash = response.getSendRawTransaction().getHash();
-        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
-        printTransactionFee(neow3j, "deposit direct", txHash);
-        return txHash;
-    }
-
-    // endregion
     // endregion
     // region deployment
 
