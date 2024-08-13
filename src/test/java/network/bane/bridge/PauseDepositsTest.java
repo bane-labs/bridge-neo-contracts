@@ -25,6 +25,7 @@ import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static network.bane.util.TestHelper.computeNewTokenRootNoPrefix;
 import static network.bane.util.TestHelper.governor;
+import static network.bane.util.TestHelper.securityGuard;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_GAS_DEPOSIT;
 import static network.bane.util.helper.DepositHelper.depositGasUsingDepositMethod;
 import static network.bane.util.helper.DepositHelper.depositGasWithDirectTransfer;
@@ -98,7 +99,7 @@ public class PauseDepositsTest {
         bridge.pauseDeposits();
         assertTrue(bridge.depositsArePaused());
         TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> bridge.unpauseDeposits(relayer));
+                assertThrows(TransactionConfigurationException.class, () -> bridge.unpauseDeposits(securityGuard));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Only the governor can call this method."));
         bridge.unpauseDeposits();
@@ -116,8 +117,8 @@ public class PauseDepositsTest {
     @Test
     public void testUnpauseDeposits_alreadyUnpaused() throws Throwable {
         assertFalse(bridge.depositsArePaused());
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> bridge.unpauseDeposits());
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.unpauseDeposits());
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Deposits are not paused."));
     }
 
@@ -129,9 +130,8 @@ public class PauseDepositsTest {
         assertFalse(bridge.depositsArePaused());
         bridge.pauseDeposits();
 
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> depositGasUsingDepositMethod(alice,
-                        recipient0, BigInteger.ONE));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> depositGasUsingDepositMethod(alice, recipient0, BigInteger.ONE));
         assertThat(thrown.getMessage(), containsString("Deposits are paused."));
 
         bridge.unpauseDeposits();
@@ -142,9 +142,8 @@ public class PauseDepositsTest {
         assertFalse(bridge.depositsArePaused());
         bridge.pauseDeposits();
 
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> depositGasWithDirectTransfer(alice,
-                        recipient0, BigInteger.ONE, DEFAULT_MIN_GAS_DEPOSIT));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> depositGasWithDirectTransfer(alice, recipient0, BigInteger.ONE, DEFAULT_MIN_GAS_DEPOSIT));
         assertThat(thrown.getMessage(), containsString("Deposits are paused."));
 
         bridge.unpauseDeposits();
@@ -184,8 +183,7 @@ public class PauseDepositsTest {
         BigInteger amount = new BigInteger("200000000");
 
         State withdrawalState_before = bridge.getTokenBridge(neoN3NeoTokenHash).withdrawalState;
-        String root =
-                computeNewTokenRootNoPrefix(withdrawalState_before.root.toString(), neoN3NeoTokenHash,
+        String root = computeNewTokenRootNoPrefix(withdrawalState_before.root.toString(), neoN3NeoTokenHash,
                         neoXNeoTokenHash, BigInteger.ONE, to, amount);
 
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
