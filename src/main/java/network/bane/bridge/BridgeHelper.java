@@ -36,12 +36,6 @@ public class BridgeHelper {
         }
     }
 
-    static void onlySecurityGuard() {
-        if (!checkWitness(managementContract().securityGuard())) {
-            abort("Only the security guard can call this method.");
-        }
-    }
-
     static BridgeManagement managementContract() {
         return new BridgeManagement(BridgeContract.baseMap.getHash160(KEY_BRIDGE_MANAGEMENT));
     }

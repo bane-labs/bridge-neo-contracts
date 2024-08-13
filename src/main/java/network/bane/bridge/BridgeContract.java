@@ -43,7 +43,6 @@ import static network.bane.bridge.BridgeHelper.onlyGovernor;
 import static network.bane.bridge.BridgeHelper.onlyGovernorOrSecurityGuard;
 import static network.bane.bridge.BridgeHelper.onlyWhenPaused;
 import static network.bane.bridge.BridgeHelper.onlyRelayer;
-import static network.bane.bridge.BridgeHelper.onlySecurityGuard;
 import static network.bane.bridge.BridgeHelper.onlyWhenNotPaused;
 import static network.bane.bridge.BridgeImpl.enteringNonReentrant;
 import static network.bane.bridge.BridgeImpl.exitingNonReentrant;
