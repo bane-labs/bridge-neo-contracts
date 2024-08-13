@@ -50,7 +50,7 @@ import static network.bane.bridge.GasBridgeImpl.onlyWhenDepositsNotPaused;
 import static network.bane.bridge.GasBridgeImpl.onlyWhenDepositsPaused;
 import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgePaused;
 import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgeNotPaused;
-import static network.bane.bridge.StorageConstants.KEY_BRIDGE_DEPOSIT_PAUSE;
+import static network.bane.bridge.StorageConstants.KEY_DEPOSIT_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
@@ -94,11 +94,11 @@ public class BridgeContract {
     @DisplayName("BridgeUnpause")
     static Event onBridgeUnpause;
 
-    @DisplayName("BridgeDepositPause")
-    static Event onBridgeDepositPause;
+    @DisplayName("DepositPause")
+    static Event onDepositPause;
 
-    @DisplayName("BridgeDepositUnpause")
-    static Event onBridgeDepositUnpause;
+    @DisplayName("DepositUnpause")
+    static Event onDepositUnpause;
 
     // endregion
     // region gas bridge events
@@ -208,7 +208,7 @@ public class BridgeContract {
             if (baseMap.getInt(KEY_VERSION) != 0) abort("Invalid version.");
             // Update internal versioning.
             baseMap.put(KEY_VERSION, 1);
-            baseMap.put(KEY_BRIDGE_DEPOSIT_PAUSE, false);
+            baseMap.put(KEY_DEPOSIT_PAUSE, false);
         } else {
             BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
             if (deploymentData.bridgeManagementContract == null ||
@@ -227,7 +227,7 @@ public class BridgeContract {
             ByteString serialize = new StdLib().serialize(gasBridge);
             baseMap.put(KEY_GAS_BRIDGE, serialize);
             baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
-            baseMap.put(KEY_BRIDGE_DEPOSIT_PAUSE, false);
+            baseMap.put(KEY_DEPOSIT_PAUSE, false);
 
             BridgeContract.baseMap.put(KEY_ENTERED, false);
             baseMap.put(KEY_VERSION, 0);
@@ -290,15 +290,15 @@ public class BridgeContract {
     public static void pauseDeposits() {
         onlyWhenDepositsNotPaused();
         onlyGovernor();
-        baseMap.put(KEY_BRIDGE_DEPOSIT_PAUSE, true);
-        onBridgeDepositPause.fire();
+        baseMap.put(KEY_DEPOSIT_PAUSE, true);
+        onDepositPause.fire();
     }
 
     public static void unpauseDeposits() {
         onlyWhenDepositsPaused();
         onlyGovernor();
-        baseMap.put(KEY_BRIDGE_DEPOSIT_PAUSE, false);
-        onBridgeDepositUnpause.fire();
+        baseMap.put(KEY_DEPOSIT_PAUSE, false);
+        onDepositUnpause.fire();
     }
 
     /**
@@ -306,7 +306,7 @@ public class BridgeContract {
      */
     @Safe
     public static boolean depositsArePaused() {
-        return baseMap.getBoolean(KEY_BRIDGE_DEPOSIT_PAUSE);
+        return baseMap.getBoolean(KEY_DEPOSIT_PAUSE);
     }
 
     // endregion
