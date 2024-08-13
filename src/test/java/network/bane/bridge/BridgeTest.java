@@ -906,17 +906,27 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testPauseBridge_onlySecurityGuard() {
+    public void testPauseBridge_notAuthorized() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.invokeFunction("pauseBridge").signers(calledByEntry(relayer)).sign());
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the security guard can call this method"));
+                containsString("Only the governor or security guard can call this method"));
     }
 
     @Test
     @Order(0)
     public void testPauseBridge_governorAllowed() throws Throwable {
+        assertFalse(bridge.isPaused());
         bridge.pauseBridge(governor);
+        assertTrue(bridge.isPaused());
+        bridge.unpause(governor);
+    }
+
+    @Test
+    @Order(0)
+    public void testPauseBridge_securityGuardAllowed() throws Throwable {
+        assertFalse(bridge.isPaused());
+        bridge.pauseBridge(securityGuard);
         assertTrue(bridge.isPaused());
         bridge.unpause(governor);
     }
