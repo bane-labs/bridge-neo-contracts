@@ -46,8 +46,11 @@ import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlyWhenNotPaused;
 import static network.bane.bridge.BridgeImpl.enteringNonReentrant;
 import static network.bane.bridge.BridgeImpl.exitingNonReentrant;
+import static network.bane.bridge.GasBridgeImpl.onlyWhenDepositsNotPaused;
+import static network.bane.bridge.GasBridgeImpl.onlyWhenDepositsPaused;
 import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgePaused;
 import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgeNotPaused;
+import static network.bane.bridge.StorageConstants.KEY_DEPOSIT_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
@@ -90,6 +93,12 @@ public class BridgeContract {
 
     @DisplayName("BridgeUnpause")
     static Event onBridgeUnpause;
+
+    @DisplayName("DepositPause")
+    static Event onDepositPause;
+
+    @DisplayName("DepositUnpause")
+    static Event onDepositUnpause;
 
     // endregion
     // region gas bridge events
@@ -195,7 +204,12 @@ public class BridgeContract {
 
     @OnDeployment
     public static void deploy(Object data, boolean isUpdate) {
-        if (!isUpdate) {
+        if (isUpdate) {
+            if (baseMap.getInt(KEY_VERSION) != 0) abort("Invalid version.");
+            // Update internal versioning.
+            baseMap.put(KEY_VERSION, 1);
+            baseMap.put(KEY_DEPOSIT_PAUSE, false);
+        } else {
             BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
             if (deploymentData.bridgeManagementContract == null ||
                     !Hash160.isValid(deploymentData.bridgeManagementContract))
@@ -213,6 +227,7 @@ public class BridgeContract {
             ByteString serialize = new StdLib().serialize(gasBridge);
             baseMap.put(KEY_GAS_BRIDGE, serialize);
             baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
+            baseMap.put(KEY_DEPOSIT_PAUSE, false);
 
             BridgeContract.baseMap.put(KEY_ENTERED, false);
             baseMap.put(KEY_VERSION, 0);
@@ -233,6 +248,12 @@ public class BridgeContract {
     // endregion
     // region pause/unpause
 
+    /**
+     * Pausing the bridge will reject any deposits and withdrawals.
+     * <p>
+     * This feature is useful to halt any interaction with the contract besides governor actions, such as updating
+     * parameters or registering new token bridges, or contract updates.
+     */
     public static void pauseBridge() {
         onlyWhenNotPaused();
         onlyGovernorOrSecurityGuard();
@@ -247,9 +268,45 @@ public class BridgeContract {
         onBridgeUnpause.fire();
     }
 
+    /**
+     * @return true if the bridge is paused and no deposits nor withdrawals are accepted. False otherwise.
+     */
     @Safe
     public static boolean isPaused() {
         return baseMap.getBoolean(KEY_BRIDGE_PAUSE);
+    }
+
+    /**
+     * Pausing deposits will reject any incoming deposits to the bridge. This means {@code depositGas()},
+     * {@code depositToken()}, and direct GAS transfers with data that would initiate a bridge request will be rejected,
+     * i.e., aborted.
+     * <p>
+     * This feature is useful in the case of a planned contract update that involves a change in the computation of
+     * the hash chain roots. By pausing the deposits, there will be no new deposits and the relayer can be given time
+     * to catch-up with relaying everything that is currently in progress (i.e., the relayer can still use the
+     * withdrawal functions) before the bridge is completely paused (i.e., with {@link #pauseBridge()}) and the
+     * contract is updated.
+     */
+    public static void pauseDeposits() {
+        onlyWhenDepositsNotPaused();
+        onlyGovernor();
+        baseMap.put(KEY_DEPOSIT_PAUSE, true);
+        onDepositPause.fire();
+    }
+
+    public static void unpauseDeposits() {
+        onlyWhenDepositsPaused();
+        onlyGovernor();
+        baseMap.put(KEY_DEPOSIT_PAUSE, false);
+        onDepositUnpause.fire();
+    }
+
+    /**
+     * @return true if deposits are paused, i.e., no deposits are being accepted. False otherwise.
+     */
+    @Safe
+    public static boolean depositsArePaused() {
+        return baseMap.getBoolean(KEY_DEPOSIT_PAUSE);
     }
 
     // endregion
@@ -302,6 +359,7 @@ public class BridgeContract {
             } else {
                 // If there's data provided in a GAS transfer, it is handled as a bridge deposit.
                 onlyWhenNotPaused();
+                onlyWhenDepositsNotPaused();
                 onlyWhenGasBridgeNotPaused();
                 GasBridgePaymentData paymentData = (GasBridgePaymentData) data;
                 if (!GasBridgePaymentData.isValid(paymentData)) abort("Invalid payment data.");
@@ -377,6 +435,7 @@ public class BridgeContract {
     public static void depositGas(Hash160 from, Hash160 to, int amount, int maxFee) {
         onlyWhenNotPaused();
         onlyWhenGasBridgeNotPaused();
+        onlyWhenDepositsNotPaused();
         GasBridgeImpl.depositGas(from, to, amount, maxFee);
     }
 
@@ -573,6 +632,7 @@ public class BridgeContract {
     public static void depositToken(Hash160 token, Hash160 from, Hash160 to, int amount, int maxFee) {
         enteringNonReentrant();
         onlyWhenNotPaused();
+        onlyWhenDepositsNotPaused();
         onlyWhenTokenBridgeNotPaused(token);
         TokenBridgeImpl.depositToken(token, from, to, amount, maxFee);
         exitingNonReentrant();

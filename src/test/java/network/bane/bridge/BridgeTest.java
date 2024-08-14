@@ -61,6 +61,8 @@ import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HAS
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_GAS_DEPOSIT;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_WITHDRAWALS;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_GAS_DEPOSIT;
+import static network.bane.util.helper.DepositHelper.depositGasUsingDepositMethod;
+import static network.bane.util.helper.DepositHelper.depositGasWithDirectTransfer;
 import static network.bane.util.helper.PrintHelper.printTransactionFee;
 import static network.bane.util.TestHelper.concatAndKeccak256;
 import static network.bane.util.TestHelper.createDepositHash;
@@ -140,44 +142,20 @@ public class BridgeTest {
         return createBridgeDeployConfig();
     }
 
-    // region helper gas
-
-    private Hash256 depositGasUsingDepositMethod(Account from, Hash160 to, BigInteger amount) throws Throwable {
-        return depositGasUsingDepositMethod(from, to, amount, DEFAULT_GAS_DEPOSIT_FEE);
-    }
-
-    private Hash256 depositGasUsingDepositMethod(Account from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
-        Hash256 txHash = bridge.depositGas(from, to, amount, maxFee);
-        printTransactionFee(neow3j, "deposit", txHash);
-        return txHash;
-    }
-
-    private Hash256 depositGasWithDirectTransfer(Account from, Hash160 to, BigInteger amount,
-            BigInteger minBridgeAmount) throws Throwable {
-        NeoSendRawTransaction response = gasToken.transfer(from, bridge.getScriptHash(), amount, array(hash160(to),
-                        integer(minBridgeAmount)))
-                .sign()
-                .send();
-        Hash256 txHash = response.getSendRawTransaction().getHash();
-        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
-        printTransactionFee(neow3j, "deposit direct", txHash);
-        return txHash;
-    }
-
-    // endregion
     // endregion
     // region deployment
 
     @Test
     @Order(0)
     public void testDeployment_deploymentDataSetCorrectly() throws IOException {
-        assertThat(bridge.findStorage("0x0a"), hasSize(6));
+        assertThat(bridge.findStorage("0x0a"), hasSize(7));
         ContractStorageEntry managementEntry = bridge.findStorage("0x0a").get(0);
         ContractStorageEntry pauseEntry = bridge.findStorage("0x0a").get(1);
         ContractStorageEntry gasBridgeEntry = bridge.findStorage("0x0a").get(2);
         ContractStorageEntry unclaimedRewardsEntry = bridge.findStorage("0x0a").get(3);
-        ContractStorageEntry enteredEntry = bridge.findStorage("0x0a").get(4);
-        ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(5);
+        ContractStorageEntry depositsPausedEntry = bridge.findStorage("0x0a").get(4);
+        ContractStorageEntry enteredEntry = bridge.findStorage("0x0a").get(5);
+        ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(6);
 
         assertThat(managementEntry.getKeyHex(), is("0x0a01"));
         assertArrayEquals(managementEntry.getValue(), MANAGEMENT_CONTRACT_HASH.toLittleEndianArray());
@@ -220,7 +198,11 @@ public class BridgeTest {
         assertThat(bridge.gasWithdrawalNonce(), is(BigInteger.ZERO));
         assertThat(bridge.gasWithdrawRoot(), is(Numeric.toHexString(Hash256.ZERO.toArray())));
 
+        assertThat(unclaimedRewardsEntry.getKeyHex(), is("0x0a04"));
         assertThat(unclaimedRewardsEntry.getValueHex(), is("0x"));
+
+        assertThat(depositsPausedEntry.getKeyHex(), is("0x0a05"));
+        assertThat(depositsPausedEntry.getValueHex(), is("0x"));
 
         assertThat(enteredEntry.getKeyHex(), is("0x0a70"));
         assertThat(enteredEntry.getValueHex(), is("0x"));

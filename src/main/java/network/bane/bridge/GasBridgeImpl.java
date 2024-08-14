@@ -45,6 +45,14 @@ public class GasBridgeImpl {
         BridgeContract.baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
     }
 
+    static void onlyWhenDepositsNotPaused() {
+        if (BridgeContract.depositsArePaused()) abort("Deposits are paused.");
+    }
+
+    static void onlyWhenDepositsPaused() {
+        if (!BridgeContract.depositsArePaused()) abort("Deposits are not paused.");
+    }
+
     // endregion
     // region deposit
 
