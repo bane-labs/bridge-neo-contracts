@@ -40,9 +40,9 @@ import static io.neow3j.devpack.Runtime.checkWitness;
 import static io.neow3j.devpack.Runtime.getCallingScriptHash;
 import static network.bane.bridge.BridgeHelper.managementContract;
 import static network.bane.bridge.BridgeHelper.onlyGovernor;
+import static network.bane.bridge.BridgeHelper.onlyGovernorOrSecurityGuard;
 import static network.bane.bridge.BridgeHelper.onlyWhenPaused;
 import static network.bane.bridge.BridgeHelper.onlyRelayer;
-import static network.bane.bridge.BridgeHelper.onlySecurityGuard;
 import static network.bane.bridge.BridgeHelper.onlyWhenNotPaused;
 import static network.bane.bridge.BridgeImpl.enteringNonReentrant;
 import static network.bane.bridge.BridgeImpl.exitingNonReentrant;
@@ -235,7 +235,7 @@ public class BridgeContract {
 
     public static void pauseBridge() {
         onlyWhenNotPaused();
-        onlySecurityGuard();
+        onlyGovernorOrSecurityGuard();
         baseMap.put(KEY_BRIDGE_PAUSE, true);
         onBridgePause.fire();
     }
@@ -348,7 +348,7 @@ public class BridgeContract {
     // region gas bridge pausing
 
     public static void pauseGasBridge() {
-        onlySecurityGuard();
+        onlyGovernorOrSecurityGuard();
         onlyWhenGasBridgeNotPaused();
         GasBridgeImpl.pauseGasBridge();
         onGasBridgePause.fire();
@@ -542,7 +542,7 @@ public class BridgeContract {
     // region token pausing
 
     public static void pauseTokenBridge(Hash160 neoN3Token) {
-        onlySecurityGuard();
+        onlyGovernorOrSecurityGuard();
         onlyWhenTokenBridgeNotPaused(neoN3Token);
         Hash160 neoXToken = getTokenBridge(neoN3Token).config.neoXToken;
         TokenBridgeImpl.pauseTokenBridge(neoN3Token);
