@@ -65,7 +65,6 @@ import static network.bane.bridge.StorageConstants.PREFIX_BASE;
 @DisplayName("NeoXBridge")
 @Permission(contract = "*")
 @ManifestExtra(key = "Author", value = "BaneLabs")
-@ManifestExtra(key = "Target", value = "Neo X TestNet T3")
 @ManifestExtra(key = "Description", value = "Contract for bridging GAS and tokens between Neo N3 and Neo X.")
 public class BridgeContract {
 
