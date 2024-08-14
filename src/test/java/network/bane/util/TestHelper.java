@@ -36,8 +36,10 @@ import static io.neow3j.utils.Numeric.cleanHexPrefix;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.prependHexPrefix;
 import static io.neow3j.utils.Numeric.toHexString;
+import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static network.bane.util.helper.TestHelper.neow3j;
 
 public class TestHelper {
 
@@ -220,14 +222,20 @@ public class TestHelper {
         return keccak256Hex(concatLeftRight(leftHex, rightHex));
     }
 
-    public static Map<ContractParameter, ContractParameter> signMsg(List<Account> validators, String root) {
-        String msg = keccak256Hex(hexStringToByteArray(root));
+    public static Map<ContractParameter, ContractParameter> signMsg(List<Account> validators, String root) throws IOException {
+        BigInteger network = BigInteger.valueOf(neow3j.getVersion().send().getVersion().getProtocol().getNetwork());
+        String msg = prefixRootWithNetwork(root, network);
         Map<ContractParameter, ContractParameter> signatures = new HashMap<>();
         for (int i = 0; i < validators.size(); i++) {
             ECKeyPair validator = validators.get(i).getECKeyPair();
             signatures.put(publicKey(validator.getPublicKey()), signature(Sign.signHexMessage(msg, validator)));
         }
         return signatures;
+    }
+
+    public static String prefixRootWithNetwork(String root, BigInteger networkId) {
+        byte[] chainIdLittleEndian = BigIntegers.toLittleEndianByteArray(networkId);
+        return toHexStringNoPrefix(concatenate(chainIdLittleEndian, hexStringToByteArray(root)));
     }
 
     public static String createDepositHash(BigInteger nonce, Hash160 to, BigInteger amount) {
