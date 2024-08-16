@@ -26,6 +26,8 @@ import io.neow3j.devpack.events.Event2Args;
 import network.bane.structs.ManagementDeploymentData;
 
 import static io.neow3j.devpack.Helper.abort;
+import static io.neow3j.devpack.Helper.concat;
+import static io.neow3j.devpack.Helper.toByteArray;
 import static io.neow3j.devpack.Runtime.checkWitness;
 
 @DisplayName("NeoXBridgeManagement")
@@ -207,7 +209,8 @@ public class BridgeManagementContract {
         CryptoLib cryptoLib = new CryptoLib();
         List<ECPoint> validators = validators();
 
-        ByteString msg = cryptoLib.keccak256(root);
+        // Prepend the root with the network identifier to create the message that should be signed by validators.
+        ByteString msg = new ByteString(concat(toByteArray(Runtime.getNetwork()), root));
         int covered = 0;
         int validatorsSize = validators.size();
         for (int i = 0; i < validatorsSize; i++) {
