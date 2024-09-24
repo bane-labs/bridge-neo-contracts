@@ -13,6 +13,7 @@ import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
 import io.neow3j.devpack.annotations.EventParameterNames;
 import io.neow3j.devpack.annotations.ManifestExtra;
+import io.neow3j.devpack.annotations.ManifestExtra.ManifestExtras;
 import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
@@ -32,8 +33,11 @@ import static io.neow3j.devpack.Runtime.checkWitness;
 
 @DisplayName("NeoXBridgeManagement")
 @Permission(nativeContract = NativeContract.ContractManagement, methods = "update")
-@ManifestExtra(key = "Author", value = "BaneLabs")
-@ManifestExtra(key = "Description", value = "Contract for managing roles in the Neo X bridge contract")
+@ManifestExtras({
+        @ManifestExtra(key = "Author", value = "BaneLabs"),
+        @ManifestExtra(key = "Description", value = "Contract for managing roles in the Neo X bridge contract"),
+        @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")
+})
 public class BridgeManagementContract {
 
     private static final StorageContext ctx = Storage.getStorageContext();

@@ -12,6 +12,7 @@ import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
 import io.neow3j.devpack.annotations.EventParameterNames;
+import io.neow3j.devpack.annotations.ManifestExtra.ManifestExtras;
 import io.neow3j.devpack.annotations.ManifestExtra;
 import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.OnNEP17Payment;
@@ -64,8 +65,11 @@ import static network.bane.bridge.StorageConstants.PREFIX_BASE;
 
 @DisplayName("NeoXBridge")
 @Permission(contract = "*")
-@ManifestExtra(key = "Author", value = "BaneLabs")
-@ManifestExtra(key = "Description", value = "Contract for bridging GAS and tokens between Neo N3 and Neo X.")
+@ManifestExtras({
+        @ManifestExtra(key = "Author", value = "BaneLabs"),
+        @ManifestExtra(key = "Description", value = "Contract for bridging GAS and tokens between Neo N3 and Neo X."),
+        @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")
+})
 public class BridgeContract {
 
     // This needs to be here due to the neow3j compiler. Technically, the Java compiler does not see this as a
