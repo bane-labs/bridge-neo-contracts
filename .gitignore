@@ -6,3 +6,6 @@
 .settings
 build/
 bin/
+
+wallets/
+**.env
