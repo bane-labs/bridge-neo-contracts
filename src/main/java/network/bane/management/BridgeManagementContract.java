@@ -28,7 +28,7 @@ import network.bane.structs.ManagementDeploymentData;
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.checkWitness;
 
-@DisplayName("NeoXBridgeManagement")
+@DisplayName("${ContractName}")
 @Permission(nativeContract = NativeContract.ContractManagement, methods = "update")
 @ManifestExtra(key = "Author", value = "BaneLabs")
 @ManifestExtra(key = "Description", value = "Contract for managing roles in the Neo X bridge contract")

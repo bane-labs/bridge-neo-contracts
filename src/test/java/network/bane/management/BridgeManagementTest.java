@@ -76,6 +76,7 @@ import static network.bane.util.TestHelper.validator5PubKey;
 import static network.bane.util.TestHelper.validator6PubKey;
 import static network.bane.util.TestHelper.validator7PubKey;
 import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
+import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -144,31 +145,7 @@ public class BridgeManagementTest {
 
     @DeployConfig(BridgeManagementContract.class)
     public static DeployConfiguration deployConfigManagement() {
-        DeployConfiguration config = new DeployConfiguration();
-        config.setDeployParam(
-                prepareManagementDeployParameter(
-                        ownerScriptHash,
-                        relayerScriptHash,
-                        asList(
-                                validator1PubKey,
-                                validator2PubKey,
-                                validator3PubKey,
-                                validator4PubKey,
-                                validator5PubKey,
-                                validator6PubKey,
-                                validator7PubKey
-                        ),
-                        5,
-                        governorScriptHash,
-                        securityGuardScriptHash
-                )
-        );
-        AccountSigner deploySigner = AccountSigner.none(owner);
-        WitnessRule deployWitnessRule = new WitnessRule(WitnessAction.ALLOW,
-                new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
-        deploySigner.setRules(deployWitnessRule);
-        config.setSigner(deploySigner);
-        return config;
+        return createBridgeManagementDeployConfig();
     }
 
     // region manifest

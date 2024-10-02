@@ -59,7 +59,7 @@ import static network.bane.bridge.TokenBridgeImpl.onlyTokenBridgeUnpaused;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_MANAGEMENT;
 import static network.bane.bridge.StorageConstants.PREFIX_BASE;
 
-@DisplayName("NeoXBridge")
+@DisplayName("${ContractName}")
 @Permission(contract = "*")
 @ManifestExtra(key = "Author", value = "BaneLabs")
 @ManifestExtra(key = "Target", value = "Neo X TestNet T3")
