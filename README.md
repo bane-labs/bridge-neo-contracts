@@ -65,7 +65,7 @@ drwxr-xr-x  7 user  wheel  224 23 Feb 17:40 ..
 
 - Run a local [Neo Express](https://github.com/neo-project/neo-express) instance. The project includes a Neo Express configuration file.
 - Fund Alice's account: `neoxp transfer 100 GAS genesis alice`
-- Go to the `network.bane.Deployment` class and run it.
+- Go to the `network.bane.scripts.DeployBridgeContracts` class and run it.
 
 ## About
 

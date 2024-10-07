@@ -1,4 +1,4 @@
-package network.bane.utils;
+package network.bane.utils.wallet;
 
 import io.neow3j.crypto.exceptions.CipherException;
 import io.neow3j.crypto.exceptions.NEP2InvalidFormat;
@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static network.bane.utils.GetEnv.getEnvVariable;
+import static network.bane.utils.env.GetEnv.getEnvVariable;
 
 public class LoadWallet {
 

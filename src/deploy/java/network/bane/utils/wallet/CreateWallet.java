@@ -1,4 +1,4 @@
-package network.bane.utils;
+package network.bane.utils.wallet;
 
 import io.neow3j.crypto.ECKeyPair;
 import io.neow3j.types.Hash160;

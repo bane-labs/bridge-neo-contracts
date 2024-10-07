@@ -1,4 +1,4 @@
-package network.bane.utils;
+package network.bane.utils.env;
 
 public class GetEnv {
 
