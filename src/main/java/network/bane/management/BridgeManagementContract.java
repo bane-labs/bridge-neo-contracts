@@ -31,7 +31,7 @@ import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Helper.toByteArray;
 import static io.neow3j.devpack.Runtime.checkWitness;
 
-@DisplayName("NeoXBridgeManagement")
+@DisplayName("${ContractName}")
 @Permission(nativeContract = NativeContract.ContractManagement, methods = "update")
 @ManifestExtras({
         @ManifestExtra(key = "Author", value = "BaneLabs"),
