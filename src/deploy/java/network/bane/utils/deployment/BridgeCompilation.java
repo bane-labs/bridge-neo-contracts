@@ -55,10 +55,8 @@ public class BridgeCompilation {
 
     public static Hash160 compileAndPrintManagementDeploymentTxData(Neow3j neow3j) throws Throwable {
         // Compile the Bridge Management contract
-        HashMap<String, String> substitutions = new HashMap<>();
-        substitutions.put("ContractName", managementContractName);
         CompilationUnit managementCompUnit = new io.neow3j.compiler.Compiler()
-                .compile(BridgeManagementContract.class.getCanonicalName(), substitutions);
+                .compile(BridgeManagementContract.class.getCanonicalName());
 
         if (MAX_NR_VALIDATORS > 7) {
             throw new Exception("Maximum number of validators cannot be greater than 7");
@@ -128,9 +126,7 @@ public class BridgeCompilation {
 
     public static void compileAndPrintBridgeDeploymentTxData(Neow3j neow3j, Hash160 managementContractHash) throws Throwable {
         // Compile the Bridge contract
-        HashMap<String, String> substitutions = new HashMap<>();
-        substitutions.put("ContractName", bridgeContractName);
-        CompilationUnit bridgeCompUnit = new Compiler().compile(BridgeContract.class.getCanonicalName(), substitutions);
+        CompilationUnit bridgeCompUnit = new Compiler().compile(BridgeContract.class.getCanonicalName());
 
         // Prepare the deployment parameter for the bridge contract
         ContractParameter bridgeDeploymentParameter = prepareBridgeDeployParameter(managementContractHash, depositFee,

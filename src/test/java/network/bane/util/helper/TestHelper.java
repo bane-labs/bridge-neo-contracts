@@ -127,7 +127,6 @@ public class TestHelper {
                         securityGuardScriptHash
                 )
         );
-        config.setSubstitution("ContractName", "NeoXBridgeManagement");
         AccountSigner deploySigner = AccountSigner.none(owner);
         WitnessRule deployWitnessRule = new WitnessRule(WitnessAction.ALLOW,
                 new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
@@ -148,7 +147,6 @@ public class TestHelper {
                         maxTotalGasDepositAmount
                 )
         );
-        config.setSubstitution("ContractName", "NeoXBridge");
         AccountSigner deploySigner = AccountSigner.none(owner);
         WitnessRule deployWitnessRule = new WitnessRule(WitnessAction.ALLOW,
                 new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
