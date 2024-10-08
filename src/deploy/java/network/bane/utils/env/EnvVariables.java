@@ -18,11 +18,6 @@ public class EnvVariables {
 
     public static final String NODE = getEnvVariableOrDefault("NEON3_JSON_RPC", "http://127.0.0.1:40332");
 
-    public static final String managementContractName =
-            getEnvVariableOrDefault("MANAGEMENT_CONTRACT_NAME", "BridgeManagement");
-    public static final String bridgeContractName =
-            getEnvVariableOrDefault("BRIDGE_CONTRACT_NAME", "Bridge");
-
     public static Account deployerAcc;
     public static Account ownerAcc;
 
