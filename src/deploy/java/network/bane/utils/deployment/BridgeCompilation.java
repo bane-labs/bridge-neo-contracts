@@ -22,7 +22,6 @@ import network.bane.bridge.BridgeContract;
 import network.bane.management.BridgeManagementContract;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 import static java.lang.String.format;
@@ -30,11 +29,9 @@ import static java.util.Arrays.asList;
 import static network.bane.utils.deployment.BridgeDeploymentParameters.prepareBridgeDeployParameter;
 import static network.bane.utils.deployment.BridgeDeploymentParameters.prepareManagementDeployParameter;
 import static network.bane.utils.env.EnvVariables.MAX_NR_VALIDATORS;
-import static network.bane.utils.env.EnvVariables.bridgeContractName;
 import static network.bane.utils.env.EnvVariables.deployerAcc;
 import static network.bane.utils.env.EnvVariables.depositFee;
 import static network.bane.utils.env.EnvVariables.governor;
-import static network.bane.utils.env.EnvVariables.managementContractName;
 import static network.bane.utils.env.EnvVariables.maxDepositAmount;
 import static network.bane.utils.env.EnvVariables.maxTotalDeposited;
 import static network.bane.utils.env.EnvVariables.minDepositAmount;
@@ -79,10 +76,10 @@ public class BridgeCompilation {
         ContractParameter managementDeployParameter = prepareManagementDeployParameter(ownerAcc.getScriptHash(),
                 relayer, validatorList, validator_threshold, governor, securityGuard);
 
+        String managementContractName = managementCompUnit.getManifest().getName();
         Hash160 managementContractHash =
                 SmartContract.calcContractHash(deployerAcc.getScriptHash(),
-                        managementCompUnit.getNefFile().getCheckSumAsInteger(),
-                        managementCompUnit.getManifest().getName());
+                        managementCompUnit.getNefFile().getCheckSumAsInteger(), managementContractName);
 
         // Deploy the management contract
         Transaction managementDeploymentTx = new ContractManagement(neow3j)
@@ -134,9 +131,10 @@ public class BridgeCompilation {
 
         NefFile nefFile = bridgeCompUnit.getNefFile();
         ContractManifest bridgeManifest = bridgeCompUnit.getManifest();
+        String bridgeContractName = bridgeManifest.getName();
         Hash160 bridgeContractHash =
                 SmartContract.calcContractHash(deployerAcc.getScriptHash(), nefFile.getCheckSumAsInteger(),
-                        bridgeManifest.getName());
+                        bridgeContractName);
         // Build the deployment transaction
         Transaction bridgeDeploymentTx = new ContractManagement(neow3j)
                 .deploy(nefFile, bridgeManifest, bridgeDeploymentParameter)
