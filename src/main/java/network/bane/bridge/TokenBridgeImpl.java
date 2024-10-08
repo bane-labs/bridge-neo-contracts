@@ -4,6 +4,7 @@ import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.Hash256;
+import io.neow3j.devpack.Helper;
 import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
@@ -146,7 +147,7 @@ public class TokenBridgeImpl {
         BridgeContract.onTokenWithdrawalRootUpdate.fire(neoN3Token, tokenBridge.config.neoXToken,
                 tokenBridge.withdrawalState.nonce, tokenBridge.withdrawalState.root);
         // Execute the token transfers
-        executeTokenTransfers(neoN3Token, tokenBridge.config.executionType, withdrawals);
+        executeTokenTransfers(neoN3Token, tokenBridge.config.decimalScalingFactor, withdrawals);
     }
 
     // endregion
@@ -178,19 +179,22 @@ public class TokenBridgeImpl {
     // endregion
     // region transfer execution
 
-    private static void executeTokenTransfers(Hash160 neoN3Token, int executionType, List<Withdrawal> withdrawals) {
-        assert executionType == ExecutionTypes.NEO ||
-                executionType == ExecutionTypes.NEP17 : "Invalid token type.";
+    private static void executeTokenTransfers(Hash160 neoN3Token, int decimalScalingFactor,
+            List<Withdrawal> withdrawals) {
+
         Hash160 executingScriptHash = getExecutingScriptHash();
         int withdrawalsSize = withdrawals.size();
+        int scalingFactor = Helper.pow(10, decimalScalingFactor);
         for (int i = 0; i < withdrawalsSize; i++) {
             Withdrawal withdrawal = withdrawals.get(i);
+            int transferAmount = withdrawal.amount * scalingFactor;
+            withdrawal.amount = transferAmount;
             // If to is a contract, add the withdrawal to the claimable map, otherwise exeucte the transfer.
             if (BridgeHelper.isContract(withdrawal.to)) {
                 addTokenClaimable(neoN3Token, withdrawal);
                 BridgeContract.onTokenClaimable.fire(neoN3Token, withdrawal.nonce, withdrawal.to, withdrawal.amount);
             } else {
-                if (new FungibleToken(neoN3Token).transfer(executingScriptHash, withdrawal.to, withdrawal.amount, null)) {
+                if (new FungibleToken(neoN3Token).transfer(executingScriptHash, withdrawal.to, transferAmount, null)) {
                     BridgeContract.onTokenWithdrawal.fire(neoN3Token, withdrawal.nonce, withdrawal.to, withdrawal.amount);
                 } else {
                     // If the transfer was unsuccessful, add the withdrawal to the claimable map.

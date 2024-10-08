@@ -25,11 +25,11 @@ public class TokenBridge {
     public static ContractParameter getAsContractParameter(TokenConfig config) {
         return array(
                 hash160(config.neoXTokenHash),
+                integer(config.decimalScalingFactor),
                 integer(config.fee),
                 integer(config.minAmount),
                 integer(config.maxAmount),
-                integer(config.maxWithdrawals),
-                integer(config.executionType.getValue())
+                integer(config.maxWithdrawals)
         );
     }
 
@@ -45,41 +45,32 @@ public class TokenBridge {
 
     public static class TokenConfig {
         public Hash160 neoXTokenHash;
+        public int decimalScalingFactor;
         public BigInteger fee;
         public BigInteger minAmount;
         public BigInteger maxAmount;
         public int maxWithdrawals;
-        public ExecutionType executionType;
 
-        public TokenConfig(Hash160 neoXTokenHash, BigInteger fee, BigInteger minAmount, BigInteger maxAmount,
-                int maxWithdrawals, ExecutionType executionType) {
+        public TokenConfig(Hash160 neoXTokenHash, int decimalScalingFactor, BigInteger fee, BigInteger minAmount,
+                BigInteger maxAmount, int maxWithdrawals) {
             this.neoXTokenHash = neoXTokenHash;
+            this.decimalScalingFactor = decimalScalingFactor;
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
             this.maxWithdrawals = maxWithdrawals;
-            this.executionType = executionType;
-        }
-
-        public static ExecutionType fromValue(int value) {
-            for (ExecutionType e : ExecutionType.values()) {
-                if (e.getValue() == value) {
-                    return e;
-                }
-            }
-            throw new IllegalArgumentException();
         }
 
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             TokenConfig that = (TokenConfig) o;
-            return maxWithdrawals == that.maxWithdrawals &&
-                    neoXTokenHash.equals(that.neoXTokenHash) &&
+            return neoXTokenHash.equals(that.neoXTokenHash) &&
+                    decimalScalingFactor == that.decimalScalingFactor &&
                     fee.equals(that.fee) &&
                     minAmount.equals(that.minAmount) &&
                     maxAmount.equals(that.maxAmount) &&
-                    executionType == that.executionType;
+                    maxWithdrawals == that.maxWithdrawals;
         }
     }
 }

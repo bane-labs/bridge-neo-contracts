@@ -21,7 +21,6 @@ import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
 import network.bane.util.Bridge;
 import network.bane.util.Management;
-import network.bane.util.structs.ExecutionType;
 import network.bane.util.structs.TokenBridge;
 
 import java.math.BigDecimal;
@@ -169,8 +168,8 @@ public class TestHelper {
                         integer(maxDeposit),
                         integer(maxWithdrawals),
                         integer(maxTotalDepositAmount)
-                )
-        );
+                        )
+                );
     }
 
     public static BigInteger incrementAndGetWithdrawalNonce() {
@@ -188,9 +187,9 @@ public class TestHelper {
         BigInteger minAmount = BigInteger.ONE;
         BigInteger maxAmount = new BigInteger("1000");
         int maxWithdrawals = 100;
-        ExecutionType executionType = ExecutionType.NEO;
-        TokenBridge.TokenConfig config = new TokenBridge.TokenConfig(neoXNeoTokenHash, fee, minAmount, maxAmount,
-                maxWithdrawals, executionType);
+        int decimalScalingFactor = 0;
+        TokenBridge.TokenConfig config = new TokenBridge.TokenConfig(neoXNeoTokenHash, decimalScalingFactor, fee,
+                minAmount, maxAmount, maxWithdrawals);
 
         Hash256 txHash = bridge.registerToken(neoN3NeoTokenHash, config);
         Await.waitUntilTransactionIsExecuted(txHash, neow3j);

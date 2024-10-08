@@ -302,11 +302,11 @@ public class Bridge extends SmartContractHelper {
         List<StackItem> tokenConfigList = response.get(3).getList();
         TokenBridge.TokenConfig tokenConfig = new TokenBridge.TokenConfig(
                 Hash160.fromAddress(tokenConfigList.get(0).getAddress()),
-                tokenConfigList.get(1).getInteger(),
+                tokenConfigList.get(1).getInteger().intValue(),
                 tokenConfigList.get(2).getInteger(),
                 tokenConfigList.get(3).getInteger(),
-                tokenConfigList.get(4).getInteger().intValue(),
-                TokenBridge.TokenConfig.fromValue(tokenConfigList.get(5).getInteger().intValue())
+                tokenConfigList.get(4).getInteger(),
+                tokenConfigList.get(5).getInteger().intValue()
         );
         return new TokenBridge(paused, depositState, withdrawalState, tokenConfig);
     }
