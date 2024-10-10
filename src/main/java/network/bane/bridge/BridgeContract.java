@@ -385,6 +385,11 @@ public class BridgeContract {
         return BridgeImpl.getUnclaimedRewards();
     }
 
+    @Safe
+    public static int neoHoldingGasRewards() {
+        return BridgeImpl.getNeoHoldingGasRewards();
+    }
+
     // endregion
     // region gas bridge
     // region gas bridge pausing
