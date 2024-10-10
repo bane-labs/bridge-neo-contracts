@@ -27,20 +27,23 @@ public class TokenBridge {
     @Struct
     public static class TokenConfig {
         public Hash160 neoXToken;
-        public int decimalScalingFactor;
         public int fee;
         public int minAmount;
         public int maxAmount;
         public int maxWithdrawals;
+        public int decimalScalingFactor;
 
-        public TokenConfig(Hash160 neoXToken, int decimalScalingFactor, int fee, int minAmount, int maxAmount,
-                int maxWithdrawals) {
+        public TokenConfig(Hash160 neoXToken, int fee, int minAmount, int maxAmount, int maxWithdrawals,
+                int decimalScalingFactor) {
             this.neoXToken = neoXToken;
-            this.decimalScalingFactor = decimalScalingFactor;
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
             this.maxWithdrawals = maxWithdrawals;
+
+            // This int was the executionType before. It will be overwritten with the decimal scaling factor during the
+            // migration from V1 to V2.
+            this.decimalScalingFactor = decimalScalingFactor;
         }
 
         public static boolean isValid(TokenConfig config) {
@@ -48,11 +51,11 @@ public class TokenBridge {
             return config.neoXToken != null &&
                     Hash160.isValid(config.neoXToken) &&
                     !config.neoXToken.isZero() &&
-                    config.decimalScalingFactor >= 0 &&
                     config.fee >= 0 &&
                     minAmount >= 0 &&
                     config.maxAmount > minAmount &&
-                    config.maxWithdrawals > 0;
+                    config.maxWithdrawals > 0 &&
+                    config.decimalScalingFactor >= 0;
         }
     }
 }
