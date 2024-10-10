@@ -14,6 +14,11 @@ public class BridgeImpl {
         BridgeContract.baseMap.put(StorageConstants.KEY_UNCLAIMED_REWARDS, currentRewards + amount);
     }
 
+    static void addNeoHoldingGasRewards(int amount) {
+        int currentRewards = BridgeContract.baseMap.getInt(StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS);
+        BridgeContract.baseMap.put(StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS, currentRewards + amount);
+    }
+
     private static boolean entered() {
         return BridgeContract.baseMap.getBoolean(KEY_ENTERED);
     }

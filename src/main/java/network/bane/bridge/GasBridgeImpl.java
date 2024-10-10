@@ -73,6 +73,7 @@ public class GasBridgeImpl {
         // The depositAmount is the amount minus the deposit fee. It is the amount that will be distributed on Neo X.
         int depositAmount = amount - depositFee;
         updateGasDepositState(gasBridge, from, to, depositAmount);
+        BridgeImpl.addToUnclaimedRewards(depositFee);
 
         if (!BridgeContract.gasToken.transfer(from, executingScriptHash, amount, null)) {
             abort("Gas transfer failed.");

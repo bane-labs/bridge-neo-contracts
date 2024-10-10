@@ -31,7 +31,6 @@ import io.neow3j.devpack.events.Event6Args;
 import io.neow3j.devpack.events.Event8Args;
 import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.GasBridge;
-import network.bane.structs.GasBridgePaymentData;
 import network.bane.structs.State;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
@@ -55,6 +54,7 @@ import static network.bane.bridge.StorageConstants.KEY_DEPOSIT_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
+import static network.bane.bridge.StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS;
 import static network.bane.bridge.StorageConstants.KEY_VERSION;
 import static network.bane.bridge.StorageConstants.KEY_UNCLAIMED_REWARDS;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
@@ -212,6 +212,7 @@ public class BridgeContract {
             // Update internal versioning.
             baseMap.put(KEY_VERSION, 1);
             baseMap.put(KEY_DEPOSIT_PAUSE, false);
+            baseMap.put(KEY_NEO_HOLDING_GAS_REWARDS, 0);
             Map<Hash160, Integer> decimalScalingFactors = (Map<Hash160, Integer>) data;
             BridgeMigrationV1ToV2.migrateV1ToV2(decimalScalingFactors);
         } else {
@@ -233,6 +234,7 @@ public class BridgeContract {
             baseMap.put(KEY_GAS_BRIDGE, serialize);
             baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
             baseMap.put(KEY_DEPOSIT_PAUSE, false);
+            baseMap.put(KEY_NEO_HOLDING_GAS_REWARDS, 0);
 
             BridgeContract.baseMap.put(KEY_ENTERED, false);
             baseMap.put(KEY_VERSION, 0);
@@ -318,38 +320,26 @@ public class BridgeContract {
     // region OnNEP17Payment
 
     /**
-     * This function is called if a NEP-17 token is sent to this contract. If the sent token is the GAS token, the
-     * behaviour of this function is special (refer to the GAS token handling below). If the sent token is not the
-     * GAS token, the function checks if the token is registered and if the {@code data} parameter is null. If either
-     * is not the case, the payment is aborted. If both are true, the payment is considered a bridge operation
-     * originating from an invocation of the {@code depositToken()} method and no further action is taken.
+     * This function is called if a NEP-17 token is sent to this contract. The function does not contain any logic to
+     * create a bridge operation, i.e., a deposit. The payments are merely accepted or rejected based on some
+     * requirements. If a payment is rejected, abort is called.
      * <p>
-     * If the token sent is the GAS token, the following three cases are handled differently.
+     * There are 3 cases that are handled differently:
+     * <ul>
+     * <li> The GAS token is sent. </li>
+     * <li> A registered token is sent. </li>
+     * <li> An unregistered token is sent. </li>
+     * </ul>
+     * The function rejects any unregistered tokens. If the contract receives a registered token, the
+     * function accepts the payment only if the data parameter is null. If the contract receives GAS, the function
+     * only accepts the payment if either the from or data parameter is null.
      * <p>
-     * (1) If the {@code from} parameter is null, the payment is a reward for holding NEO and potentially
-     * participating in the Neo N3 Governance (based on the GasToken implementation). The amount is added to the
-     * unclaimed rewards of the bridge operators.
-     * <p>
-     * (2) If the {@code from} parameter is not null and the {@code data} parameter is null, the payment is considered a
-     * fee payment for a bridge operation (e.g., deposit, withdrawal). The fee is added to the unclaimed rewards of the
-     * bridge operators. This also means that it is possible for anyone to send GAS to the bridge without triggering a
-     * bridge operation, and it will be considered a fee payment for bridge operators.
-     * <p>
-     * (3) If the {@code from} and the {@code data} parameters are both not null, the {@code data} parameter is
-     * expected to be matching a {@link GasBridgePaymentData} object. If it is not, the payment is aborted. If it is,
-     * the payment is considered a direct bridge deposit. The {@code minBridgeAmount} of the payment data is checked
-     * against the amount sent minus the current deposit fee. If the amount is below the minimum, the payment is
-     * aborted. Otherwise, the payment triggers a bridge deposit and the deposit state of the GasBridge is updated
-     * accordingly.
+     * If the contract receives GAS and the from parameter is null, the function accepts the payment as reward for
+     * holding NEO.
      *
      * @param from   the sender.
      * @param amount the amount.
-     * @param data   the data provided. If the transfer should be used to directly initiate a bridge deposit, make
-     *               sure to provide the data in the format of a {@link GasBridgePaymentData} object, i.e., an array
-     *               contract parameter. Its minBridgeAmount should be set to the amount sent minus the current
-     *               deposit fee. It ensures, that this minBridgeAmount will be the amount that is actually bridged,
-     *               and prevents any eventual front-running issues if the deposit fee would be manipulated by a
-     *               malicious governor.
+     * @param data   the data.
      */
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
@@ -357,23 +347,12 @@ public class BridgeContract {
         if (callingScriptHash.equals(gasToken.getHash())) {
             // Accept GAS rewards from holding NEO. This is the only case where the from parameter can be null.
             if (from == null) {
-                BridgeImpl.addToUnclaimedRewards(amount);
+                BridgeImpl.addNeoHoldingGasRewards(amount);
                 return;
             } else if (data == null) {
                 return;
             } else {
-                // If there's data provided in a GAS transfer, it is handled as a bridge deposit.
-                onlyWhenNotPaused();
-                onlyWhenDepositsNotPaused();
-                onlyWhenGasBridgeNotPaused();
-                GasBridgePaymentData paymentData = (GasBridgePaymentData) data;
-                if (!GasBridgePaymentData.isValid(paymentData)) abort("Invalid payment data.");
-                GasBridge gasBridge = getGasBridge();
-                int depositFee = gasBridge.config.depositFee;
-                int bridgeAmount = amount - depositFee;
-                BridgeImpl.addToUnclaimedRewards(depositFee);
-                if (bridgeAmount < paymentData.minBridgeAmount) abort("Amount below defined minimum.");
-                GasBridgeImpl.updateGasDepositState(gasBridge, from, paymentData.to, bridgeAmount);
+                abort("No data accepted.");
             }
             return;
         } else if (new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(callingScriptHash) != null) {
