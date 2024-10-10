@@ -186,8 +186,8 @@ public class TestHelper {
         BigInteger maxAmount = new BigInteger("1000");
         int maxWithdrawals = 100;
         int decimalScalingFactor = 0;
-        TokenBridge.TokenConfig config = new TokenBridge.TokenConfig(neoXNeoTokenHash, decimalScalingFactor, fee,
-                minAmount, maxAmount, maxWithdrawals);
+        TokenBridge.TokenConfig config = new TokenBridge.TokenConfig(neoXNeoTokenHash, fee, minAmount, maxAmount,
+                maxWithdrawals, decimalScalingFactor);
 
         Hash256 txHash = bridge.registerToken(neoN3NeoTokenHash, config);
         Await.waitUntilTransactionIsExecuted(txHash, neow3j);

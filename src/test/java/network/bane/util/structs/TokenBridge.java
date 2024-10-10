@@ -25,11 +25,11 @@ public class TokenBridge {
     public static ContractParameter getAsContractParameter(TokenConfig config) {
         return array(
                 hash160(config.neoXTokenHash),
-                integer(config.decimalScalingFactor),
                 integer(config.fee),
                 integer(config.minAmount),
                 integer(config.maxAmount),
-                integer(config.maxWithdrawals)
+                integer(config.maxWithdrawals),
+                integer(config.decimalScalingFactor)
         );
     }
 
@@ -45,20 +45,20 @@ public class TokenBridge {
 
     public static class TokenConfig {
         public Hash160 neoXTokenHash;
-        public int decimalScalingFactor;
         public BigInteger fee;
         public BigInteger minAmount;
         public BigInteger maxAmount;
         public int maxWithdrawals;
+        public int decimalScalingFactor;
 
-        public TokenConfig(Hash160 neoXTokenHash, int decimalScalingFactor, BigInteger fee, BigInteger minAmount,
-                BigInteger maxAmount, int maxWithdrawals) {
+        public TokenConfig(Hash160 neoXTokenHash, BigInteger fee, BigInteger minAmount, BigInteger maxAmount,
+                int maxWithdrawals, int decimalScalingFactor) {
             this.neoXTokenHash = neoXTokenHash;
-            this.decimalScalingFactor = decimalScalingFactor;
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
             this.maxWithdrawals = maxWithdrawals;
+            this.decimalScalingFactor = decimalScalingFactor;
         }
 
         public boolean equals(Object o) {
@@ -66,11 +66,11 @@ public class TokenBridge {
             if (o == null || getClass() != o.getClass()) return false;
             TokenConfig that = (TokenConfig) o;
             return neoXTokenHash.equals(that.neoXTokenHash) &&
-                    decimalScalingFactor == that.decimalScalingFactor &&
                     fee.equals(that.fee) &&
                     minAmount.equals(that.minAmount) &&
                     maxAmount.equals(that.maxAmount) &&
-                    maxWithdrawals == that.maxWithdrawals;
+                    maxWithdrawals == that.maxWithdrawals &&
+                    decimalScalingFactor == that.decimalScalingFactor;
         }
     }
 }
