@@ -166,8 +166,8 @@ public class TestHelper {
                         integer(maxDeposit),
                         integer(maxWithdrawals),
                         integer(maxTotalDepositAmount)
-                        )
-                );
+                )
+        );
     }
 
     public static BigInteger incrementAndGetWithdrawalNonce() {
