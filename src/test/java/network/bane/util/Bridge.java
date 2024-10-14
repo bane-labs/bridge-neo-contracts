@@ -306,7 +306,7 @@ public class Bridge extends SmartContractHelper {
                 tokenConfigList.get(2).getInteger(),
                 tokenConfigList.get(3).getInteger(),
                 tokenConfigList.get(4).getInteger().intValue(),
-                TokenBridge.TokenConfig.fromValue(tokenConfigList.get(5).getInteger().intValue())
+                tokenConfigList.get(5).getInteger().intValue()
         );
         return new TokenBridge(paused, depositState, withdrawalState, tokenConfig);
     }

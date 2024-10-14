@@ -29,7 +29,7 @@ public class TokenBridge {
                 integer(config.minAmount),
                 integer(config.maxAmount),
                 integer(config.maxWithdrawals),
-                integer(config.executionType.getValue())
+                integer(config.decimalScalingFactor)
         );
     }
 
@@ -49,37 +49,28 @@ public class TokenBridge {
         public BigInteger minAmount;
         public BigInteger maxAmount;
         public int maxWithdrawals;
-        public ExecutionType executionType;
+        public int decimalScalingFactor;
 
         public TokenConfig(Hash160 neoXTokenHash, BigInteger fee, BigInteger minAmount, BigInteger maxAmount,
-                int maxWithdrawals, ExecutionType executionType) {
+                int maxWithdrawals, int decimalScalingFactor) {
             this.neoXTokenHash = neoXTokenHash;
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
             this.maxWithdrawals = maxWithdrawals;
-            this.executionType = executionType;
-        }
-
-        public static ExecutionType fromValue(int value) {
-            for (ExecutionType e : ExecutionType.values()) {
-                if (e.getValue() == value) {
-                    return e;
-                }
-            }
-            throw new IllegalArgumentException();
+            this.decimalScalingFactor = decimalScalingFactor;
         }
 
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             TokenConfig that = (TokenConfig) o;
-            return maxWithdrawals == that.maxWithdrawals &&
-                    neoXTokenHash.equals(that.neoXTokenHash) &&
+            return neoXTokenHash.equals(that.neoXTokenHash) &&
                     fee.equals(that.fee) &&
                     minAmount.equals(that.minAmount) &&
                     maxAmount.equals(that.maxAmount) &&
-                    executionType == that.executionType;
+                    maxWithdrawals == that.maxWithdrawals &&
+                    decimalScalingFactor == that.decimalScalingFactor;
         }
     }
 }

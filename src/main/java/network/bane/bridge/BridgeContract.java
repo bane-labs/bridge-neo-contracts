@@ -212,6 +212,8 @@ public class BridgeContract {
             // Update internal versioning.
             baseMap.put(KEY_VERSION, 1);
             baseMap.put(KEY_DEPOSIT_PAUSE, false);
+            Map<Hash160, Integer> decimalScalingFactors = (Map<Hash160, Integer>) data;
+            BridgeMigrationV1ToV2.migrateV1ToV2(decimalScalingFactors);
         } else {
             BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
             if (deploymentData.bridgeManagementContract == null ||

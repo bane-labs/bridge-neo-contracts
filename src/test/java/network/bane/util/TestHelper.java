@@ -283,13 +283,13 @@ public class TestHelper {
         return cleanHexPrefix(createTokenOpHash(neoN3Token, neoXToken, nonce, recipient, value));
     }
 
-    public static String computeNewTokenRootNoPrefix(String previousRoot, Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce,
-            Hash160 recipient, BigInteger value) {
+    public static String computeNewTokenRootNoPrefix(String previousRoot, Hash160 neoN3Token, Hash160 neoXToken,
+            BigInteger nonce, Hash160 recipient, BigInteger value) {
         return cleanHexPrefix(computeNewTokenRoot(previousRoot, neoN3Token, neoXToken, nonce, recipient, value));
     }
 
-    public static String computeNewTokenRoot(String previousRoot, Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce,
-            Hash160 recipient, BigInteger value) {
+    public static String computeNewTokenRoot(String previousRoot, Hash160 neoN3Token, Hash160 neoXToken,
+            BigInteger nonce, Hash160 recipient, BigInteger value) {
         return concatAndKeccak256(
                 previousRoot,
                 createTokenOpHashNoPrefix(neoN3Token, neoXToken, nonce, recipient, value)
