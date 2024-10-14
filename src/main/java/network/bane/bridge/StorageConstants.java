@@ -13,6 +13,7 @@ public class StorageConstants {
     static final int KEY_GAS_BRIDGE = 0x03;
     static final int KEY_UNCLAIMED_REWARDS = 0x04;
     static final int KEY_DEPOSIT_PAUSE = 0x05;
+    static final int KEY_NEO_HOLDING_GAS_REWARDS = 0x06;
 
     static final int KEY_ENTERED = 0x70;
 

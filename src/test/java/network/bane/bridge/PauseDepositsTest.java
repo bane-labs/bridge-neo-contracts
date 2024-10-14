@@ -11,6 +11,7 @@ import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
+import network.bane.util.helper.DepositHelper;
 import network.bane.util.structs.State;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -26,9 +27,6 @@ import static io.neow3j.types.ContractParameter.integer;
 import static network.bane.util.TestHelper.computeNewTokenRootNoPrefix;
 import static network.bane.util.TestHelper.governor;
 import static network.bane.util.TestHelper.securityGuard;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_GAS_DEPOSIT;
-import static network.bane.util.helper.DepositHelper.depositGasUsingDepositMethod;
-import static network.bane.util.helper.DepositHelper.depositGasWithDirectTransfer;
 import static network.bane.util.TestHelper.concatAndKeccak256;
 import static network.bane.util.TestHelper.createDepositHash;
 import static network.bane.util.TestHelper.recipient0;
@@ -131,19 +129,7 @@ public class PauseDepositsTest {
         bridge.pauseDeposits();
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> depositGasUsingDepositMethod(alice, recipient0, BigInteger.ONE));
-        assertThat(thrown.getMessage(), containsString("Deposits are paused."));
-
-        bridge.unpauseDeposits();
-    }
-
-    @Test
-    public void testPausedDeposit_rejectDepositGas_direct() throws Throwable {
-        assertFalse(bridge.depositsArePaused());
-        bridge.pauseDeposits();
-
-        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> depositGasWithDirectTransfer(alice, recipient0, BigInteger.ONE, DEFAULT_MIN_GAS_DEPOSIT));
+                () -> DepositHelper.depositGas(alice, recipient0, BigInteger.ONE));
         assertThat(thrown.getMessage(), containsString("Deposits are paused."));
 
         bridge.unpauseDeposits();
