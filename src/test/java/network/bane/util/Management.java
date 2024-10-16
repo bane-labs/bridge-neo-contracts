@@ -32,7 +32,7 @@ public class Management extends SmartContractHelper {
         return callFunctionReturningScriptHash("relayer");
     }
 
-    public void addValidator(Account signer, ECKeyPair.ECPublicKey pubKey, boolean incrementThreshold) throws Throwable {
+    public Hash256 addValidator(Account signer, ECKeyPair.ECPublicKey pubKey, boolean incrementThreshold) throws Throwable {
         Hash256 txHash = invokeFunction("addValidator", publicKey(pubKey), bool(incrementThreshold))
                 .signers(calledByEntry(signer))
                 .sign()
@@ -40,9 +40,10 @@ public class Management extends SmartContractHelper {
                 .getSendRawTransaction()
                 .getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
+        return txHash;
     }
 
-    public void removeValidator(Account signer, ECKeyPair.ECPublicKey pubKey, boolean decrementThreshold) throws Throwable {
+    public Hash256 removeValidator(Account signer, ECKeyPair.ECPublicKey pubKey, boolean decrementThreshold) throws Throwable {
         Hash256 txHash = invokeFunction("removeValidator", publicKey(pubKey), bool(decrementThreshold))
                 .signers(calledByEntry(signer))
                 .sign()
@@ -50,9 +51,10 @@ public class Management extends SmartContractHelper {
                 .getSendRawTransaction()
                 .getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
+        return txHash;
     }
 
-    public void replaceValidator(Account signer, ECKeyPair.ECPublicKey oldValidator, ECKeyPair.ECPublicKey newValidator) throws Throwable {
+    public Hash256 replaceValidator(Account signer, ECKeyPair.ECPublicKey oldValidator, ECKeyPair.ECPublicKey newValidator) throws Throwable {
         Hash256 txHash = invokeFunction("replaceValidator", publicKey(oldValidator), publicKey(newValidator))
                 .signers(calledByEntry(signer))
                 .sign()
@@ -60,13 +62,10 @@ public class Management extends SmartContractHelper {
                 .getSendRawTransaction()
                 .getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
+        return txHash;
     }
 
-    public boolean isValidator(ECKeyPair.ECPublicKey pubKey) throws IOException {
-        return callFunctionReturningBool("isValidator", publicKey(pubKey));
-    }
-
-    public void setValidatorThreshold(Account signer, int threshold) throws Throwable {
+    public Hash256 setValidatorThreshold(Account signer, int threshold) throws Throwable {
         Hash256 txHash = invokeFunction("setValidatorThreshold", integer(threshold))
                 .signers(calledByEntry(signer))
                 .sign()
@@ -74,6 +73,11 @@ public class Management extends SmartContractHelper {
                 .getSendRawTransaction()
                 .getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
+        return txHash;
+    }
+
+    public boolean isValidator(ECKeyPair.ECPublicKey pubKey) throws IOException {
+        return callFunctionReturningBool("isValidator", publicKey(pubKey));
     }
 
     public List<ECKeyPair.ECPublicKey> validators() throws IOException {

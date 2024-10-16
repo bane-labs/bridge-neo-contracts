@@ -7,6 +7,7 @@ import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.InvocationResult;
+import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.ArrayStackItem;
@@ -20,9 +21,6 @@ import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
-import io.neow3j.transaction.witnessrule.CalledByContractCondition;
-import io.neow3j.transaction.witnessrule.WitnessAction;
-import io.neow3j.transaction.witnessrule.WitnessRule;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -63,11 +61,9 @@ import static io.neow3j.utils.Numeric.prependHexPrefix;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.defaultValidatorThreshold;
 import static network.bane.util.TestHelper.defaultValidators;
-import static network.bane.util.TestHelper.governor;
 import static network.bane.util.TestHelper.governorScriptHash;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.ownerScriptHash;
-import static network.bane.util.TestHelper.prepareManagementDeployParameter;
 import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.relayerScriptHash;
 import static network.bane.util.TestHelper.securityGuardScriptHash;
@@ -351,60 +347,36 @@ public class BridgeManagementTest {
     @Test
     public void testSetValidatorThreshold() throws Throwable {
         assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
-
-        Transaction tx = management.invokeFunction("setValidatorThreshold", integer(3))
-                .signers(calledByEntry(owner))
-                .sign();
-        NeoSendRawTransaction response = tx.send();
-        assertFalse(response.hasError());
-        waitUntilTransactionIsExecuted(response, neow3j);
-
+        Hash256 txHash = management.setValidatorThreshold(owner, 3);
+        assertThat(management.validatorThreshold(), is(3));
         Notification expected = new Notification(
                 management.getScriptHash(),
                 "ValidatorThresholdChange",
                 new ArrayStackItem(asList(new IntegerStackItem(BigInteger.valueOf(3))))
         );
-        assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
-        assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
+        NeoApplicationLog.Execution firstExecution =
+                neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution();
+        assertThat(firstExecution.getNotifications(), hasSize(1));
+        assertThat(firstExecution.getFirstNotification(), is(expected));
 
-        assertThat(management.validatorThreshold(), is(3));
-
-        // reverse set validator threshold
-        response = management.invokeFunction("setValidatorThreshold", integer(defaultValidatorThreshold))
-                .signers(calledByEntry(owner))
-                .sign()
-                .send();
-        assertFalse(response.hasError());
-        waitUntilTransactionIsExecuted(response, neow3j);
-
+        // reset validator threshold to default
+        management.setValidatorThreshold(owner, defaultValidatorThreshold);
         assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
     }
 
     @Test
     public void testSetValidatorThreshold_tooLow() throws Throwable {
-        int nrValidators = management.validators().size();
         // Threshold lower than 2 should not be allowed.
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setValidatorThreshold", integer(1))
-                        .signers(calledByEntry(owner))
-                        .sign());
+                () -> management.setValidatorThreshold(owner, 1));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Threshold too low."));
 
         // Threshold equal to 2 (minimum) should be allowed.
-        NeoSendRawTransaction response = management.invokeFunction("setValidatorThreshold", integer(2))
-                .signers(calledByEntry(owner))
-                .sign()
-                .send();
-        waitUntilTransactionIsExecuted(response, neow3j);
+        management.setValidatorThreshold(owner, 2);
         assertThat(management.validatorThreshold(), is(2));
 
         // Reset the threshold to the default used in these tests.
-        NeoSendRawTransaction resetResponse = management.invokeFunction("setValidatorThreshold",
-                        integer(defaultValidatorThreshold))
-                .signers(calledByEntry(owner))
-                .sign()
-                .send();
-        waitUntilTransactionIsExecuted(resetResponse, neow3j);
+        management.setValidatorThreshold(owner, defaultValidatorThreshold);
         assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
     }
 
@@ -412,57 +384,39 @@ public class BridgeManagementTest {
     public void testSetValidatorThreshold_tooHigh() throws Throwable {
         int nrValidators = management.validators().size();
         // Threshold higher than the number of validators should not be allowed.
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> management.invokeFunction(
-                                "setValidatorThreshold",
-                                integer(nrValidators + 1))
-                        .signers(calledByEntry(owner))
-                        .sign());
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.setValidatorThreshold(owner, nrValidators + 1));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Threshold too high."));
 
         // Threshold equal to the number of validators should be allowed.
-        NeoSendRawTransaction response = management.invokeFunction("setValidatorThreshold", integer(nrValidators))
-                .signers(calledByEntry(owner))
-                .sign()
-                .send();
-        waitUntilTransactionIsExecuted(response, neow3j);
+        management.setValidatorThreshold(owner, nrValidators);
         assertThat(management.validatorThreshold(), is(nrValidators));
 
         // Reset the threshold to the default used in these tests.
-        NeoSendRawTransaction resetResponse = management.invokeFunction("setValidatorThreshold",
-                        integer(defaultValidatorThreshold))
-                .signers(calledByEntry(owner))
-                .sign()
-                .send();
-        waitUntilTransactionIsExecuted(resetResponse, neow3j);
+        management.setValidatorThreshold(owner, defaultValidatorThreshold);
         assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
     }
 
     @Test
     public void testSetValidatorThreshold_unauthorized() {
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> management.invokeFunction(
-                                "setValidatorThreshold",
-                                integer(3))
-                        .signers(calledByEntry(governor))
-                        .sign());
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.setValidatorThreshold(relayer, 3));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
     }
 
     // endregion
-    // region validators
+    // region validators is
 
     @Test
     public void testIsValidator() throws IOException {
-        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator1PubKey)));
-        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator2PubKey)));
-        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator3PubKey)));
-        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator4PubKey)));
-        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator5PubKey)));
-        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator6PubKey)));
-        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator7PubKey)));
-        assertFalse(management.callFunctionReturningBool("isValidator",
-                publicKey(relayer.getECKeyPair().getPublicKey())));
+        assertTrue(management.isValidator(validator1PubKey));
+        assertTrue(management.isValidator(validator2PubKey));
+        assertTrue(management.isValidator(validator3PubKey));
+        assertTrue(management.isValidator(validator4PubKey));
+        assertTrue(management.isValidator(validator5PubKey));
+        assertTrue(management.isValidator(validator6PubKey));
+        assertTrue(management.isValidator(validator7PubKey));
+        assertFalse(management.isValidator(relayer.getECKeyPair().getPublicKey()));
     }
 
     @Test
