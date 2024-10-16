@@ -426,14 +426,29 @@ public class BridgeManagementTest {
 
     @Test
     @Order(0)
-    public void testValidatorAdd_incrementThreshold() {
-        fail();
+    public void testValidatorAdd_incrementThreshold() throws Throwable {
+        assertThat(management.validators().size(), is(7));
+        assertFalse(management.isValidator(florianPubKey));
+        assertThat(management.validatorThreshold(), is(5));
+        management.addValidator(owner, florianPubKey, true);
+        assertThat(management.validators().size(), is(8));
+        assertTrue(management.isValidator(florianPubKey));
+        assertThat(management.validatorThreshold(), is(6));
+
+        // reverse add validator
+        management.removeValidator(owner, florianPubKey, true);
+        assertThat(management.validators().size(), is(7));
+        assertFalse(management.isValidator(florianPubKey));
+        assertThat(management.validatorThreshold(), is(5));
     }
 
     @Test
     @Order(0)
-    public void testValidatorAdd_alreadyValidator() {
-        fail();
+    public void testValidatorAdd_alreadyValidator() throws IOException {
+        assertFalse(management.isValidator(validator2PubKey));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.addValidator(owner, validator2PubKey, false));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Already a validator."));
     }
 
     @Test
@@ -455,7 +470,9 @@ public class BridgeManagementTest {
     @Test
     @Order(0)
     public void testValidatorAdd_unauthorized() {
-        fail();
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.addValidator(relayer, validator6PubKey, false));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
     }
 
     // endregion
@@ -482,6 +499,15 @@ public class BridgeManagementTest {
         management.addValidator(owner, validator6PubKey, false);
         assertTrue(management.isValidator(validator6PubKey));
         assertThat(management.validatorThreshold(), is(5));
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorRemove_notAValidator() throws Throwable {
+        assertFalse(management.isValidator(florianPubKey));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.removeValidator(owner, validator6PubKey, false));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Not a validator."));
     }
 
     @Test
