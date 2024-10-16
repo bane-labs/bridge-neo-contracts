@@ -48,6 +48,7 @@ import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
+import static io.neow3j.types.ContractParameter.bool;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.byteArrayFromString;
 import static io.neow3j.types.ContractParameter.hash160;
@@ -73,7 +74,9 @@ import static network.bane.util.TestHelper.validator2PubKey;
 import static network.bane.util.TestHelper.validator3PubKey;
 import static network.bane.util.TestHelper.validator4PubKey;
 import static network.bane.util.TestHelper.validator5PubKey;
+import static network.bane.util.TestHelper.validator6;
 import static network.bane.util.TestHelper.validator6PubKey;
+import static network.bane.util.TestHelper.validator7;
 import static network.bane.util.TestHelper.validator7PubKey;
 import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
@@ -86,6 +89,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @ContractTest(blockTime = 1, contracts = BridgeManagementContract.class, batchFile = "setup.batch")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -405,9 +409,144 @@ public class BridgeManagementTest {
     }
 
     // endregion
+    // region validators add
+
+    @Test
+    @Order(0)
+    public void testValidatorAdd() throws Throwable {
+        assertFalse(management.isValidator(florianPubKey));
+        assertThat(management.validatorThreshold(), is(5));
+        management.addValidator(owner, florianPubKey, false);
+        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(florianPubKey)));
+        assertThat(management.callFunctionReturningInt("validatorThreshold").intValue(), is(5));
+
+        // reverse validator addition
+        management.removeValidator(owner, florianPubKey, false);
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorAdd_incrementThreshold() {
+        fail();
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorAdd_alreadyValidator() {
+        fail();
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorAdd_invalidEcPoint() {
+        fail();
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorAdd_unauthorized() {
+        fail();
+    }
+
+    // endregion
+    // region validators remove
+
+    @Test
+    @Order(0)
+    public void testValidatorRemove() throws Throwable {
+        assertTrue(management.isValidator(validator6PubKey));
+        assertThat(management.validatorThreshold(), is(5));
+        Hash256 txHash = management.removeValidator(owner, validator6PubKey, false);
+        assertFalse(management.isValidator(validator6PubKey));
+        assertThat(management.validatorThreshold(), is(5));
+
+        NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send()
+                .getApplicationLog().getFirstExecution();
+        assertThat(exec.getNotifications(), hasSize(1));
+        assertThat(exec.getFirstNotification().getContract(), is(management.getScriptHash()));
+        assertThat(exec.getFirstNotification().getEventName(), is("ValidatorRemove"));
+        assertThat(exec.getFirstNotification().getState().getList(), hasSize(1));
+        assertThat(exec.getFirstNotification().getState().getList().get(0).getAddress(), is(validator6.getAddress()));
+
+        // reverse add validator
+        management.addValidator(owner, validator6PubKey, false);
+        assertTrue(management.isValidator(validator6PubKey));
+        assertThat(management.validatorThreshold(), is(5));
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorRemove_decrementThreshold() throws Throwable {
+        assertThat(management.validators().size(), is(7));
+        assertTrue(management.isValidator(validator6PubKey));
+        assertThat(management.validatorThreshold(), is(5));
+        management.removeValidator(owner, validator6PubKey, true);
+        assertThat(management.validators().size(), is(6));
+        assertFalse(management.isValidator(validator6PubKey));
+        assertThat(management.validatorThreshold(), is(4));
+
+        // reverse add validator
+        management.addValidator(owner, validator6PubKey, true);
+        assertThat(management.validators().size(), is(7));
+        assertTrue(management.isValidator(validator6PubKey));
+        assertThat(management.validatorThreshold(), is(5));
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorRemove_failToRemoveIfMinimumLimitReached() throws Throwable {
+        // If there are only 2 validators left, validators cannot be removed.
+        assertThat(management.validators().size(), is(7));
+        management.removeValidator(owner, validator7PubKey, true);
+        management.removeValidator(owner, validator6PubKey, true);
+        management.removeValidator(owner, validator5PubKey, true);
+        assertThat(management.validatorThreshold(), is(2));
+        assertTrue(management.isValidator(validator4PubKey));
+
+        // Threshold should be 2 now. Removing a validator and decrementing the threshold further should fail.
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.removeValidator(owner, validator4PubKey, true));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Min threshold limit reached."));
+
+        management.removeValidator(owner, validator4PubKey, false);
+        management.removeValidator(owner, validator3PubKey, false);
+
+        // Threshold and number of validators should be 2 now. Removing a validator should not be possible.
+        TransactionConfigurationException thrown2 = assertThrows(TransactionConfigurationException.class,
+                () -> management.removeValidator(owner, validator2PubKey, false));
+        assertThat(thrown2.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Min number of validators reached."));
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorRemove_failToRemoveAndDecrementThreshold() throws Throwable {
+        // If the threshold is equal to the number of validators, a validator should not be removable with
+        // decrementing the threshold as well.
+        assertThat(management.validators().size(), is(7));
+        management.setValidatorThreshold(owner, 7);
+        assertTrue(management.isValidator(validator6PubKey));
+        assertThat(management.validatorThreshold(), is(7));
+
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.removeValidator(owner, validator6PubKey, true));
+
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Threshold too high."));
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorRemove_unauthorized() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.removeValidator(relayer, validator6PubKey, false));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+    }
+
+    // endregion
     // region validators is
 
     @Test
+    @Order(0)
     public void testIsValidator() throws IOException {
         assertTrue(management.isValidator(validator1PubKey));
         assertTrue(management.isValidator(validator2PubKey));
