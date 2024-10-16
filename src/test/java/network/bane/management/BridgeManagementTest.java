@@ -21,7 +21,6 @@ import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
-import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.utils.Await;
@@ -40,19 +39,16 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.any;
-import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.bool;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.byteArrayFromString;
 import static io.neow3j.types.ContractParameter.hash160;
-import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.publicKey;
 import static io.neow3j.types.ContractParameter.string;
 import static io.neow3j.types.StackItemType.ARRAY;
@@ -61,14 +57,12 @@ import static io.neow3j.types.StackItemType.INTEGER;
 import static io.neow3j.utils.Numeric.prependHexPrefix;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.defaultValidatorThreshold;
-import static network.bane.util.TestHelper.defaultValidators;
 import static network.bane.util.TestHelper.governorScriptHash;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.ownerScriptHash;
 import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.relayerScriptHash;
 import static network.bane.util.TestHelper.securityGuardScriptHash;
-import static network.bane.util.TestHelper.setDefaultValidators;
 import static network.bane.util.TestHelper.validator1PubKey;
 import static network.bane.util.TestHelper.validator2PubKey;
 import static network.bane.util.TestHelper.validator3PubKey;
@@ -76,20 +70,16 @@ import static network.bane.util.TestHelper.validator4PubKey;
 import static network.bane.util.TestHelper.validator5PubKey;
 import static network.bane.util.TestHelper.validator6;
 import static network.bane.util.TestHelper.validator6PubKey;
-import static network.bane.util.TestHelper.validator7;
 import static network.bane.util.TestHelper.validator7PubKey;
 import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 @ContractTest(blockTime = 1, contracts = BridgeManagementContract.class, batchFile = "setup.batch")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -158,8 +148,8 @@ public class BridgeManagementTest {
     @Order(0)
     public void testManifestMethods() throws IOException {
         assertThat(management.getManifest().getName(), is("NeoXBridgeManagement"));
-        assertThat(management.getManifest().getAbi().getMethods(), hasSize(15));
-        assertThat(management.getManifest().getAbi().getEvents(), hasSize(5));
+        assertThat(management.getManifest().getAbi().getMethods(), hasSize(19));
+        assertThat(management.getManifest().getAbi().getEvents(), hasSize(8));
         assertThat(management.getManifest().getSupportedStandards(), hasSize(0));
         assertThat(management.getManifest().getPermissions(), hasSize(1));
         assertThat(management.getManifest().getFirstPermission().getContract(),
@@ -349,6 +339,7 @@ public class BridgeManagementTest {
     // region validator threshold
 
     @Test
+    @Order(0)
     public void testSetValidatorThreshold() throws Throwable {
         assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
         Hash256 txHash = management.setValidatorThreshold(owner, 3);
@@ -369,6 +360,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetValidatorThreshold_tooLow() throws Throwable {
         // Threshold lower than 2 should not be allowed.
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
@@ -385,6 +377,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetValidatorThreshold_tooHigh() throws Throwable {
         int nrValidators = management.validators().size();
         // Threshold higher than the number of validators should not be allowed.
@@ -402,6 +395,7 @@ public class BridgeManagementTest {
     }
 
     @Test
+    @Order(0)
     public void testSetValidatorThreshold_unauthorized() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.setValidatorThreshold(relayer, 3));
@@ -445,7 +439,7 @@ public class BridgeManagementTest {
     @Test
     @Order(0)
     public void testValidatorAdd_alreadyValidator() throws IOException {
-        assertFalse(management.isValidator(validator2PubKey));
+        assertTrue(management.isValidator(validator2PubKey));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.addValidator(owner, validator2PubKey, false));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Already a validator."));
@@ -493,7 +487,8 @@ public class BridgeManagementTest {
         assertThat(exec.getFirstNotification().getContract(), is(management.getScriptHash()));
         assertThat(exec.getFirstNotification().getEventName(), is("ValidatorRemove"));
         assertThat(exec.getFirstNotification().getState().getList(), hasSize(1));
-        assertThat(exec.getFirstNotification().getState().getList().get(0).getAddress(), is(validator6.getAddress()));
+        assertThat(exec.getFirstNotification().getState().getList().get(0).getHexString(),
+                is(validator6.getECKeyPair().getPublicKey().getEncodedCompressedHex()));
 
         // reverse add validator
         management.addValidator(owner, validator6PubKey, false);
@@ -506,7 +501,7 @@ public class BridgeManagementTest {
     public void testValidatorRemove_notAValidator() throws Throwable {
         assertFalse(management.isValidator(florianPubKey));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.removeValidator(owner, validator6PubKey, false));
+                () -> management.removeValidator(owner, florianPubKey, false));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Not a validator."));
     }
 
@@ -533,16 +528,18 @@ public class BridgeManagementTest {
     public void testValidatorRemove_failToRemoveIfMinimumLimitReached() throws Throwable {
         // If there are only 2 validators left, validators cannot be removed.
         assertThat(management.validators().size(), is(7));
-        management.removeValidator(owner, validator7PubKey, true);
-        management.removeValidator(owner, validator6PubKey, true);
-        management.removeValidator(owner, validator5PubKey, true);
+        management.setValidatorThreshold(owner, 2);
+        management.removeValidator(owner, validator7PubKey, false);
+        management.removeValidator(owner, validator6PubKey, false);
+        management.removeValidator(owner, validator5PubKey, false);
         assertThat(management.validatorThreshold(), is(2));
         assertTrue(management.isValidator(validator4PubKey));
 
         // Threshold should be 2 now. Removing a validator and decrementing the threshold further should fail.
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.removeValidator(owner, validator4PubKey, true));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Min threshold limit reached."));
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Min validator threshold reached."));
 
         management.removeValidator(owner, validator4PubKey, false);
         management.removeValidator(owner, validator3PubKey, false);
@@ -552,12 +549,20 @@ public class BridgeManagementTest {
                 () -> management.removeValidator(owner, validator2PubKey, false));
         assertThat(thrown2.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Min number of validators reached."));
+
+        // Reset the threshold to the default used in these tests.
+        management.addValidator(owner, validator3PubKey, false);
+        management.addValidator(owner, validator4PubKey, false);
+        management.addValidator(owner, validator5PubKey, false);
+        management.addValidator(owner, validator6PubKey, false);
+        management.addValidator(owner, validator7PubKey, false);
+        management.setValidatorThreshold(owner, defaultValidatorThreshold);
     }
 
     @Test
     @Order(0)
-    public void testValidatorRemove_failToRemoveAndDecrementThreshold() throws Throwable {
-        // If the threshold is equal to the number of validators, a validator should not be removable with
+    public void testValidatorRemove_failToRemoveAndNotDecrementThresholdIfMaxThreshold() throws Throwable {
+        // If the threshold is equal to the number of validators, a validator should not be removable without
         // decrementing the threshold as well.
         assertThat(management.validators().size(), is(7));
         management.setValidatorThreshold(owner, 7);
@@ -565,9 +570,12 @@ public class BridgeManagementTest {
         assertThat(management.validatorThreshold(), is(7));
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.removeValidator(owner, validator6PubKey, true));
+                () -> management.removeValidator(owner, validator6PubKey, false));
 
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Threshold too high."));
+
+        // Reset the threshold to the default used in these tests.
+        management.setValidatorThreshold(owner, defaultValidatorThreshold);
     }
 
     @Test
@@ -614,14 +622,66 @@ public class BridgeManagementTest {
         assertThat(exec.getFirstNotification().getContract(), is(management.getScriptHash()));
         assertThat(exec.getFirstNotification().getEventName(), is("ValidatorReplace"));
         assertThat(exec.getFirstNotification().getState().getList(), hasSize(2));
-        assertThat(exec.getFirstNotification().getState().getList().get(0).getAddress(), is(validator6.getAddress()));
-        assertThat(exec.getFirstNotification().getState().getList().get(1).getAddress(), is(florian.getAddress()));
+        assertThat(exec.getFirstNotification().getState().getList().get(0).getHexString(),
+                is(validator6.getECKeyPair().getPublicKey().getEncodedCompressedHex()));
+        assertThat(exec.getFirstNotification().getState().getList().get(1).getHexString(),
+                is(florian.getECKeyPair().getPublicKey().getEncodedCompressedHex()));
 
         // reverse add validator
         management.replaceValidator(owner, florianPubKey, validator6PubKey);
         assertTrue(management.isValidator(validator6PubKey));
-        assertFalse(management.isValidator(validator6PubKey));
+        assertFalse(management.isValidator(florianPubKey));
         assertThat(management.validatorThreshold(), is(5));
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorReplace_ifThresholdEqualsNrValidators() throws Throwable {
+        management.setValidatorThreshold(owner, 7);
+        assertThat(management.validatorThreshold(), is(7));
+        assertThat(management.validators().size(), is(7));
+
+        assertTrue(management.isValidator(validator6PubKey));
+        assertFalse(management.isValidator(florianPubKey));
+        management.replaceValidator(owner, validator6PubKey, florianPubKey);
+
+        assertTrue(management.isValidator(florianPubKey));
+        assertFalse(management.isValidator(validator6PubKey));
+
+        // Reverse the replacement
+        management.replaceValidator(owner, florianPubKey, validator6PubKey);
+        assertTrue(management.isValidator(validator6PubKey));
+        assertFalse(management.isValidator(florianPubKey));
+        management.setValidatorThreshold(owner, defaultValidatorThreshold);
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorReplace_ifMinValidators() throws Throwable {
+        // If there are only 2 validators left, validators cannot be removed.
+        management.setValidatorThreshold(owner, 2);
+        management.removeValidator(owner, validator7PubKey, false);
+        management.removeValidator(owner, validator6PubKey, false);
+        management.removeValidator(owner, validator5PubKey, false);
+        management.removeValidator(owner, validator4PubKey, false);
+        management.removeValidator(owner, validator3PubKey, false);
+        assertThat(management.validatorThreshold(), is(2));
+        assertThat(management.validators().size(), is(2));
+        assertTrue(management.isValidator(validator2PubKey));
+        assertFalse(management.isValidator(florianPubKey));
+
+        management.replaceValidator(owner, validator2PubKey, florianPubKey);
+        assertTrue(management.isValidator(florianPubKey));
+        assertFalse(management.isValidator(validator2PubKey));
+
+        // Reset to the default state used in these tests.
+        management.replaceValidator(owner, florianPubKey, validator2PubKey);
+        management.addValidator(owner, validator3PubKey, false);
+        management.addValidator(owner, validator4PubKey, false);
+        management.addValidator(owner, validator5PubKey, false);
+        management.addValidator(owner, validator6PubKey, false);
+        management.addValidator(owner, validator7PubKey, false);
+        management.setValidatorThreshold(owner, defaultValidatorThreshold);
     }
 
     @Test
@@ -645,7 +705,7 @@ public class BridgeManagementTest {
     @Order(0)
     public void testValidatorReplace_failReplacingWithSamePublicKey() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.replaceValidator(relayer, validator6PubKey, validator6PubKey));
+                () -> management.replaceValidator(owner, validator6PubKey, validator6PubKey));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Public keys must be different."));
     }
@@ -672,146 +732,6 @@ public class BridgeManagementTest {
         assertTrue(management.isValidator(validator6PubKey));
         assertTrue(management.isValidator(validator7PubKey));
         assertFalse(management.isValidator(relayer.getECKeyPair().getPublicKey()));
-    }
-
-    @Test
-    @Order(0)
-    public void testSetValidators() throws Throwable {
-        assertThat(management.validators(), hasSize(defaultValidators.size()));
-        assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
-        assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
-
-        Transaction tx = management.invokeFunction("setValidators",
-                        array(
-                                publicKey(alicePubKey),
-                                publicKey(bobPubKey),
-                                publicKey(charliePubKey),
-                                publicKey(denisePubKey),
-                                publicKey(evePubKey)
-                        ),
-                        integer(3)
-                )
-                .signers(calledByEntry(owner))
-                .sign();
-        NeoSendRawTransaction response = tx.send();
-        assertFalse(response.hasError());
-        waitUntilTransactionIsExecuted(response, neow3j);
-
-        assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
-        Notification notification = tx.getApplicationLog().getFirstExecution().getFirstNotification();
-        assertThat(notification.getEventName(), is("ValidatorsChange"));
-        assertThat(notification.getContract(), is(management.getScriptHash()));
-        List<StackItem> stateList = notification.getState().getList();
-        assertThat(stateList, hasSize(2));
-        assertThat(stateList.get(0).getType(), is(ARRAY));
-        assertThat(stateList.get(0).getList(), hasSize(5));
-        assertThat(stateList.get(0).getList().stream().map(StackItem::getHexString).collect(Collectors.toList()),
-                contains(
-                        alicePubKey.getEncodedCompressedHex(),
-                        bobPubKey.getEncodedCompressedHex(),
-                        charliePubKey.getEncodedCompressedHex(),
-                        denisePubKey.getEncodedCompressedHex(),
-                        evePubKey.getEncodedCompressedHex()
-                ));
-        assertThat(stateList.get(1).getType(), is(INTEGER));
-        assertThat(stateList.get(1).getInteger().intValue(), is(3));
-
-        assertThat(management.validators(),
-                containsInAnyOrder(alicePubKey, bobPubKey, charliePubKey, denisePubKey, evePubKey));
-        assertThat(management.validatorThreshold(), is(3));
-
-        setDefaultValidators(management, neow3j);
-        assertThat(management.validators(), hasSize(defaultValidators.size()));
-        assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
-        assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
-    }
-
-    @Test
-    @Order(0)
-    public void testSetValidators_unauthorized() {
-        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setValidators", array(publicKey(alicePubKey)), integer(1))
-                        .signers(calledByEntry(alice))
-                        .sign()
-        );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
-    }
-
-    @Test
-    @Order(0)
-    public void testSetValidators_invalidThreshold() {
-        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setValidators",
-                                array(publicKey(charliePubKey), publicKey(denisePubKey)), integer(1))
-                        .signers(calledByEntry(alice))
-                        .sign()
-        );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
-    }
-
-    @Test
-    @Order(0)
-    public void testSetValidators_moreThanMax() throws IOException {
-        List<ContractParameter> newValidators = new ArrayList<>();
-        for (int i = 0; i <= 21; i++) {
-            newValidators.add(publicKey(Account.create().getECKeyPair().getPublicKey()));
-        }
-        assertThat(newValidators, hasSize(22));
-
-        assertThat(management.validators(), hasSize(defaultValidators.size()));
-        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setValidators", array(newValidators), integer(5))
-                        .signers(calledByEntry(alice))
-                        .sign()
-        );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
-    }
-
-    @Test
-    @Order(0)
-    public void testSetValidators_exactlyMax() throws Throwable {
-        List<ContractParameter> newValidators = new ArrayList<>();
-        for (int i = 0; i < 21; i++) {
-            newValidators.add(publicKey(Account.create().getECKeyPair().getPublicKey()));
-        }
-        assertThat(newValidators, hasSize(21));
-
-        assertThat(management.validators(), hasSize(7));
-        NeoSendRawTransaction response = management.invokeFunction("setValidators", array(newValidators), integer(10))
-                .signers(calledByEntry(owner)).sign().send();
-        assertFalse(response.hasError());
-        waitUntilTransactionIsExecuted(response, neow3j);
-        assertThat(management.validators(), hasSize(21));
-        assertThat(management.validatorThreshold(), is(10));
-
-        // reverse set validators
-        setDefaultValidators(management, neow3j);
-        assertThat(management.validators(), hasSize(defaultValidators.size()));
-        assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
-        assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
-    }
-
-    @Test
-    @Order(0)
-    public void testSetValidators_sameValidatorMultipleTimesInParams() throws Throwable {
-        assertThat(management.validators(), hasSize(defaultValidators.size()));
-        assertThat(management.validators(), containsInAnyOrder(defaultValidators.toArray()));
-        assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
-
-        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setValidators",
-                                array(
-                                        publicKey(alicePubKey),
-                                        publicKey(bobPubKey),
-                                        publicKey(charliePubKey),
-                                        publicKey(alicePubKey)
-                                ),
-                                integer(3))
-                        .signers(calledByEntry(owner))
-                        .sign()
-        );
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Duplicate validators provided."));
     }
 
     // endregion
