@@ -438,8 +438,18 @@ public class BridgeManagementTest {
 
     @Test
     @Order(0)
-    public void testValidatorAdd_invalidEcPoint() {
-        fail();
+    public void testValidatorAdd_failWithInvalidPublicKey() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("addValidator", any(null), bool(false))
+                        .signers(calledByEntry(owner))
+                        .sign());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key."));
+
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("addValidator", byteArrayFromString("hello"), bool(false))
+                        .signers(calledByEntry(owner))
+                        .sign());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key."));
     }
 
     @Test
@@ -536,9 +546,89 @@ public class BridgeManagementTest {
 
     @Test
     @Order(0)
+    public void testValidatorRemove_failWithInvalidPublicKey() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("removeValidator", any(null), bool(false))
+                        .signers(calledByEntry(owner))
+                        .sign());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key."));
+
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("removeValidator", byteArrayFromString("hello"), bool(false))
+                        .signers(calledByEntry(owner))
+                        .sign());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key."));
+    }
+
+    @Test
+    @Order(0)
     public void testValidatorRemove_unauthorized() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.removeValidator(relayer, validator6PubKey, false));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+    }
+
+    // endregion
+    // region validators replace
+
+    @Test
+    @Order(0)
+    public void testValidatorReplace() throws Throwable {
+        assertTrue(management.isValidator(validator6PubKey));
+        assertFalse(management.isValidator(florianPubKey));
+        assertThat(management.validatorThreshold(), is(5));
+        Hash256 txHash = management.replaceValidator(owner, validator6PubKey, florianPubKey);
+        assertFalse(management.isValidator(validator6PubKey));
+        assertTrue(management.isValidator(florianPubKey));
+        assertThat(management.validatorThreshold(), is(5));
+
+        NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send()
+                .getApplicationLog().getFirstExecution();
+        assertThat(exec.getNotifications(), hasSize(1));
+        assertThat(exec.getFirstNotification().getContract(), is(management.getScriptHash()));
+        assertThat(exec.getFirstNotification().getEventName(), is("ValidatorReplace"));
+        assertThat(exec.getFirstNotification().getState().getList(), hasSize(2));
+        assertThat(exec.getFirstNotification().getState().getList().get(0).getAddress(), is(validator6.getAddress()));
+        assertThat(exec.getFirstNotification().getState().getList().get(1).getAddress(), is(florian.getAddress()));
+
+        // reverse add validator
+        management.replaceValidator(owner, florianPubKey, validator6PubKey);
+        assertTrue(management.isValidator(validator6PubKey));
+        assertFalse(management.isValidator(validator6PubKey));
+        assertThat(management.validatorThreshold(), is(5));
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorReplace_failReplacingWithInvalidPublicKey() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("replaceValidator", publicKey(validator6PubKey), any(null))
+                        .signers(calledByEntry(owner))
+                        .sign());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key."));
+
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.invokeFunction("replaceValidator", publicKey(validator6PubKey),
+                                byteArrayFromString("hello"))
+                        .signers(calledByEntry(owner))
+                        .sign());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key."));
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorReplace_failReplacingWithSamePublicKey() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.replaceValidator(relayer, validator6PubKey, validator6PubKey));
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Public keys must be different."));
+    }
+
+    @Test
+    @Order(0)
+    public void testValidatorReplace_unauthorized() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> management.replaceValidator(relayer, validator6PubKey, florianPubKey));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
     }
 
