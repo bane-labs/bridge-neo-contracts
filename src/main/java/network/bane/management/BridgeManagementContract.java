@@ -40,6 +40,9 @@ import static io.neow3j.devpack.Runtime.checkWitness;
 })
 public class BridgeManagementContract {
 
+    private static final int MIN_VALIDATOR_THRESHOLD = 2;
+    private static final int MIN_NR_VALIDATORS = 2;
+
     private static final StorageContext ctx = Storage.getStorageContext();
 
     private static final byte prefix_base = 0x0a;
@@ -69,6 +72,10 @@ public class BridgeManagementContract {
     @DisplayName("ValidatorsChange")
     @EventParameterNames({"NewValidators", "NewThreshold"})
     public static Event2Args<List<ECPoint>, Integer> onValidatorsSet;
+
+    @DisplayName("ValidatorThresholdChange")
+    @EventParameterNames({"NewThreshold"})
+    public static Event1Arg<Integer> onValidatorThresholdChange;
 
     @DisplayName("GovernorChange")
     @EventParameterNames({"NewGovernor"})
@@ -135,34 +142,63 @@ public class BridgeManagementContract {
         onRelayerSet.fire(newRelayer);
     }
 
-    public static void setValidators(List<ECPoint> validators, int threshold) {
+    public static void addValidator(ECPoint validator, boolean increaseThreshold) {
         onlyOwner();
-        if (hasDuplicates(validators)) abort("Duplicate validators provided.");
-        int validatorsSize = validators.size();
-        if (threshold <= 0) abort("Threshold must be greater than 0.");
-        if (validatorsSize < threshold) abort("Not enough validators.");
-        Iterator<ByteString> it = validatorMap.find(FindOptions.RemovePrefix | FindOptions.KeysOnly);
-        while (it.next()) {
-            ByteString key = it.get();
-            validatorMap.delete(key);
-        }
-        for (int i = 0; i < validatorsSize; i++) {
-            ECPoint validator = validators.get(i);
-            if (validator == null || !ECPoint.isValid(validator)) abort("Invalid validator public key provided.");
-            validatorMap.put(validator, true);
-        }
-        baseMap.put(key_validator_threshold, threshold);
-        onValidatorsSet.fire(validators, threshold);
+        // Todo: Implement this method
     }
 
-    private static boolean hasDuplicates(List<ECPoint> validators) {
-        Map<ECPoint, Boolean> map = new Map<>();
-        int validatorsSize = validators.size();
-        for (int i = 0; i < validatorsSize; i++) {
-            map.put(validators.get(i), true);
-        }
-        return map.keys().length != validatorsSize;
+    public static void removeValidator(ECPoint validator, boolean decreaseThreshold) {
+        onlyOwner();
+        // Todo: Implement this method
     }
+
+    public static void replaceValidator(ECPoint oldValidator, ECPoint newValidator) {
+        onlyOwner();
+        // Todo: Implement this method
+    }
+
+    public static void setValidatorThreshold(int newThreshold) {
+        onlyOwner();
+        if (newThreshold < MIN_VALIDATOR_THRESHOLD) abort("Threshold too low.");
+        if (newThreshold > validators().size()) abort("Threshold too high.");
+        baseMap.put(key_validator_threshold, newThreshold);
+        onValidatorThresholdChange.fire(newThreshold);
+    }
+
+    @Safe
+    public static boolean isValidator(ECPoint validator) {
+        // Todo: Implement this method
+        return false;
+    }
+
+//    public static void setValidators(List<ECPoint> validators, int threshold) {
+//        onlyOwner();
+//        if (hasDuplicates(validators)) abort("Duplicate validators provided.");
+//        int validatorsSize = validators.size();
+//        if (threshold <= 0) abort("Threshold must be greater than 0.");
+//        if (validatorsSize < threshold) abort("Not enough validators.");
+//        Iterator<ByteString> it = validatorMap.find(FindOptions.RemovePrefix | FindOptions.KeysOnly);
+//        while (it.next()) {
+//            ByteString key = it.get();
+//            validatorMap.delete(key);
+//        }
+//        for (int i = 0; i < validatorsSize; i++) {
+//            ECPoint validator = validators.get(i);
+//            if (validator == null || !ECPoint.isValid(validator)) abort("Invalid validator public key provided.");
+//            validatorMap.put(validator, true);
+//        }
+//        baseMap.put(key_validator_threshold, threshold);
+//        onValidatorsSet.fire(validators, threshold);
+//    }
+
+//    private static boolean hasDuplicates(List<ECPoint> validators) {
+//        Map<ECPoint, Boolean> map = new Map<>();
+//        int validatorsSize = validators.size();
+//        for (int i = 0; i < validatorsSize; i++) {
+//            map.put(validators.get(i), true);
+//        }
+//        return map.keys().length != validatorsSize;
+//    }
 
     public static void setGovernor(Hash160 newGovernor) {
         onlyOwner();
