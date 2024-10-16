@@ -442,7 +442,7 @@ public class BridgeManagementTest {
     public void testSetValidatorThreshold_unauthorized() {
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () -> management.invokeFunction(
-                        "setValidatorThreshold",
+                                "setValidatorThreshold",
                                 integer(3))
                         .signers(calledByEntry(governor))
                         .sign());
@@ -450,7 +450,20 @@ public class BridgeManagementTest {
     }
 
     // endregion
-    // region set validators
+    // region validators
+
+    @Test
+    public void testIsValidator() throws IOException {
+        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator1PubKey)));
+        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator2PubKey)));
+        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator3PubKey)));
+        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator4PubKey)));
+        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator5PubKey)));
+        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator6PubKey)));
+        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(validator7PubKey)));
+        assertFalse(management.callFunctionReturningBool("isValidator",
+                publicKey(relayer.getECKeyPair().getPublicKey())));
+    }
 
     @Test
     @Order(0)

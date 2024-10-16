@@ -167,8 +167,10 @@ public class BridgeManagementContract {
 
     @Safe
     public static boolean isValidator(ECPoint validator) {
-        // Todo: Implement this method
-        return false;
+        if (validatorMap.get(validator) == null) {
+            return false;
+        }
+        return validatorMap.getBoolean(validator);
     }
 
 //    public static void setValidators(List<ECPoint> validators, int threshold) {
