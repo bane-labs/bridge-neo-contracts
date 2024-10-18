@@ -4,11 +4,19 @@ import io.neow3j.crypto.ECKeyPair;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.types.Hash160;
+import io.neow3j.types.Hash256;
+import io.neow3j.wallet.Account;
 import network.bane.util.helper.SmartContractHelper;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static io.neow3j.transaction.AccountSigner.calledByEntry;
+import static io.neow3j.types.ContractParameter.bool;
+import static io.neow3j.types.ContractParameter.integer;
+import static io.neow3j.types.ContractParameter.publicKey;
+import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 
 public class Management extends SmartContractHelper {
 
@@ -22,6 +30,54 @@ public class Management extends SmartContractHelper {
 
     public Hash160 relayer() throws IOException {
         return callFunctionReturningScriptHash("relayer");
+    }
+
+    public Hash256 addValidator(Account signer, ECKeyPair.ECPublicKey pubKey, boolean incrementThreshold) throws Throwable {
+        Hash256 txHash = invokeFunction("addValidator", publicKey(pubKey), bool(incrementThreshold))
+                .signers(calledByEntry(signer))
+                .sign()
+                .send()
+                .getSendRawTransaction()
+                .getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+        return txHash;
+    }
+
+    public Hash256 removeValidator(Account signer, ECKeyPair.ECPublicKey pubKey, boolean decrementThreshold) throws Throwable {
+        Hash256 txHash = invokeFunction("removeValidator", publicKey(pubKey), bool(decrementThreshold))
+                .signers(calledByEntry(signer))
+                .sign()
+                .send()
+                .getSendRawTransaction()
+                .getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+        return txHash;
+    }
+
+    public Hash256 replaceValidator(Account signer, ECKeyPair.ECPublicKey oldValidator, ECKeyPair.ECPublicKey newValidator) throws Throwable {
+        Hash256 txHash = invokeFunction("replaceValidator", publicKey(oldValidator), publicKey(newValidator))
+                .signers(calledByEntry(signer))
+                .sign()
+                .send()
+                .getSendRawTransaction()
+                .getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+        return txHash;
+    }
+
+    public Hash256 setValidatorThreshold(Account signer, int threshold) throws Throwable {
+        Hash256 txHash = invokeFunction("setValidatorThreshold", integer(threshold))
+                .signers(calledByEntry(signer))
+                .sign()
+                .send()
+                .getSendRawTransaction()
+                .getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+        return txHash;
+    }
+
+    public boolean isValidator(ECKeyPair.ECPublicKey pubKey) throws IOException {
+        return callFunctionReturningBool("isValidator", publicKey(pubKey));
     }
 
     public List<ECKeyPair.ECPublicKey> validators() throws IOException {

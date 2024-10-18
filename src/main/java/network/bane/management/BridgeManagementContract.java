@@ -43,16 +43,16 @@ public class BridgeManagementContract {
     private static final StorageContext ctx = Storage.getStorageContext();
 
     private static final byte prefix_base = 0x0a;
-    private static final StorageMap baseMap = new StorageMap(ctx, prefix_base);
+    static final StorageMap baseMap = new StorageMap(ctx, prefix_base);
     private static final byte prefix_validator = 0x0b;
-    private static final StorageMap validatorMap = new StorageMap(ctx, prefix_validator);
+    static final StorageMap validatorMap = new StorageMap(ctx, prefix_validator);
 
     private static final int key_owner = 0x00;
     private static final int key_relayer = 0x01;
     private static final int key_governor = 0x02;
     private static final int key_securityguard = 0x03;
 
-    private static final int key_validator_threshold = 0x10;
+    static final int key_validator_threshold = 0x10;
 
     private static final int key_version = 0x7f;
 
@@ -66,9 +66,21 @@ public class BridgeManagementContract {
     @EventParameterNames({"NewRelayer"})
     public static Event1Arg<Hash160> onRelayerSet;
 
-    @DisplayName("ValidatorsChange")
-    @EventParameterNames({"NewValidators", "NewThreshold"})
-    public static Event2Args<List<ECPoint>, Integer> onValidatorsSet;
+    @DisplayName("ValidatorAdd")
+    @EventParameterNames({"Validator"})
+    public static Event1Arg<ECPoint> onValidatorAddition;
+
+    @DisplayName("ValidatorRemove")
+    @EventParameterNames({"Validator"})
+    public static Event1Arg<ECPoint> onValidatorRemoval;
+
+    @DisplayName("ValidatorReplace")
+    @EventParameterNames({"OldValidator", "NewValidator"})
+    public static Event2Args<ECPoint, ECPoint> onValidatorReplacement;
+
+    @DisplayName("ValidatorThresholdChange")
+    @EventParameterNames({"Threshold"})
+    public static Event1Arg<Integer> onValidatorThresholdChange;
 
     @DisplayName("GovernorChange")
     @EventParameterNames({"NewGovernor"})
@@ -104,10 +116,9 @@ public class BridgeManagementContract {
             baseMap.put(key_relayer, relayer);
             for (int i = 0; i < validatorSize; i++) {
                 ECPoint validator = validators.get(i);
-                if (!ECPoint.isValid(validator)) abort("Invalid public key provided for validator.");
-                validatorMap.put(validator, true);
+                ManagementImpl.addValidator(validator);
             }
-            baseMap.put(key_validator_threshold, validatorThreshold);
+            ManagementImpl.setValidatorThreshold(validatorThreshold);
             baseMap.put(key_governor, governor);
             baseMap.put(key_securityguard, securityGuard);
 
@@ -135,33 +146,44 @@ public class BridgeManagementContract {
         onRelayerSet.fire(newRelayer);
     }
 
-    public static void setValidators(List<ECPoint> validators, int threshold) {
+    public static void addValidator(ECPoint validator, boolean incrementThreshold) {
         onlyOwner();
-        if (hasDuplicates(validators)) abort("Duplicate validators provided.");
-        int validatorsSize = validators.size();
-        if (threshold <= 0) abort("Threshold must be greater than 0.");
-        if (validatorsSize < threshold) abort("Not enough validators.");
-        Iterator<ByteString> it = validatorMap.find(FindOptions.RemovePrefix | FindOptions.KeysOnly);
-        while (it.next()) {
-            ByteString key = it.get();
-            validatorMap.delete(key);
+        ManagementImpl.addValidator(validator);
+        onValidatorAddition.fire(validator);
+        if (incrementThreshold) {
+            int newThreshold = ManagementImpl.incrementValidatorThreshold();
+            onValidatorThresholdChange.fire(newThreshold);
         }
-        for (int i = 0; i < validatorsSize; i++) {
-            ECPoint validator = validators.get(i);
-            if (validator == null || !ECPoint.isValid(validator)) abort("Invalid validator public key provided.");
-            validatorMap.put(validator, true);
-        }
-        baseMap.put(key_validator_threshold, threshold);
-        onValidatorsSet.fire(validators, threshold);
     }
 
-    private static boolean hasDuplicates(List<ECPoint> validators) {
-        Map<ECPoint, Boolean> map = new Map<>();
-        int validatorsSize = validators.size();
-        for (int i = 0; i < validatorsSize; i++) {
-            map.put(validators.get(i), true);
+    public static void removeValidator(ECPoint validator, boolean decrementThreshold) {
+        onlyOwner();
+        if (decrementThreshold) {
+            int newThreshold = ManagementImpl.decrementValidatorThreshold();
+            onValidatorThresholdChange.fire(newThreshold);
         }
-        return map.keys().length != validatorsSize;
+        ManagementImpl.removeValidator(validator);
+        onValidatorRemoval.fire(validator);
+    }
+
+    public static void replaceValidator(ECPoint oldValidator, ECPoint newValidator) {
+        onlyOwner();
+        ManagementImpl.replaceValidator(oldValidator, newValidator);
+        onValidatorReplacement.fire(oldValidator, newValidator);
+    }
+
+    public static void setValidatorThreshold(int newThreshold) {
+        onlyOwner();
+        ManagementImpl.setValidatorThreshold(newThreshold);
+        onValidatorThresholdChange.fire(newThreshold);
+    }
+
+    @Safe
+    public static boolean isValidator(ECPoint validator) {
+        if (validatorMap.get(validator) == null) {
+            return false;
+        }
+        return validatorMap.getBoolean(validator);
     }
 
     public static void setGovernor(Hash160 newGovernor) {
