@@ -27,7 +27,7 @@ public class RegisterToken {
     public static final BigInteger DEFAULT_MIN_AMOUNT = FungibleToken.toFractions(new BigDecimal("1"), 18);
     public static final BigInteger DEFAULT_MAX_AMOUNT = FungibleToken.toFractions(new BigDecimal("100000"), 18);
     public static final int DEFAULT_MAX_WITHDRAWALS = 100;
-    public static final int NEP17_EXECUTION_TYPE = 1;
+    public static final int DECIMAL_SCALING_FACTOR = 0;
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = Neow3j.build(new HttpService(NODE));
@@ -44,7 +44,7 @@ public class RegisterToken {
                                 integer(DEFAULT_MIN_AMOUNT),
                                 integer(DEFAULT_MAX_AMOUNT),
                                 integer(DEFAULT_MAX_WITHDRAWALS),
-                                integer(NEP17_EXECUTION_TYPE)
+                                integer(DECIMAL_SCALING_FACTOR)
 
                         )
                 ).signers(calledByEntry(getOwnerAccountFromWallet()))
