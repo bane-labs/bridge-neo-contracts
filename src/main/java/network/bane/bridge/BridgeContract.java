@@ -565,6 +565,11 @@ public class BridgeContract {
     // region token registration
 
     @Safe
+    public static boolean isRegisteredToken(Hash160 token) {
+        return TokenBridgeImpl.isRegisteredToken(token);
+    }
+
+    @Safe
     public static TokenBridge getTokenBridge(Hash160 token) {
         return TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
     }

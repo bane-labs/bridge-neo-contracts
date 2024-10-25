@@ -31,8 +31,8 @@ public class TokenBridgeImpl {
     // region registration
 
     static void registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
+        if (isRegisteredToken(token)) abort("Token already registered.");
         StorageMap tokenBridges = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
-        if (tokenBridges.get(token) != null) abort("Token already registered.");
         ByteString zeroHash = Hash256.zero().toByteString();
         State newDepositState = new State(0, zeroHash);
         State newWithdrawalState = new State(0, zeroHash);
@@ -44,6 +44,11 @@ public class TokenBridgeImpl {
                         tokenConfig
                 )
         ));
+    }
+
+    static boolean isRegisteredToken(Hash160 token) {
+        StorageMap tokenBridges = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
+        return tokenBridges.get(token) != null;
     }
 
     static TokenBridge checkRegisteredAndGetTokenBridge(Hash160 token) {
