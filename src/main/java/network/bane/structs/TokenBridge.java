@@ -2,6 +2,7 @@ package network.bane.structs;
 
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.annotations.Struct;
+import network.bane.bridge.BridgeContract;
 
 @Struct
 public class TokenBridge {
@@ -89,6 +90,7 @@ public class TokenBridge {
                     config.fee >= 0 &&
                     minAmount >= 0 &&
                     config.maxAmount > minAmount &&
+                    config.maxAmount <= BridgeContract.MAX_TRANSFER_AMOUNT_LIMIT &&
                     config.maxWithdrawals > 0 &&
                     config.decimalScalingFactor >= 0;
         }

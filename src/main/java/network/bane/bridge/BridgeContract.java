@@ -4,6 +4,7 @@ import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.Hash256;
+import io.neow3j.devpack.Helper;
 import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
@@ -76,6 +77,11 @@ public class BridgeContract {
     // constant value during compile time because it uses an instantiation with new. Static fields that are not
     // considered final must be in the main contract file.
     static final byte[] PREFIX_TOKEN_CLAIMABLES = new byte[]{StorageConstants.PREFIX_TOKEN_CLAIMABLES};
+    // This value is enforced as upper limit for the maxAmount in the token config. It ensures that the transfer
+    // amount that is distributed on the destination chain never overflows. The maximum scaling factor on Neo X is
+    // 10^36 and 10^77 is the maximum value that can be used for distribution in an EVM chain without overflowing
+    // (10^41*10^36=10^77).
+    public static final int MAX_TRANSFER_AMOUNT_LIMIT = Helper.pow(10, 41);
 
     // region static contract values
 
@@ -730,6 +736,7 @@ public class BridgeContract {
         for (int i = 0; i < nrTokens; i++) {
             Hash160 token = tokens.get(i);
             int newMaxAmount = newMaxDeposits.get(i);
+            if (newMaxAmount > MAX_TRANSFER_AMOUNT_LIMIT) abort("Max transfer amount limit exceeded.");
             TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
             tokenBridge.config.maxAmount = newMaxAmount;
             tokenBridgesMap.put(token, new StdLib().serialize(tokenBridge));
