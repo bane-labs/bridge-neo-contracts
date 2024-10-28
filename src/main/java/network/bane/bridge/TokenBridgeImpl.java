@@ -112,18 +112,25 @@ public class TokenBridgeImpl {
         if (receivedAmount < tokenBridge.config.minAmount) abort("Amount below minimum.");
         if (receivedAmount > tokenBridge.config.maxAmount) abort("Amount above maximum.");
 
+        int decimalScalingFactor = tokenBridge.config.decimalScalingFactor;
+        int scalingFactor = Helper.pow(10, decimalScalingFactor);
+        if (decimalScalingFactor > 0) {
+            if (receivedAmount % scalingFactor != 0) abort("Amount not divisible by scaling factor.");
+        }
+        int amountForHashing = receivedAmount / scalingFactor;
+
         // Update the token state
         tokenBridge.depositState.nonce++;
         ByteString depositHash =
                 TokenBridgeLib.hashTokenBridgeOp(BridgeContract.cryptoLib, neoN3Token, tokenBridge.config.neoXToken,
-                        tokenBridge.depositState.nonce, to, receivedAmount);
+                        tokenBridge.depositState.nonce, to, amountForHashing);
         ByteString newRoot =
                 BridgeLib.computeNewRoot(BridgeContract.cryptoLib, tokenBridge.depositState.root, depositHash);
         tokenBridge.depositState.root = newRoot;
         assert tokenBridge.depositState.root == newRoot : "Root was not set correctly.";
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(neoN3Token, new StdLib().serialize(tokenBridge));
         BridgeContract.onTokenDeposit.fire(neoN3Token, tokenBridge.config.neoXToken, tokenBridge.depositState.nonce,
-                to, receivedAmount, from, depositHash, newRoot);
+                to, amountForHashing, from, depositHash, newRoot);
     }
 
     // endregion
