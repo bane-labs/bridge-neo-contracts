@@ -36,8 +36,10 @@ import static io.neow3j.utils.Numeric.cleanHexPrefix;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.prependHexPrefix;
 import static io.neow3j.utils.Numeric.toHexString;
+import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static network.bane.util.helper.TestHelper.neow3j;
 
 public class TestHelper {
 
@@ -202,26 +204,27 @@ public class TestHelper {
                 .anyMatch(e -> e.getState().equals(state));
     }
 
-    // region concat and sha256 functions
+    // region concat and keccak256 functions
 
     public static byte[] concatLeftRight(String leftHex, String rightHex) {
         return concatenate(hexStringToByteArray(leftHex), hexStringToByteArray(rightHex));
     }
 
-    public static String sha256Hex(byte[] input) {
-        return toHexString(Hash.sha256(input));
+    public static String keccak256Hex(byte[] input) {
+        return toHexString(Hash.keccak256(input));
     }
 
-    public static String sha256HexNoPrefix(byte[] input) {
-        return cleanHexPrefix(sha256Hex(input));
+    public static String keccak256HexNoPrefix(byte[] input) {
+        return cleanHexPrefix(keccak256Hex(input));
     }
 
-    public static String concatAndSha256(String leftHex, String rightHex) {
-        return sha256Hex(concatLeftRight(leftHex, rightHex));
+    public static String concatAndKeccak256(String leftHex, String rightHex) {
+        return keccak256Hex(concatLeftRight(leftHex, rightHex));
     }
 
-    public static Map<ContractParameter, ContractParameter> signMsg(List<Account> validators, String root) {
-        String msg = sha256Hex(hexStringToByteArray(root));
+    public static Map<ContractParameter, ContractParameter> signMsg(List<Account> validators, String root) throws IOException {
+        BigInteger network = BigInteger.valueOf(neow3j.getVersion().send().getVersion().getProtocol().getNetwork());
+        String msg = prefixRootWithNetwork(root, network);
         Map<ContractParameter, ContractParameter> signatures = new HashMap<>();
         for (int i = 0; i < validators.size(); i++) {
             ECKeyPair validator = validators.get(i).getECKeyPair();
@@ -230,8 +233,13 @@ public class TestHelper {
         return signatures;
     }
 
+    public static String prefixRootWithNetwork(String root, BigInteger networkId) {
+        byte[] chainIdLittleEndian = BigIntegers.toLittleEndianByteArray(networkId);
+        return toHexStringNoPrefix(concatenate(chainIdLittleEndian, hexStringToByteArray(root)));
+    }
+
     public static String createDepositHash(BigInteger nonce, Hash160 to, BigInteger amount) {
-        return sha256Hex(concatDepositData(nonce, to, amount));
+        return keccak256Hex(concatDepositData(nonce, to, amount));
     }
 
     public static byte[] concatDepositData(BigInteger nonce, Hash160 recipient, BigInteger amount) {
@@ -267,7 +275,7 @@ public class TestHelper {
 
     public static String createTokenOpHash(Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce, Hash160 recipient,
             BigInteger value) {
-        return sha256Hex(concatTokenOpData(neoN3Token, neoXToken, nonce, recipient, value));
+        return keccak256Hex(concatTokenOpData(neoN3Token, neoXToken, nonce, recipient, value));
     }
 
     public static String createTokenOpHashNoPrefix(Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce,
@@ -275,14 +283,14 @@ public class TestHelper {
         return cleanHexPrefix(createTokenOpHash(neoN3Token, neoXToken, nonce, recipient, value));
     }
 
-    public static String computeNewTokenRootNoPrefix(String previousRoot, Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce,
-            Hash160 recipient, BigInteger value) {
+    public static String computeNewTokenRootNoPrefix(String previousRoot, Hash160 neoN3Token, Hash160 neoXToken,
+            BigInteger nonce, Hash160 recipient, BigInteger value) {
         return cleanHexPrefix(computeNewTokenRoot(previousRoot, neoN3Token, neoXToken, nonce, recipient, value));
     }
 
-    public static String computeNewTokenRoot(String previousRoot, Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce,
-            Hash160 recipient, BigInteger value) {
-        return concatAndSha256(
+    public static String computeNewTokenRoot(String previousRoot, Hash160 neoN3Token, Hash160 neoXToken,
+            BigInteger nonce, Hash160 recipient, BigInteger value) {
+        return concatAndKeccak256(
                 previousRoot,
                 createTokenOpHashNoPrefix(neoN3Token, neoXToken, nonce, recipient, value)
         );

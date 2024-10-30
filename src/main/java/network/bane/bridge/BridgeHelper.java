@@ -10,11 +10,11 @@ import static network.bane.bridge.StorageConstants.KEY_BRIDGE_MANAGEMENT;
 
 public class BridgeHelper {
 
-    static void onlyPaused() {
+    static void onlyWhenPaused() {
         if (!BridgeContract.isPaused()) abort("Contract is not paused.");
     }
 
-    static void onlyUnpaused() {
+    static void onlyWhenNotPaused() {
         if (BridgeContract.isPaused()) abort("Contract is paused.");
     }
 
@@ -30,9 +30,9 @@ public class BridgeHelper {
         }
     }
 
-    static void onlySecurityGuard() {
-        if (!checkWitness(managementContract().securityGuard())) {
-            abort("Only the security guard can call this method.");
+    static void onlyGovernorOrSecurityGuard() {
+        if (!checkWitness(managementContract().governor()) && !checkWitness(managementContract().securityGuard())) {
+            abort("Only the governor or security guard can call this method.");
         }
     }
 

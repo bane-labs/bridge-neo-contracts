@@ -19,12 +19,11 @@ import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
-import io.neow3j.types.NeoVMStateType;
-import io.neow3j.utils.Await;
 import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
+import network.bane.util.helper.DepositHelper;
 import network.bane.util.structs.GasBridge;
 import network.bane.util.structs.State;
 import network.bane.util.TestHelper;
@@ -54,14 +53,16 @@ import static io.neow3j.types.ContractParameter.string;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.getClaimEvents;
+import static network.bane.util.TestHelper.governor;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_GAS_DEPOSIT_FEE;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_TOTAL_MAX_DEPOSITED_GAS;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_GAS_DEPOSIT;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_WITHDRAWALS;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_GAS_DEPOSIT;
+import static network.bane.util.helper.DepositHelper.depositGas;
 import static network.bane.util.helper.PrintHelper.printTransactionFee;
-import static network.bane.util.TestHelper.concatAndSha256;
+import static network.bane.util.TestHelper.concatAndKeccak256;
 import static network.bane.util.TestHelper.createDepositHash;
 import static network.bane.util.TestHelper.getClaimableEvents;
 import static network.bane.util.TestHelper.getDepositEvents;
@@ -139,44 +140,21 @@ public class BridgeTest {
         return createBridgeDeployConfig();
     }
 
-    // region helper gas
-
-    private Hash256 depositGasUsingDepositMethod(Account from, Hash160 to, BigInteger amount) throws Throwable {
-        return depositGasUsingDepositMethod(from, to, amount, DEFAULT_GAS_DEPOSIT_FEE);
-    }
-
-    private Hash256 depositGasUsingDepositMethod(Account from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
-        Hash256 txHash = bridge.depositGas(from, to, amount, maxFee);
-        printTransactionFee(neow3j, "deposit", txHash);
-        return txHash;
-    }
-
-    private Hash256 depositGasWithDirectTransfer(Account from, Hash160 to, BigInteger amount,
-            BigInteger minBridgeAmount) throws Throwable {
-        NeoSendRawTransaction response = gasToken.transfer(from, bridge.getScriptHash(), amount, array(hash160(to),
-                        integer(minBridgeAmount)))
-                .sign()
-                .send();
-        Hash256 txHash = response.getSendRawTransaction().getHash();
-        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
-        printTransactionFee(neow3j, "deposit direct", txHash);
-        return txHash;
-    }
-
-    // endregion
     // endregion
     // region deployment
 
     @Test
     @Order(0)
     public void testDeployment_deploymentDataSetCorrectly() throws IOException {
-        assertThat(bridge.findStorage("0x0a"), hasSize(6));
+        assertThat(bridge.findStorage("0x0a"), hasSize(8));
         ContractStorageEntry managementEntry = bridge.findStorage("0x0a").get(0);
         ContractStorageEntry pauseEntry = bridge.findStorage("0x0a").get(1);
         ContractStorageEntry gasBridgeEntry = bridge.findStorage("0x0a").get(2);
         ContractStorageEntry unclaimedRewardsEntry = bridge.findStorage("0x0a").get(3);
-        ContractStorageEntry enteredEntry = bridge.findStorage("0x0a").get(4);
-        ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(5);
+        ContractStorageEntry depositsPausedEntry = bridge.findStorage("0x0a").get(4);
+        ContractStorageEntry neoHoldingGasRewardsEntry = bridge.findStorage("0x0a").get(5);
+        ContractStorageEntry enteredEntry = bridge.findStorage("0x0a").get(6);
+        ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(7);
 
         assertThat(managementEntry.getKeyHex(), is("0x0a01"));
         assertArrayEquals(managementEntry.getValue(), MANAGEMENT_CONTRACT_HASH.toLittleEndianArray());
@@ -219,7 +197,14 @@ public class BridgeTest {
         assertThat(bridge.gasWithdrawalNonce(), is(BigInteger.ZERO));
         assertThat(bridge.gasWithdrawRoot(), is(Numeric.toHexString(Hash256.ZERO.toArray())));
 
+        assertThat(unclaimedRewardsEntry.getKeyHex(), is("0x0a04"));
         assertThat(unclaimedRewardsEntry.getValueHex(), is("0x"));
+
+        assertThat(depositsPausedEntry.getKeyHex(), is("0x0a05"));
+        assertThat(depositsPausedEntry.getValueHex(), is("0x"));
+
+        assertThat(neoHoldingGasRewardsEntry.getKeyHex(), is("0x0a06"));
+        assertThat(neoHoldingGasRewardsEntry.getValueHex(), is("0x"));
 
         assertThat(enteredEntry.getKeyHex(), is("0x0a70"));
         assertThat(enteredEntry.getValueHex(), is("0x"));
@@ -246,12 +231,12 @@ public class BridgeTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () ->
                 gasToken.transfer(alice, bridge.getScriptHash(), BigInteger.ONE, dataParam).sign().send());
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid payment data."));
+                containsString("ABORTMSG is executed. Reason: No data accepted."));
     }
 
     @Test
     @Order(0)
-    public void testDeposit_abortIfInvalidDataInOnNEP17PaymentMethod() throws Throwable {
+    public void testDeposit_abortAnyDataInDirectTransfer() {
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () ->
                         gasToken.transfer(
@@ -262,55 +247,7 @@ public class BridgeTest {
                         ).sign()
                 );
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid payment data."));
-
-        NeoSendRawTransaction response = gasToken.transfer(alice, bridge.getScriptHash(), DEFAULT_MIN_GAS_DEPOSIT)
-                .sign()
-                .send();
-        assertFalse(response.hasError());
-        Hash256 txHash = response.getSendRawTransaction().getHash();
-        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
-        assertThat(neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getState(),
-                is(NeoVMStateType.HALT));
-
-        // Use same length as Hash160 but not zero.
-        byte[] newArr = new byte[20];
-        Arrays.fill(newArr, (byte) 1);
-        assertThat(newArr.length, is(20));
-        thrown = assertThrows(TransactionConfigurationException.class, () ->
-                gasToken.transfer(
-                        alice,
-                        bridge.getScriptHash(),
-                        DEFAULT_MIN_GAS_DEPOSIT.add(bridge.gasDepositFee()),
-                        array(array(newArr), integer(DEFAULT_MIN_GAS_DEPOSIT))
-                ).sign()
-        );
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid payment data."));
-
-        Arrays.fill(newArr, (byte) 0);
-        assertThat(newArr[5], is((byte) 0));
-        thrown = assertThrows(TransactionConfigurationException.class, () ->
-                gasToken.transfer(
-                        alice,
-                        bridge.getScriptHash(),
-                        DEFAULT_MIN_GAS_DEPOSIT.add(bridge.gasDepositFee()),
-                        array(array(newArr), integer(DEFAULT_MIN_GAS_DEPOSIT))
-                ).sign()
-        );
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid payment data."));
-
-        thrown = assertThrows(TransactionConfigurationException.class, () ->
-                gasToken.transfer(
-                        alice,
-                        bridge.getScriptHash(),
-                        DEFAULT_MIN_GAS_DEPOSIT.add(bridge.gasDepositFee()),
-                        array(hash160(Hash160.ZERO), integer(DEFAULT_MIN_GAS_DEPOSIT))
-                ).sign()
-        );
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid payment data."));
+                containsString("ABORTMSG is executed. Reason: No data accepted."));
     }
 
     // endregion
@@ -328,14 +265,20 @@ public class BridgeTest {
         BigInteger amount = new BigInteger("110000000");
 
         String depositRootBefore = bridge.gasDepositRoot();
-        Hash256 txHash = depositGasUsingDepositMethod(from, to, amount);
+        Hash256 txHash = DepositHelper.depositGas(from, to, amount);
 
         assertThat(bridge.gasDepositFee(), is(new BigInteger("10000000")));
+
+        // hex values and concatenation for the first deposit
+        // 0000000000000000000000000000000000000000000000000000000000000001
+        // 70997970C51812dc3A010C7d01b50e0d17dc79C8
+        // 0000000000000000000000000000000000000000000000000000000005f5e100
+        // 000000000000000000000000000000000000000000000000000000000000000170997970C51812dc3A010C7d01b50e0d17dc79C80000000000000000000000000000000000000000000000000000000005f5e100
         String d1 = createDepositHash(nextNonce, to, amount.subtract(bridge.gasDepositFee()));
         // Raw deposit hash and root. The same inputs and the same deposit and root hash are used in a Neo X test.
-        assertThat(d1, is("0x20aad97e2860b1934184ffb2b04ea45d49af5145fa43cb212027f9e8e728baea"));
-        String newRoot = concatAndSha256(depositRootBefore, d1);
-        assertThat(newRoot, is("0xdda77cac690580c1e5220d377cd807b4d2ed89751e4078525ee54297182d3d88"));
+        assertThat(d1, is("0x7ed36781b8366a590ce568db6712d377c031b9f1a21c44cda2493182b0ff92e5"));
+        String newRoot = concatAndKeccak256(depositRootBefore, d1);
+        assertThat(newRoot, is("0x70789f5bdb108a6b6dc7d7aa0d31649ab5fa980bbbfd1868eb17821b1f61e0ac"));
         assertThat(bridge.gasDepositRoot(), is(newRoot));
 
         List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
@@ -360,16 +303,18 @@ public class BridgeTest {
         assertThat(sentAmount, is(new BigInteger("110000000")));
 
         String depositRootBefore = bridge.gasDepositRoot();
-        Hash256 txHash = depositGasWithDirectTransfer(from, to, sentAmount, DEFAULT_MIN_GAS_DEPOSIT);
+        Hash256 txHash = depositGas(from, to, sentAmount, DEFAULT_MIN_GAS_DEPOSIT);
 
-        // If GAS is directly sent to the bridge providing a Hash160 value as data, the transfer initiates a bridge
-        // operation. In this case, the deposit fee is deducted from the sent amount and the remaining amount is
-        // used for the deposit to Neo X.
-        BigInteger resultingBridgeAmount = sentAmount.subtract(bridge.gasDepositFee());
-        String d2 = createDepositHash(nextNonce, to, resultingBridgeAmount);
-        assertThat(d2, is("0x983b3a1ee6b74a5ba07109966f86189d2adf108a25fd9b456030f684bffa8f84"));
-        String d12 = concatAndSha256(depositRootBefore, d2);
-        assertThat(d12, is("0xa33a32b7b710705118b37d5fa7684a26e63840e7b5b88326177e7ec4ee7be253"));
+        BigInteger depositAmountAfterFee = sentAmount.subtract(bridge.gasDepositFee());
+
+        // hex values and concatenation for the second deposit
+        // 0000000000000000000000000000000000000000000000000000000000000002
+        // 89FC6B042B146F373CEC4CA4A1B112697763360F
+        // 0000000000000000000000000000000000000000000000000000000005F5E100
+        String d2 = createDepositHash(nextNonce, to, depositAmountAfterFee);
+        assertThat(d2, is("0xcba84a7e0f42d61e4510f0b13ae53c138cb1864b97f598d273c9fb3a9fe8d51a"));
+        String d12 = concatAndKeccak256(depositRootBefore, d2);
+        assertThat(d12, is("0xa15d5e4d94b19c1c4c8aa07157bb03a121e5b886c76e5ec7cecab139eb342236"));
 
         assertThat(bridge.gasDepositRoot(), is(d12));
 
@@ -379,7 +324,7 @@ public class BridgeTest {
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
-        assertThat(depositEvent.amount, is(resultingBridgeAmount));
+        assertThat(depositEvent.amount, is(depositAmountAfterFee));
         assertThat(depositEvent.depositHashHex, is(d2));
         assertThat(depositEvent.rootHashHex, is(d12));
     }
@@ -393,10 +338,10 @@ public class BridgeTest {
         BigInteger nextNonce = incrementAndGetDepositNonce();
 
         String depositRootBefore = bridge.gasDepositRoot();
-        Hash256 txHash = depositGasUsingDepositMethod(from, to, amount);
+        Hash256 txHash = DepositHelper.depositGas(from, to, amount);
 
         String d3 = createDepositHash(nextNonce, to, amount.subtract(bridge.gasDepositFee()));
-        String d12d3 = concatAndSha256(depositRootBefore, d3);
+        String d12d3 = concatAndKeccak256(depositRootBefore, d3);
 
         assertThat(bridge.gasDepositRoot(), is(d12d3));
 
@@ -421,10 +366,10 @@ public class BridgeTest {
 
         String depositRootBefore = bridge.gasDepositRoot();
 
-        Hash256 txHash = depositGasUsingDepositMethod(from, to, amount);
+        Hash256 txHash = DepositHelper.depositGas(from, to, amount);
 
         String depositHashOffChain = createDepositHash(nextNonce, to, amount.subtract(bridge.gasDepositFee()));
-        String d1234 = concatAndSha256(depositRootBefore, depositHashOffChain);
+        String d1234 = concatAndKeccak256(depositRootBefore, depositHashOffChain);
 
         assertThat(bridge.gasDepositRoot(), is(d1234));
 
@@ -451,18 +396,6 @@ public class BridgeTest {
                 containsString("ABORTMSG is executed. Reason: Invalid sender."));
     }
 
-    @Test
-    @Order(16)
-    public void testUsingTooHighMinDepositAmount() throws Throwable {
-        Account from = bob;
-        Hash160 to = recipient2;
-        BigInteger amount = DEFAULT_MIN_GAS_DEPOSIT.add(bridge.gasDepositFee()).subtract(BigInteger.ONE);
-
-        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> depositGasWithDirectTransfer(from, to, amount, DEFAULT_MIN_GAS_DEPOSIT));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Amount below defined minimum."));
-    }
-
     // endregion
     // region withdrawal and claim
 
@@ -476,10 +409,15 @@ public class BridgeTest {
         Hash160 to = new Hash160("0x6472bf811b33b87f7872e31439cdbd16871d8cad");
         BigInteger amount = new BigInteger("200000000");
 
+        // hex values and concatenation for the first withdrawal
+        // 0000000000000000000000000000000000000000000000000000000000000001
+        // 6472bf811b33b87f7872e31439cdbd16871d8cad
+        // 000000000000000000000000000000000000000000000000000000000bebc200
+        // 00000000000000000000000000000000000000000000000000000000000000016472bf811b33b87f7872e31439cdbd16871d8cad000000000000000000000000000000000000000000000000000000000bebc200
         String d1 = createDepositHash(nonce, to, amount);
-        assertThat(d1, is("0x9d532058b0e607e4767a9c6b6915d1c97019adfcb50cafe1001904cbbaf6a3bb"));
-        String root = concatAndSha256(Hash256.ZERO.toString(), d1);
-        assertThat(root, is("0x177604db278d7680e254218a72dcc06043600f9c9cb6eb56055cd17fb81fa0b9"));
+        assertThat(d1, is("0xe9b5d0fab709134768203ee7ad13daf4ecf24a261aa26ed371c3b546db89a789"));
+        String root = concatAndKeccak256(Hash256.ZERO.toString(), d1);
+        assertThat(root, is("0x295226ccd2cee4e7fef5bc9d18677c6228052b46109731fc25dbcd6982074a0e"));
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
         Hash256 txHash = bridge.withdrawGas(root, signMsg(validators, root), withdrawal);
@@ -506,14 +444,25 @@ public class BridgeTest {
 
         String withdrawRootBefore = bridge.gasWithdrawRoot();
 
+        // hex values and concatenation for the second withdrawal
+        // 0000000000000000000000000000000000000000000000000000000000000002
+        // 9f20eee56cc5abe5955ee5e15835dc45344c368d
+        // 0000000000000000000000000000000000000000000000000000000005f5e100
+        // 00000000000000000000000000000000000000000000000000000000000000029f20eee56cc5abe5955ee5e15835dc45344c368d0000000000000000000000000000000000000000000000000000000005f5e100
         String d1 = createDepositHash(nonce1, to1, amount1);
-        assertThat(d1, is("0x32a41a5e3d27d9308a10d85281a0cee7e0f9bbfe5ac417fa21cf0ec8464be5bb"));
-        String root1 = concatAndSha256(withdrawRootBefore, d1);
-        assertThat(root1, is("0x38d6ba25f87e2a128ab82f815b5f1f84191da961cf4b58029eee2d33e9640a3a"));
+        assertThat(d1, is("0x66d8930f95244dea0f75d753436dec89c9a44e07352afcad710f56c89a777231"));
+        String root1 = concatAndKeccak256(withdrawRootBefore, d1);
+        assertThat(root1, is("0x8d5f2274902ff1095ac6ff8b7b6b8e21d7a2ff7dbb43664a35454a8069bb438b"));
+
+        // hex values and concatenation for the third withdrawal
+        // 0000000000000000000000000000000000000000000000000000000000000003
+        // a71fbffad1f175bfddb1e81a63962212d2e72e8f
+        // 0000000000000000000000000000000000000000000000000000000005f5e100
+        // 0000000000000000000000000000000000000000000000000000000000000003a71fbffad1f175bfddb1e81a63962212d2e72e8f0000000000000000000000000000000000000000000000000000000005f5e100
         String d2 = createDepositHash(nonce2, to2, amount2);
-        assertThat(d2, is("0x5355bdf08f3429f0ca6c15bea7d6bc147a7fb5072c782ff72e350e25ee683ad1"));
-        String newRoot = concatAndSha256(root1, d2);
-        assertThat(newRoot, is("0x005bac323a5f98e0ba3d41d71573853e37cc28649cd95ea703ab0f9e462573bd"));
+        assertThat(d2, is("0x127ca7356d1430f75d9e587efa590436c7e161e0b099067e38200de73973d14c"));
+        String newRoot = concatAndKeccak256(root1, d2);
+        assertThat(newRoot, is("0x3e94c8faca61ac1e24921638d4a6068f17ee3ae13f13fa60647643763d15ff6c"));
 
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(
@@ -543,7 +492,7 @@ public class BridgeTest {
 
         String withdrawRootBefore = bridge.gasWithdrawRoot();
         String d1 = createDepositHash(nonce, to, amount);
-        String root = concatAndSha256(withdrawRootBefore, d1);
+        String root = concatAndKeccak256(withdrawRootBefore, d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
 
@@ -561,23 +510,24 @@ public class BridgeTest {
     @Test
     @Order(23)
     public void testMultipleWithdrawals() throws Throwable {
+        System.out.println(gasToken.getBalanceOf(bridge.getScriptHash()));
         Hash160 to1 = recipient0;
         Hash160 to2 = recipient1;
         Hash160 to3 = recipient2;
         Hash160 to4 = recipient3;
         // The following two assertions will make sure that:
-        // - the first withdrawal is successful, leaving a contract balance of less than 12 but more than 5 gas.
+        // - the first withdrawal is successful, leaving a contract balance of less than 12 but more than 3 gas.
         // - the second withdrawal is not successful due to insufficient funds.
-        // - the third withdrawal is successful, leaving a contract balance of less than 5 gas.
+        // - the third withdrawal is successful, leaving a contract balance of less than 9 gas.
         // - the fourth withdrawal is not successful due to insufficient funds.
         // This scenario should never happen since the contract should hold all the gas that was deposited and can be
         // withdrawn from Neo X. Nevertheless, the proper functionality of adding a claimable if a transfer fails is
         // tested here.
         assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), lessThan(new BigInteger("1400000000")));
-        assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), greaterThanOrEqualTo(new BigInteger("600000000")));
+        assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), greaterThanOrEqualTo(new BigInteger("500000000")));
         BigInteger amount1 = DEFAULT_MIN_GAS_DEPOSIT.multiply(new BigInteger("2"));
         BigInteger amount2 = DEFAULT_MIN_GAS_DEPOSIT.multiply(new BigInteger("12"));
-        BigInteger amount3 = DEFAULT_MIN_GAS_DEPOSIT.multiply(new BigInteger("4"));
+        BigInteger amount3 = DEFAULT_MIN_GAS_DEPOSIT.multiply(new BigInteger("3"));
         BigInteger amount4 = DEFAULT_MIN_GAS_DEPOSIT.multiply(new BigInteger("9"));
         BigInteger nonce1 = incrementAndGetWithdrawalNonce();
         BigInteger nonce2 = incrementAndGetWithdrawalNonce();
@@ -586,13 +536,13 @@ public class BridgeTest {
 
         String rootBefore = bridge.gasWithdrawRoot();
         String d1 = createDepositHash(nonce1, to1, amount1);
-        String root = concatAndSha256(rootBefore, d1);
+        String root = concatAndKeccak256(rootBefore, d1);
         String d2 = createDepositHash(nonce2, to2, amount2);
-        root = concatAndSha256(root, d2);
+        root = concatAndKeccak256(root, d2);
         String d3 = createDepositHash(nonce3, to3, amount3);
-        root = concatAndSha256(root, d3);
+        root = concatAndKeccak256(root, d3);
         String d4 = createDepositHash(nonce4, to4, amount4);
-        root = concatAndSha256(root, d4);
+        root = concatAndKeccak256(root, d4);
 
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawals = array(
@@ -630,12 +580,12 @@ public class BridgeTest {
 
         String withdrawRootBefore = bridge.gasWithdrawRoot();
         String d1 = createDepositHash(nextNonce, to, amount);
-        String root = concatAndSha256(withdrawRootBefore, d1);
+        String root = concatAndKeccak256(withdrawRootBefore, d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nextNonce), hash160(to), integer(amount)));
         bridge.withdrawGas(root, signMsg(validators, root), withdrawal); // fund the contract if this test is executed
         // alone
-        depositGasUsingDepositMethod(alice, to, amount);
+        DepositHelper.depositGas(alice, to, amount);
 
         Hash256 txHash = bridge.claimGas(alice, nextNonce);
         List<TestHelper.ClaimEvent> claimEvents = getClaimEvents(txHash, neow3j, bridge.getScriptHash());
@@ -863,7 +813,7 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testUpdate_unpaused() throws IOException {
+    public void testUpdate_not_paused() throws IOException {
         assertFalse(bridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.invokeFunction("update", byteArray(""), string(""), any(null))
@@ -878,11 +828,29 @@ public class BridgeTest {
 
     @Test
     @Order(0)
-    public void testPauseBridge_onlySecurityGuard() {
+    public void testPauseBridge_notAuthorized() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.invokeFunction("pauseBridge").signers(calledByEntry(relayer)).sign());
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the security guard can call this method"));
+                containsString("Only the governor or security guard can call this method"));
+    }
+
+    @Test
+    @Order(0)
+    public void testPauseBridge_governorAllowed() throws Throwable {
+        assertFalse(bridge.isPaused());
+        bridge.pauseBridge(governor);
+        assertTrue(bridge.isPaused());
+        bridge.unpause(governor);
+    }
+
+    @Test
+    @Order(0)
+    public void testPauseBridge_securityGuardAllowed() throws Throwable {
+        assertFalse(bridge.isPaused());
+        bridge.pauseBridge(securityGuard);
+        assertTrue(bridge.isPaused());
+        bridge.unpause(governor);
     }
 
     @Test
@@ -904,10 +872,6 @@ public class BridgeTest {
         assertTrue(bridge.isPaused());
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> gasToken.transfer(relayer, bridge.getScriptHash(), BigInteger.ONE, hash160(recipient0)).sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
-
-        thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.depositGas(relayer, recipient0, BigInteger.TEN, DEFAULT_MIN_GAS_DEPOSIT));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
 

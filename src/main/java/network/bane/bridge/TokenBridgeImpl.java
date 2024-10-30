@@ -4,6 +4,7 @@ import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.Hash256;
+import io.neow3j.devpack.Helper;
 import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
@@ -22,7 +23,6 @@ import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 import static network.bane.bridge.BridgeHelper.managementContract;
-import static network.bane.bridge.StorageConstants.KEY_ENTERED;
 import static network.bane.bridge.StorageConstants.PREFIX_TOKEN_BRIDGES;
 import static network.bane.lib.BridgeLib.subsequentNonces;
 
@@ -31,8 +31,8 @@ public class TokenBridgeImpl {
     // region registration
 
     static void registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
+        if (isRegisteredToken(token)) abort("Token already registered.");
         StorageMap tokenBridges = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
-        if (tokenBridges.get(token) != null) abort("Token already registered.");
         ByteString zeroHash = Hash256.zero().toByteString();
         State newDepositState = new State(0, zeroHash);
         State newWithdrawalState = new State(0, zeroHash);
@@ -46,6 +46,11 @@ public class TokenBridgeImpl {
         ));
     }
 
+    static boolean isRegisteredToken(Hash160 token) {
+        StorageMap tokenBridges = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
+        return tokenBridges.get(token) != null;
+    }
+
     static TokenBridge checkRegisteredAndGetTokenBridge(Hash160 token) {
         ByteString serializedTokenBridge = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(token);
         if (serializedTokenBridge == null) abort("Token not registered.");
@@ -55,11 +60,11 @@ public class TokenBridgeImpl {
     // endregion
     // region pausing
 
-    static void onlyTokenBridgePaused(Hash160 token) {
-        if (!BridgeContract.getTokenBridge(token).paused) abort("Token bridge is unpaused.");
+    static void onlyWhenTokenBridgePaused(Hash160 token) {
+        if (!BridgeContract.getTokenBridge(token).paused) abort("Token bridge is not paused.");
     }
 
-    static void onlyTokenBridgeUnpaused(Hash160 token) {
+    static void onlyWhenTokenBridgeNotPaused(Hash160 token) {
         if (BridgeContract.getTokenBridge(token).paused) abort("Token bridge is paused.");
     }
 
@@ -88,6 +93,7 @@ public class TokenBridgeImpl {
         // If the actual deposit fee is higher than the specified max fee, abort.
         int depositFee = tokenBridge.config.fee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
+        BridgeImpl.addToUnclaimedRewards(depositFee);
 
         // Pay the fee and transfer the token
         if (!BridgeContract.gasToken.transfer(from, executingScriptHash, depositFee, null)) {
@@ -106,18 +112,25 @@ public class TokenBridgeImpl {
         if (receivedAmount < tokenBridge.config.minAmount) abort("Amount below minimum.");
         if (receivedAmount > tokenBridge.config.maxAmount) abort("Amount above maximum.");
 
+        int decimalScalingFactor = tokenBridge.config.decimalScalingFactor;
+        int scalingFactor = Helper.pow(10, decimalScalingFactor);
+        if (decimalScalingFactor > 0) {
+            if (receivedAmount % scalingFactor != 0) abort("Amount not divisible by scaling factor.");
+        }
+        int amountForHashing = receivedAmount / scalingFactor;
+
         // Update the token state
         tokenBridge.depositState.nonce++;
         ByteString depositHash =
                 TokenBridgeLib.hashTokenBridgeOp(BridgeContract.cryptoLib, neoN3Token, tokenBridge.config.neoXToken,
-                        tokenBridge.depositState.nonce, to, receivedAmount);
+                        tokenBridge.depositState.nonce, to, amountForHashing);
         ByteString newRoot =
                 BridgeLib.computeNewRoot(BridgeContract.cryptoLib, tokenBridge.depositState.root, depositHash);
         tokenBridge.depositState.root = newRoot;
         assert tokenBridge.depositState.root == newRoot : "Root was not set correctly.";
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(neoN3Token, new StdLib().serialize(tokenBridge));
         BridgeContract.onTokenDeposit.fire(neoN3Token, tokenBridge.config.neoXToken, tokenBridge.depositState.nonce,
-                to, receivedAmount, from, depositHash, newRoot);
+                to, amountForHashing, from, depositHash, newRoot);
     }
 
     // endregion
@@ -147,7 +160,7 @@ public class TokenBridgeImpl {
         BridgeContract.onTokenWithdrawalRootUpdate.fire(neoN3Token, tokenBridge.config.neoXToken,
                 tokenBridge.withdrawalState.nonce, tokenBridge.withdrawalState.root);
         // Execute the token transfers
-        executeTokenTransfers(neoN3Token, tokenBridge.config.executionType, withdrawals);
+        executeTokenTransfers(neoN3Token, tokenBridge.config.decimalScalingFactor, withdrawals);
     }
 
     // endregion
@@ -179,19 +192,22 @@ public class TokenBridgeImpl {
     // endregion
     // region transfer execution
 
-    private static void executeTokenTransfers(Hash160 neoN3Token, int executionType, List<Withdrawal> withdrawals) {
-        assert executionType == ExecutionTypes.NEO ||
-                executionType == ExecutionTypes.NEP17 : "Invalid token type.";
+    private static void executeTokenTransfers(Hash160 neoN3Token, int decimalScalingFactor,
+            List<Withdrawal> withdrawals) {
+
         Hash160 executingScriptHash = getExecutingScriptHash();
         int withdrawalsSize = withdrawals.size();
+        int scalingFactor = Helper.pow(10, decimalScalingFactor);
         for (int i = 0; i < withdrawalsSize; i++) {
             Withdrawal withdrawal = withdrawals.get(i);
+            int transferAmount = withdrawal.amount * scalingFactor;
+            withdrawal.amount = transferAmount;
             // If to is a contract, add the withdrawal to the claimable map, otherwise exeucte the transfer.
             if (BridgeHelper.isContract(withdrawal.to)) {
                 addTokenClaimable(neoN3Token, withdrawal);
                 BridgeContract.onTokenClaimable.fire(neoN3Token, withdrawal.nonce, withdrawal.to, withdrawal.amount);
             } else {
-                if (new FungibleToken(neoN3Token).transfer(executingScriptHash, withdrawal.to, withdrawal.amount, null)) {
+                if (new FungibleToken(neoN3Token).transfer(executingScriptHash, withdrawal.to, transferAmount, null)) {
                     BridgeContract.onTokenWithdrawal.fire(neoN3Token, withdrawal.nonce, withdrawal.to, withdrawal.amount);
                 } else {
                     // If the transfer was unsuccessful, add the withdrawal to the claimable map.

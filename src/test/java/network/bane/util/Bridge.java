@@ -96,6 +96,28 @@ public class Bridge extends SmartContractHelper {
         return callFunctionReturningBool("isPaused");
     }
 
+    public Hash256 pauseDeposits() throws Throwable {
+        return pauseDeposits(governor);
+    }
+
+    public Hash256 pauseDeposits(Account sender) throws Throwable {
+        AccountSigner signer = calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("pauseDeposits").signers(signer));
+    }
+
+    public Hash256 unpauseDeposits() throws Throwable {
+        return unpauseDeposits(governor);
+    }
+
+    public Hash256 unpauseDeposits(Account sender) throws Throwable {
+        AccountSigner signer = calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("unpauseDeposits").signers(signer));
+    }
+
+    public boolean depositsArePaused() throws IOException {
+        return callFunctionReturningBool("depositsArePaused");
+    }
+
     // endregion
     // region onNEP17Payment
 
@@ -284,7 +306,7 @@ public class Bridge extends SmartContractHelper {
                 tokenConfigList.get(2).getInteger(),
                 tokenConfigList.get(3).getInteger(),
                 tokenConfigList.get(4).getInteger().intValue(),
-                TokenBridge.TokenConfig.fromValue(tokenConfigList.get(5).getInteger().intValue())
+                tokenConfigList.get(5).getInteger().intValue()
         );
         return new TokenBridge(paused, depositState, withdrawalState, tokenConfig);
     }

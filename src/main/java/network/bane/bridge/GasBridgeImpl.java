@@ -25,11 +25,11 @@ public class GasBridgeImpl {
 
     // region pause
 
-    static void onlyGasBridgePaused() {
-        if (!BridgeContract.getGasBridge().paused) abort("Gas bridge is unpaused.");
+    static void onlyWhenGasBridgePaused() {
+        if (!BridgeContract.getGasBridge().paused) abort("Gas bridge is not paused.");
     }
 
-    static void onlyGasBridgeUnpaused() {
+    static void onlyWhenGasBridgeNotPaused() {
         if (BridgeContract.getGasBridge().paused) abort("Gas bridge is paused.");
     }
 
@@ -43,6 +43,14 @@ public class GasBridgeImpl {
         GasBridge gasBridge = BridgeContract.getGasBridge();
         gasBridge.paused = false;
         BridgeContract.baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
+    }
+
+    static void onlyWhenDepositsNotPaused() {
+        if (BridgeContract.depositsArePaused()) abort("Deposits are paused.");
+    }
+
+    static void onlyWhenDepositsPaused() {
+        if (!BridgeContract.depositsArePaused()) abort("Deposits are not paused.");
     }
 
     // endregion
@@ -65,6 +73,7 @@ public class GasBridgeImpl {
         // The depositAmount is the amount minus the deposit fee. It is the amount that will be distributed on Neo X.
         int depositAmount = amount - depositFee;
         updateGasDepositState(gasBridge, from, to, depositAmount);
+        BridgeImpl.addToUnclaimedRewards(depositFee);
 
         if (!BridgeContract.gasToken.transfer(from, executingScriptHash, amount, null)) {
             abort("Gas transfer failed.");

@@ -1,15 +1,11 @@
-package network.bane.util.structs;
+package network.bane.scripts;
 
-import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
+import io.neow3j.types.Hash256;
 
 import java.math.BigInteger;
 
-import static io.neow3j.types.ContractParameter.array;
-import static io.neow3j.types.ContractParameter.hash160;
-import static io.neow3j.types.ContractParameter.integer;
-
-public class TokenBridge {
+class TokenBridge {
     public boolean paused;
     public State depositState;
     public State withdrawalState;
@@ -22,17 +18,6 @@ public class TokenBridge {
         this.config = config;
     }
 
-    public static ContractParameter getAsContractParameter(TokenConfig config) {
-        return array(
-                hash160(config.neoXTokenHash),
-                integer(config.fee),
-                integer(config.minAmount),
-                integer(config.maxAmount),
-                integer(config.maxWithdrawals),
-                integer(config.decimalScalingFactor)
-        );
-    }
-
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
@@ -43,7 +28,7 @@ public class TokenBridge {
                 config.equals(that.config);
     }
 
-    public static class TokenConfig {
+    static class TokenConfig {
         public Hash160 neoXTokenHash;
         public BigInteger fee;
         public BigInteger minAmount;
@@ -71,6 +56,57 @@ public class TokenBridge {
                     maxAmount.equals(that.maxAmount) &&
                     maxWithdrawals == that.maxWithdrawals &&
                     decimalScalingFactor == that.decimalScalingFactor;
+        }
+
+        @Override
+        public String toString() {
+            return "TokenConfig{" +
+                    "neoXTokenHash=" + neoXTokenHash +
+                    ", fee=" + fee +
+                    ", minAmount=" + minAmount +
+                    ", maxAmount=" + maxAmount +
+                    ", maxWithdrawals=" + maxWithdrawals +
+                    ", decimalScalingFactor=" + decimalScalingFactor +
+                    '}';
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "TokenBridge{" +
+                "paused=" + paused +
+                ", depositState=" + depositState +
+                ", withdrawalState=" + withdrawalState +
+                ", config=" + config +
+                '}';
+    }
+    static class State {
+        public BigInteger nonce;
+        public Hash256 root;
+
+        public State(BigInteger nonce, Hash256 root) {
+            this.nonce = nonce;
+            this.root = root;
+        }
+
+        public static State newState() {
+            return new State(BigInteger.ZERO, Hash256.ZERO);
+        }
+
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            State state = (State) o;
+            return nonce.equals(state.nonce) &&
+                    root.equals(state.root);
+        }
+
+        @Override
+        public String toString() {
+            return "State{" +
+                    "nonce=" + nonce +
+                    ", root=" + root +
+                    '}';
         }
     }
 }

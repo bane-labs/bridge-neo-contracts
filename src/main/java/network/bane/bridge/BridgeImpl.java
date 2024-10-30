@@ -1,7 +1,6 @@
 package network.bane.bridge;
 
 import static io.neow3j.devpack.Helper.abort;
-import static network.bane.bridge.StorageConstants.KEY_ENTERED;
 
 public class BridgeImpl {
 
@@ -10,21 +9,29 @@ public class BridgeImpl {
     }
 
     static void addToUnclaimedRewards(int amount) {
-        int currentRewards = BridgeContract.baseMap.getInt(StorageConstants.KEY_UNCLAIMED_REWARDS);
+        int currentRewards = getUnclaimedRewards();
         BridgeContract.baseMap.put(StorageConstants.KEY_UNCLAIMED_REWARDS, currentRewards + amount);
     }
 
+    public static int getNeoHoldingGasRewards() {
+        return BridgeContract.baseMap.getInt(StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS);
+    }
+
+    static void addNeoHoldingGasRewards(int amount) {
+        int currentRewards = getNeoHoldingGasRewards();
+        BridgeContract.baseMap.put(StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS, currentRewards + amount);
+    }
+
     private static boolean entered() {
-        return BridgeContract.baseMap.getBoolean(KEY_ENTERED);
+        return BridgeContract.baseMap.getBoolean(StorageConstants.KEY_ENTERED);
     }
 
     static void enteringNonReentrant() {
         if (entered()) abort("Reentrancy detected.");
-        BridgeContract.baseMap.put(KEY_ENTERED, true);
+        BridgeContract.baseMap.put(StorageConstants.KEY_ENTERED, true);
     }
 
-    static void exiting() {
-        BridgeContract.baseMap.put(KEY_ENTERED, false);
+    static void exitingNonReentrant() {
+        BridgeContract.baseMap.put(StorageConstants.KEY_ENTERED, false);
     }
-
 }
