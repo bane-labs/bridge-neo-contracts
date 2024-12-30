@@ -5,7 +5,7 @@ import io.neow3j.types.Hash160;
 import java.math.BigInteger;
 
 public class DefaultTestValues {
-    public static final Hash160 MANAGEMENT_CONTRACT_HASH = new Hash160("0xb1bd983713782385ac3ed8c7517c1d3682027b4e");
+    public static final Hash160 MANAGEMENT_CONTRACT_HASH = new Hash160("0x0a5aa4419e253ef6e50e75a9b5460da9a2875275");
 
     public static final BigInteger DEFAULT_GAS_DEPOSIT_FEE = new BigInteger("10000000");
     public static final BigInteger DEFAULT_MIN_GAS_DEPOSIT = new BigInteger("100000000");
