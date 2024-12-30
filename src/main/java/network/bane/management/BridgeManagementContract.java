@@ -1,5 +1,6 @@
 package network.bane.management;
 
+
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
@@ -95,7 +96,13 @@ public class BridgeManagementContract {
 
     @OnDeployment
     public static void deploy(Object data, boolean isUpdate) {
-        if (!isUpdate) {
+        if (isUpdate) {
+            // Make sure that this version of the contract is only used to update a deployed contract in version 1.
+            if (baseMap.getInt(key_version) != 1) abort("Invalid version.");
+            // Update internal versioning.
+            baseMap.put(key_version, 2);
+            // Implement potential storage migration here if needed.
+        } else {
             ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
 
             Hash160 owner = deploymentData.owner;
@@ -122,7 +129,7 @@ public class BridgeManagementContract {
             baseMap.put(key_governor, governor);
             baseMap.put(key_securityguard, securityGuard);
 
-            baseMap.put(key_version, 1);
+            baseMap.put(key_version, 2);
 
             if (!checkWitness(owner())) abort("Owner must witness the deployment.");
         }
