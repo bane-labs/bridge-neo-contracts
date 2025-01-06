@@ -6,14 +6,13 @@ import io.neow3j.crypto.ECKeyPair.ECPublicKey;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
-import io.neow3j.protocol.core.response.InvocationResult;
+import io.neow3j.protocol.core.response.ContractStorageEntry;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.ArrayStackItem;
 import io.neow3j.protocol.core.stackitem.ByteStringStackItem;
 import io.neow3j.protocol.core.stackitem.IntegerStackItem;
-import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
@@ -21,7 +20,6 @@ import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
-import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
@@ -40,7 +38,6 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.none;
@@ -51,17 +48,16 @@ import static io.neow3j.types.ContractParameter.byteArrayFromString;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.publicKey;
 import static io.neow3j.types.ContractParameter.string;
-import static io.neow3j.types.StackItemType.ARRAY;
-import static io.neow3j.types.StackItemType.BYTE_STRING;
-import static io.neow3j.types.StackItemType.INTEGER;
 import static io.neow3j.utils.Numeric.prependHexPrefix;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.defaultValidatorThreshold;
+import static network.bane.util.TestHelper.governor;
 import static network.bane.util.TestHelper.governorScriptHash;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.ownerScriptHash;
 import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.relayerScriptHash;
+import static network.bane.util.TestHelper.securityGuard;
 import static network.bane.util.TestHelper.securityGuardScriptHash;
 import static network.bane.util.TestHelper.validator1PubKey;
 import static network.bane.util.TestHelper.validator2PubKey;
@@ -74,6 +70,7 @@ import static network.bane.util.TestHelper.validator7PubKey;
 import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -165,53 +162,26 @@ public class BridgeManagementTest {
 
     @Test
     @Order(0)
-    public void testDeployOwnerCorrect() throws IOException {
-        InvocationResult result = management.callInvokeFunction("owner").getInvocationResult();
+    public void testDeployment_deploymentDataSetCorrectly() throws IOException {
+        assertThat(management.owner(), is(owner.getScriptHash()));
+        assertThat(management.relayer(), is(relayer.getScriptHash()));
+        assertThat(management.governor(), is(governor.getScriptHash()));
+        assertThat(management.securityGuard(), is(securityGuard.getScriptHash()));
 
-        assertThat(result.getStack(), hasSize(1));
-        assertThat(result.getFirstStackItem().getType(), is(BYTE_STRING));
-        assertThat(Hash160.fromAddress(result.getFirstStackItem().getAddress()), is(ownerScriptHash));
-    }
+        List<ECPublicKey> validators = management.validators();
+        assertThat(validators, hasSize(7));
+        assertThat(validators, containsInAnyOrder(validator1PubKey, validator2PubKey, validator3PubKey,
+                validator4PubKey, validator5PubKey, validator6PubKey, validator7PubKey));
+        assertThat(management.validatorThreshold(), is(defaultValidatorThreshold));
 
-    @Test
-    @Order(0)
-    public void testDeployRelayerCorrect() throws IOException {
-        InvocationResult result = management.callInvokeFunction("relayer").getInvocationResult();
+        List<ContractStorageEntry> allStorageEntries = management.findStorage("0x");
+        assertThat(allStorageEntries, hasSize(13)); // 4 roles, 7 validators, 1 threshold, 1 version
 
-        assertThat(result.getStack(), hasSize(1));
-        assertThat(result.getFirstStackItem().getType(), is(BYTE_STRING));
-        assertThat(Hash160.fromAddress(result.getFirstStackItem().getAddress()), is(relayerScriptHash));
-    }
-
-    @Test
-    @Order(0)
-    public void testDeployValidatorThresholdCorrect() throws IOException {
-        InvocationResult result = management.callInvokeFunction("validatorThreshold").getInvocationResult();
-
-        assertThat(result.getStack(), hasSize(1));
-        assertThat(result.getFirstStackItem().getType(), is(INTEGER));
-        assertThat(result.getFirstStackItem().getInteger().intValue(), is(5));
-    }
-
-    @Test
-    @Order(0)
-    public void testDeployValidatorsCorrect() throws IOException {
-        InvocationResult result = management.callInvokeFunction("validators").getInvocationResult();
-
-        assertThat(result.getStack(), hasSize(1));
-        assertThat(result.getFirstStackItem().getType(), is(ARRAY));
-
-        List<StackItem> stackList = result.getFirstStackItem().getList();
-        assertThat(stackList, hasSize(7));
-
-        List<String> validatorList = stackList.stream().map(StackItem::getHexString).collect(Collectors.toList());
-        assertTrue(validatorList.contains(validator1PubKey.getEncodedCompressedHex()));
-        assertTrue(validatorList.contains(validator2PubKey.getEncodedCompressedHex()));
-        assertTrue(validatorList.contains(validator3PubKey.getEncodedCompressedHex()));
-        assertTrue(validatorList.contains(validator4PubKey.getEncodedCompressedHex()));
-        assertTrue(validatorList.contains(validator5PubKey.getEncodedCompressedHex()));
-        assertTrue(validatorList.contains(validator6PubKey.getEncodedCompressedHex()));
-        assertTrue(validatorList.contains(validator7PubKey.getEncodedCompressedHex()));
+        // Check version storage entry
+        List<ContractStorageEntry> nonValidatorStorageEntries = management.findStorage("0x0a");
+        assertThat(nonValidatorStorageEntries, hasSize(6));
+        assertThat(nonValidatorStorageEntries.get(5).getKeyHex(), is("0x0a7f"));
+        assertThat(nonValidatorStorageEntries.get(5).getValueHex(), is("0x03"));
     }
 
     // endregion

@@ -214,13 +214,11 @@ public class BridgeContract {
     @OnDeployment
     public static void deploy(Object data, boolean isUpdate) {
         if (isUpdate) {
-            if (baseMap.getInt(KEY_VERSION) != 0) abort("Invalid version.");
+            // Make sure that this version of the contract is only used to update a deployed contract in version 1.
+            if (baseMap.getInt(KEY_VERSION) != 1) abort("Invalid version.");
             // Update internal versioning.
-            baseMap.put(KEY_VERSION, 1);
-            baseMap.put(KEY_DEPOSIT_PAUSE, false);
-            baseMap.put(KEY_NEO_HOLDING_GAS_REWARDS, 0);
-            Map<Hash160, Integer> decimalScalingFactors = (Map<Hash160, Integer>) data;
-            BridgeMigrationV1ToV2.migrateV1ToV2(decimalScalingFactors);
+            baseMap.put(KEY_VERSION, 3);
+            // Implement potential storage migration here if needed.
         } else {
             BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
             if (deploymentData.bridgeManagementContract == null ||
@@ -243,7 +241,7 @@ public class BridgeContract {
             baseMap.put(KEY_NEO_HOLDING_GAS_REWARDS, 0);
 
             BridgeContract.baseMap.put(KEY_ENTERED, false);
-            baseMap.put(KEY_VERSION, 0);
+            baseMap.put(KEY_VERSION, 3);
 
             // Make sure the owner witnesses the deployment.
             if (!checkWitness(managementContract().owner())) {
