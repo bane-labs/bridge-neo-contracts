@@ -100,7 +100,7 @@ public class BridgeManagementContract {
             // Make sure that this version of the contract is only used to update a deployed contract in version 1.
             if (baseMap.getInt(key_version) != 1) abort("Invalid version.");
             // Update internal versioning.
-            baseMap.put(key_version, 2);
+            baseMap.put(key_version, 3);
             // Implement potential storage migration here if needed.
         } else {
             ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
@@ -129,7 +129,7 @@ public class BridgeManagementContract {
             baseMap.put(key_governor, governor);
             baseMap.put(key_securityguard, securityGuard);
 
-            baseMap.put(key_version, 2);
+            baseMap.put(key_version, 3);
 
             if (!checkWitness(owner())) abort("Owner must witness the deployment.");
         }

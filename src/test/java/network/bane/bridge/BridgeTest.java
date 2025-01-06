@@ -210,7 +210,7 @@ public class BridgeTest {
         assertThat(enteredEntry.getValueHex(), is("0x"));
 
         assertThat(versionEntry.getKeyHex(), is("0x0a7f"));
-        assertThat(versionEntry.getValueHex(), is("0x02"));
+        assertThat(versionEntry.getValueHex(), is("0x03"));
     }
 
     // endregion
