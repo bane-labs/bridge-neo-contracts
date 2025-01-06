@@ -31,6 +31,7 @@ public class TokenBridgeImpl {
     // region registration
 
     static void registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
+        if (token == null || !Hash160.isValid(token) || token.isZero()) abort("Invalid token");
         if (isRegisteredToken(token)) abort("Token already registered.");
         StorageMap tokenBridges = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
         ByteString zeroHash = Hash256.zero().toByteString();
