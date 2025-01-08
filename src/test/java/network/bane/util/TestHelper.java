@@ -39,6 +39,7 @@ import static io.neow3j.utils.Numeric.toHexString;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_TARGET_CHAIN_ID;
 import static network.bane.util.helper.TestHelper.neow3j;
 
 public class TestHelper {
@@ -222,9 +223,16 @@ public class TestHelper {
         return keccak256Hex(concatLeftRight(leftHex, rightHex));
     }
 
-    public static Map<ContractParameter, ContractParameter> signMsg(List<Account> validators, String root) throws IOException {
+    public static Map<ContractParameter, ContractParameter> signMsg(List<Account> validators,
+            String root) throws IOException {
+        return signMsg(DEFAULT_TARGET_CHAIN_ID, validators, root);
+    }
+
+    public static Map<ContractParameter, ContractParameter> signMsg(BigInteger targetChainId, List<Account> validators,
+            String root) throws IOException {
+
         BigInteger network = BigInteger.valueOf(neow3j.getVersion().send().getVersion().getProtocol().getNetwork());
-        String msg = prefixRootWithNetwork(root, network);
+        String msg = prependIntToStringLittleEndian(network, prependIntToStringLittleEndian(targetChainId, root));
         Map<ContractParameter, ContractParameter> signatures = new HashMap<>();
         for (int i = 0; i < validators.size(); i++) {
             ECKeyPair validator = validators.get(i).getECKeyPair();
@@ -233,9 +241,9 @@ public class TestHelper {
         return signatures;
     }
 
-    public static String prefixRootWithNetwork(String root, BigInteger networkId) {
-        byte[] chainIdLittleEndian = BigIntegers.toLittleEndianByteArray(networkId);
-        return toHexStringNoPrefix(concatenate(chainIdLittleEndian, hexStringToByteArray(root)));
+    public static String prependIntToStringLittleEndian(BigInteger intValue, String stringValue) {
+        byte[] chainIdLittleEndian = BigIntegers.toLittleEndianByteArray(intValue);
+        return toHexStringNoPrefix(concatenate(chainIdLittleEndian, hexStringToByteArray(stringValue)));
     }
 
     public static String createDepositHash(BigInteger nonce, Hash160 to, BigInteger amount) {

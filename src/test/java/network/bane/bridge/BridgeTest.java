@@ -146,15 +146,16 @@ public class BridgeTest {
     @Test
     @Order(0)
     public void testDeployment_deploymentDataSetCorrectly() throws IOException {
-        assertThat(bridge.findStorage("0x0a"), hasSize(8));
+        assertThat(bridge.findStorage("0x0a"), hasSize(9));
         ContractStorageEntry managementEntry = bridge.findStorage("0x0a").get(0);
         ContractStorageEntry pauseEntry = bridge.findStorage("0x0a").get(1);
         ContractStorageEntry gasBridgeEntry = bridge.findStorage("0x0a").get(2);
         ContractStorageEntry unclaimedRewardsEntry = bridge.findStorage("0x0a").get(3);
         ContractStorageEntry depositsPausedEntry = bridge.findStorage("0x0a").get(4);
         ContractStorageEntry neoHoldingGasRewardsEntry = bridge.findStorage("0x0a").get(5);
-        ContractStorageEntry enteredEntry = bridge.findStorage("0x0a").get(6);
-        ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(7);
+        ContractStorageEntry targetChainIdEntry = bridge.findStorage("0x0a").get(6);
+        ContractStorageEntry enteredEntry = bridge.findStorage("0x0a").get(7);
+        ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(8);
 
         assertThat(managementEntry.getKeyHex(), is("0x0a01"));
         assertArrayEquals(managementEntry.getValue(), MANAGEMENT_CONTRACT_HASH.toLittleEndianArray());
@@ -205,6 +206,10 @@ public class BridgeTest {
 
         assertThat(neoHoldingGasRewardsEntry.getKeyHex(), is("0x0a06"));
         assertThat(neoHoldingGasRewardsEntry.getValueHex(), is("0x"));
+
+        assertThat(targetChainIdEntry.getKeyHex(), is("0x0a10"));
+        // 3930 is the hex value in little-endian for 12345 (a dummy target chain id used as default in the tests).
+        assertThat(targetChainIdEntry.getValueHex(), is("0x3930"));
 
         assertThat(enteredEntry.getKeyHex(), is("0x0a70"));
         assertThat(enteredEntry.getValueHex(), is("0x"));

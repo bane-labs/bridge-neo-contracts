@@ -53,6 +53,7 @@ import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgePaused;
 import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgeNotPaused;
 import static network.bane.bridge.StorageConstants.KEY_DEPOSIT_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
+import static network.bane.bridge.StorageConstants.KEY_TARGET_CHAIN_ID;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
 import static network.bane.bridge.StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS;
@@ -68,7 +69,8 @@ import static network.bane.bridge.StorageConstants.PREFIX_BASE;
 @Permission(contract = "*")
 @ManifestExtras({
         @ManifestExtra(key = "Author", value = "BaneLabs"),
-        @ManifestExtra(key = "Description", value = "Contract for bridging GAS and tokens between Neo N3 and Neo X."),
+        @ManifestExtra(key = "Description",
+                       value = "Contract for bridging GAS and tokens between Neo N3 and an EVM chain."),
         @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")
 })
 public class BridgeContract {
@@ -161,7 +163,6 @@ public class BridgeContract {
     @EventParameterNames({"NeoN3Token", "TokenConfig"})
     static Event2Args<Hash160, TokenBridge.TokenConfig> onTokenRegister;
 
-
     @DisplayName("TokenBridgePause")
     @EventParameterNames({"NeoN3Token", "NeoXToken"})
     static Event2Args<Hash160, Hash160> onTokenBridgePause;
@@ -219,12 +220,16 @@ public class BridgeContract {
             // Update internal versioning.
             baseMap.put(KEY_VERSION, 3);
             // Implement potential storage migration here if needed.
+            V3Migration.migrate(data);
         } else {
             BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
             if (deploymentData.bridgeManagementContract == null ||
                     !Hash160.isValid(deploymentData.bridgeManagementContract))
                 abort("Invalid bridge management contract hash.");
+            if (deploymentData.targetChainId == null || deploymentData.targetChainId <= 0)
+                abort("Invalid target chain id.");
 
+            baseMap.put(KEY_TARGET_CHAIN_ID, deploymentData.targetChainId);
             baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.bridgeManagementContract);
             baseMap.put(KEY_BRIDGE_PAUSE, false);
 
@@ -367,6 +372,14 @@ public class BridgeContract {
         } else {
             abort("Unregistered token.");
         }
+    }
+
+    // endregion
+    // region target chain
+
+    @Safe
+    public static int targetChainId() {
+        return baseMap.getInt(KEY_TARGET_CHAIN_ID);
     }
 
     // endregion
@@ -617,6 +630,7 @@ public class BridgeContract {
     // endregion
     // region token deposit/withdrawal/claim
 
+    // Todo by mialbu on 08.01.25: Consider adding the target chain's id to the parameters.
     /**
      * Deposit a token to Neo X.
      *

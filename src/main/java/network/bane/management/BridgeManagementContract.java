@@ -34,11 +34,9 @@ import static io.neow3j.devpack.Runtime.checkWitness;
 
 @DisplayName("NeoXBridgeManagement")
 @Permission(nativeContract = NativeContract.ContractManagement, methods = "update")
-@ManifestExtras({
-        @ManifestExtra(key = "Author", value = "BaneLabs"),
-        @ManifestExtra(key = "Description", value = "Contract for managing roles in the Neo X bridge contract"),
-        @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")
-})
+@ManifestExtras({@ManifestExtra(key = "Author", value = "BaneLabs"),
+        @ManifestExtra(key = "Description", value = "Contract for managing roles in the bridge"),
+        @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")})
 public class BridgeManagementContract {
 
     private static final StorageContext ctx = Storage.getStorageContext();
@@ -236,14 +234,18 @@ public class BridgeManagementContract {
     }
 
     @Safe
-    public static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, ByteString root) {
+    public static boolean verifyValidatorSignatures(int targetChainId, ByteString root,
+            Map<ECPoint, ByteString> signatures) {
+
         int threshold = validatorThreshold();
         if (signatures.keys().length < threshold) abort("Not enough signatures provided.");
         CryptoLib cryptoLib = new CryptoLib();
         List<ECPoint> validators = validators();
 
-        // Prepend the root with the network identifier to create the message that should be signed by validators.
-        ByteString msg = new ByteString(concat(toByteArray(Runtime.getNetwork()), root));
+        // The root is prepended with the target chain id and then prepended again with the network identifier of the
+        // N3 network this contract is deployed on.
+        ByteString msg = new ByteString(
+                concat(toByteArray(Runtime.getNetwork()), concat(toByteArray(targetChainId), root)));
         int covered = 0;
         int validatorsSize = validators.size();
         for (int i = 0; i < validatorsSize; i++) {

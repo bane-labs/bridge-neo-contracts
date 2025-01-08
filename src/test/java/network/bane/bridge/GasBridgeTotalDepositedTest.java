@@ -43,6 +43,7 @@ import static network.bane.util.TestHelper.validator2;
 import static network.bane.util.TestHelper.validator3;
 import static network.bane.util.TestHelper.validator4;
 import static network.bane.util.TestHelper.validator5;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_TARGET_CHAIN_ID;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_GAS_DEPOSIT_FEE;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_WITHDRAWALS;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_GAS_DEPOSIT;
@@ -87,6 +88,7 @@ public class GasBridgeTotalDepositedTest {
         DeployConfiguration config = new DeployConfiguration();
         config.setDeployParam(
                 prepareBridgeDeployParameter(
+                        DEFAULT_TARGET_CHAIN_ID,
                         MANAGEMENT_CONTRACT_HASH,
                         DEFAULT_GAS_DEPOSIT_FEE,
                         DEFAULT_MIN_GAS_DEPOSIT,

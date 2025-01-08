@@ -15,6 +15,8 @@ public class StorageConstants {
     static final int KEY_DEPOSIT_PAUSE = 0x05;
     static final int KEY_NEO_HOLDING_GAS_REWARDS = 0x06;
 
+    static final int KEY_TARGET_CHAIN_ID = 0x10;
+
     static final int KEY_ENTERED = 0x70;
 
     // key used to restrict migrate from being called multiple times.
