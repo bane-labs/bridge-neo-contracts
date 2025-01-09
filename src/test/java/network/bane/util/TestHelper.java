@@ -232,13 +232,19 @@ public class TestHelper {
             String root) throws IOException {
 
         BigInteger network = BigInteger.valueOf(neow3j.getVersion().send().getVersion().getProtocol().getNetwork());
-        String msg = prependIntToStringLittleEndian(network, prependIntToStringLittleEndian(linkedChainId, root));
+        String msg = createWithdrawalMessageToSign(network, linkedChainId, root);
         Map<ContractParameter, ContractParameter> signatures = new HashMap<>();
         for (int i = 0; i < validators.size(); i++) {
             ECKeyPair validator = validators.get(i).getECKeyPair();
             signatures.put(publicKey(validator.getPublicKey()), signature(Sign.signHexMessage(msg, validator)));
         }
         return signatures;
+    }
+
+    public static String createWithdrawalMessageToSign(BigInteger network, BigInteger linkedChainId, String root) {
+        return prependIntToStringLittleEndian(network,
+                prependIntToStringLittleEndian(linkedChainId, root)
+        );
     }
 
     public static String prependIntToStringLittleEndian(BigInteger intValue, String stringValue) {
