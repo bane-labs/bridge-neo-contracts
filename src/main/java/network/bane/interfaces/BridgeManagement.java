@@ -27,7 +27,7 @@ public class BridgeManagement extends ContractInterface {
     public native List<ECPoint> validators();
 
     @CallFlags(io.neow3j.devpack.constants.CallFlags.ReadOnly)
-    public native boolean verifyValidatorSignatures(int targetChainId, ByteString root,
+    public native boolean verifyValidatorSignatures(int linkedChainId, ByteString root,
             Map<ECPoint, ByteString> signatures);
 
     @CallFlags(io.neow3j.devpack.constants.CallFlags.ReadStates)

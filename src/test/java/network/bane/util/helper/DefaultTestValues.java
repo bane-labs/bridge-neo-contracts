@@ -5,7 +5,7 @@ import io.neow3j.types.Hash160;
 import java.math.BigInteger;
 
 public class DefaultTestValues {
-    public static final BigInteger DEFAULT_TARGET_CHAIN_ID = BigInteger.valueOf(12345);
+    public static final BigInteger DEFAULT_LINKED_CHAIN_ID = BigInteger.valueOf(12345);
 
     public static final Hash160 MANAGEMENT_CONTRACT_HASH = new Hash160("0x6945b982c603ca8e640b0e13275e0a5edefed90b");
 

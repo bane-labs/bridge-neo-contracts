@@ -234,7 +234,7 @@ public class BridgeManagementContract {
     }
 
     @Safe
-    public static boolean verifyValidatorSignatures(int targetChainId, ByteString root,
+    public static boolean verifyValidatorSignatures(int linkedChainId, ByteString root,
             Map<ECPoint, ByteString> signatures) {
 
         int threshold = validatorThreshold();
@@ -242,10 +242,10 @@ public class BridgeManagementContract {
         CryptoLib cryptoLib = new CryptoLib();
         List<ECPoint> validators = validators();
 
-        // The root is prepended with the target chain id and then prepended again with the network identifier of the
+        // The root is prepended with the linked chain id and then prepended again with the network identifier of the
         // N3 network this contract is deployed on.
         ByteString msg = new ByteString(
-                concat(toByteArray(Runtime.getNetwork()), concat(toByteArray(targetChainId), root)));
+                concat(toByteArray(Runtime.getNetwork()), concat(toByteArray(linkedChainId), root)));
         int covered = 0;
         int validatorsSize = validators.size();
         for (int i = 0; i < validatorsSize; i++) {

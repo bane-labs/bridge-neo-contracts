@@ -5,12 +5,12 @@ import io.neow3j.devpack.annotations.Struct;
 
 @Struct
 public class BridgeDeploymentData {
-    public Integer targetChainId;
+    public Integer linkedChainId;
     public Hash160 bridgeManagementContract;
     public GasConfig gasConfig;
 
     public static boolean isValid(BridgeDeploymentData deploymentData) {
-        return deploymentData.targetChainId != null && deploymentData.targetChainId > 0 &&
+        return deploymentData.linkedChainId != null && deploymentData.linkedChainId > 0 &&
                 deploymentData.bridgeManagementContract != null &&
                 Hash160.isValid(deploymentData.bridgeManagementContract) &&
                 GasConfig.isValid(deploymentData.gasConfig);

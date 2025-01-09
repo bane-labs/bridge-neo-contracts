@@ -153,7 +153,7 @@ public class BridgeTest {
         ContractStorageEntry unclaimedRewardsEntry = bridge.findStorage("0x0a").get(3);
         ContractStorageEntry depositsPausedEntry = bridge.findStorage("0x0a").get(4);
         ContractStorageEntry neoHoldingGasRewardsEntry = bridge.findStorage("0x0a").get(5);
-        ContractStorageEntry targetChainIdEntry = bridge.findStorage("0x0a").get(6);
+        ContractStorageEntry linkedChainIdEntry = bridge.findStorage("0x0a").get(6);
         ContractStorageEntry enteredEntry = bridge.findStorage("0x0a").get(7);
         ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(8);
 
@@ -207,9 +207,9 @@ public class BridgeTest {
         assertThat(neoHoldingGasRewardsEntry.getKeyHex(), is("0x0a06"));
         assertThat(neoHoldingGasRewardsEntry.getValueHex(), is("0x"));
 
-        assertThat(targetChainIdEntry.getKeyHex(), is("0x0a10"));
-        // 3930 is the hex value in little-endian for 12345 (a dummy target chain id used as default in the tests).
-        assertThat(targetChainIdEntry.getValueHex(), is("0x3930"));
+        assertThat(linkedChainIdEntry.getKeyHex(), is("0x0a10"));
+        // 3930 is the hex value in little-endian for 12345 (a dummy linked chain id used as default in the tests).
+        assertThat(linkedChainIdEntry.getValueHex(), is("0x3930"));
 
         assertThat(enteredEntry.getKeyHex(), is("0x0a70"));
         assertThat(enteredEntry.getValueHex(), is("0x"));

@@ -56,7 +56,7 @@ public class TokenBridge {
 
         /**
          * The decimal scaling factor is used to mitigate the difference in decimals between the tokens on the
-         * originating and the target chain. Since the bridge amount is hashed and the bridge on the target chain
+         * source and the target chain. Since the bridge amount is hashed and the bridge on the target chain
          * needs to verify the amount with the hash, the amount used for hashing must be the same on both chains.
          * Therefore, this bridge uses the lower number of decimals as the common denominator. Hence, the following
          * rules apply:

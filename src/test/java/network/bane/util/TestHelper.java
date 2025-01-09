@@ -39,7 +39,7 @@ import static io.neow3j.utils.Numeric.toHexString;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_TARGET_CHAIN_ID;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_LINKED_CHAIN_ID;
 import static network.bane.util.helper.TestHelper.neow3j;
 
 public class TestHelper {
@@ -225,14 +225,14 @@ public class TestHelper {
 
     public static Map<ContractParameter, ContractParameter> signMsg(List<Account> validators,
             String root) throws IOException {
-        return signMsg(DEFAULT_TARGET_CHAIN_ID, validators, root);
+        return signMsg(DEFAULT_LINKED_CHAIN_ID, validators, root);
     }
 
-    public static Map<ContractParameter, ContractParameter> signMsg(BigInteger targetChainId, List<Account> validators,
+    public static Map<ContractParameter, ContractParameter> signMsg(BigInteger linkedChainId, List<Account> validators,
             String root) throws IOException {
 
         BigInteger network = BigInteger.valueOf(neow3j.getVersion().send().getVersion().getProtocol().getNetwork());
-        String msg = prependIntToStringLittleEndian(network, prependIntToStringLittleEndian(targetChainId, root));
+        String msg = prependIntToStringLittleEndian(network, prependIntToStringLittleEndian(linkedChainId, root));
         Map<ContractParameter, ContractParameter> signatures = new HashMap<>();
         for (int i = 0; i < validators.size(); i++) {
             ECKeyPair validator = validators.get(i).getECKeyPair();

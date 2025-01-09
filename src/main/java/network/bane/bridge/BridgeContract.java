@@ -53,7 +53,7 @@ import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgePaused;
 import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgeNotPaused;
 import static network.bane.bridge.StorageConstants.KEY_DEPOSIT_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
-import static network.bane.bridge.StorageConstants.KEY_TARGET_CHAIN_ID;
+import static network.bane.bridge.StorageConstants.KEY_LINKED_CHAIN_ID;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
 import static network.bane.bridge.StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS;
@@ -226,10 +226,10 @@ public class BridgeContract {
             if (deploymentData.bridgeManagementContract == null ||
                     !Hash160.isValid(deploymentData.bridgeManagementContract))
                 abort("Invalid bridge management contract hash.");
-            if (deploymentData.targetChainId == null || deploymentData.targetChainId <= 0)
-                abort("Invalid target chain id.");
+            if (deploymentData.linkedChainId == null || deploymentData.linkedChainId <= 0)
+                abort("Invalid linked chain id.");
 
-            baseMap.put(KEY_TARGET_CHAIN_ID, deploymentData.targetChainId);
+            baseMap.put(KEY_LINKED_CHAIN_ID, deploymentData.linkedChainId);
             baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.bridgeManagementContract);
             baseMap.put(KEY_BRIDGE_PAUSE, false);
 
@@ -375,11 +375,11 @@ public class BridgeContract {
     }
 
     // endregion
-    // region target chain
+    // region linked chain
 
     @Safe
-    public static int targetChainId() {
-        return baseMap.getInt(KEY_TARGET_CHAIN_ID);
+    public static int linkedChainId() {
+        return baseMap.getInt(KEY_LINKED_CHAIN_ID);
     }
 
     // endregion
