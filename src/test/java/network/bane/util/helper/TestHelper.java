@@ -43,6 +43,7 @@ import static network.bane.util.TestHelper.validator4PubKey;
 import static network.bane.util.TestHelper.validator5PubKey;
 import static network.bane.util.TestHelper.validator6PubKey;
 import static network.bane.util.TestHelper.validator7PubKey;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_LINKED_CHAIN_ID;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
 import static network.bane.util.helper.NetworkSettingsHelper.updateNetworkSettings;
 
@@ -139,6 +140,7 @@ public class TestHelper {
         DeployConfiguration config = new DeployConfiguration();
         config.setDeployParam(
                 prepareBridgeDeployParameter(
+                        DEFAULT_LINKED_CHAIN_ID,
                         MANAGEMENT_CONTRACT_HASH,
                         gasDepositFee,
                         minGasDeposit,
@@ -155,10 +157,11 @@ public class TestHelper {
         return config;
     }
 
-    public static ContractParameter prepareBridgeDeployParameter(Hash160 managementContractHash,
-            BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit, BigInteger maxWithdrawals,
-            BigInteger maxTotalDepositAmount) {
+    public static ContractParameter prepareBridgeDeployParameter(BigInteger linkedChainId,
+            Hash160 managementContractHash, BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit,
+            BigInteger maxWithdrawals, BigInteger maxTotalDepositAmount) {
         return array(
+                integer(linkedChainId),
                 hash160(managementContractHash),
                 array(
                         integer(depositFee),

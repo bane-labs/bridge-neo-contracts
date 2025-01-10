@@ -150,7 +150,7 @@ public class TokenBridgeImpl {
                 tokenBridge.config.neoXToken, withdrawals).equals(withdrawalRoot)) {
             abort("Invalid root.");
         }
-        if (!managementContract().verifyValidatorSignatures(signatures, withdrawalRoot)) {
+        if (!managementContract().verifyValidatorSignatures(BridgeContract.linkedChainId(), withdrawalRoot, signatures)) {
             abort("Invalid validator signatures provided.");
         }
         // Update the token state

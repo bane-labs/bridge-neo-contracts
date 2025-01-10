@@ -14,6 +14,7 @@ import network.bane.structs.Withdrawal;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
+import static network.bane.bridge.BridgeContract.linkedChainId;
 import static network.bane.bridge.BridgeHelper.managementContract;
 import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
 import static network.bane.bridge.StorageConstants.PREFIX_GAS_CLAIMABLES;
@@ -109,7 +110,7 @@ public class GasBridgeImpl {
                 .equals(withdrawalRoot)) {
             abort("Invalid root.");
         }
-        if (!managementContract().verifyValidatorSignatures(signatures, withdrawalRoot)) {
+        if (!managementContract().verifyValidatorSignatures(linkedChainId(), withdrawalRoot, signatures)) {
             abort("Invalid validator signatures provided.");
         }
         // Update the gas bridge state
