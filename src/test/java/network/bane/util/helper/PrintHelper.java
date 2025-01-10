@@ -29,7 +29,7 @@ public class PrintHelper {
                 neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution()
                         .getNotifications().stream()
                         .filter(n -> n.getContract().equals(bridge.getScriptHash()) &&
-                                n.getEventName().equals("OnGasDeposit"))
+                                n.getEventName().equals("OnNativeDeposit"))
                         .findFirst();
         if (onDepositOpt.isPresent()) {
             Notification depositNotification = onDepositOpt.get();

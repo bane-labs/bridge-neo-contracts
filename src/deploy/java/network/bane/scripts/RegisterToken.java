@@ -23,7 +23,7 @@ import static network.bane.utils.wallet.LoadWallet.getOwnerAccountFromWallet;
 
 public class RegisterToken {
 
-    public static final BigInteger DEFAULT_GAS_FEE = FungibleToken.toFractions(new BigDecimal("0.1"), 8);
+    public static final BigInteger DEFAULT_NATIVE_FEE = FungibleToken.toFractions(new BigDecimal("0.1"), 8);
     public static final BigInteger DEFAULT_MIN_AMOUNT = FungibleToken.toFractions(new BigDecimal("1"), 18);
     public static final BigInteger DEFAULT_MAX_AMOUNT = FungibleToken.toFractions(new BigDecimal("100000"), 18);
     public static final int DEFAULT_MAX_WITHDRAWALS = 100;
@@ -40,7 +40,7 @@ public class RegisterToken {
                         hash160(tokenHash),
                         array(
                                 hash160(new Hash160(getEnvVariable("NEOX_TOKEN_HASH"))),
-                                integer(DEFAULT_GAS_FEE),
+                                integer(DEFAULT_NATIVE_FEE),
                                 integer(DEFAULT_MIN_AMOUNT),
                                 integer(DEFAULT_MAX_AMOUNT),
                                 integer(DEFAULT_MAX_WITHDRAWALS),

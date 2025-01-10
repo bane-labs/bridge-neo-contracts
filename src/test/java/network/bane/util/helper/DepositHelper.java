@@ -13,13 +13,13 @@ import static network.bane.util.helper.TestHelper.neow3j;
 
 public class DepositHelper {
 
-    public static Hash256 depositGas(Account from, Hash160 to, BigInteger amount) throws Throwable {
-        return depositGas(from, to, amount, DEFAULT_DEPOSIT_FEE);
+    public static Hash256 depositNative(Account from, Hash160 to, BigInteger amount) throws Throwable {
+        return depositNative(from, to, amount, DEFAULT_DEPOSIT_FEE);
     }
 
-    public static Hash256 depositGas(Account from, Hash160 to, BigInteger amount, BigInteger maxFee)
+    public static Hash256 depositNative(Account from, Hash160 to, BigInteger amount, BigInteger maxFee)
             throws Throwable {
-        Hash256 txHash = bridge.depositGas(from, to, amount, maxFee);
+        Hash256 txHash = bridge.depositNative(from, to, amount, maxFee);
         printTransactionFee(neow3j, "deposit", txHash);
         return txHash;
     }

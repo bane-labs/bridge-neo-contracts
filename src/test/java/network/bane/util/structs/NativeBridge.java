@@ -2,15 +2,15 @@ package network.bane.util.structs;
 
 import java.math.BigInteger;
 
-public class GasBridge {
+public class NativeBridge {
     public boolean paused;
     public BigInteger totalDeposited;
     public State depositState;
     public State withdrawalState;
-    public GasConfig config;
+    public NativeConfig config;
 
-    public GasBridge(boolean paused, BigInteger totalDeposited, State depositState, State withdrawalState,
-            GasConfig config) {
+    public NativeBridge(boolean paused, BigInteger totalDeposited, State depositState, State withdrawalState,
+            NativeConfig config) {
         this.paused = paused;
         this.totalDeposited = totalDeposited;
         this.depositState = depositState;
@@ -18,7 +18,7 @@ public class GasBridge {
         this.config = config;
     }
 
-    public boolean equals(GasBridge other) {
+    public boolean equals(NativeBridge other) {
         if (other == null) {
             return false;
         }
@@ -32,14 +32,14 @@ public class GasBridge {
                 this.config.equals(other.config);
     }
 
-    public static class GasConfig {
+    public static class NativeConfig {
         public BigInteger fee;
         public BigInteger minAmount;
         public BigInteger maxAmount;
         public Integer maxWithdrawals;
         public BigInteger maxTotalDeposit;
 
-        public GasConfig(BigInteger fee, BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals,
+        public NativeConfig(BigInteger fee, BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals,
                 BigInteger maxTotalDeposit) {
             this.fee = fee;
             this.minAmount = minAmount;
@@ -48,7 +48,7 @@ public class GasBridge {
             this.maxTotalDeposit = maxTotalDeposit;
         }
 
-        public boolean equals(GasConfig other) {
+        public boolean equals(NativeConfig other) {
             if (other == null) {
                 return false;
             }

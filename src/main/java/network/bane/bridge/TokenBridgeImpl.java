@@ -97,7 +97,7 @@ public class TokenBridgeImpl {
         BridgeImpl.addToUnclaimedRewards(depositFee);
 
         // Pay the fee and transfer the token
-        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, depositFee, null)) {
+        if (!BridgeContract.nativeToken.transfer(from, executingScriptHash, depositFee, null)) {
             abort("Fee transfer failed.");
         }
         FungibleToken tokenContract = new FungibleToken(neoN3Token);
@@ -182,7 +182,7 @@ public class TokenBridgeImpl {
         int amount = claimable.amount;
 
         tokenClaimableMap.delete(nonce);
-        assert token != BridgeContract.gasToken.getHash() : "Token cannot be the gas token.";
+        assert token != BridgeContract.nativeToken.getHash() : "Token cannot be the gas token.";
         if (new FungibleToken(token).transfer(getExecutingScriptHash(), to, amount, null)) {
             BridgeContract.onTokenClaim.fire(token, nonce, to, amount);
         } else {
