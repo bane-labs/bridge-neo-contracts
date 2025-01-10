@@ -36,8 +36,8 @@ import static network.bane.util.TestHelper.governor;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.securityGuard;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_GAS_DEPOSIT_FEE;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_GAS_DEPOSIT;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_DEPOSIT;
 import static network.bane.util.structs.TokenBridge.getAsContractParameter;
 
 public class Bridge extends SmartContractHelper {
@@ -140,7 +140,7 @@ public class Bridge extends SmartContractHelper {
     // region gas deposit/withdraw/claim
 
     public Hash256 depositGas(Account from, Hash160 to, BigInteger amount) throws Throwable {
-        return depositGas(from, to, amount, DEFAULT_MIN_GAS_DEPOSIT);
+        return depositGas(from, to, amount, DEFAULT_MIN_DEPOSIT);
     }
 
     public Hash256 depositGas(Account from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
@@ -148,7 +148,7 @@ public class Bridge extends SmartContractHelper {
     }
 
     public Hash256 depositGas(Account sender, Hash160 from, Hash160 to, BigInteger amount) throws Throwable {
-        return depositGas(sender, from, to, amount, DEFAULT_GAS_DEPOSIT_FEE);
+        return depositGas(sender, from, to, amount, DEFAULT_DEPOSIT_FEE);
     }
 
     public Hash256 depositGas(Account sender, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
@@ -202,7 +202,7 @@ public class Bridge extends SmartContractHelper {
                 gasConfigList.get(0).getInteger(),
                 gasConfigList.get(1).getInteger(),
                 gasConfigList.get(2).getInteger(),
-                gasConfigList.get(3).getInteger(),
+                gasConfigList.get(3).getInteger().intValue(),
                 gasConfigList.get(4).getInteger()
         );
         return new GasBridge(paused, totalDeposited, depositState, withdrawalState, gasConfig);
@@ -397,58 +397,52 @@ public class Bridge extends SmartContractHelper {
         return getTokenConfig(tokenHash).fee;
     }
 
-    public Hash256 setTokenDepositFee(Hash160 tokenHash, BigInteger newFee) throws Throwable {
-        return setTokenDepositFee(governor, tokenHash, newFee);
+    public Hash256 setTokenDepositFee(Map<Hash160, BigInteger> newFees) throws Throwable {
+        return setTokenDepositFee(governor, newFees);
     }
 
-    public Hash256 setTokenDepositFee(Account sender, Hash160 tokenHash, BigInteger newFee) throws Throwable {
+    public Hash256 setTokenDepositFee(Account sender, Map<Hash160, BigInteger> newFees) throws Throwable {
         AccountSigner signer = calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("setTokenDepositFee", array(hash160(tokenHash)),
-                array(integer(newFee)))
-                .signers(signer));
+        return sendAndAwaitExecution(invokeFunction("setTokenDepositFee", map(newFees)).signers(signer));
     }
 
     public BigInteger minTokenDeposit(Hash160 tokenHash) throws IOException {
         return callFunctionReturningInt("minTokenDeposit", hash160(tokenHash));
     }
 
-    public Hash256 setMinTokenDeposit(Hash160 tokenHash, BigInteger newMin) throws Throwable {
-        return setMinTokenDeposit(governor, tokenHash, newMin);
+    public Hash256 setMinTokenDeposit(Map<Hash160, BigInteger> newMins) throws Throwable {
+        return setMinTokenDeposit(governor, newMins);
     }
 
-    public Hash256 setMinTokenDeposit(Account sender, Hash160 tokenHash, BigInteger newMin) throws Throwable {
+    public Hash256 setMinTokenDeposit(Account sender, Map<Hash160, BigInteger> newMins) throws Throwable {
         AccountSigner signer = calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("setMinTokenDeposit", array(hash160(tokenHash), integer(newMin)))
-                .signers(signer));
+        return sendAndAwaitExecution(invokeFunction("setMinTokenDeposit", map(newMins)).signers(signer));
     }
 
     public BigInteger maxTokenDeposit(Hash160 tokenHash) throws IOException {
         return callFunctionReturningInt("maxTokenDeposit", hash160(tokenHash));
     }
 
-    public Hash256 setMaxTokenDeposit(Hash160 tokenHash, BigInteger newMax) throws Throwable {
-        return setMaxTokenDeposit(governor, tokenHash, newMax);
+    public Hash256 setMaxTokenDeposit(Map<Hash160, BigInteger> newMaxs) throws Throwable {
+        return setMaxTokenDeposit(governor, newMaxs);
     }
 
-    public Hash256 setMaxTokenDeposit(Account sender, Hash160 tokenHash, BigInteger newMax) throws Throwable {
+    public Hash256 setMaxTokenDeposit(Account sender, Map<Hash160, BigInteger> newMaxs) throws Throwable {
         AccountSigner signer = calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("setMaxTokenDeposit", array(hash160(tokenHash), integer(newMax)))
-                .signers(signer));
+        return sendAndAwaitExecution(invokeFunction("setMaxTokenDeposit", map(newMaxs)).signers(signer));
     }
 
-    public BigInteger maxTokenWithdrawals(Hash160 tokenHash) throws IOException {
-        return callFunctionReturningInt("maxTokenWithdrawals", hash160(tokenHash));
+    public Integer maxTokenWithdrawals(Hash160 tokenHash) throws IOException {
+        return callFunctionReturningInt("maxTokenWithdrawals", hash160(tokenHash)).intValue();
     }
 
-    public Hash256 setMaxTokenWithdrawals(Hash160 tokenHash, BigInteger newMax) throws Throwable {
-        return setMaxTokenWithdrawals(governor, tokenHash, newMax);
+    public Hash256 setMaxTokenWithdrawals(Map<Hash160, Integer> newMaxs) throws Throwable {
+        return setMaxTokenWithdrawals(governor, newMaxs);
     }
 
-    public Hash256 setMaxTokenWithdrawals(Account sender, Hash160 tokenHash, BigInteger newMax) throws Throwable {
+    public Hash256 setMaxTokenWithdrawals(Account sender, Map<Hash160, Integer> newMaxs) throws Throwable {
         AccountSigner signer = calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("setMaxTokenWithdrawals", array(hash160(tokenHash),
-                integer(newMax)))
-                .signers(signer));
+        return sendAndAwaitExecution(invokeFunction("setMaxTokenWithdrawals", map(newMaxs)).signers(signer));
     }
 
     // endregion

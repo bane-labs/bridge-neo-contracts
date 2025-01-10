@@ -52,7 +52,7 @@ public class TestHelper {
     public static final BigInteger gasDepositFee = new BigInteger("10000000");
     public static final BigInteger minGasDeposit = new BigInteger("100000000");
     public static final BigInteger maxGasDeposit = new BigInteger("1000000000000");
-    public static final BigInteger maxWithdrawals = new BigInteger("100");
+    public static final int maxWithdrawals = 100;
     public static final BigInteger maxTotalGasDepositAmount = new BigInteger("10000000000000");
 
     public static Bridge bridge;
@@ -159,7 +159,7 @@ public class TestHelper {
 
     public static ContractParameter prepareBridgeDeployParameter(BigInteger linkedChainId,
             Hash160 managementContractHash, BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit,
-            BigInteger maxWithdrawals, BigInteger maxTotalDepositAmount) {
+            int maxWithdrawals, BigInteger maxTotalDepositAmount) {
         return array(
                 integer(linkedChainId),
                 hash160(managementContractHash),

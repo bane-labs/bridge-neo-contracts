@@ -67,12 +67,10 @@ import static network.bane.bridge.StorageConstants.PREFIX_BASE;
 
 @DisplayName("NeoXBridge")
 @Permission(contract = "*")
-@ManifestExtras({
-        @ManifestExtra(key = "Author", value = "BaneLabs"),
+@ManifestExtras({@ManifestExtra(key = "Author", value = "BaneLabs"),
         @ManifestExtra(key = "Description",
                        value = "Contract for bridging GAS and tokens between Neo N3 and an EVM chain."),
-        @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")
-})
+        @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")})
 public class BridgeContract {
 
     // This needs to be here due to the neow3j compiler. Technically, the Java compiler does not see this as a
@@ -631,6 +629,7 @@ public class BridgeContract {
     // region token deposit/withdrawal/claim
 
     // Todo by mialbu on 08.01.25: Consider adding the target chain's id to the parameters.
+
     /**
      * Deposit a token to Neo X.
      *
@@ -700,14 +699,12 @@ public class BridgeContract {
         return getTokenBridge(token).config.fee;
     }
 
-    public static void setTokenDepositFee(List<Hash160> tokens, List<Integer> newDepositFees) {
+    public static void setTokenDepositFee(Map<Hash160, Integer> newDepositFees) {
         onlyGovernor();
-        int nrTokens = tokens.size();
-        if (nrTokens != newDepositFees.size()) abort("Length mismatch.");
+        Hash160[] tokens = newDepositFees.keys();
         StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
-        for (int i = 0; i < nrTokens; i++) {
-            Hash160 token = tokens.get(i);
-            int newFee = newDepositFees.get(i);
+        for (Hash160 token : tokens) {
+            Integer newFee = newDepositFees.get(token);
             TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
             tokenBridge.config.fee = newFee;
             tokenBridgesMap.put(token, new StdLib().serialize(tokenBridge));
@@ -720,18 +717,19 @@ public class BridgeContract {
         return getTokenBridge(token).config.minAmount;
     }
 
-    public static void setMinTokenDeposit(List<Hash160> tokens, List<Integer> newMinDeposits) {
+    public static void setMinTokenDeposit(Map<Hash160, Integer> newMinDeposits) {
         onlyGovernor();
-        int nrTokens = tokens.size();
-        if (nrTokens != newMinDeposits.size()) abort("Length mismatch.");
+        Hash160[] tokens = newMinDeposits.keys();
         StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
-        for (int i = 0; i < nrTokens; i++) {
-            Hash160 token = tokens.get(i);
-            int newMinAmount = newMinDeposits.get(i);
+        for (Hash160 token : tokens) {
+            Integer newMin = newMinDeposits.get(token);
             TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
-            tokenBridge.config.minAmount = newMinAmount;
+            if (newMin > tokenBridge.config.maxAmount) {
+                abort("Minimum deposit must not be greater than the maximum deposit.");
+            }
+            tokenBridge.config.minAmount = newMin;
             tokenBridgesMap.put(token, new StdLib().serialize(tokenBridge));
-            onMinTokenDepositChange.fire(token, newMinAmount);
+            onMinTokenDepositChange.fire(token, newMin);
         }
     }
 
@@ -740,19 +738,19 @@ public class BridgeContract {
         return getTokenBridge(token).config.maxAmount;
     }
 
-    public static void setMaxTokenDeposit(List<Hash160> tokens, List<Integer> newMaxDeposits) {
+    public static void setMaxTokenDeposit(Map<Hash160, Integer> newMaxDeposits) {
         onlyGovernor();
-        int nrTokens = tokens.size();
-        if (nrTokens != newMaxDeposits.size()) abort("Length mismatch.");
+        Hash160[] tokens = newMaxDeposits.keys();
         StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
-        for (int i = 0; i < nrTokens; i++) {
-            Hash160 token = tokens.get(i);
-            int newMaxAmount = newMaxDeposits.get(i);
-            if (newMaxAmount > MAX_TRANSFER_AMOUNT_LIMIT) abort("Max transfer amount limit exceeded.");
+        for (Hash160 token : tokens) {
+            Integer newMax = newMaxDeposits.get(token);
             TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
-            tokenBridge.config.maxAmount = newMaxAmount;
+            if (newMax < tokenBridge.config.minAmount) {
+                abort("Maximum deposit must not be less than the minimum deposit.");
+            }
+            tokenBridge.config.maxAmount = newMax;
             tokenBridgesMap.put(token, new StdLib().serialize(tokenBridge));
-            onMaxTokenDepositChange.fire(token, newMaxAmount);
+            onMaxTokenDepositChange.fire(token, newMax);
         }
     }
 
@@ -761,18 +759,16 @@ public class BridgeContract {
         return getTokenBridge(token).config.maxWithdrawals;
     }
 
-    public static void setMaxTokenWithdrawals(List<Hash160> tokens, List<Integer> newMaxWithdrawals) {
+    public static void setMaxTokenWithdrawals(Map<Hash160, Integer> newMaxWithdrawals) {
         onlyGovernor();
-        int nrTokens = tokens.size();
-        if (nrTokens != newMaxWithdrawals.size()) abort("Length mismatch.");
+        Hash160[] tokens = newMaxWithdrawals.keys();
         StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
-        for (int i = 0; i < nrTokens; i++) {
-            Hash160 token = tokens.get(i);
-            int newMaxWithdrawal = newMaxWithdrawals.get(i);
+        for (Hash160 token : tokens) {
+            Integer newMax = newMaxWithdrawals.get(token);
             TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
-            tokenBridge.config.maxWithdrawals = newMaxWithdrawal;
+            tokenBridge.config.maxWithdrawals = newMax;
             tokenBridgesMap.put(token, new StdLib().serialize(tokenBridge));
-            onMaxTokenWithdrawalsChange.fire(token, newMaxWithdrawal);
+            onMaxTokenWithdrawalsChange.fire(token, newMax);
         }
     }
 

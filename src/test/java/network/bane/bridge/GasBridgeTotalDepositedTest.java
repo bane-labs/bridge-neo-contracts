@@ -44,9 +44,9 @@ import static network.bane.util.TestHelper.validator3;
 import static network.bane.util.TestHelper.validator4;
 import static network.bane.util.TestHelper.validator5;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_LINKED_CHAIN_ID;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_GAS_DEPOSIT_FEE;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_WITHDRAWALS;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_GAS_DEPOSIT;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_DEPOSIT;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
 import static network.bane.util.helper.TestHelper.alice;
 import static network.bane.util.helper.TestHelper.bridge;
@@ -90,8 +90,8 @@ public class GasBridgeTotalDepositedTest {
                 prepareBridgeDeployParameter(
                         DEFAULT_LINKED_CHAIN_ID,
                         MANAGEMENT_CONTRACT_HASH,
-                        DEFAULT_GAS_DEPOSIT_FEE,
-                        DEFAULT_MIN_GAS_DEPOSIT,
+                        DEFAULT_DEPOSIT_FEE,
+                        DEFAULT_MIN_DEPOSIT,
                         FungibleToken.toFractions(new BigDecimal("500"), 8),
                         DEFAULT_MAX_WITHDRAWALS,
                         FungibleToken.toFractions(new BigDecimal("1000"), 8)
