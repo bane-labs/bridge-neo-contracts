@@ -36,10 +36,11 @@ public class GasBridge {
         public BigInteger fee;
         public BigInteger minAmount;
         public BigInteger maxAmount;
-        public BigInteger maxWithdrawals;
+        public Integer maxWithdrawals;
         public BigInteger maxTotalDeposit;
 
-        public GasConfig(BigInteger fee, BigInteger minAmount, BigInteger maxAmount, BigInteger maxWithdrawals, BigInteger maxTotalDeposit) {
+        public GasConfig(BigInteger fee, BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals,
+                BigInteger maxTotalDeposit) {
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
