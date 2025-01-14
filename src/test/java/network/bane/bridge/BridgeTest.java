@@ -218,6 +218,12 @@ public class BridgeTest {
         assertThat(versionEntry.getValueHex(), is("0x03"));
     }
 
+    @Test
+    @Order(0)
+    public void testNativeTokenGetter() throws IOException {
+        assertThat(bridge.nativeToken(), is(gasToken.getScriptHash()));
+    }
+
     // endregion
     // region rejected deposits
 

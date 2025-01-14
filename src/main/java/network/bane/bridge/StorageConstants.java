@@ -8,7 +8,6 @@ public class StorageConstants {
     static final byte PREFIX_TOKEN_BRIDGES = 0x1a;
     static final byte PREFIX_TOKEN_CLAIMABLES = 0x1b;
 
-    static final int KEY_NATIVE_TOKEN = 0x00;
     static final int KEY_BRIDGE_MANAGEMENT = 0x01;
     static final int KEY_BRIDGE_PAUSE = 0x02;
     static final int KEY_NATIVE_BRIDGE = 0x03;

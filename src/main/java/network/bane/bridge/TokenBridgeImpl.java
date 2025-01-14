@@ -11,6 +11,7 @@ import io.neow3j.devpack.Map;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.constants.FindOptions;
 import io.neow3j.devpack.contracts.FungibleToken;
+import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.lib.BridgeLib;
 import network.bane.lib.TokenBridgeLib;
@@ -97,7 +98,7 @@ public class TokenBridgeImpl {
         BridgeImpl.addToUnclaimedRewards(depositFee);
 
         // Pay the fee and transfer the token
-        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, depositFee, null)) {
+        if (!new GasToken().transfer(from, executingScriptHash, depositFee, null)) {
             abort("Fee transfer failed.");
         }
         FungibleToken tokenContract = new FungibleToken(neoN3Token);
@@ -182,7 +183,7 @@ public class TokenBridgeImpl {
         int amount = claimable.amount;
 
         tokenClaimableMap.delete(nonce);
-        assert token != BridgeContract.gasToken.getHash() : "Token cannot be the gas token.";
+        assert token != NativeBridgeImpl.nativeToken().getHash() : "Token cannot be the bridge’s native token.";
         if (new FungibleToken(token).transfer(getExecutingScriptHash(), to, amount, null)) {
             BridgeContract.onTokenClaim.fire(token, nonce, to, amount);
         } else {

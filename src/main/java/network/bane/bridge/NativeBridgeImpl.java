@@ -6,6 +6,8 @@ import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
 import io.neow3j.devpack.StorageMap;
+import io.neow3j.devpack.contracts.FungibleToken;
+import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.lib.NativeBridgeLib;
 import network.bane.structs.Claimable;
@@ -23,6 +25,12 @@ import static network.bane.lib.BridgeLib.subsequentNonces;
 import static network.bane.lib.NativeBridgeLib.hashNativeBridgeOp;
 
 public class NativeBridgeImpl {
+
+    static FungibleToken nativeToken() {
+        // Todo mialbu 14.01.25: Replace with storage value once v3 migration code includes the native token address
+        //  configuration upon deployment.
+        return new GasToken();
+    }
 
     // region pause
 
@@ -76,7 +84,8 @@ public class NativeBridgeImpl {
         updateNativeDepositState(nativeTokenBridge, from, to, depositAmount);
         BridgeImpl.addToUnclaimedRewards(depositFee);
 
-        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, amount, null)) {
+        // Distribute the token used for the native bridge
+        if (!nativeToken().transfer(from, executingScriptHash, amount, null)) {
             abort("Token transfer failed.");
         }
     }
@@ -158,7 +167,7 @@ public class NativeBridgeImpl {
 
         nativeClaimableMap.delete(nonce);
 
-        if (BridgeContract.gasToken.transfer(getExecutingScriptHash(), to, amount, null)) {
+        if (nativeToken().transfer(getExecutingScriptHash(), to, amount, null)) {
             BridgeContract.onNativeClaim.fire(nonce, to, amount);
         } else {
             abort("Claim transfer failed.");
@@ -183,7 +192,7 @@ public class NativeBridgeImpl {
                 addNativeClaimable(withdrawal);
                 BridgeContract.onNativeClaimable.fire(withdrawal.nonce, withdrawal.to, withdrawal.amount);
             } else {
-                if (BridgeContract.gasToken.transfer(executingScriptHash, withdrawal.to, withdrawal.amount, null)) {
+                if (nativeToken().transfer(executingScriptHash, withdrawal.to, withdrawal.amount, null)) {
                     BridgeContract.onNativeWithdrawal.fire(withdrawal.nonce, withdrawal.to, withdrawal.amount);
                 } else {
                     // If the transfer was unsuccessful, add the withdrawal to the claimable map.

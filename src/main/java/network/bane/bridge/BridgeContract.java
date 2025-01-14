@@ -56,7 +56,6 @@ import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_LINKED_CHAIN_ID;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
 import static network.bane.bridge.StorageConstants.KEY_NATIVE_BRIDGE;
-import static network.bane.bridge.StorageConstants.KEY_NATIVE_TOKEN;
 import static network.bane.bridge.StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS;
 import static network.bane.bridge.StorageConstants.KEY_VERSION;
 import static network.bane.bridge.StorageConstants.KEY_UNCLAIMED_REWARDS;
@@ -88,7 +87,6 @@ public class BridgeContract {
 
     static final StorageContext ctx = Storage.getStorageContext();
     static final CryptoLib cryptoLib = new CryptoLib();
-    static final GasToken gasToken = new GasToken();
 
     // baseMap is used to store native-related state and general contract information, i.e., management contract and
     // pause status.
@@ -354,7 +352,7 @@ public class BridgeContract {
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
         Hash160 callingScriptHash = getCallingScriptHash();
-        if (callingScriptHash.equals(gasToken.getHash())) {
+        if (callingScriptHash.equals(new GasToken().getHash())) {
             // Accept GAS rewards from holding NEO. This is the only case where the from parameter can be null.
             if (from == null) {
                 BridgeImpl.addNeoHoldingGasRewards(amount);
@@ -410,12 +408,6 @@ public class BridgeContract {
 
     // endregion
     // region native bridge
-
-    @Safe
-    public static Hash160 nativeToken() {
-        return baseMap.getHash160(KEY_NATIVE_TOKEN);
-    }
-
     // region native bridge pausing
 
     public static void pauseNativeBridge() {
@@ -496,6 +488,11 @@ public class BridgeContract {
     // endregion
     // region native bridge configuration/state
     // region native bridge configuration
+
+    @Safe
+    public static Hash160 nativeToken() {
+        return NativeBridgeImpl.nativeToken().getHash();
+    }
 
     @Safe
     public static NativeTokenBridge getNativeBridge() {

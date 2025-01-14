@@ -164,6 +164,10 @@ public class Bridge extends SmartContractHelper {
     // region native bridge configuration/state
     // region native bridge configuration
 
+    public Hash160 nativeToken() throws IOException {
+        return callFunctionReturningScriptHash("nativeToken");
+    }
+
     public NativeBridge getNativeBridge() throws IOException {
         List<StackItem> nativeBridgeList = callInvokeFunction("getNativeBridge")
                 .getInvocationResult().getFirstStackItem().getList();
