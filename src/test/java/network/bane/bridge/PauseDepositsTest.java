@@ -124,7 +124,7 @@ public class PauseDepositsTest {
     // region deposits when deposits are paused
 
     @Test
-    public void testPausedDeposit_rejectDepositGas() throws Throwable {
+    public void testPausedDeposit_rejectDepositNative() throws Throwable {
         assertFalse(bridge.depositsArePaused());
         bridge.pauseDeposits();
 
@@ -139,7 +139,7 @@ public class PauseDepositsTest {
     // region withdrawal when deposits are paused
 
     @Test
-    public void testPauseDeposits_withdrawGas() throws Throwable {
+    public void testPauseDeposits_withdrawNative() throws Throwable {
         assertFalse(bridge.depositsArePaused());
         bridge.pauseDeposits();
         assertThat(bridge.getNativeBridge().withdrawalState.nonce, is(BigInteger.ZERO));

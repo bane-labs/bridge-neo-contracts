@@ -61,7 +61,7 @@ public class TokenBridgeWithdrawalTest {
 
     // TODO: Use withdrawToken() with the deployed NEP-17 token and to a contract -> check event TokenClaimable
     // TODO: Use withdrawToken() with withdrawals that exceed the bridge's balance -> check event TokenClaimable
-    // TODO: Check event GasWithdrawalRootUpdate for a successful withdrawal
+    // TODO: Check event NativeWithdrawalRootUpdate for a successful withdrawal
     // TODO: Check updated root and nonce after a successful withdrawal
 
     // endregion

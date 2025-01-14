@@ -352,6 +352,7 @@ public class BridgeContract {
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
         Hash160 callingScriptHash = getCallingScriptHash();
+        // Todo mialbu 14.01.25: Accept Gas if it is not used in the native bridge but is registered as a token bridge.
         if (callingScriptHash.equals(new GasToken().getHash())) {
             // Accept GAS rewards from holding NEO. This is the only case where the from parameter can be null.
             if (from == null) {
