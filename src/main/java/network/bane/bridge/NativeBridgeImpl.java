@@ -76,7 +76,7 @@ public class NativeBridgeImpl {
         updateNativeDepositState(nativeTokenBridge, from, to, depositAmount);
         BridgeImpl.addToUnclaimedRewards(depositFee);
 
-        if (!BridgeContract.nativeToken.transfer(from, executingScriptHash, amount, null)) {
+        if (!BridgeContract.gasToken.transfer(from, executingScriptHash, amount, null)) {
             abort("Token transfer failed.");
         }
     }
@@ -158,7 +158,7 @@ public class NativeBridgeImpl {
 
         nativeClaimableMap.delete(nonce);
 
-        if (BridgeContract.nativeToken.transfer(getExecutingScriptHash(), to, amount, null)) {
+        if (BridgeContract.gasToken.transfer(getExecutingScriptHash(), to, amount, null)) {
             BridgeContract.onNativeClaim.fire(nonce, to, amount);
         } else {
             abort("Claim transfer failed.");
@@ -183,7 +183,7 @@ public class NativeBridgeImpl {
                 addNativeClaimable(withdrawal);
                 BridgeContract.onNativeClaimable.fire(withdrawal.nonce, withdrawal.to, withdrawal.amount);
             } else {
-                if (BridgeContract.nativeToken.transfer(executingScriptHash, withdrawal.to, withdrawal.amount, null)) {
+                if (BridgeContract.gasToken.transfer(executingScriptHash, withdrawal.to, withdrawal.amount, null)) {
                     BridgeContract.onNativeWithdrawal.fire(withdrawal.nonce, withdrawal.to, withdrawal.amount);
                 } else {
                     // If the transfer was unsuccessful, add the withdrawal to the claimable map.

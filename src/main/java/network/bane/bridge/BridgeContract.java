@@ -88,7 +88,7 @@ public class BridgeContract {
 
     static final StorageContext ctx = Storage.getStorageContext();
     static final CryptoLib cryptoLib = new CryptoLib();
-    static final GasToken nativeToken = new GasToken();
+    static final GasToken gasToken = new GasToken();
 
     // baseMap is used to store native-related state and general contract information, i.e., management contract and
     // pause status.
@@ -354,7 +354,7 @@ public class BridgeContract {
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
         Hash160 callingScriptHash = getCallingScriptHash();
-        if (callingScriptHash.equals(nativeToken.getHash())) {
+        if (callingScriptHash.equals(gasToken.getHash())) {
             // Accept GAS rewards from holding NEO. This is the only case where the from parameter can be null.
             if (from == null) {
                 BridgeImpl.addNeoHoldingGasRewards(amount);
