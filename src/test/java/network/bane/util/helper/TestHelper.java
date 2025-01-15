@@ -133,6 +133,7 @@ public class TestHelper {
                 new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
         deploySigner.setRules(deployWitnessRule);
         config.setSigner(deploySigner);
+        config.setSubstitution("BridgeManagementName", "NeoXBridgeManagement");
         return config;
     }
 
@@ -154,6 +155,7 @@ public class TestHelper {
                 new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
         deploySigner.setRules(deployWitnessRule);
         config.setSigner(deploySigner);
+        config.setSubstitution("BridgeName", "NeoXBridge");
         return config;
     }
 
