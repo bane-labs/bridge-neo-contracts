@@ -31,7 +31,7 @@ import io.neow3j.devpack.events.Event4Args;
 import io.neow3j.devpack.events.Event6Args;
 import io.neow3j.devpack.events.Event8Args;
 import network.bane.structs.BridgeDeploymentData;
-import network.bane.structs.GasBridge;
+import network.bane.structs.NativeTokenBridge;
 import network.bane.structs.State;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
@@ -47,15 +47,15 @@ import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlyWhenNotPaused;
 import static network.bane.bridge.BridgeImpl.enteringNonReentrant;
 import static network.bane.bridge.BridgeImpl.exitingNonReentrant;
-import static network.bane.bridge.GasBridgeImpl.onlyWhenDepositsNotPaused;
-import static network.bane.bridge.GasBridgeImpl.onlyWhenDepositsPaused;
-import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgePaused;
-import static network.bane.bridge.GasBridgeImpl.onlyWhenGasBridgeNotPaused;
+import static network.bane.bridge.NativeBridgeImpl.onlyWhenDepositsNotPaused;
+import static network.bane.bridge.NativeBridgeImpl.onlyWhenDepositsPaused;
+import static network.bane.bridge.NativeBridgeImpl.onlyWhenNativeBridgePaused;
+import static network.bane.bridge.NativeBridgeImpl.onlyWhenNativeBridgeNotPaused;
 import static network.bane.bridge.StorageConstants.KEY_DEPOSIT_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_LINKED_CHAIN_ID;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
-import static network.bane.bridge.StorageConstants.KEY_GAS_BRIDGE;
+import static network.bane.bridge.StorageConstants.KEY_NATIVE_BRIDGE;
 import static network.bane.bridge.StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS;
 import static network.bane.bridge.StorageConstants.KEY_VERSION;
 import static network.bane.bridge.StorageConstants.KEY_UNCLAIMED_REWARDS;
@@ -69,7 +69,7 @@ import static network.bane.bridge.StorageConstants.PREFIX_BASE;
 @Permission(contract = "*")
 @ManifestExtras({@ManifestExtra(key = "Author", value = "BaneLabs"),
         @ManifestExtra(key = "Description",
-                       value = "Contract for bridging GAS and tokens between Neo N3 and an EVM chain."),
+                       value = "Contract for bridging fungible tokens between Neo N3 and a linked chain."),
         @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")})
 public class BridgeContract {
 
@@ -87,9 +87,8 @@ public class BridgeContract {
 
     static final StorageContext ctx = Storage.getStorageContext();
     static final CryptoLib cryptoLib = new CryptoLib();
-    static final GasToken gasToken = new GasToken();
 
-    // baseMap is used to store gas-related state and general contract information, i.e., management contract and
+    // baseMap is used to store native-related state and general contract information, i.e., management contract and
     // pause status.
     static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
 
@@ -110,49 +109,49 @@ public class BridgeContract {
     static Event onDepositUnpause;
 
     // endregion
-    // region gas bridge events
+    // region native bridge events
 
-    @DisplayName("GasBridgePause")
-    static Event onGasBridgePause;
+    @DisplayName("NativeBridgePause")
+    static Event onNativeBridgePause;
 
-    @DisplayName("GasBridgeUnpause")
-    static Event onGasBridgeUnpause;
+    @DisplayName("NativeBridgeUnpause")
+    static Event onNativeBridgeUnpause;
 
-    @DisplayName("GasDeposit")
+    @DisplayName("NativeDeposit")
     @EventParameterNames({"Nonce", "Recipient", "Amount", "Depositor", "DepositHash", "NewDepositRoot"})
-    static Event6Args<Integer, Hash160, Integer, Hash160, ByteString, ByteString> onGasDeposit;
+    static Event6Args<Integer, Hash160, Integer, Hash160, ByteString, ByteString> onNativeDeposit;
 
-    @DisplayName("GasClaimable")
+    @DisplayName("NativeClaimable")
     @EventParameterNames({"Nonce", "Recipient", "Amount"})
-    static Event3Args<Integer, Hash160, Integer> onGasClaimable;
+    static Event3Args<Integer, Hash160, Integer> onNativeClaimable;
 
-    @DisplayName("GasClaim")
+    @DisplayName("NativeClaim")
     @EventParameterNames({"Nonce", "Recipient", "Amount"})
-    static Event3Args<Integer, Hash160, Integer> onGasClaim;
+    static Event3Args<Integer, Hash160, Integer> onNativeClaim;
 
-    @DisplayName("GasWithdrawal")
+    @DisplayName("NativeWithdrawal")
     @EventParameterNames({"Nonce", "Recipient", "Amount"})
-    static Event3Args<Integer, Hash160, Integer> onGasWithdrawal;
+    static Event3Args<Integer, Hash160, Integer> onNativeWithdrawal;
 
-    @DisplayName("GasWithdrawalRootUpdate")
+    @DisplayName("NativeWithdrawalRootUpdate")
     @EventParameterNames({"Nonce", "WithdrawalRoot"})
-    static Event2Args<Integer, ByteString> onGasWithdrawalRootUpdate;
+    static Event2Args<Integer, ByteString> onNativeWithdrawalRootUpdate;
 
-    @DisplayName("GasDepositFeeChange")
+    @DisplayName("NativeDepositFeeChange")
     @EventParameterNames({"NewFee"})
-    static Event1Arg<Integer> onGasDepositFeeChange;
+    static Event1Arg<Integer> onNativeDepositFeeChange;
 
-    @DisplayName("MinGasDepositChange")
+    @DisplayName("MinNativeDepositChange")
     @EventParameterNames({"NewMinDeposit"})
-    static Event1Arg<Integer> onMinGasDepositChange;
+    static Event1Arg<Integer> onMinNativeDepositChange;
 
-    @DisplayName("MaxGasDepositChange")
+    @DisplayName("MaxNativeDepositChange")
     @EventParameterNames({"NewMaxDeposit"})
-    static Event1Arg<Integer> onMaxGasDepositChange;
+    static Event1Arg<Integer> onMaxNativeDepositChange;
 
-    @DisplayName("MaxTotalDepositedGasChange")
-    @EventParameterNames({"NewMaxTotalDepositedGas"})
-    static Event1Arg<Integer> onMaxTotalDepositedGasChange;
+    @DisplayName("MaxTotalDepositedNativeChange")
+    @EventParameterNames({"NewMaxTotalDepositedNative"})
+    static Event1Arg<Integer> onMaxTotalDepositedNativeChange;
 
     // endregion
     // region token bridge events
@@ -226,6 +225,8 @@ public class BridgeContract {
                 abort("Invalid bridge management contract hash.");
             if (deploymentData.linkedChainId == null || deploymentData.linkedChainId <= 0)
                 abort("Invalid linked chain id.");
+            // Todo: Check if there is a native token representative for the linked chain in the deployment data.
+            //  If so, check its validity. Otherwise, do not set the native token.
 
             baseMap.put(KEY_LINKED_CHAIN_ID, deploymentData.linkedChainId);
             baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.bridgeManagementContract);
@@ -234,11 +235,11 @@ public class BridgeContract {
             ByteString zeroHash = Hash256.zero().toByteString();
             State newDepositState = new State(0, zeroHash);
             State newWithdrawalState = new State(0, zeroHash);
-            GasBridge gasBridge = new GasBridge(false, 0, newDepositState, newWithdrawalState,
-                    deploymentData.gasConfig);
-            if (!GasBridge.isValid(gasBridge)) abort("Invalid gas bridge.");
-            ByteString serialize = new StdLib().serialize(gasBridge);
-            baseMap.put(KEY_GAS_BRIDGE, serialize);
+            NativeTokenBridge nativeBridge = new NativeTokenBridge(false, 0, newDepositState, newWithdrawalState,
+                    deploymentData.nativeConfig);
+            if (!NativeTokenBridge.isValid(nativeBridge)) abort("Invalid native bridge.");
+            ByteString serialize = new StdLib().serialize(nativeBridge);
+            baseMap.put(KEY_NATIVE_BRIDGE, serialize);
             baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
             baseMap.put(KEY_DEPOSIT_PAUSE, false);
             baseMap.put(KEY_NEO_HOLDING_GAS_REWARDS, 0);
@@ -291,9 +292,8 @@ public class BridgeContract {
     }
 
     /**
-     * Pausing deposits will reject any incoming deposits to the bridge. This means {@code depositGas()},
-     * {@code depositToken()}, and direct GAS transfers with data that would initiate a bridge request will be rejected,
-     * i.e., aborted.
+     * Pausing deposits will reject any incoming deposits to the bridge. This means {@code depositNative()} and
+     * {@code depositToken()} will be rejected, i.e., aborted.
      * <p>
      * This feature is useful in the case of a planned contract update that involves a change in the computation of
      * the hash chain roots. By pausing the deposits, there will be no new deposits and the relayer can be given time
@@ -333,7 +333,8 @@ public class BridgeContract {
      * <p>
      * There are 3 cases that are handled differently:
      * <ul>
-     * <li> The GAS token is sent. </li>
+     * <li> The native token is sent, i.e., in case of Neo X as linked chain, the GasToken, or for other linked
+     * chains, the corresponding fungible token set as the native token for that linked chain. </li>
      * <li> A registered token is sent. </li>
      * <li> An unregistered token is sent. </li>
      * </ul>
@@ -351,7 +352,8 @@ public class BridgeContract {
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
         Hash160 callingScriptHash = getCallingScriptHash();
-        if (callingScriptHash.equals(gasToken.getHash())) {
+        // Todo mialbu 14.01.25: Accept Gas if it is not used in the native bridge but is registered as a token bridge.
+        if (callingScriptHash.equals(new GasToken().getHash())) {
             // Accept GAS rewards from holding NEO. This is the only case where the from parameter can be null.
             if (from == null) {
                 BridgeImpl.addNeoHoldingGasRewards(amount);
@@ -393,7 +395,7 @@ public class BridgeContract {
 
     /**
      * @return the amount of unclaimed rewards for the bridge operators. This amount is increased by the deposit fees
-     * of the gas and token bridges, as well as by rewards from holding NEO.
+     * of the native and token bridges, as well as by rewards from holding NEO.
      */
     @Safe
     public static int unclaimedRewards() {
@@ -406,45 +408,46 @@ public class BridgeContract {
     }
 
     // endregion
-    // region gas bridge
-    // region gas bridge pausing
+    // region native bridge
+    // region native bridge pausing
 
-    public static void pauseGasBridge() {
+    public static void pauseNativeBridge() {
         onlyGovernorOrSecurityGuard();
-        onlyWhenGasBridgeNotPaused();
-        GasBridgeImpl.pauseGasBridge();
-        onGasBridgePause.fire();
+        onlyWhenNativeBridgeNotPaused();
+        NativeBridgeImpl.pauseNativeBridge();
+        onNativeBridgePause.fire();
     }
 
-    public static void unpauseGasBridge() {
+    public static void unpauseNativeBridge() {
         onlyGovernor();
-        onlyWhenGasBridgePaused();
-        GasBridgeImpl.unpauseGasBridge();
-        onGasBridgeUnpause.fire();
+        onlyWhenNativeBridgePaused();
+        NativeBridgeImpl.unpauseNativeBridge();
+        onNativeBridgeUnpause.fire();
     }
 
     // endregion
-    // region gas deposit/claim/withdrawal
+    // region native deposit/claim/withdrawal
 
     /**
-     * Deposit GAS to Neo X.
+     * Deposits the linked chain's native token representative to the linked chain.
      *
      * @param from   the sender.
-     * @param to     the recipient on Neo X.
-     * @param amount the amount of GAS to deposit to Neo X. The provided amount includes the deposit fee. The value
-     *               that will be distributed on Neo X is this amount minus the deposit fee.
-     * @param maxFee the maximum fee that the depositor is willing to pay for the deposit. If the actual fee is higher
-     *               than this value, the deposit is aborted.
+     * @param to     the recipient on the linked chain.
+     * @param amount the amount to deposit to the linked chain. The provided amount includes the deposit fee. In
+     *               case of the Neo X bridge, the value that will be distributed is this amount minus the deposit fee.
+     * @param maxFee the maximum fee in GAS that the depositor is willing to pay for the deposit. If the actual fee is
+     *               higher than this value, the deposit is aborted.
      */
-    public static void depositGas(Hash160 from, Hash160 to, int amount, int maxFee) {
+    public static void depositNative(Hash160 from, Hash160 to, int amount, int maxFee) {
         onlyWhenNotPaused();
-        onlyWhenGasBridgeNotPaused();
+        onlyWhenNativeBridgeNotPaused();
         onlyWhenDepositsNotPaused();
-        GasBridgeImpl.depositGas(from, to, amount, maxFee);
+        NativeBridgeImpl.depositNative(from, to, amount, maxFee);
     }
 
     /**
-     * Withdraws GAS from the contract (i.e., from Neo X) to the provided recipients.
+     * Withdraws the linked chain's native token representative from the contract (i.e., GAS in case of Neo X) to
+     * the provided recipients.
      * <p>
      * Requires the signatures of the validators. The signatures must sign the provided withdrawal root, while the
      * provided withdrawal root must be the computed root based on the current root in storage and the provided
@@ -452,125 +455,131 @@ public class BridgeContract {
      * <p>
      * Withdrawals to contracts are made available for claiming and are not directly transferred due to uncertain
      * computation costs. Additionaly, if a transfer fails, the withdrawal is also made available for claiming. This
-     * should never happen as long as the deposited GAS funds are held in this contract.
+     * should never happen as long as the deposited native token funds are held in this contract.
      *
      * @param withdrawalRoot the new withdrawal root.
      * @param signatures     the signatures of the validators.
      * @param withdrawals    the withdrawals to execute.
      */
-    public static void withdrawGas(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
+    public static void withdrawNative(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
         onlyRelayer();
         onlyWhenNotPaused();
-        onlyWhenGasBridgeNotPaused();
-        GasBridgeImpl.withdrawGas(withdrawalRoot, signatures, withdrawals);
+        onlyWhenNativeBridgeNotPaused();
+        NativeBridgeImpl.withdrawNative(withdrawalRoot, signatures, withdrawals);
     }
 
     /**
-     * Claim GAS that has been withdrawn from Neo X.
+     * Claim the linked chain's native token representative that has been withdrawn from the linked chain.
      * <p>
-     * Only withdrawals that have a contract as recipient or for which the transfer has failed (should never happen
-     * as long as the deposited GAS funds are held in this contract) are available to claim.
+     * Only withdrawals that have a contract as recipient or for which the transfer has failed (this should never happen
+     * as long as the deposited funds are held in this contract) are available to claim.
      * <p>
      * In order to claim a withdrawal, provide the nonce of the withdrawal and the amount will be transferred to the
      * already specified recipient.
      *
      * @param nonce the nonce of the withdrawal that is claimable.
      */
-    public static void claimGas(int nonce) {
+    public static void claimNative(int nonce) {
         onlyWhenNotPaused();
-        onlyWhenGasBridgeNotPaused();
-        GasBridgeImpl.claimGas(nonce);
+        onlyWhenNativeBridgeNotPaused();
+        NativeBridgeImpl.claimNative(nonce);
     }
 
     // endregion
-    // region gas bridge configuration/state
-    // region gas bridge configuration
+    // region native bridge configuration/state
+    // region native bridge configuration
 
     @Safe
-    public static GasBridge getGasBridge() {
-        ByteString serialized = baseMap.get(KEY_GAS_BRIDGE);
-        return (GasBridge) new StdLib().deserialize(serialized);
+    public static Hash160 nativeToken() {
+        return NativeBridgeImpl.nativeToken().getHash();
     }
 
     @Safe
-    public static int gasDepositFee() {
-        return getGasBridge().config.depositFee;
+    public static NativeTokenBridge getNativeBridge() {
+        ByteString serialized = baseMap.get(KEY_NATIVE_BRIDGE);
+        return (NativeTokenBridge) new StdLib().deserialize(serialized);
     }
 
-    public static void setGasDepositFee(int newFee) {
+    @Safe
+    public static int nativeDepositFee() {
+        return getNativeBridge().config.depositFee;
+    }
+
+    public static void setNativeDepositFee(int newFee) {
         onlyGovernor();
         if (newFee < 0) abort("New deposit fee must be nonnegative.");
-        GasBridge gasBridge = getGasBridge();
-        if (newFee >= gasBridge.config.minAmount) abort("Deposit fee must be less than the minimum deposit amount.");
-        gasBridge.config.depositFee = newFee;
-        baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
-        onGasDepositFeeChange.fire(newFee);
+        NativeTokenBridge nativeBridge = getNativeBridge();
+        if (newFee >= nativeBridge.config.minAmount) abort("Deposit fee must be less than the minimum deposit amount.");
+        nativeBridge.config.depositFee = newFee;
+        baseMap.put(KEY_NATIVE_BRIDGE, new StdLib().serialize(nativeBridge));
+        onNativeDepositFeeChange.fire(newFee);
     }
 
     @Safe
-    public static int minGasDeposit() {
-        return getGasBridge().config.minAmount;
+    public static int minNativeDeposit() {
+        return getNativeBridge().config.minAmount;
     }
 
-    public static void setMinGasDeposit(int newMinAmount) {
+    public static void setMinNativeDeposit(int newMinAmount) {
         onlyGovernor();
-        GasBridge gasBridge = getGasBridge();
-        if (newMinAmount <= gasBridge.config.depositFee) abort("Minimum deposit must be greater than the deposit fee.");
-        if (newMinAmount > gasBridge.config.maxAmount) abort("Minimum must be less than the maximum amount.");
-        gasBridge.config.minAmount = newMinAmount;
-        baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
-        onMinGasDepositChange.fire(newMinAmount);
+        NativeTokenBridge nativeBridge = getNativeBridge();
+        if (newMinAmount <= nativeBridge.config.depositFee)
+            abort("Minimum deposit must be greater than the deposit fee.");
+        if (newMinAmount > nativeBridge.config.maxAmount) abort("Minimum must be less than the maximum amount.");
+        nativeBridge.config.minAmount = newMinAmount;
+        baseMap.put(KEY_NATIVE_BRIDGE, new StdLib().serialize(nativeBridge));
+        onMinNativeDepositChange.fire(newMinAmount);
     }
 
     @Safe
-    public static int maxGasDeposit() {
-        return getGasBridge().config.maxAmount;
+    public static int maxNativeDeposit() {
+        return getNativeBridge().config.maxAmount;
     }
 
-    public static void setMaxGasDeposit(int newMaxAmount) {
+    public static void setMaxNativeDeposit(int newMaxAmount) {
         onlyGovernor();
-        GasBridge gasBridge = getGasBridge();
-        if (newMaxAmount < gasBridge.config.minAmount) abort("Maximum must be greater than the minimum amount.");
-        if (newMaxAmount >= gasBridge.config.maxTotalDeposited)
+        NativeTokenBridge nativeBridge = getNativeBridge();
+        if (newMaxAmount < nativeBridge.config.minAmount) abort("Maximum must be greater than the minimum amount.");
+        if (newMaxAmount >= nativeBridge.config.maxTotalDeposited)
             abort("Value must be less than the maximum total deposited amount.");
-        gasBridge.config.maxAmount = newMaxAmount;
-        baseMap.put(KEY_GAS_BRIDGE, new StdLib().serialize(gasBridge));
-        onMaxGasDepositChange.fire(newMaxAmount);
+        nativeBridge.config.maxAmount = newMaxAmount;
+        baseMap.put(KEY_NATIVE_BRIDGE, new StdLib().serialize(nativeBridge));
+        onMaxNativeDepositChange.fire(newMaxAmount);
     }
 
     @Safe
-    public static int maxTotalDepositedGas() {
-        return getGasBridge().config.maxTotalDeposited;
+    public static int maxTotalDepositedNative() {
+        return getNativeBridge().config.maxTotalDeposited;
     }
 
-    public static void setMaxTotalDepositedGas(int newMaxTotalDeposited) {
+    public static void setMaxTotalDepositedNative(int newMaxTotalDeposited) {
         onlyGovernor();
-        GasBridgeImpl.setMaxTotalDepositedGas(newMaxTotalDeposited);
-        onMaxTotalDepositedGasChange.fire(newMaxTotalDeposited);
+        NativeBridgeImpl.setMaxTotalDepositedNative(newMaxTotalDeposited);
+        onMaxTotalDepositedNativeChange.fire(newMaxTotalDeposited);
     }
 
     // endregion
-    // region gas bridge state
+    // region native bridge state
 
     @Safe
-    public static int gasDepositNonce() {
-        return getGasBridge().depositState.nonce;
+    public static int nativeDepositNonce() {
+        return getNativeBridge().depositState.nonce;
     }
 
     @Safe
-    public static ByteString gasDepositRoot() {
-        return getGasBridge().depositState.root;
+    public static ByteString nativeDepositRoot() {
+        return getNativeBridge().depositState.root;
     }
 
     @Safe
-    public static int gasWithdrawalNonce() {
-        return getGasBridge().withdrawalState.nonce;
+    public static int nativeWithdrawalNonce() {
+        return getNativeBridge().withdrawalState.nonce;
     }
 
     @Safe
-    public static ByteString gasWithdrawalRoot() {
-        return getGasBridge().withdrawalState.root;
+    public static ByteString nativeWithdrawalRoot() {
+        return getNativeBridge().withdrawalState.root;
     }
 
     // endregion

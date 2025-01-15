@@ -23,7 +23,7 @@ import static network.bane.utils.wallet.LoadWallet.getOwnerAccountFromWallet;
 
 public class DepositToken {
 
-    public static final BigInteger DEFAULT_GAS_FEE = FungibleToken.toFractions(new BigDecimal("0.1"), 8);
+    public static final BigInteger DEFAULT_NATIVE_FEE = FungibleToken.toFractions(new BigDecimal("0.1"), 8);
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = Neow3j.build(new HttpService(NODE));
@@ -32,7 +32,7 @@ public class DepositToken {
         Hash160 bridgeAddress = new Hash160(getEnvVariable("BRIDGE_HASH"));
         Account from = getOwnerAccountFromWallet();
         Hash160 to = new Hash160(getEnvVariable("DEFAULT_RECIPIENT_ON_NEOX"));
-        BigInteger maxFee = DEFAULT_GAS_FEE;
+        BigInteger maxFee = DEFAULT_NATIVE_FEE;
 
         FungibleToken tokenContract = new FungibleToken(tokenHash, neow3j);
         BigDecimal decimalAmount = new BigDecimal("22");

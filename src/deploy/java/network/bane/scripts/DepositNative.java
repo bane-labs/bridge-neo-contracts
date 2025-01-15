@@ -21,9 +21,9 @@ import static network.bane.utils.env.EnvVariables.NODE;
 import static network.bane.utils.env.GetEnv.getEnvVariable;
 import static network.bane.utils.wallet.LoadWallet.getOwnerAccountFromWallet;
 
-public class DepositGas {
+public class DepositNative {
 
-    public static final BigInteger DEFAULT_GAS_FEE = FungibleToken.toFractions(new BigDecimal("0.1"), 8);
+    public static final BigInteger DEFAULT_NATIVE_FEE = FungibleToken.toFractions(new BigDecimal("0.1"), 8);
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = Neow3j.build(new HttpService(NODE));
@@ -32,10 +32,10 @@ public class DepositGas {
         Account from = getOwnerAccountFromWallet();
         Hash160 to = new Hash160(getEnvVariable("DEFAULT_RECIPIENT_ON_NEOX"));
         BigInteger amount = FungibleToken.toFractions(new BigDecimal("6"), 8);
-        BigInteger maxFee = DEFAULT_GAS_FEE;
+        BigInteger maxFee = DEFAULT_NATIVE_FEE;
 
         SmartContract bridge = new SmartContract(bridgeAddress, neow3j);
-        Transaction tx = bridge.invokeFunction("depositGas",
+        Transaction tx = bridge.invokeFunction("depositNative",
                         hash160(from),
                         hash160(to),
                         integer(amount),

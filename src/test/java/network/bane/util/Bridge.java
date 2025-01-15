@@ -15,7 +15,7 @@ import io.neow3j.types.Hash256;
 import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 import network.bane.util.helper.SmartContractHelper;
-import network.bane.util.structs.GasBridge;
+import network.bane.util.structs.NativeBridge;
 import network.bane.util.structs.State;
 import network.bane.util.structs.TokenBridge;
 
@@ -26,7 +26,6 @@ import java.util.Map;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.any;
-import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
@@ -119,42 +118,25 @@ public class Bridge extends SmartContractHelper {
     }
 
     // endregion
-    // region onNEP17Payment
+    // region native bridge
+    // region native deposit/withdraw/claim
 
-    public Hash256 depositGasDirectly(Account from, BigInteger amount, Hash160 to, BigInteger minBridgeAmount)
-            throws Throwable {
-        return depositGasDirectly(from, from.getScriptHash(), amount, to, minBridgeAmount);
+    public Hash256 depositNative(Account from, Hash160 to, BigInteger amount) throws Throwable {
+        return depositNative(from, to, amount, DEFAULT_MIN_DEPOSIT);
     }
 
-    public Hash256 depositGasDirectly(Account sender, Hash160 from, BigInteger amount, Hash160 to,
-            BigInteger minBridgeAmount) throws Throwable {
+    public Hash256 depositNative(Account from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
+        return depositNative(from, from.getScriptHash(), to, amount, maxFee);
+    }
+
+    public Hash256 depositNative(Account sender, Hash160 from, Hash160 to, BigInteger amount) throws Throwable {
+        return depositNative(sender, from, to, amount, DEFAULT_DEPOSIT_FEE);
+    }
+
+    public Hash256 depositNative(Account sender, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
         Signer signer = AccountSigner.none(sender).setAllowedContracts(GasToken.SCRIPT_HASH);
         return sendAndAwaitExecution(
-                new GasToken(neow3j)
-                        .transfer(from, getScriptHash(), amount, array(hash160(to), integer(minBridgeAmount)))
-                        .signers(signer));
-    }
-
-    // endregion
-    // region gas bridge
-    // region gas deposit/withdraw/claim
-
-    public Hash256 depositGas(Account from, Hash160 to, BigInteger amount) throws Throwable {
-        return depositGas(from, to, amount, DEFAULT_MIN_DEPOSIT);
-    }
-
-    public Hash256 depositGas(Account from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
-        return depositGas(from, from.getScriptHash(), to, amount, maxFee);
-    }
-
-    public Hash256 depositGas(Account sender, Hash160 from, Hash160 to, BigInteger amount) throws Throwable {
-        return depositGas(sender, from, to, amount, DEFAULT_DEPOSIT_FEE);
-    }
-
-    public Hash256 depositGas(Account sender, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
-        Signer signer = AccountSigner.none(sender).setAllowedContracts(GasToken.SCRIPT_HASH);
-        return sendAndAwaitExecution(
-                invokeFunction("depositGas",
+                invokeFunction("depositNative",
                         hash160(from),
                         hash160(to),
                         integer(amount),
@@ -162,10 +144,10 @@ public class Bridge extends SmartContractHelper {
                 ).signers(signer));
     }
 
-    public Hash256 withdrawGas(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
+    public Hash256 withdrawNative(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
             ContractParameter withdrawals) throws Throwable {
         Hash256 txHash = sendAndAwaitExecution(
-                invokeFunction("withdrawGas",
+                invokeFunction("withdrawNative",
                         byteArray(withdrawalRoot),
                         map(signatures),
                         withdrawals
@@ -173,110 +155,114 @@ public class Bridge extends SmartContractHelper {
         return txHash;
     }
 
-    public Hash256 claimGas(Account sender, BigInteger nonce) throws Throwable {
+    public Hash256 claimNative(Account sender, BigInteger nonce) throws Throwable {
         Signer signer = AccountSigner.none(sender).setAllowedContracts(GasToken.SCRIPT_HASH);
-        return sendAndAwaitExecution(invokeFunction("claimGas", integer(nonce)).signers(signer));
+        return sendAndAwaitExecution(invokeFunction("claimNative", integer(nonce)).signers(signer));
     }
 
     // endregion
-    // region gas bridge configuration/state
-    // region gas bridge configuration
+    // region native bridge configuration/state
+    // region native bridge configuration
 
-    public GasBridge getGasBridge() throws IOException {
-        List<StackItem> gasBridgeList = callInvokeFunction("getGasBridge")
+    public Hash160 nativeToken() throws IOException {
+        return callFunctionReturningScriptHash("nativeToken");
+    }
+
+    public NativeBridge getNativeBridge() throws IOException {
+        List<StackItem> nativeBridgeList = callInvokeFunction("getNativeBridge")
                 .getInvocationResult().getFirstStackItem().getList();
-        boolean paused = gasBridgeList.get(0).getBoolean();
-        BigInteger totalDeposited = gasBridgeList.get(1).getInteger();
-        List<StackItem> depositStateList = gasBridgeList.get(2).getList();
+        boolean paused = nativeBridgeList.get(0).getBoolean();
+        BigInteger totalDeposited = nativeBridgeList.get(1).getInteger();
+        List<StackItem> depositStateList = nativeBridgeList.get(2).getList();
         State depositState = new State(
                 depositStateList.get(0).getInteger(),
                 new Hash256(depositStateList.get(1).getByteArray())
         );
-        List<StackItem> withdrawalStateList = gasBridgeList.get(3).getList();
+        List<StackItem> withdrawalStateList = nativeBridgeList.get(3).getList();
         State withdrawalState = new State(
                 withdrawalStateList.get(0).getInteger(),
                 new Hash256(withdrawalStateList.get(1).getByteArray())
         );
-        List<StackItem> gasConfigList = gasBridgeList.get(4).getList();
-        GasBridge.GasConfig gasConfig = new GasBridge.GasConfig(
-                gasConfigList.get(0).getInteger(),
-                gasConfigList.get(1).getInteger(),
-                gasConfigList.get(2).getInteger(),
-                gasConfigList.get(3).getInteger().intValue(),
-                gasConfigList.get(4).getInteger()
+        List<StackItem> nativeConfigList = nativeBridgeList.get(4).getList();
+        NativeBridge.NativeConfig nativeConfig = new NativeBridge.NativeConfig(
+                nativeConfigList.get(0).getInteger(),
+                nativeConfigList.get(1).getInteger(),
+                nativeConfigList.get(2).getInteger(),
+                nativeConfigList.get(3).getInteger().intValue(),
+                nativeConfigList.get(4).getInteger()
         );
-        return new GasBridge(paused, totalDeposited, depositState, withdrawalState, gasConfig);
+        return new NativeBridge(paused, totalDeposited, depositState, withdrawalState, nativeConfig);
     }
 
-    public BigInteger gasDepositFee() throws IOException {
-        return getGasBridge().config.fee;
+    public BigInteger nativeDepositFee() throws IOException {
+        return getNativeBridge().config.fee;
     }
 
-    public Hash256 setGasDepositFee(BigInteger newFee) throws Throwable {
-        return setGasDepositFee(governor, newFee);
+    public Hash256 setNativeDepositFee(BigInteger newFee) throws Throwable {
+        return setNativeDepositFee(governor, newFee);
     }
 
-    public Hash256 setGasDepositFee(Account sender, BigInteger newFee) throws Throwable {
+    public Hash256 setNativeDepositFee(Account sender, BigInteger newFee) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("setGasDepositFee", integer(newFee)).signers(signer));
+        return sendAndAwaitExecution(invokeFunction("setNativeDepositFee", integer(newFee)).signers(signer));
     }
 
-    public BigInteger minGasDeposit() throws IOException {
-        return getGasBridge().config.minAmount;
+    public BigInteger minNativeDeposit() throws IOException {
+        return getNativeBridge().config.minAmount;
     }
 
-    public Hash256 setMinGasDeposit(BigInteger newMin) throws Throwable {
-        return setMinGasDeposit(governor, newMin);
+    public Hash256 setMinNativeDeposit(BigInteger newMin) throws Throwable {
+        return setMinNativeDeposit(governor, newMin);
     }
 
-    public Hash256 setMinGasDeposit(Account sender, BigInteger newMin) throws Throwable {
+    public Hash256 setMinNativeDeposit(Account sender, BigInteger newMin) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("setMinGasDeposit", integer(newMin)).signers(signer));
+        return sendAndAwaitExecution(invokeFunction("setMinNativeDeposit", integer(newMin)).signers(signer));
     }
 
-    public BigInteger maxGasDeposit() throws IOException {
-        return getGasBridge().config.maxAmount;
+    public BigInteger maxNativeDeposit() throws IOException {
+        return getNativeBridge().config.maxAmount;
     }
 
-    public Hash256 setMaxGasDeposit(BigInteger newMax) throws Throwable {
-        return setMaxGasDeposit(governor, newMax);
+    public Hash256 setMaxNativeDeposit(BigInteger newMax) throws Throwable {
+        return setMaxNativeDeposit(governor, newMax);
     }
 
-    public Hash256 setMaxGasDeposit(Account sender, BigInteger newMax) throws Throwable {
+    public Hash256 setMaxNativeDeposit(Account sender, BigInteger newMax) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("setMaxGasDeposit", integer(newMax)).signers(signer));
+        return sendAndAwaitExecution(invokeFunction("setMaxNativeDeposit", integer(newMax)).signers(signer));
     }
 
-    public BigInteger maxTotalDepositedGas() throws IOException {
-        return getGasBridge().config.maxTotalDeposit;
+    public BigInteger maxTotalDepositedNative() throws IOException {
+        return getNativeBridge().config.maxTotalDeposit;
     }
 
-    public Hash256 setMaxTotalDepositedGas(BigInteger newMax) throws Throwable {
-        return setMaxTotalDepositedGas(governor, newMax);
+    public Hash256 setMaxTotalDepositedNative(BigInteger newMax) throws Throwable {
+        return setMaxTotalDepositedNative(governor, newMax);
     }
 
-    public Hash256 setMaxTotalDepositedGas(Account sender, BigInteger newMax) throws Throwable {
+    public Hash256 setMaxTotalDepositedNative(Account sender, BigInteger newMax) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("setMaxTotalDepositedGas", integer(newMax)).signers(signer));
+        return sendAndAwaitExecution(invokeFunction("setMaxTotalDepositedNative", integer(newMax)).signers(signer));
     }
 
     // endregion
-    // region gas bridge state
+    // region native bridge state
 
-    public BigInteger gasDepositNonce() throws IOException {
-        return getGasBridge().depositState.nonce;
+    public BigInteger nativeDepositNonce() throws IOException {
+        return getNativeBridge().depositState.nonce;
     }
 
-    public String gasDepositRoot() throws IOException {
-        return Numeric.toHexString(getGasBridge().depositState.root.toArray());
+    public String nativeDepositRoot() throws IOException {
+        return Numeric.toHexString(getNativeBridge().depositState.root.toArray());
     }
 
-    public BigInteger gasWithdrawalNonce() throws IOException {
-        return getGasBridge().withdrawalState.nonce;
+    public BigInteger nativeWithdrawalNonce() throws IOException {
+        return getNativeBridge().withdrawalState.nonce;
     }
 
-    public String gasWithdrawRoot() throws IOException {
-        return Numeric.toHexString(getGasBridge().withdrawalState.root.toArray());
+    public String nativeWithdrawRoot() throws IOException {
+        return Numeric.toHexString(getNativeBridge().withdrawalState.root.toArray());
     }
 
     // endregion
