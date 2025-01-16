@@ -37,6 +37,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -273,7 +274,7 @@ public class BridgeTest {
         incrementAndGetDepositNonce(); // Necessary if other tests are run besides this one.
         BigInteger nextNonce = BigInteger.ONE;
         Hash160 to = new Hash160("0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
-        BigInteger amount = new BigInteger("110000000");
+        BigInteger amount = gasToken.toFractions(BigDecimal.ONE);
 
         String depositRootBefore = bridge.nativeDepositRoot();
         Hash256 txHash = DepositHelper.depositNative(from, to, amount);
@@ -285,7 +286,7 @@ public class BridgeTest {
         // 70997970C51812dc3A010C7d01b50e0d17dc79C8
         // 0000000000000000000000000000000000000000000000000000000005f5e100
         // 000000000000000000000000000000000000000000000000000000000000000170997970C51812dc3A010C7d01b50e0d17dc79C80000000000000000000000000000000000000000000000000000000005f5e100
-        String d1 = createDepositHash(nextNonce, to, amount.subtract(bridge.nativeDepositFee()));
+        String d1 = createDepositHash(nextNonce, to, amount);
         // Raw deposit hash and root. The same inputs and the same deposit and root hash are used in a Neo X test.
         assertThat(d1, is("0x7ed36781b8366a590ce568db6712d377c031b9f1a21c44cda2493182b0ff92e5"));
         String newRoot = concatAndKeccak256(depositRootBefore, d1);
@@ -298,7 +299,7 @@ public class BridgeTest {
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
-        assertThat(depositEvent.amount, is(amount.subtract(bridge.nativeDepositFee())));
+        assertThat(depositEvent.amount, is(amount));
         assertThat(depositEvent.depositHashHex, is(d1));
         assertThat(depositEvent.rootHashHex, is(newRoot));
     }
@@ -310,19 +311,16 @@ public class BridgeTest {
         BigInteger nextNonce = new BigInteger("2");
         incrementAndGetDepositNonce();
         Hash160 to = new Hash160("0x89fc6b042b146f373cec4ca4a1b112697763360f");
-        BigInteger sentAmount = DEFAULT_MIN_DEPOSIT.add(bridge.nativeDepositFee());
-        assertThat(sentAmount, is(new BigInteger("110000000")));
+        BigInteger amount = DEFAULT_MIN_DEPOSIT;
 
         String depositRootBefore = bridge.nativeDepositRoot();
-        Hash256 txHash = depositNative(from, to, sentAmount, DEFAULT_MIN_DEPOSIT);
-
-        BigInteger depositAmountAfterFee = sentAmount.subtract(bridge.nativeDepositFee());
+        Hash256 txHash = depositNative(from, to, amount, DEFAULT_DEPOSIT_FEE);
 
         // hex values and concatenation for the second deposit
         // 0000000000000000000000000000000000000000000000000000000000000002
         // 89FC6B042B146F373CEC4CA4A1B112697763360F
         // 0000000000000000000000000000000000000000000000000000000005F5E100
-        String d2 = createDepositHash(nextNonce, to, depositAmountAfterFee);
+        String d2 = createDepositHash(nextNonce, to, amount);
         assertThat(d2, is("0xcba84a7e0f42d61e4510f0b13ae53c138cb1864b97f598d273c9fb3a9fe8d51a"));
         String d12 = concatAndKeccak256(depositRootBefore, d2);
         assertThat(d12, is("0xa15d5e4d94b19c1c4c8aa07157bb03a121e5b886c76e5ec7cecab139eb342236"));
@@ -335,7 +333,7 @@ public class BridgeTest {
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
-        assertThat(depositEvent.amount, is(depositAmountAfterFee));
+        assertThat(depositEvent.amount, is(amount));
         assertThat(depositEvent.depositHashHex, is(d2));
         assertThat(depositEvent.rootHashHex, is(d12));
     }
@@ -351,7 +349,7 @@ public class BridgeTest {
         String depositRootBefore = bridge.nativeDepositRoot();
         Hash256 txHash = DepositHelper.depositNative(from, to, amount);
 
-        String d3 = createDepositHash(nextNonce, to, amount.subtract(bridge.nativeDepositFee()));
+        String d3 = createDepositHash(nextNonce, to, amount);
         String d12d3 = concatAndKeccak256(depositRootBefore, d3);
 
         assertThat(bridge.nativeDepositRoot(), is(d12d3));
@@ -362,7 +360,7 @@ public class BridgeTest {
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
-        assertThat(depositEvent.amount, is(amount.subtract(bridge.nativeDepositFee())));
+        assertThat(depositEvent.amount, is(amount));
         assertThat(depositEvent.depositHashHex, is(d3));
         assertThat(depositEvent.rootHashHex, is(d12d3));
     }
@@ -379,7 +377,7 @@ public class BridgeTest {
 
         Hash256 txHash = DepositHelper.depositNative(from, to, amount);
 
-        String depositHashOffChain = createDepositHash(nextNonce, to, amount.subtract(bridge.nativeDepositFee()));
+        String depositHashOffChain = createDepositHash(nextNonce, to, amount);
         String d1234 = concatAndKeccak256(depositRootBefore, depositHashOffChain);
 
         assertThat(bridge.nativeDepositRoot(), is(d1234));
@@ -390,7 +388,7 @@ public class BridgeTest {
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
-        assertThat(depositEvent.amount, is(amount.subtract(bridge.nativeDepositFee())));
+        assertThat(depositEvent.amount, is(amount));
         assertThat(depositEvent.depositHashHex, is(depositHashOffChain));
         assertThat(depositEvent.rootHashHex, is(d1234));
     }

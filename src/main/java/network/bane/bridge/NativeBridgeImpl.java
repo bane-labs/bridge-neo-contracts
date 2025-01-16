@@ -79,10 +79,9 @@ public class NativeBridgeImpl {
         int depositFee = nativeTokenBridge.config.depositFee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
 
-        // The depositAmount is the amount minus the deposit fee. It is the amount that will be distributed on Neo X.
-        int depositAmount = amount - depositFee;
-        updateNativeDepositState(nativeTokenBridge, from, to, depositAmount);
-        BridgeImpl.addToUnclaimedRewards(depositFee);
+        BridgeImpl.payFee(from, depositFee);
+
+        updateNativeDepositState(nativeTokenBridge, from, to, amount);
 
         // Distribute the token used for the native bridge
         if (!nativeToken().transfer(from, executingScriptHash, amount, null)) {

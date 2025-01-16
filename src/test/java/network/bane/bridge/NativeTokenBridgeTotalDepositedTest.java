@@ -117,9 +117,9 @@ public class NativeTokenBridgeTotalDepositedTest {
         assertThat(initialNativeBridgeState.totalDeposited, is(BigInteger.ZERO));
 
         // Deposit 100 Gas, then 200. Total should be 300 after both deposits.
-        bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("100")).add(fee));
+        bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("100")));
         assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("100"))));
-        bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("200")).add(fee));
+        bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("200")));
         assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("300"))));
 
         // Withdraw 50 gas.
@@ -145,7 +145,7 @@ public class NativeTokenBridgeTotalDepositedTest {
         assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("250"))));
 
         // Deposit 120 gas.
-        bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("120")).add(fee));
+        bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("120")));
         assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("370"))));
     }
 
@@ -157,7 +157,6 @@ public class NativeTokenBridgeTotalDepositedTest {
     public void testTotalDepositedNativeToken_MaxReached() throws Throwable {
         BigInteger newMaxTotalDepositedNative = gasToken.toFractions(new BigDecimal("5000"));
         NativeBridge initialNativeBridgeState = bridge.getNativeBridge();
-        BigInteger fee = initialNativeBridgeState.config.fee;
         assertThat(initialNativeBridgeState.totalDeposited, is(gasToken.toFractions(new BigDecimal("370"))));
 
         bridge.setMaxTotalDepositedNative(newMaxTotalDepositedNative);
@@ -168,17 +167,17 @@ public class NativeTokenBridgeTotalDepositedTest {
         // The max amount that can still be deposited is 5000 - 370 = 4630.
         // Depositing > 4630 should fail.
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () ->
-                bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("4631")).add(fee)));
+                bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("4631"))));
         assertThat(thrown.getMessage(),
                 containsString("Max total deposited native tokens exceeded. Await governor to increase."));
 
         // Depositing 4630 should work.
-        bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("4630")).add(fee));
+        bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("4630")));
         assertThat(bridge.getNativeBridge().totalDeposited, is(newMaxTotalDepositedNative));
 
         // Depositing 1 should fail.
         thrown = assertThrows(TransactionConfigurationException.class, () ->
-                bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("1")).add(fee)));
+                bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("1"))));
         assertThat(thrown.getMessage(),
                 containsString("Max total deposited native tokens exceeded. Await governor to increase."));
 
@@ -188,7 +187,7 @@ public class NativeTokenBridgeTotalDepositedTest {
         assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("5000"))));
 
         // Depositing 1 should not fail.
-        Hash256 txHash = bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("1")).add(fee));
+        Hash256 txHash = bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("1")));
         assertThat(neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getState(),
                 is(NeoVMStateType.HALT));
     }
