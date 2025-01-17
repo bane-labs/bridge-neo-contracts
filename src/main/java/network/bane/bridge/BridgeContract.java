@@ -433,8 +433,7 @@ public class BridgeContract {
      *
      * @param from   the sender.
      * @param to     the recipient on the linked chain.
-     * @param amount the amount to deposit to the linked chain. The provided amount includes the deposit fee. In
-     *               case of the Neo X bridge, the value that will be distributed is this amount minus the deposit fee.
+     * @param amount the amount to deposit to the linked chain.
      * @param maxFee the maximum fee in GAS that the depositor is willing to pay for the deposit. If the actual fee is
      *               higher than this value, the deposit is aborted.
      */

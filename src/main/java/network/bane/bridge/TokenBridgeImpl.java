@@ -95,12 +95,9 @@ public class TokenBridgeImpl {
         // If the actual deposit fee is higher than the specified max fee, abort.
         int depositFee = tokenBridge.config.fee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
-        BridgeImpl.addToUnclaimedRewards(depositFee);
 
-        // Pay the fee and transfer the token
-        if (!new GasToken().transfer(from, executingScriptHash, depositFee, null)) {
-            abort("Fee transfer failed.");
-        }
+        BridgeImpl.payFee(from, depositFee);
+
         FungibleToken tokenContract = new FungibleToken(neoN3Token);
         int bridgeBalanceBefore = tokenContract.balanceOf(executingScriptHash);
         if (!tokenContract.transfer(from, executingScriptHash, amount, null)) {

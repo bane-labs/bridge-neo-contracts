@@ -1,8 +1,20 @@
 package network.bane.bridge;
 
+import io.neow3j.devpack.Hash160;
+import io.neow3j.devpack.contracts.GasToken;
+
 import static io.neow3j.devpack.Helper.abort;
+import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 
 public class BridgeImpl {
+
+    static void payFee(Hash160 from, int fee) {
+        addToUnclaimedRewards(fee);
+        // Pay the fee and transfer the token
+        if (!new GasToken().transfer(from, getExecutingScriptHash(), fee, null)) {
+            abort("Fee transfer failed.");
+        }
+    }
 
     static int getUnclaimedRewards() {
         return BridgeContract.baseMap.getInt(StorageConstants.KEY_UNCLAIMED_REWARDS);
