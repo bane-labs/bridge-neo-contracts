@@ -66,27 +66,32 @@ public class NativeBridgeImpl {
     // region deposit
 
     static void depositNative(Hash160 from, Hash160 to, int amount, int maxFee) {
-        if (to == null || !Hash160.isValid(to) || to.isZero()) abort("Invalid recipient.");
-        if (from == null || !Hash160.isValid(from) || from.isZero()) abort("Invalid sender.");
         Hash160 executingScriptHash = getExecutingScriptHash();
-        if (executingScriptHash.equals(from)) abort("Invalid sender.");
+        BridgeImpl.checkDepositParameters(executingScriptHash, from, to);
 
+        // Todo mialbu 17.01.2025: Check if the native token bridge is registered, once the registration feature has
+        //  been implemented.
         NativeTokenBridge nativeTokenBridge = BridgeContract.getNativeBridge();
-        if (amount < nativeTokenBridge.config.minAmount) abort("Deposit amount is too low.");
-        if (amount > nativeTokenBridge.config.maxAmount) abort("Deposit amount is too high.");
 
         // If the deposit fee is higher than the specified max fee, abort.
         int depositFee = nativeTokenBridge.config.depositFee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
 
-        updateNativeDepositState(nativeTokenBridge, from, to, amount);
-
+        // Fee payment
         BridgeImpl.payFee(from, depositFee);
 
-        // Distribute the token used for the native bridge
-        if (!nativeToken().transfer(from, executingScriptHash, amount, null)) {
-            abort("Token transfer failed.");
-        }
+        // Native token deposit transfer
+        int receivedAmount = BridgeImpl.transferDepositToken(nativeToken(), from, executingScriptHash, amount);
+
+        // Check the received amount with the configured min and max deposit amounts.
+        if (receivedAmount < nativeTokenBridge.config.minAmount) abort("Deposit amount is too low.");
+        if (receivedAmount > nativeTokenBridge.config.maxAmount) abort("Deposit amount is too high.");
+
+        // Todo mialbu 17.01.2025: Add decimal scaling factor computation here.
+        int amountForHashing = receivedAmount;
+
+        // Update the native bridge state.
+        updateNativeDepositState(nativeTokenBridge, from, to, amountForHashing);
     }
 
     static void updateNativeDepositState(NativeTokenBridge nativeTokenBridge, Hash160 from, Hash160 to, int amount) {

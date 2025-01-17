@@ -402,7 +402,7 @@ public class BridgeTest {
                 assertThrows(TransactionConfigurationException.class,
                         () -> bridge.depositNative(alice, bridge.getScriptHash(), recipient0, amount));
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid sender."));
+                containsString("ABORTMSG is executed. Reason: Prohibited from parameter."));
     }
 
     // endregion
