@@ -79,9 +79,9 @@ public class NativeBridgeImpl {
         int depositFee = nativeTokenBridge.config.depositFee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
 
-        BridgeImpl.payFee(from, depositFee);
-
         updateNativeDepositState(nativeTokenBridge, from, to, amount);
+
+        BridgeImpl.payFee(from, depositFee);
 
         // Distribute the token used for the native bridge
         if (!nativeToken().transfer(from, executingScriptHash, amount, null)) {
