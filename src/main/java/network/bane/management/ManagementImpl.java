@@ -17,20 +17,20 @@ public class ManagementImpl {
 
     static void addValidator(ECPoint validator) {
         if (validator == null || !ECPoint.isValid(validator)) {
-            abort("Invalid public key.");
+            abort("Invalid public key");
         }
         if (isValidator(validator)) {
-            abort("Already a validator.");
+            abort("Already a validator");
         }
         validatorMap.put(validator, true);
     }
 
     static void removeValidator(ECPoint validator) {
         if (validator == null || !ECPoint.isValid(validator)) {
-            abort("Invalid public key.");
+            abort("Invalid public key");
         }
         if (!isValidator(validator)) {
-            abort("Not a validator.");
+            abort("Not a validator");
         }
         int nrValidators = validators().size();
         if (nrValidators == MIN_NR_VALIDATORS) {
@@ -39,7 +39,7 @@ public class ManagementImpl {
         // If the threshold is equal to the number of validators, we can't remove any more validators.
         // The greater than or equal to check is just a safety measure.
         if (validatorThreshold() >= nrValidators) {
-            abort("Threshold too high.");
+            abort("Threshold too high");
         }
         validatorMap.delete(validator);
     }
@@ -63,24 +63,24 @@ public class ManagementImpl {
 
     static void replaceValidator(ECPoint oldValidator, ECPoint newValidator) {
         if (oldValidator == null || !ECPoint.isValid(oldValidator) || newValidator == null || !ECPoint.isValid(newValidator)) {
-            abort("Invalid public key.");
+            abort("Invalid public key");
         }
         if (oldValidator.equals(newValidator)) {
-            abort("Public keys must be different.");
+            abort("Public keys must differ.");
         }
         if (!isValidator(oldValidator)) {
-            abort("Not a validator.");
+            abort("Old public key is not a validator.");
         }
         if (isValidator(newValidator)) {
-            abort("Already a validator.");
+            abort("New public key is already a validator.");
         }
         validatorMap.delete(oldValidator);
         validatorMap.put(newValidator, true);
     }
 
     static void setValidatorThreshold(int newThreshold) {
-        if (newThreshold < MIN_VALIDATOR_THRESHOLD) abort("Threshold too low.");
-        if (newThreshold > validators().size()) abort("Threshold too high.");
+        if (newThreshold < MIN_VALIDATOR_THRESHOLD) abort("Threshold too low");
+        if (newThreshold > validators().size()) abort("Threshold too high");
         baseMap.put(key_validator_threshold, newThreshold);
     }
 }

@@ -214,7 +214,7 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(owner))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
 
         // reverse set owner
         response = management.invokeFunction("setOwner", hash160(ownerScriptHash))
@@ -235,14 +235,14 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(owner))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid script hash provided."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid new owner"));
 
         thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("setOwner", byteArrayFromString("invalid"))
                         .signers(calledByEntry(owner))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid script hash provided."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid new owner"));
     }
 
     @Test
@@ -254,7 +254,7 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(alice))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
     // endregion
@@ -302,7 +302,7 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(alice))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
     // endregion
@@ -335,7 +335,7 @@ public class BridgeManagementTest {
         // Threshold lower than 2 should not be allowed.
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.setValidatorThreshold(owner, 1));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Threshold too low."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Threshold too low"));
 
         // Threshold equal to 2 (minimum) should be allowed.
         management.setValidatorThreshold(owner, 2);
@@ -353,7 +353,7 @@ public class BridgeManagementTest {
         // Threshold higher than the number of validators should not be allowed.
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.setValidatorThreshold(owner, nrValidators + 1));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Threshold too high."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Threshold too high"));
 
         // Threshold equal to the number of validators should be allowed.
         management.setValidatorThreshold(owner, nrValidators);
@@ -369,7 +369,7 @@ public class BridgeManagementTest {
     public void testSetValidatorThreshold_unauthorized() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.setValidatorThreshold(relayer, 3));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
     // endregion
@@ -412,7 +412,8 @@ public class BridgeManagementTest {
         assertTrue(management.isValidator(validator2PubKey));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.addValidator(owner, validator2PubKey, false));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Already a validator."));
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Already a validator"));
     }
 
     @Test
@@ -422,13 +423,13 @@ public class BridgeManagementTest {
                 () -> management.invokeFunction("addValidator", any(null), bool(false))
                         .signers(calledByEntry(owner))
                         .sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key"));
 
         thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("addValidator", byteArrayFromString("hello"), bool(false))
                         .signers(calledByEntry(owner))
                         .sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key"));
     }
 
     @Test
@@ -436,7 +437,7 @@ public class BridgeManagementTest {
     public void testValidatorAdd_unauthorized() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.addValidator(relayer, validator6PubKey, false));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
     // endregion
@@ -472,7 +473,7 @@ public class BridgeManagementTest {
         assertFalse(management.isValidator(florianPubKey));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.removeValidator(owner, florianPubKey, false));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Not a validator."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Not a validator"));
     }
 
     @Test
@@ -542,7 +543,7 @@ public class BridgeManagementTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.removeValidator(owner, validator6PubKey, false));
 
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Threshold too high."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Threshold too high"));
 
         // Reset the threshold to the default used in these tests.
         management.setValidatorThreshold(owner, defaultValidatorThreshold);
@@ -555,13 +556,13 @@ public class BridgeManagementTest {
                 () -> management.invokeFunction("removeValidator", any(null), bool(false))
                         .signers(calledByEntry(owner))
                         .sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key"));
 
         thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("removeValidator", byteArrayFromString("hello"), bool(false))
                         .signers(calledByEntry(owner))
                         .sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key"));
     }
 
     @Test
@@ -569,7 +570,7 @@ public class BridgeManagementTest {
     public void testValidatorRemove_unauthorized() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.removeValidator(relayer, validator6PubKey, false));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
     // endregion
@@ -661,14 +662,14 @@ public class BridgeManagementTest {
                 () -> management.invokeFunction("replaceValidator", publicKey(validator6PubKey), any(null))
                         .signers(calledByEntry(owner))
                         .sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key"));
 
         thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.invokeFunction("replaceValidator", publicKey(validator6PubKey),
                                 byteArrayFromString("hello"))
                         .signers(calledByEntry(owner))
                         .sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid public key"));
     }
 
     @Test
@@ -677,7 +678,7 @@ public class BridgeManagementTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.replaceValidator(owner, validator6PubKey, validator6PubKey));
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Public keys must be different."));
+                containsString("ABORTMSG is executed. Reason: Public keys must differ."));
     }
 
     @Test
@@ -685,7 +686,7 @@ public class BridgeManagementTest {
     public void testValidatorReplace_unauthorized() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> management.replaceValidator(relayer, validator6PubKey, florianPubKey));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
     // endregion
@@ -749,7 +750,7 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(alice))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
     // endregion
@@ -797,7 +798,7 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(alice))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
     // endregion
@@ -835,7 +836,7 @@ public class BridgeManagementTest {
                         .signers(calledByEntry(relayer))
                         .sign()
         );
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
     // endregion

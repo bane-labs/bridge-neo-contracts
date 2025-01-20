@@ -169,7 +169,7 @@ public class NativeTokenBridgeTotalDepositedTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () ->
                 bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("4631"))));
         assertThat(thrown.getMessage(),
-                containsString("Max total deposited native tokens exceeded. Await governor to increase."));
+                containsString("Max total deposited native tokens exceeded. Wait for governor to increase."));
 
         // Depositing 4630 should work.
         bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("4630")));
@@ -179,7 +179,7 @@ public class NativeTokenBridgeTotalDepositedTest {
         thrown = assertThrows(TransactionConfigurationException.class, () ->
                 bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("1"))));
         assertThat(thrown.getMessage(),
-                containsString("Max total deposited native tokens exceeded. Await governor to increase."));
+                containsString("Max total deposited native tokens exceeded. Wait for governor to increase."));
 
         // Increasing the max total deposited gas should enable a gas deposit of 1 to work again.
         bridge.setMaxTotalDepositedNative(gasToken.toFractions(new BigDecimal("5001")));

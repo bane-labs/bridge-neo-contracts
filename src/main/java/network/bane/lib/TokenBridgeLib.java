@@ -39,7 +39,7 @@ public class TokenBridgeLib {
         ByteString parent = formerRoot;
         for (int i = 0; i < withdrawals.size(); i++) {
             Withdrawal withdrawal = withdrawals.get(i);
-            if (!Withdrawal.isValid(withdrawal)) abort("Invalid withdrawal provided.");
+            if (!Withdrawal.isValid(withdrawal)) abort("Invalid withdrawal");
             ByteString withdrawalHash = hashTokenBridgeOp(cryptoLib, token, neoXToken, withdrawal.nonce, withdrawal.to,
                     withdrawal.amount);
             parent = computeNewRoot(cryptoLib, parent, withdrawalHash);

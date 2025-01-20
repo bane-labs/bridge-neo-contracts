@@ -35,11 +35,11 @@ public class NativeBridgeImpl {
     // region pause
 
     static void onlyWhenNativeBridgePaused() {
-        if (!BridgeContract.getNativeBridge().paused) abort("Native bridge is not paused.");
+        if (!BridgeContract.getNativeBridge().paused) abort("Native bridge not paused");
     }
 
     static void onlyWhenNativeBridgeNotPaused() {
-        if (BridgeContract.getNativeBridge().paused) abort("Native bridge is paused.");
+        if (BridgeContract.getNativeBridge().paused) abort("Native bridge paused");
     }
 
     static void pauseNativeBridge() {
@@ -55,11 +55,11 @@ public class NativeBridgeImpl {
     }
 
     static void onlyWhenDepositsNotPaused() {
-        if (BridgeContract.depositsArePaused()) abort("Deposits are paused.");
+        if (BridgeContract.depositsArePaused()) abort("Deposits paused");
     }
 
     static void onlyWhenDepositsPaused() {
-        if (!BridgeContract.depositsArePaused()) abort("Deposits are not paused.");
+        if (!BridgeContract.depositsArePaused()) abort("Deposits not paused");
     }
 
     // endregion
@@ -75,7 +75,7 @@ public class NativeBridgeImpl {
 
         // If the deposit fee is higher than the specified max fee, abort.
         int depositFee = nativeTokenBridge.config.depositFee;
-        if (depositFee > maxFee) abort("Max fee exceeded.");
+        if (depositFee > maxFee) abort("Max fee exceeded");
 
         // Fee payment
         BridgeImpl.payFee(from, depositFee);
@@ -84,8 +84,8 @@ public class NativeBridgeImpl {
         int receivedAmount = BridgeImpl.transferDepositToken(nativeToken(), from, executingScriptHash, amount);
 
         // Check the received amount with the configured min and max deposit amounts.
-        if (receivedAmount < nativeTokenBridge.config.minAmount) abort("Deposit amount is too low.");
-        if (receivedAmount > nativeTokenBridge.config.maxAmount) abort("Deposit amount is too high.");
+        if (receivedAmount < nativeTokenBridge.config.minAmount) abort("Deposit amount too low");
+        if (receivedAmount > nativeTokenBridge.config.maxAmount) abort("Deposit amount too high");
 
         // Todo mialbu 17.01.2025: Add decimal scaling factor computation here.
         int amountForHashing = receivedAmount;
@@ -98,7 +98,7 @@ public class NativeBridgeImpl {
         nativeTokenBridge.depositState.nonce++;
         nativeTokenBridge.totalDeposited += amount;
         if (nativeTokenBridge.totalDeposited > nativeTokenBridge.config.maxTotalDeposited) {
-            abort("Max total deposited native tokens exceeded. Await governor to increase.");
+            abort("Max total deposited native tokens exceeded. Wait for governor to increase.");
         }
         ByteString depositHash = hashNativeBridgeOp(BridgeContract.cryptoLib, nativeTokenBridge.depositState.nonce, to, amount);
         nativeTokenBridge.depositState.root =
@@ -114,17 +114,17 @@ public class NativeBridgeImpl {
     static void withdrawNative(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
         int withdrawalsSize = withdrawals.size();
-        if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
+        if (withdrawalsSize <= 0) abort("At least one withdrawal required.");
         NativeTokenBridge nativeTokenBridge = BridgeContract.getNativeBridge();
         if (!subsequentNonces(withdrawals, nativeTokenBridge.withdrawalState.nonce)) {
-            abort("Provided withdrawals are not subsequent.");
+            abort("Provided withdrawals not subsequent");
         }
         if (!NativeBridgeLib.computeNewTopRoot(BridgeContract.cryptoLib, nativeTokenBridge.withdrawalState.root, withdrawals)
                 .equals(withdrawalRoot)) {
-            abort("Invalid root.");
+            abort("Invalid root");
         }
         if (!managementContract().verifyValidatorSignatures(linkedChainId(), withdrawalRoot, signatures)) {
-            abort("Invalid validator signatures provided.");
+            abort("Invalid validator signatures");
         }
         // Update the native bridge state
         nativeTokenBridge.withdrawalState.nonce += withdrawalsSize;
@@ -164,7 +164,7 @@ public class NativeBridgeImpl {
     static void claimNative(int nonce) {
         StorageMap nativeClaimableMap = new StorageMap(BridgeContract.ctx, PREFIX_NATIVE_CLAIMABLES);
         ByteString claimableEntry = nativeClaimableMap.get(nonce);
-        if (claimableEntry == null) abort("No claim for this nonce.");
+        if (claimableEntry == null) abort("No claim found");
         Claimable claimable = (Claimable) new StdLib().deserialize(claimableEntry);
         Hash160 to = claimable.to;
         int amount = claimable.amount;
@@ -174,7 +174,7 @@ public class NativeBridgeImpl {
         if (nativeToken().transfer(getExecutingScriptHash(), to, amount, null)) {
             BridgeContract.onNativeClaim.fire(nonce, to, amount);
         } else {
-            abort("Claim transfer failed.");
+            abort("Claim transfer failed");
         }
     }
 

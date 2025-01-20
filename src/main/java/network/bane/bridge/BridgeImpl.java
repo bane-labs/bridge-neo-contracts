@@ -14,7 +14,7 @@ public class BridgeImpl {
         addToUnclaimedRewards(fee);
         // Pay the fee and transfer the token
         if (!new GasToken().transfer(from, getExecutingScriptHash(), fee, null)) {
-            abort("Fee transfer failed.");
+            abort("Fee transfer failed");
         }
     }
 

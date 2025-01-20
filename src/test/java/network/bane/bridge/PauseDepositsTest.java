@@ -88,7 +88,7 @@ public class PauseDepositsTest {
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () -> bridge.pauseDeposits(relayer));
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the governor can call this method."));
+                containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
     }
 
     @Test
@@ -99,7 +99,7 @@ public class PauseDepositsTest {
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () -> bridge.unpauseDeposits(securityGuard));
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the governor can call this method."));
+                containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
         bridge.unpauseDeposits();
     }
 
@@ -117,7 +117,7 @@ public class PauseDepositsTest {
         assertFalse(bridge.depositsArePaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.unpauseDeposits());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Deposits are not paused."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Deposits not paused"));
     }
 
     // endregion
@@ -130,7 +130,7 @@ public class PauseDepositsTest {
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> DepositHelper.depositNative(alice, recipient0, BigInteger.ONE));
-        assertThat(thrown.getMessage(), containsString("Deposits are paused."));
+        assertThat(thrown.getMessage(), containsString("Deposits paused"));
 
         bridge.unpauseDeposits();
     }

@@ -32,7 +32,7 @@ public class NativeBridgeLib {
         ByteString parent = formerRoot;
         for (int i = 0; i < withdrawals.size(); i++) {
             Withdrawal withdrawal = withdrawals.get(i);
-            if (!Withdrawal.isValid(withdrawal)) abort("Invalid withdrawal provided.");
+            if (!Withdrawal.isValid(withdrawal)) abort("Invalid withdrawal");
             ByteString withdrawalHash = hashNativeBridgeOp(cryptoLib, withdrawal.nonce, withdrawal.to, withdrawal.amount);
             parent = computeNewRoot(cryptoLib, parent, withdrawalHash);
         }

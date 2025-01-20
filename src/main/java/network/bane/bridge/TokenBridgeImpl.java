@@ -32,7 +32,7 @@ public class TokenBridgeImpl {
 
     static void registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
         if (token == null || !Hash160.isValid(token) || token.isZero()) abort("Invalid token");
-        if (isRegisteredToken(token)) abort("Token already registered.");
+        if (isRegisteredToken(token)) abort("Token already registered");
         StorageMap tokenBridges = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
         ByteString zeroHash = Hash256.zero().toByteString();
         State newDepositState = new State(0, zeroHash);
@@ -54,7 +54,7 @@ public class TokenBridgeImpl {
 
     static TokenBridge checkRegisteredAndGetTokenBridge(Hash160 token) {
         ByteString serializedTokenBridge = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(token);
-        if (serializedTokenBridge == null) abort("Token not registered.");
+        if (serializedTokenBridge == null) abort("Token not registered");
         return (TokenBridge) new StdLib().deserialize(serializedTokenBridge);
     }
 
@@ -62,11 +62,11 @@ public class TokenBridgeImpl {
     // region pausing
 
     static void onlyWhenTokenBridgePaused(Hash160 token) {
-        if (!BridgeContract.getTokenBridge(token).paused) abort("Token bridge is not paused.");
+        if (!BridgeContract.getTokenBridge(token).paused) abort("Token bridge not paused");
     }
 
     static void onlyWhenTokenBridgeNotPaused(Hash160 token) {
-        if (BridgeContract.getTokenBridge(token).paused) abort("Token bridge is paused.");
+        if (BridgeContract.getTokenBridge(token).paused) abort("Token bridge paused");
     }
 
     static void pauseTokenBridge(Hash160 token) {
@@ -92,7 +92,7 @@ public class TokenBridgeImpl {
 
         // If the deposit fee is higher than the specified max fee, abort.
         int depositFee = tokenBridge.config.fee;
-        if (depositFee > maxFee) abort("Max fee exceeded.");
+        if (depositFee > maxFee) abort("Max fee exceeded");
 
         // Fee payment
         BridgeImpl.payFee(from, depositFee);
@@ -102,8 +102,8 @@ public class TokenBridgeImpl {
         int receivedAmount = BridgeImpl.transferDepositToken(tokenContract, from, executingScriptHash, amount);
 
         // Check the received amount with the configured min and max amounts.
-        if (receivedAmount < tokenBridge.config.minAmount) abort("Amount below minimum.");
-        if (receivedAmount > tokenBridge.config.maxAmount) abort("Amount above maximum.");
+        if (receivedAmount < tokenBridge.config.minAmount) abort("Amount below minimum");
+        if (receivedAmount > tokenBridge.config.maxAmount) abort("Amount above maximum");
 
         // Decimal scaling factor calculation
         int decimalScalingFactor = tokenBridge.config.decimalScalingFactor;
@@ -121,7 +121,7 @@ public class TokenBridgeImpl {
         ByteString newRoot =
                 BridgeLib.computeNewRoot(BridgeContract.cryptoLib, tokenBridge.depositState.root, depositHash);
         tokenBridge.depositState.root = newRoot;
-        assert tokenBridge.depositState.root == newRoot : "Root was not set correctly.";
+        assert tokenBridge.depositState.root == newRoot : "Root not set correctly";
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(neoN3Token, new StdLib().serialize(tokenBridge));
         BridgeContract.onTokenDeposit.fire(neoN3Token, tokenBridge.config.neoXToken, tokenBridge.depositState.nonce,
                 to, amount, from, depositHash, newRoot);
@@ -135,21 +135,21 @@ public class TokenBridgeImpl {
         // Token registration is checked within getTokenBridge
         TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(neoN3Token);
         int withdrawalsSize = withdrawals.size();
-        if (withdrawalsSize <= 0) abort("At least one withdrawal is required.");
+        if (withdrawalsSize <= 0) abort("At least one withdrawal required");
         if (!subsequentNonces(withdrawals, tokenBridge.withdrawalState.nonce)) {
-            abort("Provided withdrawals are not subsequent.");
+            abort("Provided withdrawals not subsequent");
         }
         if (!TokenBridgeLib.computeNewTopRoot(BridgeContract.cryptoLib, tokenBridge.withdrawalState.root, neoN3Token,
                 tokenBridge.config.neoXToken, withdrawals).equals(withdrawalRoot)) {
-            abort("Invalid root.");
+            abort("Invalid root");
         }
         if (!managementContract().verifyValidatorSignatures(BridgeContract.linkedChainId(), withdrawalRoot, signatures)) {
-            abort("Invalid validator signatures provided.");
+            abort("Invalid validator signatures");
         }
         // Update the token state
         tokenBridge.withdrawalState.nonce = withdrawals.get(withdrawalsSize - 1).nonce;
         tokenBridge.withdrawalState.root = withdrawalRoot;
-        assert tokenBridge.withdrawalState.root == withdrawalRoot : "Root was not set correctly.";
+        assert tokenBridge.withdrawalState.root == withdrawalRoot : "Root not set correctly";
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(neoN3Token, new StdLib().serialize(tokenBridge));
         BridgeContract.onTokenWithdrawalRootUpdate.fire(neoN3Token, tokenBridge.config.neoXToken,
                 tokenBridge.withdrawalState.nonce, tokenBridge.withdrawalState.root);
@@ -169,7 +169,7 @@ public class TokenBridgeImpl {
         StorageMap tokenClaimableMap = new StorageMap(BridgeContract.ctx,
                 concat(BridgeContract.PREFIX_TOKEN_CLAIMABLES, token.toByteString()));
         ByteString claimableEntry = tokenClaimableMap.get(nonce);
-        if (claimableEntry == null) abort("No claim for this nonce.");
+        if (claimableEntry == null) abort("No claim found");
         Claimable claimable = (Claimable) new StdLib().deserialize(claimableEntry);
         Hash160 to = claimable.to;
         int amount = claimable.amount;
@@ -179,7 +179,7 @@ public class TokenBridgeImpl {
         if (new FungibleToken(token).transfer(getExecutingScriptHash(), to, amount, null)) {
             BridgeContract.onTokenClaim.fire(token, nonce, to, amount);
         } else {
-            abort("Claim transfer failed.");
+            abort("Claim transfer failed");
         }
     }
 

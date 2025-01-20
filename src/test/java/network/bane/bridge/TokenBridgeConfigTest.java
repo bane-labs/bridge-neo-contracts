@@ -123,7 +123,7 @@ public class TokenBridgeConfigTest {
 
         TransactionConfigurationException thrown = assertThrows(
                 TransactionConfigurationException.class, () -> bridge.setTokenDepositFee(bob, newValues));
-        assertThat(thrown.getMessage(), containsString("Only the governor can call this method"));
+        assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
     // Abort when trying to set a deposit fee value for a token that is not registered.
@@ -193,7 +193,7 @@ public class TokenBridgeConfigTest {
 
         TransactionConfigurationException thrown = assertThrows(
                 TransactionConfigurationException.class, () -> bridge.setMinTokenDeposit(bob, newValues));
-        assertThat(thrown.getMessage(), containsString("Only the governor can call this method"));
+        assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
     // Abort when trying to set a min deposit value that is greater than the max deposit value.
@@ -281,7 +281,7 @@ public class TokenBridgeConfigTest {
 
         TransactionConfigurationException thrown = assertThrows(
                 TransactionConfigurationException.class, () -> bridge.setMaxTokenDeposit(bob, newValues));
-        assertThat(thrown.getMessage(), containsString("Only the governor can call this method"));
+        assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
     // Abort when trying to set a max deposit value that is less than the min deposit value.
@@ -368,7 +368,7 @@ public class TokenBridgeConfigTest {
 
         TransactionConfigurationException thrown = assertThrows(
                 TransactionConfigurationException.class, () -> bridge.setMaxTokenWithdrawals(bob, newValues));
-        assertThat(thrown.getMessage(), containsString("Only the governor can call this method"));
+        assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
     // Abort when trying to set a max withdrawals value for a token that is not registered.

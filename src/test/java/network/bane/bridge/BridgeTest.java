@@ -235,7 +235,7 @@ public class BridgeTest {
     public void testDeposit_abortIfNotRegistered() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () ->
                 neoToken.transfer(alice, bridge.getScriptHash(), BigInteger.ONE).sign().send());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Unregistered token."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Unregistered token"));
     }
 
     @Test
@@ -245,7 +245,7 @@ public class BridgeTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () ->
                 gasToken.transfer(alice, bridge.getScriptHash(), BigInteger.ONE, dataParam).sign().send());
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: No data accepted."));
+                containsString("ABORTMSG is executed. Reason: No data accepted"));
     }
 
     @Test
@@ -261,7 +261,7 @@ public class BridgeTest {
                         ).sign()
                 );
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: No data accepted."));
+                containsString("ABORTMSG is executed. Reason: No data accepted"));
     }
 
     // endregion
@@ -726,7 +726,7 @@ public class BridgeTest {
                                 .send()
                 );
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the governor can call this method."));
+                containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
     }
 
     @Test
@@ -783,7 +783,7 @@ public class BridgeTest {
                                 .signers(AccountSigner.calledByEntry(alice))
                                 .sign());
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the governor can call this method."));
+                containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
     }
 
     @Test
@@ -846,7 +846,7 @@ public class BridgeTest {
                                 .signers(AccountSigner.calledByEntry(alice))
                                 .sign());
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the governor can call this method."));
+                containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
     }
 
     // endregion
@@ -885,8 +885,7 @@ public class BridgeTest {
                         .signers(AccountSigner.calledByEntry(alice))
                         .sign());
 
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the owner can update this contract."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
         bridge.unpause();
     }
 
@@ -898,8 +897,7 @@ public class BridgeTest {
                 () -> bridge.invokeFunction("update", byteArray(""), string(""), any(null))
                         .signers(AccountSigner.calledByEntry(owner))
                         .sign());
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Contract is not paused."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract not paused"));
     }
 
     // endregion
@@ -910,8 +908,7 @@ public class BridgeTest {
     public void testPauseBridge_notAuthorized() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.invokeFunction("pauseBridge").signers(calledByEntry(relayer)).sign());
-        assertThat(thrown.getMessage(),
-                containsString("Only the governor or security guard can call this method"));
+        assertThat(thrown.getMessage(), containsString("No authorization - only governor or security guard"));
     }
 
     @Test
@@ -939,8 +936,8 @@ public class BridgeTest {
         assertTrue(bridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.invokeFunction("unpauseBridge").signers(calledByEntry(relayer)).sign());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Only the governor can call this" +
-                " method."));
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
         bridge.unpause();
     }
 
@@ -952,15 +949,15 @@ public class BridgeTest {
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.depositNative(relayer, recipient0, BigInteger.TEN, DEFAULT_MIN_DEPOSIT));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract paused"));
 
         thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.claimNative(relayer, BigInteger.TEN));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract paused"));
 
         thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.pauseBridge(securityGuard));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract paused"));
         bridge.unpause();
     }
 
@@ -970,7 +967,7 @@ public class BridgeTest {
         assertFalse(bridge.isPaused());
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () -> bridge.unpause());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is not paused."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract not paused"));
     }
 
     @Test
@@ -983,7 +980,7 @@ public class BridgeTest {
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.withdrawNative("", map, array("")));
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract is paused."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract paused"));
         bridge.unpause();
     }
 

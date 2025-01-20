@@ -213,7 +213,7 @@ public class BridgeContract {
     public static void deploy(Object data, boolean isUpdate) {
         if (isUpdate) {
             // Make sure that this version of the contract is only used to update a deployed contract in version 1.
-            if (baseMap.getInt(KEY_VERSION) != 1) abort("Invalid version.");
+            if (baseMap.getInt(KEY_VERSION) != 1) abort("Invalid version");
             // Update internal versioning.
             baseMap.put(KEY_VERSION, 3);
             // Implement potential storage migration here if needed.
@@ -222,9 +222,9 @@ public class BridgeContract {
             BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
             if (deploymentData.bridgeManagementContract == null ||
                     !Hash160.isValid(deploymentData.bridgeManagementContract))
-                abort("Invalid bridge management contract hash.");
+                abort("Invalid bridge management");
             if (deploymentData.linkedChainId == null || deploymentData.linkedChainId <= 0)
-                abort("Invalid linked chain id.");
+                abort("Invalid linked chain id");
             // Todo: Check if there is a native token representative for the linked chain in the deployment data.
             //  If so, check its validity. Otherwise, do not set the native token.
 
@@ -237,7 +237,7 @@ public class BridgeContract {
             State newWithdrawalState = new State(0, zeroHash);
             NativeTokenBridge nativeBridge = new NativeTokenBridge(false, 0, newDepositState, newWithdrawalState,
                     deploymentData.nativeConfig);
-            if (!NativeTokenBridge.isValid(nativeBridge)) abort("Invalid native bridge.");
+            if (!NativeTokenBridge.isValid(nativeBridge)) abort("Invalid native bridge");
             ByteString serialize = new StdLib().serialize(nativeBridge);
             baseMap.put(KEY_NATIVE_BRIDGE, serialize);
             baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
@@ -256,7 +256,7 @@ public class BridgeContract {
 
     public static void update(ByteString nef, String manifest, Object data) {
         onlyWhenPaused();
-        if (!checkWitness(managementContract().owner())) abort("Only the owner can update this contract.");
+        if (!checkWitness(managementContract().owner())) abort("No authorization - only owner");
         new ContractManagement().update(nef, manifest, data);
     }
 
@@ -361,16 +361,16 @@ public class BridgeContract {
             } else if (data == null) {
                 return;
             } else {
-                abort("No data accepted.");
+                abort("No data accepted");
             }
             return;
         } else if (new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(callingScriptHash) != null) {
             if (data != null) {
-                abort("No data accepted.");
+                abort("No data accepted");
             }
             return;
         } else {
-            abort("Unregistered token.");
+            abort("Unregistered token");
         }
     }
 
@@ -624,7 +624,7 @@ public class BridgeContract {
 
     public static void registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
         onlyGovernor();
-        if (!TokenBridge.TokenConfig.isValid(tokenConfig)) abort("Invalid token configuration.");
+        if (!TokenBridge.TokenConfig.isValid(tokenConfig)) abort("Invalid token configuration");
         TokenBridgeImpl.registerToken(token, tokenConfig);
         onTokenRegister.fire(token, tokenConfig);
     }
