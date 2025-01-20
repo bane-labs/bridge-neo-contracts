@@ -20,11 +20,11 @@ public class BridgeImpl {
 
     static void checkDepositParameters(Hash160 executingScriptHash, Hash160 from, Hash160 to) {
         // Check from parameter validity and prohibition
-        if (from == null || !Hash160.isValid(from) || from.isZero()) abort("Invalid from parameter.");
-        if (executingScriptHash.equals(from)) abort("Prohibited from parameter.");
+        if (from == null || !Hash160.isValid(from) || from.isZero()) abort("Invalid 'from'");
+        if (executingScriptHash.equals(from)) abort("Prohibited 'from'");
 
         // Check to parameter validity
-        if (to == null || !Hash160.isValid(to) || to.isZero()) abort("Invalid to parameter.");
+        if (to == null || !Hash160.isValid(to) || to.isZero()) abort("Invalid 'to'");
     }
 
     /**
@@ -40,12 +40,12 @@ public class BridgeImpl {
     static int transferDepositToken(FungibleToken tokenContract, Hash160 from, Hash160 to, int amount) {
         int bridgeBalanceBefore = tokenContract.balanceOf(to);
         if (!tokenContract.transfer(from, to, amount, null)) {
-            abort("Token transfer failed.");
+            abort("Token transfer failed");
         }
         // Compare the balance before and after the transfer and use the difference as the depositing amount used for
         // the deposit hash computation.
         int bridgeBalanceAfter = tokenContract.balanceOf(to);
-        if (bridgeBalanceAfter < bridgeBalanceBefore) abort("Invalid transfer.");
+        if (bridgeBalanceAfter < bridgeBalanceBefore) abort("Invalid transfer");
 
         // Calculate the actually received amount and return it.
         return bridgeBalanceAfter - bridgeBalanceBefore;
@@ -63,7 +63,7 @@ public class BridgeImpl {
 
         int scalingFactor = Helper.pow(10, decimalScalingFactor);
         if (decimalScalingFactor > 0) {
-            if (amount % scalingFactor != 0) abort("Amount not divisible by scaling factor.");
+            if (amount % scalingFactor != 0) abort("Amount not divisible by scaling factor");
         }
         return amount / scalingFactor;
     }
@@ -91,7 +91,7 @@ public class BridgeImpl {
     }
 
     static void enteringNonReentrant() {
-        if (entered()) abort("Reentrancy detected.");
+        if (entered()) abort("Reentrancy detected");
         BridgeContract.baseMap.put(StorageConstants.KEY_ENTERED, true);
     }
 
