@@ -438,10 +438,15 @@ public class BridgeContract {
      *               higher than this value, the deposit is aborted.
      */
     public static void depositNative(Hash160 from, Hash160 to, int amount, int maxFee) {
+        enteringNonReentrant();
+
         onlyWhenNotPaused();
         onlyWhenNativeBridgeNotPaused();
         onlyWhenDepositsNotPaused();
+
         NativeBridgeImpl.depositNative(from, to, amount, maxFee);
+
+        exitingNonReentrant();
     }
 
     /**
@@ -462,10 +467,15 @@ public class BridgeContract {
      */
     public static void withdrawNative(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
+        enteringNonReentrant();
+
         onlyRelayer();
         onlyWhenNotPaused();
         onlyWhenNativeBridgeNotPaused();
+
         NativeBridgeImpl.withdrawNative(withdrawalRoot, signatures, withdrawals);
+
+        exitingNonReentrant();
     }
 
     /**
@@ -480,9 +490,14 @@ public class BridgeContract {
      * @param nonce the nonce of the withdrawal that is claimable.
      */
     public static void claimNative(int nonce) {
+        enteringNonReentrant();
+
         onlyWhenNotPaused();
         onlyWhenNativeBridgeNotPaused();
+
         NativeBridgeImpl.claimNative(nonce);
+
+        exitingNonReentrant();
     }
 
     // endregion
@@ -650,10 +665,13 @@ public class BridgeContract {
      */
     public static void depositToken(Hash160 token, Hash160 from, Hash160 to, int amount, int maxFee) {
         enteringNonReentrant();
+
         onlyWhenNotPaused();
         onlyWhenDepositsNotPaused();
         onlyWhenTokenBridgeNotPaused(token);
+
         TokenBridgeImpl.depositToken(token, from, to, amount, maxFee);
+
         exitingNonReentrant();
     }
 
@@ -675,10 +693,15 @@ public class BridgeContract {
      */
     public static void withdrawToken(Hash160 token, ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
+        enteringNonReentrant();
+
         onlyRelayer();
         onlyWhenNotPaused();
         onlyWhenTokenBridgeNotPaused(token);
+
         TokenBridgeImpl.withdrawToken(token, withdrawalRoot, signatures, withdrawals);
+
+        exitingNonReentrant();
     }
 
     /**
@@ -693,9 +716,14 @@ public class BridgeContract {
      * @param nonce the nonce of the withdrawal that is claimable.
      */
     public static void claimToken(Hash160 token, int nonce) {
+        enteringNonReentrant();
+
         onlyWhenNotPaused();
         onlyWhenTokenBridgeNotPaused(token);
+
         TokenBridgeImpl.claimToken(token, nonce);
+
+        exitingNonReentrant();
     }
 
     // endregion

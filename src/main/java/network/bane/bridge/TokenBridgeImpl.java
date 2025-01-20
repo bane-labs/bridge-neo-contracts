@@ -11,7 +11,6 @@ import io.neow3j.devpack.Map;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.constants.FindOptions;
 import io.neow3j.devpack.contracts.FungibleToken;
-import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.lib.BridgeLib;
 import network.bane.lib.TokenBridgeLib;
@@ -86,50 +85,46 @@ public class TokenBridgeImpl {
     // region deposit
 
     static void depositToken(Hash160 neoN3Token, Hash160 from, Hash160 to, int amount, int maxFee) {
-        if (to == null || !Hash160.isValid(to) || to.isZero()) abort("Invalid to parameter.");
-        if (from == null || !Hash160.isValid(from) || from.isZero()) abort("Invalid from parameter.");
         Hash160 executingScriptHash = getExecutingScriptHash();
-        if (executingScriptHash.equals(from)) abort("Invalid from parameter.");
+        BridgeImpl.checkDepositParameters(executingScriptHash, from, to);
 
         TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(neoN3Token);
-        // If the actual deposit fee is higher than the specified max fee, abort.
+
+        // If the deposit fee is higher than the specified max fee, abort.
         int depositFee = tokenBridge.config.fee;
         if (depositFee > maxFee) abort("Max fee exceeded.");
 
+        // Fee payment
         BridgeImpl.payFee(from, depositFee);
 
+        // Token deposit transfer
         FungibleToken tokenContract = new FungibleToken(neoN3Token);
-        int bridgeBalanceBefore = tokenContract.balanceOf(executingScriptHash);
-        if (!tokenContract.transfer(from, executingScriptHash, amount, null)) {
-            abort("Token transfer failed.");
-        }
-        // Compare the balance before and after the transfer and use the difference as the depositing amount used for
-        // the deposit hash computation.
-        int bridgeBalanceAfter = tokenContract.balanceOf(executingScriptHash);
-        if (bridgeBalanceAfter < bridgeBalanceBefore) abort("Invalid transfer.");
-        int receivedAmount = bridgeBalanceAfter - bridgeBalanceBefore;
+        int receivedAmount = BridgeImpl.transferDepositToken(tokenContract, from, executingScriptHash, amount);
+
+        // Check the received amount with the configured min and max amounts.
         if (receivedAmount < tokenBridge.config.minAmount) abort("Amount below minimum.");
         if (receivedAmount > tokenBridge.config.maxAmount) abort("Amount above maximum.");
 
+        // Decimal scaling factor calculation
         int decimalScalingFactor = tokenBridge.config.decimalScalingFactor;
-        int scalingFactor = Helper.pow(10, decimalScalingFactor);
-        if (decimalScalingFactor > 0) {
-            if (receivedAmount % scalingFactor != 0) abort("Amount not divisible by scaling factor.");
-        }
-        int amountForHashing = receivedAmount / scalingFactor;
+        int amountForHashing = BridgeImpl.divideByDecimalFactor(receivedAmount, decimalScalingFactor);
 
-        // Update the token state
+        // Update the token bridge state.
+        updateTokenDepositState(tokenBridge, neoN3Token, from, to, amountForHashing);
+    }
+
+    static void updateTokenDepositState(TokenBridge tokenBridge, Hash160 neoN3Token, Hash160 from, Hash160 to, int amount) {
         tokenBridge.depositState.nonce++;
         ByteString depositHash =
                 TokenBridgeLib.hashTokenBridgeOp(BridgeContract.cryptoLib, neoN3Token, tokenBridge.config.neoXToken,
-                        tokenBridge.depositState.nonce, to, amountForHashing);
+                        tokenBridge.depositState.nonce, to, amount);
         ByteString newRoot =
                 BridgeLib.computeNewRoot(BridgeContract.cryptoLib, tokenBridge.depositState.root, depositHash);
         tokenBridge.depositState.root = newRoot;
         assert tokenBridge.depositState.root == newRoot : "Root was not set correctly.";
         new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(neoN3Token, new StdLib().serialize(tokenBridge));
         BridgeContract.onTokenDeposit.fire(neoN3Token, tokenBridge.config.neoXToken, tokenBridge.depositState.nonce,
-                to, amountForHashing, from, depositHash, newRoot);
+                to, amount, from, depositHash, newRoot);
     }
 
     // endregion

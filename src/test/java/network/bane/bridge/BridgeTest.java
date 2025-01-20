@@ -45,9 +45,11 @@ import java.util.HashMap;
 import java.util.List;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
+import static io.neow3j.transaction.AccountSigner.global;
 import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
+import static io.neow3j.types.ContractParameter.byteArrayFromString;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.string;
@@ -402,7 +404,75 @@ public class BridgeTest {
                 assertThrows(TransactionConfigurationException.class,
                         () -> bridge.depositNative(alice, bridge.getScriptHash(), recipient0, amount));
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid sender."));
+                containsString("ABORTMSG is executed. Reason: Prohibited 'from'"));
+    }
+
+    @Test
+    @Order(15)
+    public void failDepositNative_invalidFrom() {
+        BigInteger amount = DEFAULT_MIN_DEPOSIT.multiply(new BigInteger("3"));
+
+        // Fail depositing with from = null
+        TransactionConfigurationException thrown =
+                assertThrows(TransactionConfigurationException.class,
+                        () -> bridge.invokeFunction("depositNative",
+                                        any(null),
+                                        hash160(alice),
+                                        integer(amount),
+                                        integer(DEFAULT_DEPOSIT_FEE))
+                                .signers(global(alice))
+                                .sign());
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Invalid 'from'"));
+
+        // Fail depositing using the bridge contract's hash for 'from'
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.depositNative(alice, Hash160.ZERO, recipient0, amount));
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Invalid 'from'"));
+
+        // Fail depositing with invalid script hash for 'from'
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.invokeFunction("depositNative",
+                                byteArrayFromString("hello"),
+                                hash160(alice),
+                                integer(amount),
+                                integer(DEFAULT_DEPOSIT_FEE))
+                        .signers(global(alice))
+                        .sign());
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Invalid 'from'"));
+    }
+
+    @Test
+    @Order(15)
+    public void failDepositNative_invalidTo() {
+        BigInteger amount = DEFAULT_MIN_DEPOSIT.multiply(new BigInteger("3"));
+
+        // Fail depositing with to = null
+        TransactionConfigurationException thrown =
+                assertThrows(TransactionConfigurationException.class,
+                        () -> bridge.invokeFunction("depositNative",
+                                        hash160(alice),
+                                        any(null),
+                                        integer(amount),
+                                        integer(DEFAULT_DEPOSIT_FEE))
+                                .signers(global(alice))
+                                .sign());
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Invalid 'to'"));
+
+        // Fail depositing with invalid script hash for 'to'
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.invokeFunction("depositNative",
+                                hash160(alice),
+                                byteArrayFromString("hello"),
+                                integer(amount),
+                                integer(DEFAULT_DEPOSIT_FEE))
+                        .signers(global(alice))
+                        .sign());
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Invalid 'to'"));
     }
 
     // endregion
@@ -592,8 +662,8 @@ public class BridgeTest {
         String root = concatAndKeccak256(withdrawRootBefore, d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nextNonce), hash160(to), integer(amount)));
-        bridge.withdrawNative(root, signMsg(validators, root), withdrawal); // fund the contract if this test is executed
-        // alone
+        // fund the contract if this test is executed alone
+        bridge.withdrawNative(root, signMsg(validators, root), withdrawal);
         DepositHelper.depositNative(alice, to, amount);
 
         Hash256 txHash = bridge.claimNative(alice, nextNonce);
