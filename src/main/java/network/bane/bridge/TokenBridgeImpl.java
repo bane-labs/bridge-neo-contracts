@@ -175,7 +175,7 @@ public class TokenBridgeImpl {
         int amount = claimable.amount;
 
         tokenClaimableMap.delete(nonce);
-        assert token != NativeBridgeImpl.nativeToken().getHash() : "Token cannot be the bridge’s native token.";
+
         if (new FungibleToken(token).transfer(getExecutingScriptHash(), to, amount, null)) {
             BridgeContract.onTokenClaim.fire(token, nonce, to, amount);
         } else {

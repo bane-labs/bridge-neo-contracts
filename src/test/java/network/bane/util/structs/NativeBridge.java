@@ -1,5 +1,7 @@
 package network.bane.util.structs;
 
+import io.neow3j.types.Hash160;
+
 import java.math.BigInteger;
 
 public class NativeBridge {
@@ -38,14 +40,18 @@ public class NativeBridge {
         public BigInteger maxAmount;
         public Integer maxWithdrawals;
         public BigInteger maxTotalDeposit;
+        public Hash160 tokenHash;
+        public int decimalScalingFactor;
 
         public NativeConfig(BigInteger fee, BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals,
-                BigInteger maxTotalDeposit) {
+                BigInteger maxTotalDeposit, Hash160 token, int decimalScalingFactor) {
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
             this.maxWithdrawals = maxWithdrawals;
             this.maxTotalDeposit = maxTotalDeposit;
+            this.tokenHash = token;
+            this.decimalScalingFactor = decimalScalingFactor;
         }
 
         public boolean equals(NativeConfig other) {
@@ -59,7 +65,9 @@ public class NativeBridge {
                     this.minAmount.equals(other.minAmount) &&
                     this.maxAmount.equals(other.maxAmount) &&
                     this.maxWithdrawals.equals(other.maxWithdrawals) &&
-                    this.maxTotalDeposit.equals(other.maxTotalDeposit);
+                    this.maxTotalDeposit.equals(other.maxTotalDeposit) &&
+                    this.tokenHash.equals(other.tokenHash) &&
+                    this.decimalScalingFactor == other.decimalScalingFactor;
         }
     }
 }

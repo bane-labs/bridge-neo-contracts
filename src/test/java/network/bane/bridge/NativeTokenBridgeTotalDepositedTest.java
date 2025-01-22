@@ -2,6 +2,7 @@ package network.bane.bridge;
 
 import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.FungibleToken;
+import io.neow3j.contract.GasToken;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
@@ -35,6 +36,7 @@ import static io.neow3j.types.ContractParameter.integer;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.concatAndKeccak256;
 import static network.bane.util.TestHelper.createDepositHash;
+import static network.bane.util.TestHelper.governor;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.recipient0;
 import static network.bane.util.TestHelper.signMsg;
@@ -76,6 +78,13 @@ public class NativeTokenBridgeTotalDepositedTest {
     public static void setUp() throws Throwable {
         setup(ext);
         setupBridge(ext);
+
+        bridge.setNativeBridge(governor, GasToken.SCRIPT_HASH, 18, DEFAULT_DEPOSIT_FEE,
+                        DEFAULT_MIN_DEPOSIT,
+                        FungibleToken.toFractions(new BigDecimal("500"), 8),
+                        DEFAULT_MAX_WITHDRAWALS,
+                        FungibleToken.toFractions(new BigDecimal("1000"), 8));
+        bridge.unpauseNativeBridge();
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -89,12 +98,7 @@ public class NativeTokenBridgeTotalDepositedTest {
         config.setDeployParam(
                 prepareBridgeDeployParameter(
                         DEFAULT_LINKED_CHAIN_ID,
-                        MANAGEMENT_CONTRACT_HASH,
-                        DEFAULT_DEPOSIT_FEE,
-                        DEFAULT_MIN_DEPOSIT,
-                        FungibleToken.toFractions(new BigDecimal("500"), 8),
-                        DEFAULT_MAX_WITHDRAWALS,
-                        FungibleToken.toFractions(new BigDecimal("1000"), 8)
+                        MANAGEMENT_CONTRACT_HASH
                 )
         );
         AccountSigner deploySigner = AccountSigner.none(owner);

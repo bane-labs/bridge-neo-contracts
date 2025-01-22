@@ -7,12 +7,10 @@ import io.neow3j.devpack.annotations.Struct;
 public class BridgeDeploymentData {
     public Integer linkedChainId;
     public Hash160 bridgeManagementContract;
-    public NativeTokenConfig nativeConfig;
 
     public static boolean isValid(BridgeDeploymentData deploymentData) {
         return deploymentData.linkedChainId != null && deploymentData.linkedChainId > 0 &&
                 deploymentData.bridgeManagementContract != null &&
-                Hash160.isValid(deploymentData.bridgeManagementContract) &&
-                NativeTokenConfig.isValid(deploymentData.nativeConfig);
+                Hash160.isValid(deploymentData.bridgeManagementContract);
     }
 }
