@@ -5,7 +5,7 @@ import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
 import io.neow3j.devpack.annotations.Struct;
-import network.bane.lib.BridgeLib;
+import network.bane.lib.NativeBridgeLib;
 
 import static io.neow3j.devpack.Helper.abort;
 
@@ -93,7 +93,7 @@ public class NativeTokenBridgeV3 {
 
             if (decimalsOnLinkedChain < 0) abort("Invalid decimals");
             if (decimalsOnLinkedChain > 32) abort("Max decimals supported exceeded");
-            this.decimalScalingFactor = BridgeLib.calculateDecimalScalingFactor(tokenForNativeBridge,
+            this.decimalScalingFactor = NativeBridgeLib.calculateDecimalScalingFactor(tokenForNativeBridge,
                     decimalsOnLinkedChain);
         }
 
