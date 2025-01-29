@@ -407,7 +407,7 @@ public class BridgeContract {
 
         onlyGovernor();
 
-        // Set the native bridge. If the native bridge is already set, this throws an exception.
+        // Set the native bridge. Aborts if the native bridge is already set.
         NativeBridgeImpl.setNativeBridge(tokenForNativeBridge, decimalsOnLinkedChain, depositFee, minAmount,
                 maxAmount, maxWithdrawals, maxTotalDeposited);
 
@@ -417,14 +417,14 @@ public class BridgeContract {
     // endregion
     // region native bridge pausing
 
-    public static void pauseNativeBridge() throws Exception {
+    public static void pauseNativeBridge() {
         onlyGovernorOrSecurityGuard();
         onlyWhenNativeBridgeNotPaused();
         NativeBridgeImpl.pauseNativeBridge();
         onNativeBridgePause.fire();
     }
 
-    public static void unpauseNativeBridge() throws Exception {
+    public static void unpauseNativeBridge() {
         onlyGovernor();
         onlyWhenNativeBridgePaused();
         NativeBridgeImpl.unpauseNativeBridge();
@@ -443,7 +443,7 @@ public class BridgeContract {
      * @param maxFee the maximum fee in GAS that the depositor is willing to pay for the deposit. If the actual fee is
      *               higher than this value, the deposit is aborted.
      */
-    public static void depositNative(Hash160 from, Hash160 to, int amount, int maxFee) throws Exception {
+    public static void depositNative(Hash160 from, Hash160 to, int amount, int maxFee) {
         enteringNonReentrant();
 
         onlyWhenNotPaused();
@@ -472,7 +472,7 @@ public class BridgeContract {
      * @param withdrawals    the withdrawals to execute.
      */
     public static void withdrawNative(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
-            List<Withdrawal> withdrawals) throws Exception {
+            List<Withdrawal> withdrawals) {
         enteringNonReentrant();
 
         onlyRelayer();
@@ -495,7 +495,7 @@ public class BridgeContract {
      *
      * @param nonce the nonce of the withdrawal that is claimable.
      */
-    public static void claimNative(int nonce) throws Exception {
+    public static void claimNative(int nonce) {
         enteringNonReentrant();
 
         onlyWhenNotPaused();
@@ -511,29 +511,29 @@ public class BridgeContract {
     // region native bridge configuration
 
     @Safe
-    public static Hash160 nativeToken() throws Exception {
-        return NativeBridgeImpl.nativeToken().getHash();
-    }
-
-    @Safe
     public static boolean nativeBridgeIsSet() {
         return NativeBridgeImpl.nativeBridgeIsSet();
     }
 
     @Safe
-    public static NativeTokenBridgeV3 getNativeBridge() throws Exception {
+    public static Hash160 nativeToken() {
+        return NativeBridgeImpl.getNativeBridge().config.nativeToken;
+    }
+
+    @Safe
+    public static NativeTokenBridgeV3 getNativeBridge() {
         return NativeBridgeImpl.getNativeBridge();
     }
 
     @Safe
-    public static int nativeDepositFee() throws Exception {
-        return getNativeBridge().config.depositFee;
+    public static int nativeDepositFee() {
+        return NativeBridgeImpl.getNativeBridge().config.depositFee;
     }
 
-    public static void setNativeDepositFee(int newFee) throws Exception {
+    public static void setNativeDepositFee(int newFee) {
         onlyGovernor();
         if (newFee < 0) abort("New deposit fee must be nonnegative.");
-        NativeTokenBridgeV3 nativeBridge = getNativeBridge();
+        NativeTokenBridgeV3 nativeBridge = NativeBridgeImpl.getNativeBridge();
         if (newFee >= nativeBridge.config.minAmount) abort("Deposit fee must be less than the minimum deposit amount.");
         nativeBridge.config.depositFee = newFee;
         baseMap.put(KEY_NATIVE_BRIDGE, new StdLib().serialize(nativeBridge));
@@ -541,13 +541,13 @@ public class BridgeContract {
     }
 
     @Safe
-    public static int minNativeDeposit() throws Exception {
-        return getNativeBridge().config.minAmount;
+    public static int minNativeDeposit() {
+        return NativeBridgeImpl.getNativeBridge().config.minAmount;
     }
 
-    public static void setMinNativeDeposit(int newMinAmount) throws Exception {
+    public static void setMinNativeDeposit(int newMinAmount) {
         onlyGovernor();
-        NativeTokenBridgeV3 nativeBridge = getNativeBridge();
+        NativeTokenBridgeV3 nativeBridge = NativeBridgeImpl.getNativeBridge();
         if (newMinAmount <= nativeBridge.config.depositFee)
             abort("Minimum deposit must be greater than the deposit fee.");
         if (newMinAmount > nativeBridge.config.maxAmount) abort("Minimum must be less than the maximum amount.");
@@ -557,13 +557,13 @@ public class BridgeContract {
     }
 
     @Safe
-    public static int maxNativeDeposit() throws Exception {
-        return getNativeBridge().config.maxAmount;
+    public static int maxNativeDeposit() {
+        return NativeBridgeImpl.getNativeBridge().config.maxAmount;
     }
 
-    public static void setMaxNativeDeposit(int newMaxAmount) throws Exception {
+    public static void setMaxNativeDeposit(int newMaxAmount) {
         onlyGovernor();
-        NativeTokenBridgeV3 nativeBridge = getNativeBridge();
+        NativeTokenBridgeV3 nativeBridge = NativeBridgeImpl.getNativeBridge();
         if (newMaxAmount < nativeBridge.config.minAmount) abort("Maximum must be greater than the minimum amount.");
         if (newMaxAmount >= nativeBridge.config.maxTotalDeposited)
             abort("Value must be less than the maximum total deposited amount.");
@@ -573,11 +573,11 @@ public class BridgeContract {
     }
 
     @Safe
-    public static int maxTotalDepositedNative() throws Exception {
-        return getNativeBridge().config.maxTotalDeposited;
+    public static int maxTotalDepositedNative() {
+        return NativeBridgeImpl.getNativeBridge().config.maxTotalDeposited;
     }
 
-    public static void setMaxTotalDepositedNative(int newMaxTotalDeposited) throws Exception {
+    public static void setMaxTotalDepositedNative(int newMaxTotalDeposited) {
         onlyGovernor();
         NativeBridgeImpl.setMaxTotalDepositedNative(newMaxTotalDeposited);
         onMaxTotalDepositedNativeChange.fire(newMaxTotalDeposited);
@@ -587,23 +587,23 @@ public class BridgeContract {
     // region native bridge state
 
     @Safe
-    public static int nativeDepositNonce() throws Exception {
-        return getNativeBridge().depositState.nonce;
+    public static int nativeDepositNonce() {
+        return NativeBridgeImpl.getNativeBridge().depositState.nonce;
     }
 
     @Safe
-    public static ByteString nativeDepositRoot() throws Exception {
-        return getNativeBridge().depositState.root;
+    public static ByteString nativeDepositRoot() {
+        return NativeBridgeImpl.getNativeBridge().depositState.root;
     }
 
     @Safe
-    public static int nativeWithdrawalNonce() throws Exception {
-        return getNativeBridge().withdrawalState.nonce;
+    public static int nativeWithdrawalNonce() {
+        return NativeBridgeImpl.getNativeBridge().withdrawalState.nonce;
     }
 
     @Safe
-    public static ByteString nativeWithdrawalRoot() throws Exception {
-        return getNativeBridge().withdrawalState.root;
+    public static ByteString nativeWithdrawalRoot() {
+        return NativeBridgeImpl.getNativeBridge().withdrawalState.root;
     }
 
     // endregion
