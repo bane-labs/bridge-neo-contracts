@@ -7,7 +7,7 @@ import io.neow3j.devpack.Map;
 import io.neow3j.devpack.annotations.Struct;
 
 @Struct
-public class NativeTokenConfig {
+public class NativeTokenConfigV2 {
 
     /**
      * The fee that is charged for each deposit.
@@ -39,7 +39,9 @@ public class NativeTokenConfig {
      */
     public int maxTotalDeposited;
 
-    public NativeTokenConfig(int depositFee, int minAmount, int maxAmount, int maxWithdrawals, int maxTotalDeposited) {
+    public NativeTokenConfigV2(int depositFee, int minAmount, int maxAmount, int maxWithdrawals,
+            int maxTotalDeposited) {
+
         this.depositFee = depositFee;
         this.minAmount = minAmount;
         this.maxAmount = maxAmount;
@@ -47,7 +49,7 @@ public class NativeTokenConfig {
         this.maxTotalDeposited = maxTotalDeposited;
     }
 
-    public static boolean isValid(NativeTokenConfig config) {
+    public static boolean isValid(NativeTokenConfigV2 config) {
         return config != null &&
                 config.depositFee >= 0 &&
                 config.minAmount >= 0 &&

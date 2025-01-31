@@ -67,6 +67,10 @@ public class PauseDepositsTest {
     public static void setUp() throws Throwable {
         setup(ext);
         setupBridge(ext);
+
+        bridge.setDefaultNativeBridge();
+        bridge.unpauseNativeBridge();
+
         registerNeoTokenBridge();
     }
 

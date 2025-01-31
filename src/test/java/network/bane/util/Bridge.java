@@ -36,7 +36,9 @@ import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.securityGuard;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_DEPOSIT;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_DEPOSIT;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_TOTAL_MAX_DEPOSITED_NATIVE;
 import static network.bane.util.structs.TokenBridge.getAsContractParameter;
 
 public class Bridge extends SmartContractHelper {
@@ -51,7 +53,8 @@ public class Bridge extends SmartContractHelper {
         return update(owner, newNefFile, newManifest, data);
     }
 
-    public Hash256 update(Account sender, NefFile newNefFile, ContractManifest newManifest, ContractParameter data) throws Throwable {
+    public Hash256 update(Account sender, NefFile newNefFile, ContractManifest newManifest, ContractParameter data)
+            throws Throwable {
         if (newNefFile == null) {
             throw new IllegalArgumentException("The NEF file cannot be null.");
         } else if (newManifest == null) {
@@ -119,6 +122,53 @@ public class Bridge extends SmartContractHelper {
 
     // endregion
     // region native bridge
+    // region native bridge setting
+
+    public Hash256 setDefaultNativeBridge() throws Throwable {
+        return setNativeBridge(governor, GasToken.SCRIPT_HASH, 18, DEFAULT_DEPOSIT_FEE, DEFAULT_MIN_DEPOSIT,
+                DEFAULT_MAX_DEPOSIT, 100, DEFAULT_TOTAL_MAX_DEPOSITED_NATIVE);
+    }
+
+    public Hash256 setNativeBridge(Account sender, Hash160 token, int decimalsOnLinkedChain, BigInteger depositFee,
+            BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals, BigInteger maxTotalDeposited) throws Throwable {
+        return sendAndAwaitExecution(
+                invokeFunction("setNativeBridge",
+                        hash160(token),
+                        integer(decimalsOnLinkedChain),
+                        integer(depositFee),
+                        integer(minAmount),
+                        integer(maxAmount),
+                        integer(maxWithdrawals),
+                        integer(maxTotalDeposited)
+                ).signers(calledByEntry(sender)));
+    }
+
+    // endregion
+    // region native bridge pausing
+
+    public Hash256 pauseNativeBridge() throws Throwable {
+        return pauseNativeBridge(securityGuard);
+    }
+
+    public Hash256 pauseNativeBridge(Account sender) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("pauseNativeBridge").signers(signer));
+    }
+
+    public Hash256 unpauseNativeBridge() throws Throwable {
+        return unpauseNativeBridge(governor);
+    }
+
+    public Hash256 unpauseNativeBridge(Account sender) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("unpauseNativeBridge").signers(signer));
+    }
+
+    public boolean nativeBridgeIsPaused() throws IOException {
+        return getNativeBridge().paused;
+    }
+
+    // endregion
     // region native deposit/withdraw/claim
 
     public Hash256 depositNative(Account from, Hash160 to, BigInteger amount) throws Throwable {
@@ -133,7 +183,8 @@ public class Bridge extends SmartContractHelper {
         return depositNative(sender, from, to, amount, DEFAULT_DEPOSIT_FEE);
     }
 
-    public Hash256 depositNative(Account sender, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee) throws Throwable {
+    public Hash256 depositNative(Account sender, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee)
+            throws Throwable {
         Signer signer = AccountSigner.none(sender).setAllowedContracts(GasToken.SCRIPT_HASH);
         return sendAndAwaitExecution(
                 invokeFunction("depositNative",
@@ -189,7 +240,9 @@ public class Bridge extends SmartContractHelper {
                 nativeConfigList.get(1).getInteger(),
                 nativeConfigList.get(2).getInteger(),
                 nativeConfigList.get(3).getInteger().intValue(),
-                nativeConfigList.get(4).getInteger()
+                nativeConfigList.get(4).getInteger(),
+                Hash160.fromAddress(nativeConfigList.get(5).getAddress()),
+                nativeConfigList.get(6).getInteger().intValue()
         );
         return new NativeBridge(paused, totalDeposited, depositState, withdrawalState, nativeConfig);
     }
@@ -301,7 +354,8 @@ public class Bridge extends SmartContractHelper {
         return registerToken(governor, neoN3TokenHash, config);
     }
 
-    public Hash256 registerToken(Account sender, Hash160 neoN3TokenHash, TokenBridge.TokenConfig config) throws Throwable {
+    public Hash256 registerToken(Account sender, Hash160 neoN3TokenHash, TokenBridge.TokenConfig config)
+            throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
         return sendAndAwaitExecution(
                 invokeFunction("registerToken",
@@ -338,7 +392,8 @@ public class Bridge extends SmartContractHelper {
         return depositToken(from, from.getScriptHash(), tokenHash, to, amount);
     }
 
-    public Hash256 depositToken(Account sender, Hash160 from, Hash160 tokenHash, Hash160 to, BigInteger amount) throws Throwable {
+    public Hash256 depositToken(Account sender, Hash160 from, Hash160 tokenHash, Hash160 to, BigInteger amount)
+            throws Throwable {
         Signer signer = AccountSigner.none(sender).setAllowedContracts(tokenHash, GasToken.SCRIPT_HASH);
         BigInteger fee = getTokenConfig(tokenHash).fee;
         return sendAndAwaitExecution(
@@ -357,7 +412,7 @@ public class Bridge extends SmartContractHelper {
     }
 
     public Hash256 withdrawToken(Account sender, Hash160 tokenHash, String withdrawalRoot, Map<ContractParameter,
-            ContractParameter> signatures,
+                    ContractParameter> signatures,
             ContractParameter withdrawals) throws Throwable {
         return sendAndAwaitExecution(invokeFunction("withdrawToken", hash160(tokenHash),
                 byteArray(withdrawalRoot),

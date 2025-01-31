@@ -4,6 +4,7 @@ import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.contracts.CryptoLib;
+import io.neow3j.devpack.contracts.FungibleToken;
 import network.bane.structs.Withdrawal;
 
 import static io.neow3j.devpack.Helper.abort;
@@ -37,6 +38,24 @@ public class NativeBridgeLib {
             parent = computeNewRoot(cryptoLib, parent, withdrawalHash);
         }
         return parent;
+    }
+
+    /**
+     * Calculates the scaling factor for the decimals of a token on the native chain to the decimals on the linked chain.
+     * <p>
+     * The side with fewer decimals is used as the base for the hash computation.
+     *
+     * @param tokenForNativeBridge the token hash of the token that is used for the native bridge.
+     * @param decimalsOnLinkedChain the number of decimals of the native token on the linked chain.
+     * @return the decimal scaling factor.
+     */
+    public static int calculateDecimalScalingFactor(Hash160 tokenForNativeBridge, int decimalsOnLinkedChain) {
+        int decimalsHere = new FungibleToken(tokenForNativeBridge).decimals();
+        if (decimalsHere > decimalsOnLinkedChain) {
+            return decimalsHere - decimalsOnLinkedChain;
+        } else {
+            return 0;
+        }
     }
 
 }

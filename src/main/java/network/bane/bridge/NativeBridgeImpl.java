@@ -3,15 +3,16 @@ package network.bane.bridge;
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
+import io.neow3j.devpack.Hash256;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.contracts.FungibleToken;
-import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.lib.NativeBridgeLib;
 import network.bane.structs.Claimable;
-import network.bane.structs.NativeTokenBridge;
+import network.bane.structs.NativeTokenBridgeV3;
+import network.bane.structs.State;
 import network.bane.structs.Withdrawal;
 
 import static io.neow3j.devpack.Helper.abort;
@@ -26,30 +27,42 @@ import static network.bane.lib.NativeBridgeLib.hashNativeBridgeOp;
 
 public class NativeBridgeImpl {
 
-    static FungibleToken nativeToken() {
-        // Todo mialbu 14.01.25: Replace with storage value once v3 migration code includes the native token address
-        //  configuration upon deployment.
-        return new GasToken();
+    // region getters
+
+    static boolean nativeBridgeIsSet() {
+        ByteString serialized = BridgeContract.baseMap.get(KEY_NATIVE_BRIDGE);
+        return serialized != null;
     }
 
+    static NativeTokenBridgeV3 getNativeBridge() {
+        ByteString serialized = BridgeContract.baseMap.get(KEY_NATIVE_BRIDGE);
+        if (serialized == null) abort("Native bridge not set");
+        return (NativeTokenBridgeV3) new StdLib().deserialize(serialized);
+    }
+
+    static FungibleToken nativeToken() {
+        return new FungibleToken(getNativeBridge().config.nativeToken);
+    }
+
+    // endregion
     // region pause
 
     static void onlyWhenNativeBridgePaused() {
-        if (!BridgeContract.getNativeBridge().paused) abort("Native bridge not paused");
+        if (!getNativeBridge().paused) abort("Native bridge not paused");
     }
 
     static void onlyWhenNativeBridgeNotPaused() {
-        if (BridgeContract.getNativeBridge().paused) abort("Native bridge paused");
+        if (getNativeBridge().paused) abort("Native bridge paused");
     }
 
     static void pauseNativeBridge() {
-        NativeTokenBridge nativeTokenBridge = BridgeContract.getNativeBridge();
+        NativeTokenBridgeV3 nativeTokenBridge = getNativeBridge();
         nativeTokenBridge.paused = true;
         BridgeContract.baseMap.put(KEY_NATIVE_BRIDGE, new StdLib().serialize(nativeTokenBridge));
     }
 
     static void unpauseNativeBridge() {
-        NativeTokenBridge nativeTokenBridge = BridgeContract.getNativeBridge();
+        NativeTokenBridgeV3 nativeTokenBridge = getNativeBridge();
         nativeTokenBridge.paused = false;
         BridgeContract.baseMap.put(KEY_NATIVE_BRIDGE, new StdLib().serialize(nativeTokenBridge));
     }
@@ -69,9 +82,7 @@ public class NativeBridgeImpl {
         Hash160 executingScriptHash = getExecutingScriptHash();
         BridgeImpl.checkDepositParameters(executingScriptHash, from, to);
 
-        // Todo mialbu 17.01.2025: Check if the native token bridge is registered, once the registration feature has
-        //  been implemented.
-        NativeTokenBridge nativeTokenBridge = BridgeContract.getNativeBridge();
+        NativeTokenBridgeV3 nativeTokenBridge = getNativeBridge();
 
         // If the deposit fee is higher than the specified max fee, abort.
         int depositFee = nativeTokenBridge.config.depositFee;
@@ -94,13 +105,14 @@ public class NativeBridgeImpl {
         updateNativeDepositState(nativeTokenBridge, from, to, amountForHashing);
     }
 
-    static void updateNativeDepositState(NativeTokenBridge nativeTokenBridge, Hash160 from, Hash160 to, int amount) {
+    static void updateNativeDepositState(NativeTokenBridgeV3 nativeTokenBridge, Hash160 from, Hash160 to, int amount) {
         nativeTokenBridge.depositState.nonce++;
         nativeTokenBridge.totalDeposited += amount;
         if (nativeTokenBridge.totalDeposited > nativeTokenBridge.config.maxTotalDeposited) {
             abort("Max total deposited native tokens exceeded. Wait for governor to increase.");
         }
-        ByteString depositHash = hashNativeBridgeOp(BridgeContract.cryptoLib, nativeTokenBridge.depositState.nonce, to, amount);
+        ByteString depositHash = hashNativeBridgeOp(BridgeContract.cryptoLib, nativeTokenBridge.depositState.nonce, to,
+                amount);
         nativeTokenBridge.depositState.root =
                 computeNewRoot(BridgeContract.cryptoLib, nativeTokenBridge.depositState.root, depositHash);
         BridgeContract.baseMap.put(KEY_NATIVE_BRIDGE, new StdLib().serialize(nativeTokenBridge));
@@ -113,13 +125,15 @@ public class NativeBridgeImpl {
 
     static void withdrawNative(ByteString withdrawalRoot, Map<ECPoint, ByteString> signatures,
             List<Withdrawal> withdrawals) {
+
         int withdrawalsSize = withdrawals.size();
         if (withdrawalsSize <= 0) abort("At least one withdrawal required.");
-        NativeTokenBridge nativeTokenBridge = BridgeContract.getNativeBridge();
+        NativeTokenBridgeV3 nativeTokenBridge = getNativeBridge();
         if (!subsequentNonces(withdrawals, nativeTokenBridge.withdrawalState.nonce)) {
             abort("Provided withdrawals not subsequent");
         }
-        if (!NativeBridgeLib.computeNewTopRoot(BridgeContract.cryptoLib, nativeTokenBridge.withdrawalState.root, withdrawals)
+        if (!NativeBridgeLib.computeNewTopRoot(BridgeContract.cryptoLib, nativeTokenBridge.withdrawalState.root,
+                        withdrawals)
                 .equals(withdrawalRoot)) {
             abort("Invalid root");
         }
@@ -131,7 +145,8 @@ public class NativeBridgeImpl {
         nativeTokenBridge.withdrawalState.root = withdrawalRoot;
         nativeTokenBridge.totalDeposited -= computeTotalWithdrawnAmount(withdrawals);
         BridgeContract.baseMap.put(KEY_NATIVE_BRIDGE, new StdLib().serialize(nativeTokenBridge));
-        BridgeContract.onNativeWithdrawalRootUpdate.fire(nativeTokenBridge.withdrawalState.nonce, nativeTokenBridge.withdrawalState.root);
+        BridgeContract.onNativeWithdrawalRootUpdate.fire(nativeTokenBridge.withdrawalState.nonce,
+                nativeTokenBridge.withdrawalState.root);
         // Execute the token transfers
         executeNativeTokenTransfers(withdrawals);
     }
@@ -208,12 +223,34 @@ public class NativeBridgeImpl {
     }
 
     static void setMaxTotalDepositedNative(int newMaxTotalDeposited) {
-        NativeTokenBridge nativeTokenBridge = BridgeContract.getNativeBridge();
+        NativeTokenBridgeV3 nativeTokenBridge = getNativeBridge();
         if (newMaxTotalDeposited < nativeTokenBridge.totalDeposited) {
             abort("New value must be greater or equal to the total amount deposited.");
         }
         nativeTokenBridge.config.maxTotalDeposited = newMaxTotalDeposited;
         BridgeContract.baseMap.put(KEY_NATIVE_BRIDGE, new StdLib().serialize(nativeTokenBridge));
+    }
+
+    static void setNativeBridge(Hash160 tokenForNativeBridge, int decimalsOnLinkedChain, int depositFee,
+            int minAmount, int maxAmount, int maxWithdrawals, int maxTotalDeposited) {
+
+        if (nativeBridgeIsSet()) abort("Native bridge already set");
+
+        ByteString zeroHash = Hash256.zero().toByteString();
+        State newDepositState = new State(0, zeroHash);
+        State newWithdrawalState = new State(0, zeroHash);
+
+        NativeTokenBridgeV3.NativeTokenConfigV3 nativeTokenConfig =
+                new NativeTokenBridgeV3.NativeTokenConfigV3(tokenForNativeBridge, decimalsOnLinkedChain,
+                        depositFee, minAmount, maxAmount, maxWithdrawals, maxTotalDeposited);
+        // The config validity is checked in the NativeTokenBridge validity check.
+
+        NativeTokenBridgeV3 nativeBridge = new NativeTokenBridgeV3(true, 0, newDepositState, newWithdrawalState,
+                nativeTokenConfig);
+        if (!NativeTokenBridgeV3.isValid(nativeBridge)) abort("Invalid native bridge");
+
+        ByteString serialize = new StdLib().serialize(nativeBridge);
+        BridgeContract.baseMap.put(KEY_NATIVE_BRIDGE, serialize);
     }
 
     // endregion

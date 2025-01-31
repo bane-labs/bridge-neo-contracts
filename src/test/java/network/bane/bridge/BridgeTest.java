@@ -58,6 +58,8 @@ import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.getClaimEvents;
 import static network.bane.util.TestHelper.governor;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_NATIVE_DECIMAL_SCALING_FACTOR;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_NATIVE_TOKEN_HASH;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_TOTAL_MAX_DEPOSITED_NATIVE;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_DEPOSIT;
@@ -131,6 +133,9 @@ public class BridgeTest {
     public static void setUp() throws Throwable {
         setup(ext);
         setupBridge(ext);
+
+        bridge.setDefaultNativeBridge();
+        bridge.unpauseNativeBridge();
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -174,12 +179,14 @@ public class BridgeTest {
                 "4002" + // array size 2 - withdrawal state
                 "2100" +
                 "28200000000000000000000000000000000000000000000000000000000000000000" + // bytestring size 32
-                "4005" + // array size 5 - config
+                "4007" + // array size 7 - config
                 "210480969800" + // integer 0_10000000
                 "210400e1f505" + // integer 1_00000000
                 "21060010a5d4e800" + // integer 10000_00000000
                 "210164" + // integer 100
-                "210600a0724e1809"; // integer 100'000_00000000
+                "210600a0724e1809" + // integer 100'000_00000000
+                "2814cf76e28bd0062c4a478ee35561011319f3cfa4d2" + // the token hash used for the native bridge
+                "2100"; // the decimal scaling factor
         assertThat(nativeBridgeEntry.getValueHex(), is(expectedStorageValue));
 
         assertThat(bridge.management(), is(MANAGEMENT_CONTRACT_HASH));
@@ -190,7 +197,9 @@ public class BridgeTest {
                         DEFAULT_MIN_DEPOSIT,
                         DEFAULT_MAX_DEPOSIT,
                         DEFAULT_MAX_WITHDRAWALS,
-                        DEFAULT_TOTAL_MAX_DEPOSITED_NATIVE)
+                        DEFAULT_TOTAL_MAX_DEPOSITED_NATIVE,
+                        DEFAULT_NATIVE_TOKEN_HASH,
+                        DEFAULT_NATIVE_DECIMAL_SCALING_FACTOR)
         );
         assertTrue(bridge.getNativeBridge().equals(expectedNativeBridge));
         assertThat(bridge.nativeDepositFee(), is(DEFAULT_DEPOSIT_FEE));

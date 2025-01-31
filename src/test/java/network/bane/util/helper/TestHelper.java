@@ -142,12 +142,7 @@ public class TestHelper {
         config.setDeployParam(
                 prepareBridgeDeployParameter(
                         DEFAULT_LINKED_CHAIN_ID,
-                        MANAGEMENT_CONTRACT_HASH,
-                        nativeDepositFee,
-                        minNativeDeposit,
-                        maxNativeDeposit,
-                        maxNativeWithdrawals,
-                        maxTotalNativeDepositAmount
+                        MANAGEMENT_CONTRACT_HASH
                 )
         );
         AccountSigner deploySigner = AccountSigner.none(owner);
@@ -160,18 +155,10 @@ public class TestHelper {
     }
 
     public static ContractParameter prepareBridgeDeployParameter(BigInteger linkedChainId,
-            Hash160 managementContractHash, BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit,
-            int maxWithdrawals, BigInteger maxTotalDepositAmount) {
+            Hash160 managementContractHash) {
         return array(
                 integer(linkedChainId),
-                hash160(managementContractHash),
-                array(
-                        integer(depositFee),
-                        integer(minDeposit),
-                        integer(maxDeposit),
-                        integer(maxWithdrawals),
-                        integer(maxTotalDepositAmount)
-                )
+                hash160(managementContractHash)
         );
     }
 
