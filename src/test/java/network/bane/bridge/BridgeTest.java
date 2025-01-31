@@ -1,5 +1,6 @@
 package network.bane.bridge;
 
+import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
@@ -15,6 +16,8 @@ import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.AccountSigner;
+import io.neow3j.transaction.ContractSigner;
+import io.neow3j.transaction.Signer;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
@@ -97,6 +100,7 @@ import static network.bane.util.helper.TestHelper.charlie;
 import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
 import static network.bane.util.helper.TestHelper.denise;
+import static network.bane.util.helper.TestHelper.eve;
 import static network.bane.util.helper.TestHelper.gasToken;
 import static network.bane.util.helper.TestHelper.incrementAndGetDepositNonce;
 import static network.bane.util.helper.TestHelper.incrementAndGetWithdrawalNonce;
@@ -428,7 +432,8 @@ public class BridgeTest {
                                         any(null),
                                         hash160(alice),
                                         integer(amount),
-                                        integer(DEFAULT_DEPOSIT_FEE))
+                                        integer(DEFAULT_DEPOSIT_FEE),
+                                        null)
                                 .signers(global(alice))
                                 .sign());
         assertThat(thrown.getMessage(),
@@ -446,7 +451,8 @@ public class BridgeTest {
                                 byteArrayFromString("hello"),
                                 hash160(alice),
                                 integer(amount),
-                                integer(DEFAULT_DEPOSIT_FEE))
+                                integer(DEFAULT_DEPOSIT_FEE),
+                                null)
                         .signers(global(alice))
                         .sign());
         assertThat(thrown.getMessage(),
@@ -465,7 +471,8 @@ public class BridgeTest {
                                         hash160(alice),
                                         any(null),
                                         integer(amount),
-                                        integer(DEFAULT_DEPOSIT_FEE))
+                                        integer(DEFAULT_DEPOSIT_FEE),
+                                        null)
                                 .signers(global(alice))
                                 .sign());
         assertThat(thrown.getMessage(),
@@ -477,11 +484,99 @@ public class BridgeTest {
                                 hash160(alice),
                                 byteArrayFromString("hello"),
                                 integer(amount),
-                                integer(DEFAULT_DEPOSIT_FEE))
+                                integer(DEFAULT_DEPOSIT_FEE),
+                                null)
                         .signers(global(alice))
                         .sign());
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Invalid 'to'"));
+    }
+
+    @Test
+    @Order(15)
+    public void testSponsorDeposit() throws Throwable {
+        Account sender = charlie;
+        Account from = denise;
+        Account sponsor = eve;
+
+        BigInteger fromBalanceBefore = gasToken.getBalanceOf(from);
+        BigInteger sponsorBalanceBefore = gasToken.getBalanceOf(sponsor);
+
+        BigInteger fee = bridge.getNativeBridge().config.fee;
+        BigInteger amount = DEFAULT_MIN_DEPOSIT;
+
+        bridge.depositNative(sender, from, recipient0, amount, DEFAULT_DEPOSIT_FEE, sponsor);
+
+        BigInteger fromBalanceAfter = gasToken.getBalanceOf(from);
+        BigInteger sponsorBalanceAfter = gasToken.getBalanceOf(sponsor);
+
+        assertThat(fromBalanceAfter, is(fromBalanceBefore.subtract(amount)));
+        assertThat(sponsorBalanceAfter, is(sponsorBalanceBefore.subtract(fee)));
+    }
+
+    @Test
+    @Order(15)
+    public void failSponsorDeposit_bridgeAsSponsor() throws Throwable {
+        Account sender = charlie;
+        Account from = denise;
+        Hash160 sponsor = bridge.getScriptHash();
+
+        BigInteger fee = bridge.getNativeBridge().config.fee;
+        BigInteger amount = DEFAULT_MIN_DEPOSIT;
+
+        Signer senderSigner = AccountSigner.none(sender);
+        Signer fromSigner = AccountSigner.none(from).setAllowedContracts(GasToken.SCRIPT_HASH);
+        Signer feeSponsorSigner = ContractSigner.calledByEntry(sponsor).setAllowedContracts(GasToken.SCRIPT_HASH);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () ->
+                bridge.invokeFunction("depositNative",
+                                hash160(from),
+                                hash160(recipient0),
+                                integer(amount),
+                                integer(fee),
+                                hash160(sponsor)
+                        ).signers(senderSigner, fromSigner, feeSponsorSigner)
+                        .sign()
+        );
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Prohibited 'feeSponsor'"));
+    }
+
+    @Test
+    @Order(15)
+    public void failSponsorDeposit_invalidSponsor() throws Throwable {
+        Account sender = charlie;
+        Account from = denise;
+
+        BigInteger fee = bridge.getNativeBridge().config.fee;
+        BigInteger amount = DEFAULT_MIN_DEPOSIT;
+
+        Signer senderSigner = AccountSigner.none(sender);
+        Signer fromSigner = AccountSigner.none(from).setAllowedContracts(GasToken.SCRIPT_HASH);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () ->
+                bridge.invokeFunction("depositNative",
+                                hash160(from),
+                                hash160(recipient0),
+                                integer(amount),
+                                integer(fee),
+                                byteArrayFromString("sponsor")
+                        ).signers(senderSigner, fromSigner)
+                        .sign()
+        );
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Invalid 'feeSponsor'"));
+
+        thrown = assertThrows(TransactionConfigurationException.class, () ->
+                bridge.invokeFunction("depositNative",
+                                hash160(from),
+                                hash160(recipient0),
+                                integer(amount),
+                                integer(fee),
+                                hash160(Hash160.ZERO)
+                        ).signers(senderSigner, fromSigner)
+                        .sign()
+        );
+        assertThat(thrown.getMessage(),
+                containsString("ABORTMSG is executed. Reason: Invalid 'feeSponsor'"));
     }
 
     // endregion

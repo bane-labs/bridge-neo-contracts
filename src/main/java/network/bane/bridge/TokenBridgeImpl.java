@@ -84,7 +84,7 @@ public class TokenBridgeImpl {
     // endregion
     // region deposit
 
-    static void depositToken(Hash160 neoN3Token, Hash160 from, Hash160 to, int amount, int maxFee) {
+    static void depositToken(Hash160 neoN3Token, Hash160 from, Hash160 to, int amount, int maxFee, Hash160 feeSponsor) {
         Hash160 executingScriptHash = getExecutingScriptHash();
         BridgeImpl.checkDepositParameters(executingScriptHash, from, to);
 
@@ -95,7 +95,7 @@ public class TokenBridgeImpl {
         if (depositFee > maxFee) abort("Max fee exceeded");
 
         // Fee payment
-        BridgeImpl.payFee(from, depositFee);
+        BridgeImpl.payFee(from, depositFee, feeSponsor);
 
         // Token deposit transfer
         FungibleToken tokenContract = new FungibleToken(neoN3Token);

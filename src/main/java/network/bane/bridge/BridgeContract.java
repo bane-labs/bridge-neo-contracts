@@ -437,20 +437,21 @@ public class BridgeContract {
     /**
      * Deposits the linked chain's native token representative to the linked chain.
      *
-     * @param from   the sender.
-     * @param to     the recipient on the linked chain.
-     * @param amount the amount to deposit to the linked chain.
-     * @param maxFee the maximum fee in GAS that the depositor is willing to pay for the deposit. If the actual fee is
-     *               higher than this value, the deposit is aborted.
+     * @param from       the sender.
+     * @param to         the recipient on the linked chain.
+     * @param amount     the amount to deposit to the linked chain.
+     * @param maxFee     the maximum fee in GAS that the depositor is willing to pay for the deposit. If the actual
+     *                   fee is higher than this value, the deposit is aborted.
+     * @param feeSponsor the address that pays the fee for the deposit. If null, the from address pays the fee.
      */
-    public static void depositNative(Hash160 from, Hash160 to, int amount, int maxFee) {
+    public static void depositNative(Hash160 from, Hash160 to, int amount, int maxFee, Hash160 feeSponsor) {
         enteringNonReentrant();
 
         onlyWhenNotPaused();
         onlyWhenNativeBridgeNotPaused();
         onlyWhenDepositsNotPaused();
 
-        NativeBridgeImpl.depositNative(from, to, amount, maxFee);
+        NativeBridgeImpl.depositNative(from, to, amount, maxFee, feeSponsor);
 
         exitingNonReentrant();
     }
@@ -666,21 +667,24 @@ public class BridgeContract {
     /**
      * Deposit a token to Neo X.
      *
-     * @param token  the token to deposit.
-     * @param from   the sender.
-     * @param to     the recipient on Neo X.
-     * @param amount the amount of the token to deposit to Neo X.
-     * @param maxFee the maximum fee (GAS) that the depositor is willing to pay for the deposit. If the actual fee is
-     *               higher than this value, the deposit is aborted.
+     * @param token      the token to deposit.
+     * @param from       the sender.
+     * @param to         the recipient on Neo X.
+     * @param amount     the amount of the token to deposit to Neo X.
+     * @param maxFee     the maximum fee (GAS) that the depositor is willing to pay for the deposit. If the actual
+     *                   fee is higher than this value, the deposit is aborted.
+     * @param feeSponsor the address that pays the fee for the deposit. If null, the from address pays the fee.
      */
-    public static void depositToken(Hash160 token, Hash160 from, Hash160 to, int amount, int maxFee) {
+    public static void depositToken(Hash160 token, Hash160 from, Hash160 to, int amount, int maxFee,
+            Hash160 feeSponsor) {
+
         enteringNonReentrant();
 
         onlyWhenNotPaused();
         onlyWhenDepositsNotPaused();
         onlyWhenTokenBridgeNotPaused(token);
 
-        TokenBridgeImpl.depositToken(token, from, to, amount, maxFee);
+        TokenBridgeImpl.depositToken(token, from, to, amount, maxFee, feeSponsor);
 
         exitingNonReentrant();
     }
