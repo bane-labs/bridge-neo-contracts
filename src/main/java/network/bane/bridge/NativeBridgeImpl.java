@@ -4,6 +4,7 @@ import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.Hash256;
+import io.neow3j.devpack.Helper;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
 import io.neow3j.devpack.StorageMap;
@@ -98,8 +99,8 @@ public class NativeBridgeImpl {
         if (receivedAmount < nativeTokenBridge.config.minAmount) abort("Deposit amount too low");
         if (receivedAmount > nativeTokenBridge.config.maxAmount) abort("Deposit amount too high");
 
-        // Todo mialbu 17.01.2025: Add decimal scaling factor computation here.
-        int amountForHashing = receivedAmount;
+        int amountForHashing = BridgeImpl.divideByDecimalFactor(receivedAmount,
+                nativeTokenBridge.config.decimalScalingFactor);
 
         // Update the native bridge state.
         updateNativeDepositState(nativeTokenBridge, from, to, amountForHashing);
@@ -148,7 +149,7 @@ public class NativeBridgeImpl {
         BridgeContract.onNativeWithdrawalRootUpdate.fire(nativeTokenBridge.withdrawalState.nonce,
                 nativeTokenBridge.withdrawalState.root);
         // Execute the token transfers
-        executeNativeTokenTransfers(withdrawals);
+        executeNativeTokenTransfers(withdrawals, nativeTokenBridge.config.decimalScalingFactor);
     }
 
     /**
@@ -201,11 +202,14 @@ public class NativeBridgeImpl {
     // endregion
     // region transfer execution
 
-    static void executeNativeTokenTransfers(List<Withdrawal> withdrawals) {
-        int withdrawalsSize = withdrawals.size();
+    static void executeNativeTokenTransfers(List<Withdrawal> withdrawals, int decimalScalingFactor) {
         Hash160 executingScriptHash = getExecutingScriptHash();
+        int withdrawalsSize = withdrawals.size();
+        int scalingFactor = Helper.pow(10, decimalScalingFactor);
         for (int i = 0; i < withdrawalsSize; i++) {
             Withdrawal withdrawal = withdrawals.get(i);
+            int transferAmount = withdrawal.amount * scalingFactor;
+            withdrawal.amount = transferAmount;
             // If the to address is a contract, add the withdrawal to the claimable map, otherwise exeucte the transfer.
             if (BridgeHelper.isContract(withdrawal.to)) {
                 addNativeClaimable(withdrawal);
