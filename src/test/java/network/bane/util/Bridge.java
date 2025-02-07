@@ -192,8 +192,7 @@ public class Bridge extends SmartContractHelper {
                         hash160(from),
                         hash160(to),
                         integer(amount),
-                        integer(maxFee),
-                        null
+                        integer(maxFee)
                 ).signers(signer));
     }
 
@@ -419,9 +418,25 @@ public class Bridge extends SmartContractHelper {
                         hash160(from),
                         hash160(to),
                         integer(amount),
-                        integer(fee),
-                        null
+                        integer(fee)
                 ).signers(signer));
+    }
+
+    public Hash256 depositToken(Account sender, Account from, Hash160 tokenHash, Hash160 to, BigInteger amount,
+            Account feeSponsor) throws Throwable {
+        Signer senderSigner = AccountSigner.none(sender);
+        Signer fromSigner = AccountSigner.none(sender).setAllowedContracts(tokenHash);
+        Signer feeSponsorSigner = AccountSigner.none(sender).setAllowedContracts(GasToken.SCRIPT_HASH);
+        BigInteger fee = getTokenConfig(tokenHash).fee;
+        return sendAndAwaitExecution(
+                invokeFunction("depositToken",
+                        hash160(tokenHash),
+                        hash160(from),
+                        hash160(to),
+                        integer(amount),
+                        integer(fee),
+                        hash160(feeSponsor)
+                ).signers(senderSigner, fromSigner, feeSponsorSigner));
     }
 
     public Hash256 withdrawToken(Hash160 tokenHash, String withdrawalRoot,

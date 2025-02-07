@@ -432,8 +432,7 @@ public class BridgeTest {
                                         any(null),
                                         hash160(alice),
                                         integer(amount),
-                                        integer(DEFAULT_DEPOSIT_FEE),
-                                        null)
+                                        integer(DEFAULT_DEPOSIT_FEE))
                                 .signers(global(alice))
                                 .sign());
         assertThat(thrown.getMessage(),
@@ -451,8 +450,7 @@ public class BridgeTest {
                                 byteArrayFromString("hello"),
                                 hash160(alice),
                                 integer(amount),
-                                integer(DEFAULT_DEPOSIT_FEE),
-                                null)
+                                integer(DEFAULT_DEPOSIT_FEE))
                         .signers(global(alice))
                         .sign());
         assertThat(thrown.getMessage(),
@@ -471,8 +469,7 @@ public class BridgeTest {
                                         hash160(alice),
                                         any(null),
                                         integer(amount),
-                                        integer(DEFAULT_DEPOSIT_FEE),
-                                        null)
+                                        integer(DEFAULT_DEPOSIT_FEE))
                                 .signers(global(alice))
                                 .sign());
         assertThat(thrown.getMessage(),
@@ -484,8 +481,7 @@ public class BridgeTest {
                                 hash160(alice),
                                 byteArrayFromString("hello"),
                                 integer(amount),
-                                integer(DEFAULT_DEPOSIT_FEE),
-                                null)
+                                integer(DEFAULT_DEPOSIT_FEE))
                         .signers(global(alice))
                         .sign());
         assertThat(thrown.getMessage(),

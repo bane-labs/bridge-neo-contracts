@@ -437,6 +437,20 @@ public class BridgeContract {
     /**
      * Deposits the linked chain's native token representative to the linked chain.
      *
+     * @param from   the sender.
+     * @param to     the recipient on the linked chain.
+     * @param amount the amount to deposit to the linked chain.
+     * @param maxFee the maximum fee in GAS that the depositor is willing to pay for the deposit. If the actual fee
+     *               is higher than this value, the deposit is aborted.
+     */
+    public static void depositNative(Hash160 from, Hash160 to, int amount, int maxFee) {
+        depositNative(from, to, amount, maxFee, null);
+    }
+
+    /**
+     * Deposits the linked chain's native token representative to the linked chain and allows to specify a sponsor to
+     * pay the bridge fee.
+     *
      * @param from       the sender.
      * @param to         the recipient on the linked chain.
      * @param amount     the amount to deposit to the linked chain.
@@ -665,12 +679,26 @@ public class BridgeContract {
     // Todo by mialbu on 08.01.25: Consider adding the target chain's id to the parameters.
 
     /**
-     * Deposit a token to Neo X.
+     * Deposits a token to the linked chain.
+     *
+     * @param token  the token to deposit.
+     * @param from   the sender.
+     * @param to     the recipient on the linked chain.
+     * @param amount the amount of the token to deposit to the linked chain.
+     * @param maxFee the maximum fee (GAS) that the depositor is willing to pay for the deposit. If the actual fee is
+     *               higher than this value, the deposit is aborted.
+     */
+    public static void depositToken(Hash160 token, Hash160 from, Hash160 to, int amount, int maxFee) {
+        depositToken(token, from, to, amount, maxFee, null);
+    }
+
+    /**
+     * Deposits a token to the linked chain and allows to specify a sponsor to pay the bridge fee..
      *
      * @param token      the token to deposit.
      * @param from       the sender.
-     * @param to         the recipient on Neo X.
-     * @param amount     the amount of the token to deposit to Neo X.
+     * @param to         the recipient on the linked chain.
+     * @param amount     the amount of the token to deposit to the linked chain.
      * @param maxFee     the maximum fee (GAS) that the depositor is willing to pay for the deposit. If the actual
      *                   fee is higher than this value, the deposit is aborted.
      * @param feeSponsor the address that pays the fee for the deposit. If null, the from address pays the fee.
@@ -690,7 +718,7 @@ public class BridgeContract {
     }
 
     /**
-     * Withdraws tokens from the contract (i.e., from Neo X) to the provided recipients.
+     * Withdraws tokens from the contract to the provided recipients.
      * <p>
      * Requires the signatures of the validators. The signatures must sign the provided withdrawal root, while the
      * provided withdrawal root must be the computed root based on the current root in storage and the provided
@@ -719,7 +747,7 @@ public class BridgeContract {
     }
 
     /**
-     * Claim tokens that have been withdrawn from Neo X.
+     * Claim tokens that have been withdrawn from the linked chain.
      * <p>
      * Only withdrawals that have a contract as recipient or for which the transfer has failed (should never happen
      * as long as the deposited token funds are held in this contract) are available to claim.
