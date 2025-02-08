@@ -130,7 +130,8 @@ public class Bridge extends SmartContractHelper {
     }
 
     public Hash256 setNativeBridge(Account sender, Hash160 token, int decimalsOnLinkedChain, BigInteger depositFee,
-            BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals, BigInteger maxTotalDeposited) throws Throwable {
+            BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals, BigInteger maxTotalDeposited)
+            throws Throwable {
         return sendAndAwaitExecution(
                 invokeFunction("setNativeBridge",
                         hash160(token),
@@ -193,6 +194,21 @@ public class Bridge extends SmartContractHelper {
                         integer(amount),
                         integer(maxFee)
                 ).signers(signer));
+    }
+
+    public Hash256 depositNative(Account sender, Account from, Hash160 to, BigInteger amount, BigInteger maxFee,
+            Account feeSponsor) throws Throwable {
+        Signer senderSigner = AccountSigner.none(sender);
+        Signer fromSigner = AccountSigner.none(from).setAllowedContracts(GasToken.SCRIPT_HASH);
+        Signer feeSponsorSigner = AccountSigner.none(feeSponsor).setAllowedContracts(GasToken.SCRIPT_HASH);
+        return sendAndAwaitExecution(
+                invokeFunction("depositNative",
+                        hash160(from),
+                        hash160(to),
+                        integer(amount),
+                        integer(maxFee),
+                        hash160(feeSponsor)
+                ).signers(senderSigner, fromSigner, feeSponsorSigner));
     }
 
     public Hash256 withdrawNative(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
@@ -404,6 +420,23 @@ public class Bridge extends SmartContractHelper {
                         integer(amount),
                         integer(fee)
                 ).signers(signer));
+    }
+
+    public Hash256 depositToken(Account sender, Account from, Hash160 tokenHash, Hash160 to, BigInteger amount,
+            Account feeSponsor) throws Throwable {
+        Signer senderSigner = AccountSigner.none(sender);
+        Signer fromSigner = AccountSigner.none(sender).setAllowedContracts(tokenHash);
+        Signer feeSponsorSigner = AccountSigner.none(sender).setAllowedContracts(GasToken.SCRIPT_HASH);
+        BigInteger fee = getTokenConfig(tokenHash).fee;
+        return sendAndAwaitExecution(
+                invokeFunction("depositToken",
+                        hash160(tokenHash),
+                        hash160(from),
+                        hash160(to),
+                        integer(amount),
+                        integer(fee),
+                        hash160(feeSponsor)
+                ).signers(senderSigner, fromSigner, feeSponsorSigner));
     }
 
     public Hash256 withdrawToken(Hash160 tokenHash, String withdrawalRoot,

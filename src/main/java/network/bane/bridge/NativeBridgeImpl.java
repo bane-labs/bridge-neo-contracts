@@ -79,7 +79,7 @@ public class NativeBridgeImpl {
     // endregion
     // region deposit
 
-    static void depositNative(Hash160 from, Hash160 to, int amount, int maxFee) {
+    static void depositNative(Hash160 from, Hash160 to, int amount, int maxFee, Hash160 feeSponsor) {
         Hash160 executingScriptHash = getExecutingScriptHash();
         BridgeImpl.checkDepositParameters(executingScriptHash, from, to);
 
@@ -90,7 +90,7 @@ public class NativeBridgeImpl {
         if (depositFee > maxFee) abort("Max fee exceeded");
 
         // Fee payment
-        BridgeImpl.payFee(from, depositFee);
+        BridgeImpl.payFee(from, depositFee, feeSponsor);
 
         // Native token deposit transfer
         int receivedAmount = BridgeImpl.transferDepositToken(nativeToken(), from, executingScriptHash, amount);

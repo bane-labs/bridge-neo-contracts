@@ -10,10 +10,18 @@ import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 
 public class BridgeImpl {
 
-    static void payFee(Hash160 from, int fee) {
+    static void payFee(Hash160 from, int fee, Hash160 feeSponsor) {
         addToUnclaimedRewards(fee);
+        Hash160 feePayer;
+        if (feeSponsor == null) {
+            feePayer = from;
+        } else {
+            if (!Hash160.isValid(feeSponsor) || feeSponsor.isZero()) abort("Invalid 'feeSponsor'");
+            if (getExecutingScriptHash().equals(feeSponsor)) abort("Prohibited 'feeSponsor'");
+            feePayer = feeSponsor;
+        }
         // Pay the fee and transfer the token
-        if (!new GasToken().transfer(from, getExecutingScriptHash(), fee, null)) {
+        if (!new GasToken().transfer(feePayer, getExecutingScriptHash(), fee, null)) {
             abort("Fee transfer failed");
         }
     }
