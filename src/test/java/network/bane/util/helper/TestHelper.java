@@ -183,6 +183,8 @@ public class TestHelper {
 
         Hash256 txHash = bridge.registerToken(neoN3NeoTokenHash, config);
         Await.waitUntilTransactionIsExecuted(txHash, neow3j);
+        Hash256 unpauseTxHash = bridge.unpauseTokenBridge(neoN3NeoTokenHash);
+        Await.waitUntilTransactionIsExecuted(unpauseTxHash, neow3j);
     }
 
 }

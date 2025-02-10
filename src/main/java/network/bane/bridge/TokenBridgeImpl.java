@@ -39,7 +39,7 @@ public class TokenBridgeImpl {
         State newWithdrawalState = new State(0, zeroHash);
         tokenBridges.put(token, new StdLib().serialize(
                 new TokenBridge(
-                        false,
+                        true,
                         newDepositState,
                         newWithdrawalState,
                         tokenConfig
