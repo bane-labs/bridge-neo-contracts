@@ -1,7 +1,7 @@
 package network.bane.bridge;
 
 import io.neow3j.devpack.ByteString;
-import io.neow3j.devpack.annotations.Struct;
+import io.neow3j.devpack.Runtime;
 import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.structs.NativeTokenBridgeV2;
@@ -13,26 +13,25 @@ import static network.bane.bridge.StorageConstants.KEY_LINKED_CHAIN_ID;
 import static network.bane.bridge.StorageConstants.KEY_NATIVE_BRIDGE;
 
 public class V3Migration {
-    @Struct
-    private static class V3UpdateData {
-        public Integer linkedChainId;
-    }
 
-    // Checks that the provided data's content is valid.
-    static boolean isValid(Object data) {
-        V3UpdateData migrationData = (V3UpdateData) data;
-        return migrationData.linkedChainId != null && migrationData.linkedChainId > 0;
-    }
+    private static final int NETWORK_N3_MAINNET = 860833102;
+    private static final int NETWORK_N3_TESTNET = 894710606;
+
+    private static final int CHAINID_NEOX_MAINNET = 47763;
+    private static final int CHAINID_NEOX_TESTNET = 12227332;
 
     // Migrates the data from the previous version to the current version.
-    static void migrate(Object data) {
-        // Todo: Consider hardcoding this migration for Neo X testnet and mainnet to reduce manual input errors. If we
-        //  deploy for other networks, we'll only deploy using v3, thus, no migration from v2 will be needed there.
-        V3UpdateData migrationData = (V3UpdateData) data;
-        if (!isValid(migrationData)) {
-            abort("Invalid migration data");
+    static void migrate() {
+        Integer linkedChain = null;
+        int thisNetwork = Runtime.getNetwork();
+        if (thisNetwork == NETWORK_N3_MAINNET) {
+            linkedChain = CHAINID_NEOX_MAINNET;
+        } else if (thisNetwork == NETWORK_N3_TESTNET) {
+            linkedChain = CHAINID_NEOX_TESTNET;
+        } else {
+            abort("Unsupported network.");
         }
-        BridgeContract.baseMap.put(KEY_LINKED_CHAIN_ID, migrationData.linkedChainId);
+        BridgeContract.baseMap.put(KEY_LINKED_CHAIN_ID, linkedChain);
 
         // Read V2 of native bridge
         NativeTokenBridgeV2 nativeBridgeV2 = (NativeTokenBridgeV2) new StdLib().deserialize(

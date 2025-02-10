@@ -217,8 +217,8 @@ public class BridgeContract {
             if (baseMap.getInt(KEY_VERSION) != 1) abort("Invalid version");
             // Update internal versioning.
             baseMap.put(KEY_VERSION, 3);
-            // Implement potential storage migration here if needed.
-            V3Migration.migrate(data);
+            // Migrate storage.
+            V3Migration.migrate();
         } else {
             BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
             if (deploymentData.bridgeManagementContract == null ||
