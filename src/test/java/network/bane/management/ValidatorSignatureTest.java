@@ -15,9 +15,9 @@ public class ValidatorSignatureTest {
         String root = "295226ccd2cee4e7fef5bc9d18677c6228052b46109731fc25dbcd6982074a0e";
 
         BigInteger n3Network = new BigInteger("894710606");
-        BigInteger sourceChainId = new BigInteger("31337");
+        BigInteger sourceChainId = new BigInteger("12227332");
 
         String msg = createWithdrawalMessageToSign(n3Network, sourceChainId, root);
-        assertThat(msg, is("4e335435697a295226ccd2cee4e7fef5bc9d18677c6228052b46109731fc25dbcd6982074a0e"));
+        assertThat(msg, is("4e3354350493ba00295226ccd2cee4e7fef5bc9d18677c6228052b46109731fc25dbcd6982074a0e"));
     }
 }
