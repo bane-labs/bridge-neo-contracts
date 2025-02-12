@@ -7,7 +7,7 @@ import io.neow3j.devpack.annotations.OnNEP17Payment;
 
 @DisplayName("BaneBridge")
 @ManifestExtra(key = "author", value = "BaneLabs")
-@ManifestExtra(key = "description", value = "Test Contract for bridging GAS tokens from Neo N3 to Bane.")
+@ManifestExtra(key = "description", value = "Test Contract for bridging tokens from Neo N3 to Bane.")
 public class TestContract {
 
     @OnNEP17Payment

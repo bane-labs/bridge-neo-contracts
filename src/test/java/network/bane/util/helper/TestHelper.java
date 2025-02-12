@@ -43,16 +43,17 @@ import static network.bane.util.TestHelper.validator4PubKey;
 import static network.bane.util.TestHelper.validator5PubKey;
 import static network.bane.util.TestHelper.validator6PubKey;
 import static network.bane.util.TestHelper.validator7PubKey;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_LINKED_CHAIN_ID;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
 import static network.bane.util.helper.NetworkSettingsHelper.updateNetworkSettings;
 
 public class TestHelper {
 
-    public static final BigInteger gasDepositFee = new BigInteger("10000000");
-    public static final BigInteger minGasDeposit = new BigInteger("100000000");
-    public static final BigInteger maxGasDeposit = new BigInteger("1000000000000");
-    public static final BigInteger maxWithdrawals = new BigInteger("100");
-    public static final BigInteger maxTotalGasDepositAmount = new BigInteger("10000000000000");
+    public static final BigInteger nativeDepositFee = new BigInteger("10000000");
+    public static final BigInteger minNativeDeposit = new BigInteger("100000000");
+    public static final BigInteger maxNativeDeposit = new BigInteger("1000000000000");
+    public static final int maxNativeWithdrawals = 100;
+    public static final BigInteger maxTotalNativeDepositAmount = new BigInteger("10000000000000");
 
     public static Bridge bridge;
     public static Management management;
@@ -132,6 +133,7 @@ public class TestHelper {
                 new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
         deploySigner.setRules(deployWitnessRule);
         config.setSigner(deploySigner);
+        config.setSubstitution("BridgeManagementName", "NeoXBridgeManagement");
         return config;
     }
 
@@ -139,12 +141,8 @@ public class TestHelper {
         DeployConfiguration config = new DeployConfiguration();
         config.setDeployParam(
                 prepareBridgeDeployParameter(
-                        MANAGEMENT_CONTRACT_HASH,
-                        gasDepositFee,
-                        minGasDeposit,
-                        maxGasDeposit,
-                        maxWithdrawals,
-                        maxTotalGasDepositAmount
+                        DEFAULT_LINKED_CHAIN_ID,
+                        MANAGEMENT_CONTRACT_HASH
                 )
         );
         AccountSigner deploySigner = AccountSigner.none(owner);
@@ -152,21 +150,15 @@ public class TestHelper {
                 new CalledByContractCondition(ContractManagement.SCRIPT_HASH));
         deploySigner.setRules(deployWitnessRule);
         config.setSigner(deploySigner);
+        config.setSubstitution("BridgeName", "NeoXBridge");
         return config;
     }
 
-    public static ContractParameter prepareBridgeDeployParameter(Hash160 managementContractHash,
-            BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit, BigInteger maxWithdrawals,
-            BigInteger maxTotalDepositAmount) {
+    public static ContractParameter prepareBridgeDeployParameter(BigInteger linkedChainId,
+            Hash160 managementContractHash) {
         return array(
-                hash160(managementContractHash),
-                array(
-                        integer(depositFee),
-                        integer(minDeposit),
-                        integer(maxDeposit),
-                        integer(maxWithdrawals),
-                        integer(maxTotalDepositAmount)
-                )
+                integer(linkedChainId),
+                hash160(managementContractHash)
         );
     }
 
@@ -191,6 +183,8 @@ public class TestHelper {
 
         Hash256 txHash = bridge.registerToken(neoN3NeoTokenHash, config);
         Await.waitUntilTransactionIsExecuted(txHash, neow3j);
+        Hash256 unpauseTxHash = bridge.unpauseTokenBridge(neoN3NeoTokenHash);
+        Await.waitUntilTransactionIsExecuted(unpauseTxHash, neow3j);
     }
 
 }

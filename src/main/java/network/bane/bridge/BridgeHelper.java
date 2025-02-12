@@ -11,28 +11,28 @@ import static network.bane.bridge.StorageConstants.KEY_BRIDGE_MANAGEMENT;
 public class BridgeHelper {
 
     static void onlyWhenPaused() {
-        if (!BridgeContract.isPaused()) abort("Contract is not paused.");
+        if (!BridgeContract.isPaused()) abort("Contract not paused");
     }
 
     static void onlyWhenNotPaused() {
-        if (BridgeContract.isPaused()) abort("Contract is paused.");
+        if (BridgeContract.isPaused()) abort("Contract paused");
     }
 
     static void onlyRelayer() {
         if (!checkWitness(managementContract().relayer())) {
-            abort("Only the relayer can call this method.");
+            abort("No authorization - only relayer");
         }
     }
 
     static void onlyGovernor() {
         if (!checkWitness(managementContract().governor())) {
-            abort("Only the governor can call this method.");
+            abort("No authorization - only governor");
         }
     }
 
     static void onlyGovernorOrSecurityGuard() {
         if (!checkWitness(managementContract().governor()) && !checkWitness(managementContract().securityGuard())) {
-            abort("Only the governor or security guard can call this method.");
+            abort("No authorization - only governor or security guard");
         }
     }
 

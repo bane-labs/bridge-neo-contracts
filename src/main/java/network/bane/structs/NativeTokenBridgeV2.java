@@ -3,17 +3,17 @@ package network.bane.structs;
 import io.neow3j.devpack.annotations.Struct;
 
 @Struct
-public class GasBridge {
+public class NativeTokenBridgeV2 {
     public boolean paused;
     // Note: If a future version of the bridge contract should contain a verify method, the computation of this value
     // should be kept in mind (and adapted), since otherwise the actual balance might differ from this accounting here.
     public int totalDeposited;
     public State depositState;
     public State withdrawalState;
-    public GasConfig config;
+    public NativeTokenConfigV2 config;
 
-    public GasBridge(boolean paused, Integer totalDeposited, State depositState, State withdrawalState,
-            GasConfig config) {
+    public NativeTokenBridgeV2(boolean paused, Integer totalDeposited, State depositState, State withdrawalState,
+            NativeTokenConfigV2 config) {
         this.paused = paused;
         this.totalDeposited = totalDeposited;
         this.depositState = depositState;
@@ -21,11 +21,11 @@ public class GasBridge {
         this.config = config;
     }
 
-    public static boolean isValid(GasBridge gasBridge) {
-        return gasBridge != null &&
-                gasBridge.totalDeposited >= 0 &&
-                State.isValid(gasBridge.depositState) &&
-                State.isValid(gasBridge.withdrawalState) &&
-                GasConfig.isValid(gasBridge.config);
+    public static boolean isValid(NativeTokenBridgeV2 nativeTokenBridge) {
+        return nativeTokenBridge != null &&
+                nativeTokenBridge.totalDeposited >= 0 &&
+                State.isValid(nativeTokenBridge.depositState) &&
+                State.isValid(nativeTokenBridge.withdrawalState) &&
+                NativeTokenConfigV2.isValid(nativeTokenBridge.config);
     }
 }

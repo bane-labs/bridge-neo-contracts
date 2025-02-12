@@ -1,16 +1,18 @@
 package network.bane.util.structs;
 
+import io.neow3j.types.Hash160;
+
 import java.math.BigInteger;
 
-public class GasBridge {
+public class NativeBridge {
     public boolean paused;
     public BigInteger totalDeposited;
     public State depositState;
     public State withdrawalState;
-    public GasConfig config;
+    public NativeConfig config;
 
-    public GasBridge(boolean paused, BigInteger totalDeposited, State depositState, State withdrawalState,
-            GasConfig config) {
+    public NativeBridge(boolean paused, BigInteger totalDeposited, State depositState, State withdrawalState,
+            NativeConfig config) {
         this.paused = paused;
         this.totalDeposited = totalDeposited;
         this.depositState = depositState;
@@ -18,7 +20,7 @@ public class GasBridge {
         this.config = config;
     }
 
-    public boolean equals(GasBridge other) {
+    public boolean equals(NativeBridge other) {
         if (other == null) {
             return false;
         }
@@ -32,22 +34,27 @@ public class GasBridge {
                 this.config.equals(other.config);
     }
 
-    public static class GasConfig {
+    public static class NativeConfig {
         public BigInteger fee;
         public BigInteger minAmount;
         public BigInteger maxAmount;
-        public BigInteger maxWithdrawals;
+        public Integer maxWithdrawals;
         public BigInteger maxTotalDeposit;
+        public Hash160 tokenHash;
+        public int decimalScalingFactor;
 
-        public GasConfig(BigInteger fee, BigInteger minAmount, BigInteger maxAmount, BigInteger maxWithdrawals, BigInteger maxTotalDeposit) {
+        public NativeConfig(BigInteger fee, BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals,
+                BigInteger maxTotalDeposit, Hash160 token, int decimalScalingFactor) {
             this.fee = fee;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
             this.maxWithdrawals = maxWithdrawals;
             this.maxTotalDeposit = maxTotalDeposit;
+            this.tokenHash = token;
+            this.decimalScalingFactor = decimalScalingFactor;
         }
 
-        public boolean equals(GasConfig other) {
+        public boolean equals(NativeConfig other) {
             if (other == null) {
                 return false;
             }
@@ -58,7 +65,9 @@ public class GasBridge {
                     this.minAmount.equals(other.minAmount) &&
                     this.maxAmount.equals(other.maxAmount) &&
                     this.maxWithdrawals.equals(other.maxWithdrawals) &&
-                    this.maxTotalDeposit.equals(other.maxTotalDeposit);
+                    this.maxTotalDeposit.equals(other.maxTotalDeposit) &&
+                    this.tokenHash.equals(other.tokenHash) &&
+                    this.decimalScalingFactor == other.decimalScalingFactor;
         }
     }
 }

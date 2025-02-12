@@ -19,7 +19,7 @@ public class BridgeLib {
     static byte[] padToBytes(byte[] data, int padToSize) {
         int dataSize = data.length;
         int toPad = padToSize - dataSize;
-        assert toPad >= 0 : "Data is too long.";
+        assert toPad >= 0 : "Data too long";
         byte[] padding = new byte[toPad];
         return concat(data, padding);
     }

@@ -67,6 +67,10 @@ public class PauseDepositsTest {
     public static void setUp() throws Throwable {
         setup(ext);
         setupBridge(ext);
+
+        bridge.setDefaultNativeBridge();
+        bridge.unpauseNativeBridge();
+
         registerNeoTokenBridge();
     }
 
@@ -88,7 +92,7 @@ public class PauseDepositsTest {
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () -> bridge.pauseDeposits(relayer));
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the governor can call this method."));
+                containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
     }
 
     @Test
@@ -99,7 +103,7 @@ public class PauseDepositsTest {
         TransactionConfigurationException thrown =
                 assertThrows(TransactionConfigurationException.class, () -> bridge.unpauseDeposits(securityGuard));
         assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Only the governor can call this method."));
+                containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
         bridge.unpauseDeposits();
     }
 
@@ -117,20 +121,20 @@ public class PauseDepositsTest {
         assertFalse(bridge.depositsArePaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.unpauseDeposits());
-        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Deposits are not paused."));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Deposits not paused"));
     }
 
     // endregion
     // region deposits when deposits are paused
 
     @Test
-    public void testPausedDeposit_rejectDepositGas() throws Throwable {
+    public void testPausedDeposit_rejectDepositNative() throws Throwable {
         assertFalse(bridge.depositsArePaused());
         bridge.pauseDeposits();
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> DepositHelper.depositGas(alice, recipient0, BigInteger.ONE));
-        assertThat(thrown.getMessage(), containsString("Deposits are paused."));
+                () -> DepositHelper.depositNative(alice, recipient0, BigInteger.ONE));
+        assertThat(thrown.getMessage(), containsString("Deposits paused"));
 
         bridge.unpauseDeposits();
     }
@@ -139,10 +143,10 @@ public class PauseDepositsTest {
     // region withdrawal when deposits are paused
 
     @Test
-    public void testPauseDeposits_withdrawGas() throws Throwable {
+    public void testPauseDeposits_withdrawNative() throws Throwable {
         assertFalse(bridge.depositsArePaused());
         bridge.pauseDeposits();
-        assertThat(bridge.getGasBridge().withdrawalState.nonce, is(BigInteger.ZERO));
+        assertThat(bridge.getNativeBridge().withdrawalState.nonce, is(BigInteger.ZERO));
 
         BigInteger nonce = BigInteger.ONE;
         Hash160 to = new Hash160("0x6472bf811b33b87f7872e31439cdbd16871d8cad");
@@ -152,9 +156,9 @@ public class PauseDepositsTest {
         String root = concatAndKeccak256(Hash256.ZERO.toString(), d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
-        bridge.withdrawGas(root, signMsg(validators, root), withdrawal);
+        bridge.withdrawNative(root, signMsg(validators, root), withdrawal);
 
-        assertThat(bridge.getGasBridge().withdrawalState.nonce, is(BigInteger.ONE));
+        assertThat(bridge.getNativeBridge().withdrawalState.nonce, is(BigInteger.ONE));
         bridge.unpauseDeposits();
     }
 

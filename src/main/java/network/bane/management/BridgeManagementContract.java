@@ -1,5 +1,6 @@
 package network.bane.management;
 
+
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
@@ -31,13 +32,11 @@ import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Helper.toByteArray;
 import static io.neow3j.devpack.Runtime.checkWitness;
 
-@DisplayName("NeoXBridgeManagement")
+@DisplayName("${BridgeManagementName}")
 @Permission(nativeContract = NativeContract.ContractManagement, methods = "update")
-@ManifestExtras({
-        @ManifestExtra(key = "Author", value = "BaneLabs"),
-        @ManifestExtra(key = "Description", value = "Contract for managing roles in the Neo X bridge contract"),
-        @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")
-})
+@ManifestExtras({@ManifestExtra(key = "Author", value = "BaneLabs"),
+        @ManifestExtra(key = "Description", value = "Contract for managing roles in the bridge"),
+        @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")})
 public class BridgeManagementContract {
 
     private static final StorageContext ctx = Storage.getStorageContext();
@@ -95,22 +94,27 @@ public class BridgeManagementContract {
 
     @OnDeployment
     public static void deploy(Object data, boolean isUpdate) {
-        if (!isUpdate) {
+        if (isUpdate) {
+            // Make sure that this version of the contract is only used to update a deployed contract in version 1.
+            if (baseMap.getInt(key_version) != 1) abort("Invalid version.");
+            // Update internal versioning.
+            baseMap.put(key_version, 3);
+            // Implement potential storage migration here if needed.
+        } else {
             ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
 
             Hash160 owner = deploymentData.owner;
-            if (owner == null || !Hash160.isValid(owner)) abort("Invalid script hash provided for owner.");
+            if (owner == null || !Hash160.isValid(owner)) abort("Invalid owner");
             Hash160 relayer = deploymentData.relayer;
-            if (relayer == null || !Hash160.isValid(relayer)) abort("Invalid script hash provided for relayer.");
+            if (relayer == null || !Hash160.isValid(relayer)) abort("Invalid relayer");
             List<ECPoint> validators = deploymentData.validators;
             int validatorSize = validators.size();
             int validatorThreshold = deploymentData.validatorThreshold;
-            if (validatorSize < validatorThreshold) abort("Not enough validators.");
+            if (validatorSize < validatorThreshold) abort("Insufficient validators");
             Hash160 governor = deploymentData.governor;
-            if (governor == null || !Hash160.isValid(governor)) abort("Invalid script hash provided for governor.");
+            if (governor == null || !Hash160.isValid(governor)) abort("Invalid governor");
             Hash160 securityGuard = deploymentData.securityGuard;
-            if (securityGuard == null || !Hash160.isValid(securityGuard))
-                abort("Invalid script hash provided for security guard.");
+            if (securityGuard == null || !Hash160.isValid(securityGuard)) abort("Invalid security guard");
 
             baseMap.put(key_owner, owner);
             baseMap.put(key_relayer, relayer);
@@ -122,7 +126,7 @@ public class BridgeManagementContract {
             baseMap.put(key_governor, governor);
             baseMap.put(key_securityguard, securityGuard);
 
-            baseMap.put(key_version, 1);
+            baseMap.put(key_version, 3);
 
             if (!checkWitness(owner())) abort("Owner must witness the deployment.");
         }
@@ -133,15 +137,15 @@ public class BridgeManagementContract {
 
     public static void setOwner(Hash160 newOwner) {
         onlyOwner();
-        if (newOwner == null || !Hash160.isValid(newOwner)) abort("Invalid script hash provided.");
-        if (!Runtime.checkWitness(newOwner)) abort("New owner must be witness to the transaction.");
+        if (newOwner == null || !Hash160.isValid(newOwner)) abort("Invalid new owner");
+        if (!Runtime.checkWitness(newOwner)) abort("New owner must witness owner change.");
         baseMap.put(key_owner, newOwner);
         onOwnerSet.fire(newOwner);
     }
 
     public static void setRelayer(Hash160 newRelayer) {
         onlyOwner();
-        if (newRelayer == null || !Hash160.isValid(newRelayer)) abort("Invalid script hash provided.");
+        if (newRelayer == null || !Hash160.isValid(newRelayer)) abort("Invalid new relayer");
         baseMap.put(key_relayer, newRelayer);
         onRelayerSet.fire(newRelayer);
     }
@@ -188,14 +192,14 @@ public class BridgeManagementContract {
 
     public static void setGovernor(Hash160 newGovernor) {
         onlyOwner();
-        if (newGovernor == null || !Hash160.isValid(newGovernor)) abort("Invalid script hash provided.");
+        if (newGovernor == null || !Hash160.isValid(newGovernor)) abort("Invalid new governor");
         baseMap.put(key_governor, newGovernor);
         onGovernorSet.fire(newGovernor);
     }
 
     public static void setSecurityGuard(Hash160 newSecurityGuard) {
         onlyOwner();
-        if (newSecurityGuard == null || !Hash160.isValid(newSecurityGuard)) abort("Invalid script hash provided.");
+        if (newSecurityGuard == null || !Hash160.isValid(newSecurityGuard)) abort("Invalid new security guard");
         baseMap.put(key_securityguard, newSecurityGuard);
         onSecurityGuardSet.fire(newSecurityGuard);
     }
@@ -229,14 +233,18 @@ public class BridgeManagementContract {
     }
 
     @Safe
-    public static boolean verifyValidatorSignatures(Map<ECPoint, ByteString> signatures, ByteString root) {
+    public static boolean verifyValidatorSignatures(int linkedChainId, ByteString root,
+            Map<ECPoint, ByteString> signatures) {
+
         int threshold = validatorThreshold();
-        if (signatures.keys().length < threshold) abort("Not enough signatures provided.");
+        if (signatures.keys().length < threshold) abort("Insufficient signatures");
         CryptoLib cryptoLib = new CryptoLib();
         List<ECPoint> validators = validators();
 
-        // Prepend the root with the network identifier to create the message that should be signed by validators.
-        ByteString msg = new ByteString(concat(toByteArray(Runtime.getNetwork()), root));
+        // The root is prepended with the linked chain id and then prepended again with the network identifier of the
+        // N3 network this contract is deployed on.
+        ByteString msg = new ByteString(
+                concat(toByteArray(Runtime.getNetwork()), concat(toByteArray(linkedChainId), root)));
         int covered = 0;
         int validatorsSize = validators.size();
         for (int i = 0; i < validatorsSize; i++) {
@@ -266,7 +274,7 @@ public class BridgeManagementContract {
     // region restrictions
 
     private static void onlyOwner() {
-        if (!checkWitness(owner())) abort("No authorization.");
+        if (!checkWitness(owner())) abort("No authorization - only owner");
     }
 
     // endregion
