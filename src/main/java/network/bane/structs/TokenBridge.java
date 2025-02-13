@@ -76,9 +76,6 @@ public class TokenBridge {
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
             this.maxWithdrawals = maxWithdrawals;
-
-            // This int was the executionType before. It will be overwritten with the decimal scaling factor during the
-            // migration from V1 to V2.
             this.decimalScalingFactor = decimalScalingFactor;
         }
 

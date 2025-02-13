@@ -181,7 +181,7 @@ public class BridgeManagementTest {
         List<ContractStorageEntry> nonValidatorStorageEntries = management.findStorage("0x0a");
         assertThat(nonValidatorStorageEntries, hasSize(6));
         assertThat(nonValidatorStorageEntries.get(5).getKeyHex(), is("0x0a7f"));
-        assertThat(nonValidatorStorageEntries.get(5).getValueHex(), is("0x03"));
+        assertThat(nonValidatorStorageEntries.get(5).getValueHex(), is("0x04"));
     }
 
     // endregion

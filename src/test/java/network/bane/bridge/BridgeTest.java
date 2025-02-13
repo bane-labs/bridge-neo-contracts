@@ -231,7 +231,7 @@ public class BridgeTest {
         assertThat(enteredEntry.getValueHex(), is("0x"));
 
         assertThat(versionEntry.getKeyHex(), is("0x0a7f"));
-        assertThat(versionEntry.getValueHex(), is("0x03"));
+        assertThat(versionEntry.getValueHex(), is("0x04"));
     }
 
     @Test

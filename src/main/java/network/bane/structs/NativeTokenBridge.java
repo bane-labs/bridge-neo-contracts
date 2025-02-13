@@ -10,17 +10,17 @@ import network.bane.lib.NativeBridgeLib;
 import static io.neow3j.devpack.Helper.abort;
 
 @Struct
-public class NativeTokenBridgeV3 {
+public class NativeTokenBridge {
     public boolean paused;
     // Note: If a future version of the bridge contract should contain a verify method, the computation of this value
     // should be kept in mind (and adapted), since otherwise the actual balance might differ from this accounting here.
     public int totalDeposited;
     public State depositState;
     public State withdrawalState;
-    public NativeTokenConfigV3 config;
+    public NativeTokenConfig config;
 
-    public NativeTokenBridgeV3(boolean paused, Integer totalDeposited, State depositState, State withdrawalState,
-            NativeTokenConfigV3 config) {
+    public NativeTokenBridge(boolean paused, Integer totalDeposited, State depositState, State withdrawalState,
+            NativeTokenConfig config) {
         this.paused = paused;
         this.totalDeposited = totalDeposited;
         this.depositState = depositState;
@@ -28,15 +28,15 @@ public class NativeTokenBridgeV3 {
         this.config = config;
     }
 
-    public static boolean isValid(NativeTokenBridgeV3 nativeTokenBridge) {
+    public static boolean isValid(NativeTokenBridge nativeTokenBridge) {
         return nativeTokenBridge != null &&
                 nativeTokenBridge.totalDeposited >= 0 &&
                 State.isValid(nativeTokenBridge.depositState) &&
                 State.isValid(nativeTokenBridge.withdrawalState) &&
-                NativeTokenConfigV3.isValid(nativeTokenBridge.config);
+                NativeTokenConfig.isValid(nativeTokenBridge.config);
     }
 
-    static public class NativeTokenConfigV3 {
+    static public class NativeTokenConfig {
 
         /**
          * The fee that is charged for each deposit.
@@ -80,7 +80,7 @@ public class NativeTokenBridgeV3 {
          */
         public int decimalScalingFactor;
 
-        public NativeTokenConfigV3(Hash160 tokenForNativeBridge, int decimalsOnLinkedChain, int depositFee,
+        public NativeTokenConfig(Hash160 tokenForNativeBridge, int decimalsOnLinkedChain, int depositFee,
                 int minAmount, int maxAmount, int maxWithdrawals, int maxTotalDeposited) {
 
             this.depositFee = depositFee;
@@ -97,7 +97,7 @@ public class NativeTokenBridgeV3 {
                     decimalsOnLinkedChain);
         }
 
-        public static boolean isValid(NativeTokenConfigV3 config) {
+        public static boolean isValid(NativeTokenConfig config) {
             return config != null &&
                     config.depositFee >= 0 &&
                     config.minAmount >= 0 &&

@@ -30,7 +30,7 @@ import io.neow3j.devpack.events.Event4Args;
 import io.neow3j.devpack.events.Event6Args;
 import io.neow3j.devpack.events.Event8Args;
 import network.bane.structs.BridgeDeploymentData;
-import network.bane.structs.NativeTokenBridgeV3;
+import network.bane.structs.NativeTokenBridge;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
 
@@ -213,12 +213,11 @@ public class BridgeContract {
     @OnDeployment
     public static void deploy(Object data, boolean isUpdate) {
         if (isUpdate) {
-            // Make sure that this version of the contract is only used to update a deployed contract in version 1.
-            if (baseMap.getInt(KEY_VERSION) != 1) abort("Invalid version");
+            // Make sure that this version of the contract is only used to update a deployed contract in version 3.
+            if (baseMap.getInt(KEY_VERSION) != 3) abort("Invalid version");
             // Update internal versioning.
-            baseMap.put(KEY_VERSION, 3);
-            // Migrate storage.
-            V3Migration.migrate();
+            baseMap.put(KEY_VERSION, 4);
+            // Migrate storage here if required.
         } else {
             BridgeDeploymentData deploymentData = (BridgeDeploymentData) data;
             if (deploymentData.bridgeManagementContract == null ||
@@ -236,7 +235,7 @@ public class BridgeContract {
             baseMap.put(KEY_NEO_HOLDING_GAS_REWARDS, 0);
 
             BridgeContract.baseMap.put(KEY_ENTERED, false);
-            baseMap.put(KEY_VERSION, 3);
+            baseMap.put(KEY_VERSION, 4);
 
             // Make sure the owner witnesses the deployment.
             if (!checkWitness(managementContract().owner())) {
@@ -536,7 +535,7 @@ public class BridgeContract {
     }
 
     @Safe
-    public static NativeTokenBridgeV3 getNativeBridge() {
+    public static NativeTokenBridge getNativeBridge() {
         return NativeBridgeImpl.getNativeBridge();
     }
 
@@ -548,7 +547,7 @@ public class BridgeContract {
     public static void setNativeDepositFee(int newFee) {
         onlyGovernor();
         if (newFee < 0) abort("New deposit fee must be nonnegative.");
-        NativeTokenBridgeV3 nativeBridge = NativeBridgeImpl.getNativeBridge();
+        NativeTokenBridge nativeBridge = NativeBridgeImpl.getNativeBridge();
         if (newFee >= nativeBridge.config.minAmount) abort("Deposit fee must be less than the minimum deposit amount.");
         nativeBridge.config.depositFee = newFee;
         baseMap.put(KEY_NATIVE_BRIDGE, new StdLib().serialize(nativeBridge));
@@ -562,7 +561,7 @@ public class BridgeContract {
 
     public static void setMinNativeDeposit(int newMinAmount) {
         onlyGovernor();
-        NativeTokenBridgeV3 nativeBridge = NativeBridgeImpl.getNativeBridge();
+        NativeTokenBridge nativeBridge = NativeBridgeImpl.getNativeBridge();
         if (newMinAmount <= nativeBridge.config.depositFee)
             abort("Minimum deposit must be greater than the deposit fee.");
         if (newMinAmount > nativeBridge.config.maxAmount) abort("Minimum must be less than the maximum amount.");
@@ -578,7 +577,7 @@ public class BridgeContract {
 
     public static void setMaxNativeDeposit(int newMaxAmount) {
         onlyGovernor();
-        NativeTokenBridgeV3 nativeBridge = NativeBridgeImpl.getNativeBridge();
+        NativeTokenBridge nativeBridge = NativeBridgeImpl.getNativeBridge();
         if (newMaxAmount < nativeBridge.config.minAmount) abort("Maximum must be greater than the minimum amount.");
         if (newMaxAmount >= nativeBridge.config.maxTotalDeposited)
             abort("Value must be less than the maximum total deposited amount.");
