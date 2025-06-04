@@ -19,7 +19,7 @@ import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.constants.FindOptions;
-import io.neow3j.devpack.constants.NamedCurve;
+import io.neow3j.devpack.constants.NamedCurveHash;
 import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
@@ -251,7 +251,7 @@ public class BridgeManagementContract {
             ECPoint validator = validators.get(i);
             if (signatures.containsKey(validator)) {
                 boolean verified =
-                        cryptoLib.verifyWithECDsa(msg, validator, signatures.get(validator), NamedCurve.Secp256r1);
+                        cryptoLib.verifyWithECDsa(msg, validator, signatures.get(validator), NamedCurveHash.secp256r1SHA256);
                 if (verified) {
                     covered++;
                 }

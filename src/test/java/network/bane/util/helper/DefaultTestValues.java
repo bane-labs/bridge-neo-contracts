@@ -8,7 +8,7 @@ import java.math.BigInteger;
 public class DefaultTestValues {
     public static final BigInteger DEFAULT_LINKED_CHAIN_ID = BigInteger.valueOf(12345);
 
-    public static final Hash160 MANAGEMENT_CONTRACT_HASH = new Hash160("0xfbfbc3b7fcab6eeb6d1f180ac624fc413f1cbcbe");
+    public static final Hash160 MANAGEMENT_CONTRACT_HASH = new Hash160("0x74eace325d73d7fa70c6b8772fabaac20a632706");
 
     public static final BigInteger DEFAULT_DEPOSIT_FEE = new BigInteger("10000000");
     public static final BigInteger DEFAULT_MIN_DEPOSIT = new BigInteger("100000000");
