@@ -15,9 +15,9 @@ import static io.neow3j.transaction.AccountSigner.calledByEntry;
 public class NetworkSettingsHelper {
 
     // The current network settings on mainnet
-    public static final BigInteger networkFeePerByte = new BigInteger("100");
-    public static final BigInteger storageFeeFactor = new BigInteger("10000");
-    public static final BigInteger executionFeeFactor = new BigInteger("3");
+    public static final BigInteger networkFeePerByte = new BigInteger("20");
+    public static final BigInteger storageFeeFactor = new BigInteger("1000");
+    public static final BigInteger executionFeeFactor = new BigInteger("1");
 
     public static void updateNetworkSettings(Neow3j neow3j, Account committeeMultiSigAcc, Account committeeSignerAcc) throws Throwable {
         setNetworkFeePerByte(neow3j, committeeMultiSigAcc, committeeSignerAcc);
