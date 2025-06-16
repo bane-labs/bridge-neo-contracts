@@ -16,6 +16,7 @@ import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.annotations.Struct;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.StdLib;
+import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
 
 import static io.neow3j.devpack.Helper.abort;
@@ -41,9 +42,17 @@ public class MessageExecutor {
     // endregion
     // region events
 
-    @DisplayName("MessageExecution")
+    @DisplayName("MessageStore")
+    @EventParameterNames({"Id", "Message"})
+    public static Event2Args<Integer, ByteString> onMessageStore;
+
+    @DisplayName("MessageExecute")
+    @EventParameterNames({"Id"})
+    public static Event1Arg<Integer> onMessageExecution;
+
+    @DisplayName("MessageExecuteReturn")
     @EventParameterNames({"Id", "ReturnValue"})
-    public static Event2Args<Integer, Object> onMessageExecution;
+    public static Event2Args<Integer, Object> onMessageExecutionResult;
 
     // endregion events
     // region structs
@@ -61,6 +70,7 @@ public class MessageExecutor {
 
     @Struct
     public static class Message {
+        // todo: metadata entries
         public Invocation invocation;
 
         public Message(Invocation invocation) {
@@ -86,7 +96,18 @@ public class MessageExecutor {
     // region methods
 
     @Safe
-    public ByteString getMessage(int id) {
+    public static int getCurrentMessageId() {
+        return Storage.getInt(context, MESSAGES_CURRENT_ID_KEY);
+    }
+
+    private static int incrementAndGetMessageId() {
+        int newMessageId = getCurrentMessageId() + 1;
+        Storage.put(context, MESSAGES_CURRENT_ID_KEY, newMessageId);
+        return newMessageId;
+    }
+
+    @Safe
+    public static ByteString getMessage(int id) {
         return messagesMap.get(id);
     }
 
@@ -95,10 +116,23 @@ public class MessageExecutor {
         return (Message) stdLib.deserialize(messagesMap.get(id));
     }
 
-    public static void storeMessage(ByteString serializedMessage) {
-        if (serializedMessage == null || serializedMessage.length() == 0) {
+    public static void storeMessage(ByteString message) {
+        if (message == null || message.length() == 0) {
             abort("Serialized message cannot be null or empty.");
         }
+        int messageId = incrementAndGetMessageId();
+        messagesMap.put(messageId, message);
+        onMessageStore.fire(messageId, message);
+    }
+
+    @Safe
+    public static ByteString getMessageSerialized(Hash160 contract, String method, byte callFlags, Object[] args) {
+        return stdLib.serialize(new Message(new Message.Invocation(contract, method, callFlags, args)));
+    }
+
+    @Safe
+    public static Message.Invocation getInvocation(ByteString serialized) {
+        return (Message.Invocation) stdLib.deserialize(serialized);
     }
 
     public static Object executeMessage(int id) {
@@ -107,9 +141,10 @@ public class MessageExecutor {
         if (invocation.args == null) {
             invocation.args = new Object[0];
         }
+        onMessageExecution.fire(id);
         Object returnValue = Contract.call(invocation.contract, invocation.method, invocation.callFlags,
                 invocation.args);
-        onMessageExecution.fire(id, returnValue);
+        onMessageExecutionResult.fire(id, returnValue);
         return returnValue;
     }
 
@@ -119,7 +154,7 @@ public class MessageExecutor {
     @OnDeployment
     public static void deploy(Object data, boolean update) {
         if (!update) {
-            Storage.put(context, MESSAGES_CURRENT_ID_KEY, 0);
+            Storage.put(context, MESSAGES_CURRENT_ID_KEY, -1);
         }
     }
 

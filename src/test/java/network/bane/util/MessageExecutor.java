@@ -6,6 +6,7 @@ import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.InvocationResult;
 import io.neow3j.transaction.TransactionBuilder;
+import io.neow3j.types.CallFlags;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -13,12 +14,17 @@ import io.neow3j.wallet.Account;
 import network.bane.util.helper.SmartContractHelper;
 
 import java.io.IOException;
+import java.math.BigInteger;
+import java.util.List;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.any;
+import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
+import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
+import static io.neow3j.types.ContractParameter.string;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.owner;
@@ -59,6 +65,16 @@ public class MessageExecutor extends SmartContractHelper {
     // endregion
     // region read
 
+    public InvocationResult getMessageSerialized(Hash160 contract, String method, CallFlags callFlags,
+            List<ContractParameter> params) throws IOException {
+        return callInvokeFunction("getMessageSerialized", asList(hash160(contract), string(method),
+                integer(callFlags.getValue()), array(params))).getInvocationResult();
+    }
+
+    public InvocationResult getInvocation(byte[] serializedInvocation) throws IOException {
+        return callInvokeFunction("getInvocation", asList(byteArray(serializedInvocation))).getInvocationResult();
+    }
+
     public InvocationResult getMessage(int id) throws IOException {
         return callInvokeFunction("getMessage", asList(integer(id))).getInvocationResult();
     }
@@ -74,7 +90,7 @@ public class MessageExecutor extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("storeMessage", byteArray(message)).signers(none(sender)));
     }
 
-    public Hash256 executeMessage(Account sender, int id) throws Throwable {
+    public Hash256 executeMessage(Account sender, BigInteger id) throws Throwable {
         return sendAndAwaitExecution(invokeFunction("executeMessage", integer(id)).signers(none(sender)));
     }
 
