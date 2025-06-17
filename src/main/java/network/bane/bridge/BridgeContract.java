@@ -45,6 +45,8 @@ import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlyWhenNotPaused;
 import static network.bane.bridge.BridgeImpl.enteringNonReentrant;
 import static network.bane.bridge.BridgeImpl.exitingNonReentrant;
+import static network.bane.bridge.MessageBridgeImpl.onlyWhenMessageBridgeNotPaused;
+import static network.bane.bridge.MessageBridgeImpl.onlyWhenMessageBridgePaused;
 import static network.bane.bridge.NativeBridgeImpl.onlyWhenDepositsNotPaused;
 import static network.bane.bridge.NativeBridgeImpl.onlyWhenDepositsPaused;
 import static network.bane.bridge.NativeBridgeImpl.onlyWhenNativeBridgePaused;
@@ -873,6 +875,116 @@ public class BridgeContract {
     }
 
     // endregion
+    // endregion
+    // endregion
+    // region message bridge
+    // region message pausing
+
+    public static void pauseMessageBridge() {
+        onlyGovernorOrSecurityGuard();
+        // Todo: Implement message bridge pausing.
+        onlyWhenMessageBridgeNotPaused();
+        MessageBridgeImpl.pauseMessageBridge();
+//        onMessageBridgePause.fire();
+        abort("Not implemented yet.");
+    }
+
+    public static void unpauseMessageBridge() {
+        onlyGovernor();
+        // Todo: Implement message bridge unpausing.
+        onlyWhenMessageBridgePaused();
+        MessageBridgeImpl.unpauseMessageBridge();
+//        onMessageBridgeUnpause.fire();
+        abort("Not implemented yet.");
+    }
+
+    // endregion
+    // region message sending, storing, executing
+
+    public static int sendMessage(ByteString msgCall) {
+        // Todo: Implement message sending.
+        onlyWhenMessageBridgeNotPaused();
+        MessageBridgeImpl.sendMessage(msgCall);
+//        onMessageSend.fire(msgCall);
+        abort("Not implemented yet.");
+        return 0; // Placeholder return value, replace with actual message ID when implemented.
+    }
+
+    public static void storeMessage(int timestamp, Hash160 msgSender, ByteString serializedInvocation) {
+        // Todo: Implement message storing.
+        onlyRelayer();
+        onlyWhenMessageBridgeNotPaused();
+        MessageBridgeImpl.storeMessage(timestamp, msgSender, serializedInvocation);
+//        onMessageDelivery.fire(timestamp, msgSender, serializedInvocation);
+        abort("Not implemented yet.");
+    }
+
+    public static void executeMessage(int messageId) {
+        // Todo: Implement message execution.
+        onlyWhenMessageBridgeNotPaused();
+        MessageBridgeImpl.executeMessage(messageId);
+        abort("Not implemented yet.");
+    }
+
+    // endregion
+    // region message result
+
+    public static void storeMessageExecutionResult(int messageId, ByteString result) {
+        // Todo: Implement storing message execution result.
+        onlyRelayer();
+        onlyWhenMessageBridgeNotPaused();
+//        MessageBridgeImpl.storeMessageExecutionResult(messageId, result);
+        abort("Not implemented yet.");
+    }
+
+    @Safe
+    public static ByteString getMessageExecutionResult(int messageId) {
+        abort("Not implemented yet.");
+        return null; // Placeholder return value, replace with actual result when implemented.
+    }
+
+    // endregion
+    // region message bridge configuration/state
+
+    public static void setMessageSendFee(int newFee) {
+        onlyGovernor();
+        abort("Not implemented yet.");
+    }
+
+    @Safe
+    public static int getMessageSendFee() {
+        abort("Not implemented yet.");
+        return 0; // Placeholder return value, replace with actual fee when implemented.
+    }
+
+    // endregion
+    // region message state
+
+    @Safe
+    public static int evmMessageNonce() {
+//        return getEvmMessageBridge().nonce;
+        abort("Not implemented yet.");
+        return 0; // Placeholder return value, replace with actual nonce when implemented.
+    }
+
+    @Safe
+    public static ByteString evmMessageRoot() {
+        abort("Not implemented yet.");
+        return null; // Placeholder return value, replace with actual root when implemented.
+    }
+
+    @Safe
+    public static int n3MessageNonce() {
+        abort("Not implemented yet.");
+        return 0; // Placeholder return value, replace with actual nonce when implemented.
+    }
+
+    @Safe
+    public static ByteString n3MessageRoot() {
+        abort("Not implemented yet.");
+        return null; // Placeholder return value, replace with actual root when implemented.
+    }
+
     // endregion
     // endregion
 
