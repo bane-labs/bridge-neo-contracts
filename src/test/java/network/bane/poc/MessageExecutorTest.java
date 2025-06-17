@@ -71,11 +71,14 @@ public class MessageExecutorTest {
         String value = "hello world";
         List<ContractParameter> params = asList(integer(key), string(value));
 
-        byte[] message = messageExecutor.getMessageSerialized(contract, function, callFlags, params).getFirstStackItem()
-                .getByteArray();
+        byte[] invocation = messageExecutor.serializeInvocation(contract, function, callFlags, params)
+                .getFirstStackItem().getByteArray();
 
-        // Store the message in the MessageExecutor contract
-        Hash256 storeTx = messageExecutor.storeMessage(owner, message);
+        // Store the invocation bytes together with metadata (i.e., timestamp and sender)
+        BigInteger timestamp = BigInteger.valueOf(5);
+        Hash160 msgSender = owner.getScriptHash();
+        Hash256 storeTx = messageExecutor.storeMessage(owner, timestamp, msgSender, invocation);
+
         NeoApplicationLog.Execution storeExec = neow3j.getApplicationLog(storeTx).send().getApplicationLog()
                 .getFirstExecution();
         List<StackItem> storeNotificationState = storeExec.getFirstNotification().getState().getList();

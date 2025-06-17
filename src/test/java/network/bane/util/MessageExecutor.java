@@ -65,10 +65,30 @@ public class MessageExecutor extends SmartContractHelper {
     // endregion
     // region read
 
-    public InvocationResult getMessageSerialized(Hash160 contract, String method, CallFlags callFlags,
+    public InvocationResult serializeMessage(Hash160 contract, String method, CallFlags callFlags,
             List<ContractParameter> params) throws IOException {
-        return callInvokeFunction("getMessageSerialized", asList(hash160(contract), string(method),
+        return callInvokeFunction("serializeMessage", asList(hash160(contract), string(method),
                 integer(callFlags.getValue()), array(params))).getInvocationResult();
+    }
+
+    public InvocationResult serializeMessage(int timestamp, Hash160 msgSender, Hash160 contract, String method,
+            CallFlags callFlags, List<ContractParameter> params) throws IOException {
+        return callInvokeFunction("serializeMessage", asList(integer(timestamp), hash160(msgSender),
+                hash160(contract), string(method), integer(callFlags.getValue()), array(params))).getInvocationResult();
+    }
+
+    public InvocationResult serializeInvocation(Hash160 contract, String method, CallFlags callFlags,
+            List<ContractParameter> params) throws IOException {
+        return callInvokeFunction("serializeInvocation", asList(hash160(contract), string(method),
+                integer(callFlags.getValue()), array(params))).getInvocationResult();
+    }
+
+    public InvocationResult deserializeMessage(byte[] serializedMessage) throws IOException {
+        return callInvokeFunction("deserializeMessage", asList(byteArray(serializedMessage))).getInvocationResult();
+    }
+
+    public InvocationResult deserializeInvocation(byte[] serializedInvocation) throws IOException {
+        return callInvokeFunction("deserializeInvocation", asList(byteArray(serializedInvocation))).getInvocationResult();
     }
 
     public InvocationResult getInvocation(byte[] serializedInvocation) throws IOException {
@@ -86,8 +106,10 @@ public class MessageExecutor extends SmartContractHelper {
     // endregion
     // region store/execute
 
-    public Hash256 storeMessage(Account sender, byte[] message) throws Throwable {
-        return sendAndAwaitExecution(invokeFunction("storeMessage", byteArray(message)).signers(none(sender)));
+    public Hash256 storeMessage(Account sender, BigInteger timestamp, Hash160 msgSender, byte[] invocation) throws Throwable {
+        return sendAndAwaitExecution(
+                invokeFunction("storeMessage", integer(timestamp), hash160(msgSender), byteArray(invocation))
+                        .signers(none(sender)));
     }
 
     public Hash256 executeMessage(Account sender, BigInteger id) throws Throwable {

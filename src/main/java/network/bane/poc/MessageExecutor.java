@@ -13,7 +13,6 @@ import io.neow3j.devpack.annotations.ManifestExtra.ManifestExtras;
 import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
-import io.neow3j.devpack.annotations.Struct;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event1Arg;
@@ -44,7 +43,7 @@ public class MessageExecutor {
 
     @DisplayName("MessageStore")
     @EventParameterNames({"Id", "Message"})
-    public static Event2Args<Integer, ByteString> onMessageStore;
+    public static Event2Args<Integer, Message> onMessageStore;
 
     @DisplayName("MessageExecute")
     @EventParameterNames({"Id"})
@@ -55,44 +54,6 @@ public class MessageExecutor {
     public static Event2Args<Integer, Object> onMessageExecutionResult;
 
     // endregion events
-    // region structs
-
-    @Struct
-    public static class MessageContainer {
-        public Message message;
-        public int state;
-    }
-
-    public static class MessageExecutionState {
-        public static final int PENDING = 1;
-        public static final int EXECUTED = 1 << 1; // 2
-    }
-
-    @Struct
-    public static class Message {
-        // todo: metadata entries
-        public Invocation invocation;
-
-        public Message(Invocation invocation) {
-            this.invocation = invocation;
-        }
-
-        public static class Invocation {
-            public Hash160 contract;
-            public String method;
-            public byte callFlags;
-            public Object[] args;
-
-            public Invocation(Hash160 contract, String method, byte callFlags, Object[] args) {
-                this.contract = contract;
-                this.method = method;
-                this.callFlags = callFlags;
-                this.args = args;
-            }
-        }
-    }
-
-    // endregion structs
     // region methods
 
     @Safe
@@ -116,32 +77,60 @@ public class MessageExecutor {
         return (Message) stdLib.deserialize(messagesMap.get(id));
     }
 
-    public static void storeMessage(ByteString message) {
-        if (message == null || message.length() == 0) {
-            abort("Serialized message cannot be null or empty.");
+    public static void storeMessage(int timestamp, Hash160 sender, ByteString serializedInvocation) {
+        if (serializedInvocation == null || serializedInvocation.length() == 0) {
+            abort("Serialized invocation cannot be null or empty.");
         }
         int messageId = incrementAndGetMessageId();
-        messagesMap.put(messageId, message);
+        Message message = new Message(new Message.Metadata(timestamp, sender), serializedInvocation);
+        messagesMap.put(messageId, stdLib.serialize(message));
+
+        // todo: compute message hash and update hash chain with hash(messageId, message).
+        //  onMessageStoreRootUpdate.fire(messageId, message.hash, n3MessageStoreRoot
+
         onMessageStore.fire(messageId, message);
     }
 
     @Safe
-    public static ByteString getMessageSerialized(Hash160 contract, String method, byte callFlags, Object[] args) {
-        return stdLib.serialize(new Message(new Message.Invocation(contract, method, callFlags, args)));
+    public static ByteString serializeMessage(int timestamp, Hash160 msgSender, Hash160 contract, String method,
+            byte callFlags, Object[] args) {
+        return stdLib.serialize(new Message(new Message.Metadata(timestamp, msgSender),
+                stdLib.serialize(new Invocation(contract, method, callFlags, args))));
     }
 
     @Safe
-    public static Message.Invocation getInvocation(ByteString serialized) {
-        return (Message.Invocation) stdLib.deserialize(serialized);
+    public static ByteString serializeMessage(int timestamp, Hash160 msgSender, ByteString invocation) {
+        return stdLib.serialize(new Message(new Message.Metadata(timestamp, msgSender), invocation));
+    }
+
+    @Safe
+    public static Message deserializeMessage(ByteString message) {
+        return (Message) stdLib.deserialize(message);
+    }
+
+    @Safe
+    public static Invocation deserializeInvocation(ByteString invocation) {
+        return (Invocation) stdLib.deserialize(invocation);
+    }
+
+    @Safe
+    public static ByteString serializeInvocation(Hash160 contract, String method, byte callFlags, Object[] args) {
+        return stdLib.serialize(new Invocation(contract, method, callFlags, args));
+    }
+
+    @Safe
+    public static Invocation getInvocation(ByteString serialized) {
+        return (Invocation) stdLib.deserialize(serialized);
     }
 
     public static Object executeMessage(int id) {
         Message message = getMessageDeserialized(id);
-        Message.Invocation invocation = message.invocation;
+        Invocation invocation = (Invocation) stdLib.deserialize(message.invocation);
         if (invocation.args == null) {
             invocation.args = new Object[0];
         }
         onMessageExecution.fire(id);
+        // Todo: Reject disallowed calls, e.g., any call to the native ContractManagement contract.
         Object returnValue = Contract.call(invocation.contract, invocation.method, invocation.callFlags,
                 invocation.args);
         onMessageExecutionResult.fire(id, returnValue);
