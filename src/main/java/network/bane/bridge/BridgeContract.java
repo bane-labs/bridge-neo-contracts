@@ -30,6 +30,7 @@ import io.neow3j.devpack.events.Event4Args;
 import io.neow3j.devpack.events.Event6Args;
 import io.neow3j.devpack.events.Event8Args;
 import network.bane.structs.BridgeDeploymentData;
+import network.bane.structs.message.Message;
 import network.bane.structs.NativeTokenBridge;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
@@ -55,6 +56,7 @@ import static network.bane.bridge.StorageConstants.KEY_DEPOSIT_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_LINKED_CHAIN_ID;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
+import static network.bane.bridge.StorageConstants.KEY_MESSAGE_EXECUTOR;
 import static network.bane.bridge.StorageConstants.KEY_NATIVE_BRIDGE;
 import static network.bane.bridge.StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS;
 import static network.bane.bridge.StorageConstants.KEY_VERSION;
@@ -207,6 +209,34 @@ public class BridgeContract {
     @DisplayName("MaxTokenWithdrawalsChange")
     @EventParameterNames({"NeoN3Token", "NewMaxWithdrawals"})
     static Event2Args<Hash160, Integer> onMaxTokenWithdrawalsChange;
+
+    // endregion
+    // region message bridge events
+
+    @DisplayName("MessageBridgeSet")
+    static Event onMessageBridgeSet;
+
+    @DisplayName("MessageBridgePause")
+    static Event onMessageBridgePause;
+
+    @DisplayName("MessageBridgeUnpause")
+    static Event onMessageBridgeUnpause;
+
+    @DisplayName("MessageSend")
+    @EventParameterNames({"Message", "Root"})
+    static Event2Args<Message, ByteString> onMessageSend;
+
+    @DisplayName("MessageStore")
+    @EventParameterNames({"Message"})
+    static Event1Arg<Message> onMessageStore;
+
+    @DisplayName("EvmToN3MessageRootUpdate")
+    @EventParameterNames({"Nonce", "Root"})
+    static Event2Args<Integer, ByteString> onEvmToN3MessageRootUpdate;
+
+    @DisplayName("MessageExecute")
+    @EventParameterNames({"Nonce"})
+    static Event1Arg<Integer> onMessageExecute;
 
     // endregion
     // endregion
@@ -380,6 +410,14 @@ public class BridgeContract {
     @Safe
     public static Hash160 management() {
         return baseMap.getHash160(KEY_BRIDGE_MANAGEMENT);
+    }
+
+    // endregion
+    // region bridge message executor
+
+    @Safe
+    public static Hash160 messageExecutor() {
+        return baseMap.getHash160(KEY_MESSAGE_EXECUTOR);
     }
 
     // endregion
@@ -878,52 +916,56 @@ public class BridgeContract {
     // endregion
     // endregion
     // region message bridge
+    // region native bridge setting
+
+    public static void setMessageBridge(Hash160 executorContract, int fee) {
+        onlyGovernor();
+
+        // Sets the message bridge. Aborts if the message bridge is already set.
+        MessageBridgeImpl.setMessageBridge(executorContract, fee);
+        onMessageBridgeSet.fire();
+    }
+
+    // endregion
     // region message pausing
 
     public static void pauseMessageBridge() {
         onlyGovernorOrSecurityGuard();
-        // Todo: Implement message bridge pausing.
         onlyWhenMessageBridgeNotPaused();
         MessageBridgeImpl.pauseMessageBridge();
-//        onMessageBridgePause.fire();
-        abort("Not implemented yet.");
+        onMessageBridgePause.fire();
     }
 
     public static void unpauseMessageBridge() {
         onlyGovernor();
-        // Todo: Implement message bridge unpausing.
         onlyWhenMessageBridgePaused();
         MessageBridgeImpl.unpauseMessageBridge();
-//        onMessageBridgeUnpause.fire();
-        abort("Not implemented yet.");
+        onMessageBridgeUnpause.fire();
     }
 
     // endregion
-    // region message sending, storing, executing
+    // region message sending
 
-    public static int sendMessage(ByteString msgCall) {
-        // Todo: Implement message sending.
+    public static int sendMessage(ByteString evmMessageBytes, Hash160 feePayer, int maxFee) {
+        onlyWhenNotPaused();
         onlyWhenMessageBridgeNotPaused();
-        MessageBridgeImpl.sendMessage(msgCall);
-//        onMessageSend.fire(msgCall);
-        abort("Not implemented yet.");
-        return 0; // Placeholder return value, replace with actual message ID when implemented.
+
+        return MessageBridgeImpl.sendMessage(evmMessageBytes, feePayer, maxFee);
     }
 
-    public static void storeMessage(int timestamp, Hash160 msgSender, ByteString serializedInvocation) {
-        // Todo: Implement message storing.
+    // endregion
+    // region storing and executing
+
+    public static void storeMessage(ByteString root, Map<ECPoint, ByteString> signatures, List<Message> messages) {
         onlyRelayer();
         onlyWhenMessageBridgeNotPaused();
-        MessageBridgeImpl.storeMessage(timestamp, msgSender, serializedInvocation);
-//        onMessageDelivery.fire(timestamp, msgSender, serializedInvocation);
-        abort("Not implemented yet.");
+
+        MessageBridgeImpl.storeMessages(root, signatures, messages);
     }
 
     public static void executeMessage(int messageId) {
-        // Todo: Implement message execution.
         onlyWhenMessageBridgeNotPaused();
         MessageBridgeImpl.executeMessage(messageId);
-        abort("Not implemented yet.");
     }
 
     // endregion

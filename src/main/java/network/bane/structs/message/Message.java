@@ -1,4 +1,4 @@
-package network.bane.poc;
+package network.bane.structs.message;
 
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.Hash160;
@@ -6,17 +6,20 @@ import io.neow3j.devpack.annotations.Struct;
 
 @Struct
 public class Message {
-//    public int nonce; // Todo:
+    public Integer nonce;
     public Metadata metadata;
-    public ByteString invocation;
+    public ByteString messageBytes;
 
-    public Message(Metadata metadata, ByteString invocation) {
+    public Message(Integer nonce, Metadata metadata, ByteString messageBytes) {
+        this.nonce = nonce;
         this.metadata = metadata;
-        this.invocation = invocation;
+        this.messageBytes = messageBytes;
     }
 
-    public boolean isValid() {
-        return metadata != null && invocation != null && metadata.isValid();
+    public static boolean isValid(Message message) {
+        return message.nonce != null &&
+                message.metadata != null && message.metadata.isValid() &&
+                message.messageBytes != null;
     }
 
     public static class Metadata {

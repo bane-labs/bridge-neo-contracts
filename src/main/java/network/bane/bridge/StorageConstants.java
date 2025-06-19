@@ -7,6 +7,8 @@ public class StorageConstants {
     static final byte PREFIX_NATIVE_CLAIMABLES = 0x0b;
     static final byte PREFIX_TOKEN_BRIDGES = 0x1a;
     static final byte PREFIX_TOKEN_CLAIMABLES = 0x1b;
+    static final byte PREFIX_EXECUTABLE_MESSAGES = 0x1c;
+    static final byte PREFIX_MESSAGES_EXECUTED = 0x1d;
 
     static final int KEY_BRIDGE_MANAGEMENT = 0x01;
     static final int KEY_BRIDGE_PAUSE = 0x02;
@@ -16,6 +18,9 @@ public class StorageConstants {
     static final int KEY_NEO_HOLDING_GAS_REWARDS = 0x06;
 
     static final int KEY_LINKED_CHAIN_ID = 0x10;
+
+    static final int KEY_MESSAGE_BRIDGE = 0x20;
+    static final int KEY_MESSAGE_EXECUTOR = 0x21;
 
     static final int KEY_ENTERED = 0x70;
 

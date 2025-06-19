@@ -1,4 +1,4 @@
-package network.bane.poc;
+package network.bane.structs.message;
 
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.annotations.Struct;
