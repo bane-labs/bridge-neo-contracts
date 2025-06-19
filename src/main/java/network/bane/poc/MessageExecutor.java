@@ -17,6 +17,8 @@ import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
+import network.bane.structs.message.Invocation;
+import network.bane.structs.message.Message;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Storage.getStorageContext;
@@ -82,7 +84,7 @@ public class MessageExecutor {
             abort("Serialized invocation cannot be null or empty.");
         }
         int messageId = incrementAndGetMessageId();
-        Message message = new Message(new Message.Metadata(timestamp, sender), serializedInvocation);
+        Message message = new Message(messageId, new Message.Metadata(timestamp, sender), serializedInvocation);
         messagesMap.put(messageId, stdLib.serialize(message));
 
         // todo: compute message hash and update hash chain with hash(messageId, message).
@@ -92,15 +94,15 @@ public class MessageExecutor {
     }
 
     @Safe
-    public static ByteString serializeMessage(int timestamp, Hash160 msgSender, Hash160 contract, String method,
-            byte callFlags, Object[] args) {
-        return stdLib.serialize(new Message(new Message.Metadata(timestamp, msgSender),
+    public static ByteString serializeMessage(int messageId, int timestamp, Hash160 msgSender, Hash160 contract,
+            String method, byte callFlags, Object[] args) {
+        return stdLib.serialize(new Message(messageId, new Message.Metadata(timestamp, msgSender),
                 stdLib.serialize(new Invocation(contract, method, callFlags, args))));
     }
 
     @Safe
-    public static ByteString serializeMessage(int timestamp, Hash160 msgSender, ByteString invocation) {
-        return stdLib.serialize(new Message(new Message.Metadata(timestamp, msgSender), invocation));
+    public static ByteString serializeMessage(int messageId, int timestamp, Hash160 msgSender, ByteString invocation) {
+        return stdLib.serialize(new Message(messageId, new Message.Metadata(timestamp, msgSender), invocation));
     }
 
     @Safe
@@ -125,7 +127,7 @@ public class MessageExecutor {
 
     public static Object executeMessage(int id) {
         Message message = getMessageDeserialized(id);
-        Invocation invocation = (Invocation) stdLib.deserialize(message.invocation);
+        Invocation invocation = (Invocation) stdLib.deserialize(message.messageBytes);
         if (invocation.args == null) {
             invocation.args = new Object[0];
         }
