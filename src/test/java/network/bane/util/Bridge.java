@@ -627,7 +627,7 @@ public class Bridge extends SmartContractHelper {
         return callFunctionReturningInt("maxMsgSizeForSending");
     }
 
-    public Hash256 setmaxMessageSizeForSending(BigInteger newMaxSize) throws Throwable {
+    public Hash256 setMaxMessageSizeForSending(BigInteger newMaxSize) throws Throwable {
         return setMaxMsgSizeForSending(governor, newMaxSize);
     }
 
@@ -645,10 +645,10 @@ public class Bridge extends SmartContractHelper {
         return setMaxNrMessagesForStoring(governor, newMaxNrMessages);
     }
 
-    public Hash256 setMaxNrMessagesForStoring(Account sender, BigInteger newMaxSizenewMaxNrMessages) throws Throwable {
+    public Hash256 setMaxNrMessagesForStoring(Account sender, BigInteger newMaxNrMessages) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
         return sendAndAwaitExecution(
-                invokeFunction("setMaxNrMessagesForStoring", integer(newMaxSizenewMaxNrMessages)).signers(signer));
+                invokeFunction("setMaxNrMessagesForStoring", integer(newMaxNrMessages)).signers(signer));
     }
 
     // endregion
