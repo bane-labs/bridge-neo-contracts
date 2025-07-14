@@ -54,6 +54,7 @@ import static network.bane.bridge.StorageConstants.KEY_DEPOSIT_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_LINKED_CHAIN_ID;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
+import static network.bane.bridge.StorageConstants.KEY_MESSAGE_EXECUTION_MANAGER;
 import static network.bane.bridge.StorageConstants.KEY_NATIVE_BRIDGE;
 import static network.bane.bridge.StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS;
 import static network.bane.bridge.StorageConstants.KEY_VERSION;
@@ -945,6 +946,16 @@ public class BridgeContract {
     @Safe
     public static MessageBridge getMessageBridge() {
         return MessageBridgeImpl.getMessageBridge();
+    }
+
+    @Safe
+    public static Hash160 messageExecutionManager() {
+        // todo: add execution manager to the message bridge config.
+        return baseMap.getHash160(KEY_MESSAGE_EXECUTION_MANAGER);
+    }
+
+    public static void setMessageExecutionManager(Hash160 newMessageExecutionManager) {
+        abort("Not implemented yet");
     }
 
     @Safe
