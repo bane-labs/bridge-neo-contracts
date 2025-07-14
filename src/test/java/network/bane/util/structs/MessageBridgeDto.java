@@ -1,8 +1,7 @@
 package network.bane.util.structs;
 
-import io.neow3j.protocol.core.response.ContractManifest;
-
 import java.math.BigInteger;
+import java.util.Objects;
 
 public class MessageBridgeDto {
     public boolean paused;
@@ -32,6 +31,11 @@ public class MessageBridgeDto {
                 this.config.equals(that.config);
     }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(paused, evmToN3MessageState, n3ToEvmMessageState, config);
+    }
+
     public static class MessageConfig {
         public BigInteger sendingFee;
         public int maxMessageSizeForSending;
@@ -56,5 +60,12 @@ public class MessageBridgeDto {
                     this.maxMessageSizeForSending == that.maxMessageSizeForSending &&
                     this.maxNrMessagesForStoring == that.maxNrMessagesForStoring;
         }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(sendingFee, maxMessageSizeForSending, maxNrMessagesForStoring);
+        }
+
     }
+
 }

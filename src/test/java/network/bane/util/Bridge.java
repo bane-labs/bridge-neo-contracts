@@ -642,7 +642,7 @@ public class Bridge extends SmartContractHelper {
     }
 
     public Hash256 setMaxNrMessagesForStoring(BigInteger newMaxNrMessages) throws Throwable {
-        return setMaxMessageSizeForSending(governor, newMaxNrMessages);
+        return setMaxNrMessagesForStoring(governor, newMaxNrMessages);
     }
 
     public Hash256 setMaxNrMessagesForStoring(Account sender, BigInteger newMaxSizenewMaxNrMessages) throws Throwable {
