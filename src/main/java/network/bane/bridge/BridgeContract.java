@@ -886,12 +886,12 @@ public class BridgeContract {
     // region message bridge
     // region set message bridge
 
-    public static void setMessageBridge(Hash160 executionManager, int sendingFee, int maxMsgSizeForSending,
+    public static void setMessageBridge(Hash160 executionManager, int sendingFee, int maxBytesForSending,
             int maxNrMsgsForStoring) {
 
         onlyGovernor();
         // Set the message bridge. Aborts if the message bridge is already set.
-        MessageBridgeImpl.setMessageBridge(executionManager, sendingFee, maxMsgSizeForSending, maxNrMsgsForStoring);
+        MessageBridgeImpl.setMessageBridge(executionManager, sendingFee, maxBytesForSending, maxNrMsgsForStoring);
         onMessageBridgeSet.fire();
     }
 
@@ -968,11 +968,11 @@ public class BridgeContract {
     }
 
     @Safe
-    public static int maxMessageSizeForSending() {
-        return MessageBridgeImpl.getMessageBridge().config.maxMessageSizeForSending;
+    public static int maxBytesForSending() {
+        return MessageBridgeImpl.getMessageBridge().config.maxBytesForSending;
     }
 
-    public static void setMaxMessageSizeForSending(int newMaxSize) {
+    public static void setMaxBytesForSending(int newMaxBytes) {
         abort("Not implemented yet");
     }
 

@@ -40,7 +40,7 @@ import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_DEPOSIT;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_DEPOSIT;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_MAX_SIZE_FOR_SENDING_BYTES;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_MAX_BYTES_FOR_SENDING;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_SENDING_FEE;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_TOTAL_MAX_DEPOSITED_NATIVE;
@@ -551,7 +551,7 @@ public class Bridge extends SmartContractHelper {
 
     public Hash256 setDefaultMessageBridge() throws Throwable {
         return setMessageBridge(governor, DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH, DEFAULT_MSG_SENDING_FEE,
-                DEFAULT_MSG_MAX_SIZE_FOR_SENDING_BYTES, DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION);
+                DEFAULT_MSG_MAX_BYTES_FOR_SENDING, DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION);
     }
 
     public Hash256 setMessageBridge(Account sender, Hash160 executionManager, BigInteger sendingFee,
@@ -623,18 +623,18 @@ public class Bridge extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("setMessageSendingFee", integer(newFee)).signers(signer));
     }
 
-    public BigInteger maxMessageSizeForSending() throws IOException {
-        return callFunctionReturningInt("maxMessageSizeForSending");
+    public BigInteger maxMsgSizeForSending() throws IOException {
+        return callFunctionReturningInt("maxMsgSizeForSending");
     }
 
     public Hash256 setmaxMessageSizeForSending(BigInteger newMaxSize) throws Throwable {
-        return setMaxMessageSizeForSending(governor, newMaxSize);
+        return setMaxMsgSizeForSending(governor, newMaxSize);
     }
 
-    public Hash256 setMaxMessageSizeForSending(Account sender, BigInteger newMaxSize) throws Throwable {
+    public Hash256 setMaxMsgSizeForSending(Account sender, BigInteger newMaxSize) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
         return sendAndAwaitExecution(
-                invokeFunction("setMaxMessageSizeForSending", integer(newMaxSize)).signers(signer));
+                invokeFunction("setMaxMsgSizeForSending", integer(newMaxSize)).signers(signer));
     }
 
     public BigInteger maxNrMessagesForStoring() throws IOException {

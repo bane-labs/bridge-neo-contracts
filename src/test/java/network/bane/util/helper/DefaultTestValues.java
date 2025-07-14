@@ -22,7 +22,7 @@ public class DefaultTestValues {
     public static final Hash160 DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH =
             new Hash160("0x74eace325d73d7fa70c6b8772fabaac20a632706");
     public static final BigInteger DEFAULT_MSG_SENDING_FEE = new BigInteger("100000000");
-    public static final int DEFAULT_MSG_MAX_SIZE_FOR_SENDING_BYTES = 10000;
+    public static final int DEFAULT_MSG_MAX_BYTES_FOR_SENDING = 10000;
     public static final int DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION = 10;
 
 

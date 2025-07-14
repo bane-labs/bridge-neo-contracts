@@ -38,12 +38,12 @@ public class MessageBridgeDto {
 
     public static class MessageConfig {
         public BigInteger sendingFee;
-        public int maxMessageSizeForSending;
+        public int maxBytesForSending;
         public int maxNrMessagesForStoring;
 
-        public MessageConfig(BigInteger sendingFee, int maxMessageSizeForSending, int maxNrMessagesForStoring) {
+        public MessageConfig(BigInteger sendingFee, int maxBytesForSending, int maxNrMessagesForStoring) {
             this.sendingFee = sendingFee;
-            this.maxMessageSizeForSending = maxMessageSizeForSending;
+            this.maxBytesForSending = maxBytesForSending;
             this.maxNrMessagesForStoring = maxNrMessagesForStoring;
         }
 
@@ -57,13 +57,13 @@ public class MessageBridgeDto {
             }
             MessageConfig that = (MessageConfig) other;
             return this.sendingFee.equals(that.sendingFee) &&
-                    this.maxMessageSizeForSending == that.maxMessageSizeForSending &&
+                    this.maxBytesForSending == that.maxBytesForSending &&
                     this.maxNrMessagesForStoring == that.maxNrMessagesForStoring;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(sendingFee, maxMessageSizeForSending, maxNrMessagesForStoring);
+            return Objects.hash(sendingFee, maxBytesForSending, maxNrMessagesForStoring);
         }
 
     }

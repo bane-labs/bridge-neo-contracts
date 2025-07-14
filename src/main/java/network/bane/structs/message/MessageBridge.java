@@ -32,9 +32,9 @@ public class MessageBridge {
         public int sendingFee;
 
         /**
-         * The maximum size of a message that can be sent from N3 to EVM.
+         * The maximum size (in bytes) of a message that can be sent from N3 to EVM.
          */
-        public int maxMessageSizeForSending;
+        public int maxBytesForSending;
 
         /**
          * The maximum number of messages that can be batched together by the relayer in a single invocation of
@@ -42,16 +42,16 @@ public class MessageBridge {
          */
         public int maxNrMessagesForStoring;
 
-        public MessageConfig(int sendingFee, int maxMessageSizeForSending, int maxNrMessagesForStoring) {
+        public MessageConfig(int sendingFee, int maxBytesForSending, int maxNrMessagesForStoring) {
             this.sendingFee = sendingFee;
-            this.maxMessageSizeForSending = maxMessageSizeForSending;
+            this.maxBytesForSending = maxBytesForSending;
             this.maxNrMessagesForStoring = maxNrMessagesForStoring;
         }
 
         public static boolean isValid(MessageConfig config) {
             return config != null &&
                     config.sendingFee >= 0 &&
-                    config.maxMessageSizeForSending > 0 &&
+                    config.maxBytesForSending > 0 &&
                     config.maxNrMessagesForStoring > 0;
         }
 

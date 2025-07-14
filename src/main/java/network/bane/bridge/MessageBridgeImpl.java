@@ -26,7 +26,7 @@ public class MessageBridgeImpl {
         return (MessageBridge) new StdLib().deserialize(serialized);
     }
 
-    static void setMessageBridge(Hash160 executionManager, int sendingFee, int maxMsgSizeForSending,
+    static void setMessageBridge(Hash160 executionManager, int sendingFee, int maxBytesForSending,
             int maxNrMsgsForStoring) {
 
         if (messageBridgeIsSet()) abort("Message bridge already set");
@@ -36,7 +36,7 @@ public class MessageBridgeImpl {
 
         ByteString zeroHash = Hash256.zero().toByteString();
         MessageBridge messageBridge = new MessageBridge(true, new State(0, zeroHash), new State(0, zeroHash),
-                new MessageBridge.MessageConfig(sendingFee, maxMsgSizeForSending, maxNrMsgsForStoring)
+                new MessageBridge.MessageConfig(sendingFee, maxBytesForSending, maxNrMsgsForStoring)
         );
         if (!MessageBridge.isValid(messageBridge)) abort("Invalid message bridge configuration");
         BridgeContract.baseMap.put(KEY_MESSAGE_BRIDGE, new StdLib().serialize(messageBridge));
