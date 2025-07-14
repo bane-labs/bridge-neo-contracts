@@ -29,6 +29,8 @@ public class MessageBridgeImpl {
     static void setMessageBridge(Hash160 executionManager, int sendingFee, int maxMsgSizeForSending,
             int maxNrMsgsForStoring) {
 
+        if (messageBridgeIsSet()) abort("Message bridge already set");
+
         if (!new ContractManagement().isContract(executionManager)) abort("ExecutionManager must be a contract");
         BridgeContract.baseMap.put(KEY_MESSAGE_EXECUTION_MANAGER, executionManager);
 
