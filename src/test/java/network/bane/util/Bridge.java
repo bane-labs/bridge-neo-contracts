@@ -623,18 +623,18 @@ public class Bridge extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("setMessageSendingFee", integer(newFee)).signers(signer));
     }
 
-    public BigInteger maxMsgSizeForSending() throws IOException {
-        return callFunctionReturningInt("maxMsgSizeForSending");
+    public BigInteger maxBytesForSending() throws IOException {
+        return callFunctionReturningInt("maxBytesForSending");
     }
 
-    public Hash256 setMaxMessageSizeForSending(BigInteger newMaxSize) throws Throwable {
-        return setMaxMsgSizeForSending(governor, newMaxSize);
+    public Hash256 setMaxBytesForSending(BigInteger newMaxSize) throws Throwable {
+        return setMaxBytesForSending(governor, newMaxSize);
     }
 
-    public Hash256 setMaxMsgSizeForSending(Account sender, BigInteger newMaxSize) throws Throwable {
+    public Hash256 setMaxBytesForSending(Account sender, BigInteger newMaxSize) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
         return sendAndAwaitExecution(
-                invokeFunction("setMaxMsgSizeForSending", integer(newMaxSize)).signers(signer));
+                invokeFunction("setMaxBytesForSending", integer(newMaxSize)).signers(signer));
     }
 
     public BigInteger maxNrMessagesForStoring() throws IOException {
