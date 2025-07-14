@@ -18,7 +18,7 @@ public class StorageConstants {
     static final int KEY_LINKED_CHAIN_ID = 0x10;
 
     static final int KEY_MESSAGE_BRIDGE = 0x20;
-    static final int KEY_MESSAGE_EXECUTOR = 0x21;
+    static final int KEY_MESSAGE_EXECUTION_MANAGER = 0x21;
 
     static final int KEY_ENTERED = 0x70;
 

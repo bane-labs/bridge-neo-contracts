@@ -10,7 +10,7 @@ import network.bane.structs.message.MessageBridge;
 
 import static io.neow3j.devpack.Helper.abort;
 import static network.bane.bridge.StorageConstants.KEY_MESSAGE_BRIDGE;
-import static network.bane.bridge.StorageConstants.KEY_MESSAGE_EXECUTOR;
+import static network.bane.bridge.StorageConstants.KEY_MESSAGE_EXECUTION_MANAGER;
 
 public class MessageBridgeImpl {
 
@@ -30,17 +30,14 @@ public class MessageBridgeImpl {
             int maxNrMsgsForStoring) {
 
         if (!new ContractManagement().isContract(executionManager)) abort("ExecutionManager must be a contract");
-        BridgeContract.baseMap.put(KEY_MESSAGE_EXECUTOR, executionManager);
+        BridgeContract.baseMap.put(KEY_MESSAGE_EXECUTION_MANAGER, executionManager);
 
         ByteString zeroHash = Hash256.zero().toByteString();
-        State initialState = new State(0, zeroHash);
-        BridgeContract.baseMap.put(KEY_MESSAGE_BRIDGE,
-                new StdLib().serialize(
-                        new MessageBridge(true, initialState, initialState,
-                                new MessageBridge.MessageConfig(sendingFee, maxMsgSizeForSending, maxNrMsgsForStoring)
-                        )
-                )
+        MessageBridge messageBridge = new MessageBridge(true, new State(0, zeroHash), new State(0, zeroHash),
+                new MessageBridge.MessageConfig(sendingFee, maxMsgSizeForSending, maxNrMsgsForStoring)
         );
+        if (!MessageBridge.isValid(messageBridge)) abort("Invalid message bridge configuration");
+        BridgeContract.baseMap.put(KEY_MESSAGE_BRIDGE, new StdLib().serialize(messageBridge));
     }
 
     // endregion
