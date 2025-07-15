@@ -91,6 +91,13 @@ public class MessageBridgeImpl {
         storeMessageBridge(messageBridge);
     }
 
+    public static void setMaxNrMessagesForStoring(int newMaxNrMessages) {
+        MessageBridge messageBridge = getMessageBridge();
+        if (newMaxNrMessages <= 0) abort("Max number of messages for storing must be positive");
+        messageBridge.config.maxNrMessagesForStoring = newMaxNrMessages;
+        storeMessageBridge(messageBridge);
+    }
+
     // endregion
 
 }

@@ -229,6 +229,10 @@ public class BridgeContract {
     @EventParameterNames({"NewMaxBytes"})
     static Event1Arg<Integer> onMessageMaxBytesForSendingChange;
 
+    @DisplayName("MaxNrMessagesForStoringChange")
+    @EventParameterNames({"NewMaxNrMessages"})
+    static Event1Arg<Integer> onMaxNrMessagesForStoringChange;
+
     @DisplayName("MessageExecutionManagerChange")
     @EventParameterNames({"NewExecutionManager"})
     static Event1Arg<Hash160> onMessageExecutionManagerChange;
@@ -1011,7 +1015,9 @@ public class BridgeContract {
     }
 
     public static void setMaxNrMessagesForStoring(int newMaxNrMessages) {
-        abort("Not implemented yet");
+        onlyGovernor();
+        MessageBridgeImpl.setMaxNrMessagesForStoring(newMaxNrMessages);
+        onMaxNrMessagesForStoringChange.fire(newMaxNrMessages);
     }
 
     // endregion

@@ -199,6 +199,45 @@ public class MessageBridgeTest {
 
     @Test
     @Order(0)
+    public void test_setMaxNrMessagesForStoring() throws Throwable {
+        BigInteger maxNrMessagesBefore = bridge.maxNrMessagesForStoring();
+        BigInteger newMaxNrMessages = new BigInteger("20");
+        assertThat(newMaxNrMessages, is(not(maxNrMessagesBefore)));
+
+        Hash256 tx = bridge.setMaxNrMessagesForStoring(newMaxNrMessages);
+        assertThat(bridge.maxNrMessagesForStoring(), is(newMaxNrMessages));
+
+        Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
+                .getFirstNotification();
+        assertThat(notification.getContract(), is(bridge.getScriptHash()));
+        assertThat(notification.getEventName(), is("MaxNrMessagesForStoringChange"));
+        assertThat(notification.getState().getList(), hasSize(1));
+        assertThat(notification.getState().getList().get(0).getInteger(), is(newMaxNrMessages));
+
+        // revert the state for further tests
+        bridge.setMaxNrMessagesForStoring(maxNrMessagesBefore);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setMaxNrMessageForStoring_invalidValue() {
+        BigInteger invalidMaxNrMessages = BigInteger.ZERO;
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMaxNrMessagesForStoring(invalidMaxNrMessages));
+        assertThat(thrown.getMessage(), containsString("Max number of messages for storing must be positive"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_setMaxNrMessagesForStoring_notGovernor(){
+        BigInteger newMaxNrMessages = new BigInteger("20");
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMaxNrMessagesForStoring(alice, newMaxNrMessages));
+        assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
+    }
+
+    @Test
+    @Order(0)
     public void test_setExecutionManager() throws Throwable {
         Hash160 executionManagerBefore = bridge.messageExecutionManager();
         Hash160 newExecutionManager = testContract;
