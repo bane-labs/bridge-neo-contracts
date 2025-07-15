@@ -176,7 +176,7 @@ public class MessageBridgeTest {
         assertThat(notification.getState().getList().get(0).getInteger(), is(newMaxBytes));
 
         // revert the state for further tests
-        bridge.setMessageSendingFee(maxBytesBefore);
+        bridge.setMaxBytesForSending(maxBytesBefore);
     }
 
     @Test

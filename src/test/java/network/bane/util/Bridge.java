@@ -2,7 +2,6 @@ package network.bane.util;
 
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
-import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
