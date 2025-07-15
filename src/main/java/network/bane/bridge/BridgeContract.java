@@ -33,6 +33,7 @@ import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.NativeTokenBridge;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
+import network.bane.structs.message.MessageBridge;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.checkWitness;
@@ -53,6 +54,7 @@ import static network.bane.bridge.StorageConstants.KEY_DEPOSIT_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_LINKED_CHAIN_ID;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
+import static network.bane.bridge.StorageConstants.KEY_MESSAGE_EXECUTION_MANAGER;
 import static network.bane.bridge.StorageConstants.KEY_NATIVE_BRIDGE;
 import static network.bane.bridge.StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS;
 import static network.bane.bridge.StorageConstants.KEY_VERSION;
@@ -205,6 +207,12 @@ public class BridgeContract {
     @DisplayName("MaxTokenWithdrawalsChange")
     @EventParameterNames({"NeoN3Token", "NewMaxWithdrawals"})
     static Event2Args<Hash160, Integer> onMaxTokenWithdrawalsChange;
+
+    // endregion
+    // region message bridge events
+
+    @DisplayName("MessageBridgeSet")
+    static Event onMessageBridgeSet;
 
     // endregion
     // endregion
@@ -870,6 +878,134 @@ public class BridgeContract {
     @Safe
     public static ByteString tokenWithdrawalRoot(Hash160 token) {
         return getTokenBridge(token).withdrawalState.root;
+    }
+
+    // endregion
+    // endregion
+    // endregion
+    // region message bridge
+    // region set message bridge
+
+    public static void setMessageBridge(Hash160 executionManager, int sendingFee, int maxBytesForSending,
+            int maxNrMsgsForStoring) {
+
+        onlyGovernor();
+        // Set the message bridge. Aborts if the message bridge is already set.
+        MessageBridgeImpl.setMessageBridge(executionManager, sendingFee, maxBytesForSending, maxNrMsgsForStoring);
+        onMessageBridgeSet.fire();
+    }
+
+    // endregion
+    // region message bridge pausing
+
+    public static void pauseMessageBridge() {
+        // todo: pause message bridge.
+        abort("Not implemented yet");
+    }
+
+    public static void unpauseMessageBridge() {
+        // todo: pause message bridge.
+        abort("Not implemented yet");
+    }
+
+    // endregion
+    // region message sending (N3 to EVM)
+
+    public static void sendMessage() {
+        // todo: send messages from N3 to EVM.
+        abort("Not implemented yet");
+    }
+
+    // endregion
+    // region message storing and executing (EVM to N3)
+
+    public static void storeMessages() {
+        // todo: store messages from EVM to N3.
+        abort("Not implemented yet");
+    }
+
+    public static void executeMessage() {
+        // todo: execute messages from EVM to N3.
+        abort("Not implemented yet");
+    }
+
+    // endregion
+    // region message execution results from EVM
+
+    // todo: handle message execution results from EVM.
+
+    // endregion
+    // region message bridge configuration/state
+    // region message bridge configuration
+
+    @Safe
+    public static boolean messageBridgeIsSet() {
+        return MessageBridgeImpl.messageBridgeIsSet();
+    }
+
+    @Safe
+    public static MessageBridge getMessageBridge() {
+        return MessageBridgeImpl.getMessageBridge();
+    }
+
+    @Safe
+    public static Hash160 messageExecutionManager() {
+        // todo: add execution manager to the message bridge config.
+        return baseMap.getHash160(KEY_MESSAGE_EXECUTION_MANAGER);
+    }
+
+    public static void setMessageExecutionManager(Hash160 newMessageExecutionManager) {
+        abort("Not implemented yet");
+    }
+
+    @Safe
+    public static int messageSendingFee() {
+        return MessageBridgeImpl.getMessageBridge().config.sendingFee;
+    }
+
+    public static void setMessageSendingFee(int newFee) {
+        abort("Not implemented yet");
+    }
+
+    @Safe
+    public static int maxBytesForSending() {
+        return MessageBridgeImpl.getMessageBridge().config.maxBytesForSending;
+    }
+
+    public static void setMaxBytesForSending(int newMaxBytes) {
+        abort("Not implemented yet");
+    }
+
+    @Safe
+    public static int maxNrMessagesForStoring() {
+        return MessageBridgeImpl.getMessageBridge().config.maxNrMessagesForStoring;
+    }
+
+    public static void setMaxNrMessagesForStoring(int newMaxNrMessages) {
+        abort("Not implemented yet");
+    }
+
+    // endregion
+    // region message bridge state
+
+    @Safe
+    public static int evmMessageNonce() {
+        return MessageBridgeImpl.getMessageBridge().n3ToEvmMessageState.nonce;
+    }
+
+    @Safe
+    public static ByteString evmMessageRoot() {
+        return MessageBridgeImpl.getMessageBridge().n3ToEvmMessageState.root;
+    }
+
+    @Safe
+    public static int n3MessageNonce() {
+        return MessageBridgeImpl.getMessageBridge().evmToN3MessageState.nonce;
+    }
+
+    @Safe
+    public static ByteString n3MessageRoot() {
+        return MessageBridgeImpl.getMessageBridge().evmToN3MessageState.root;
     }
 
     // endregion

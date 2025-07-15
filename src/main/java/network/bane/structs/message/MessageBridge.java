@@ -1,0 +1,60 @@
+package network.bane.structs.message;
+
+import io.neow3j.devpack.annotations.Struct;
+import network.bane.structs.State;
+
+@Struct
+public class MessageBridge {
+    public boolean paused;
+    public State evmToN3MessageState;
+    public State n3ToEvmMessageState;
+    public MessageConfig config;
+
+    public MessageBridge(boolean paused, State evmToN3MessageState, State n3ToEvmMessageState, MessageConfig config) {
+        this.paused = paused;
+        this.evmToN3MessageState = evmToN3MessageState;
+        this.n3ToEvmMessageState = n3ToEvmMessageState;
+        this.config = config;
+    }
+
+    public static boolean isValid(MessageBridge messageBridge) {
+        return messageBridge != null &&
+                State.isValid(messageBridge.evmToN3MessageState) &&
+                State.isValid(messageBridge.n3ToEvmMessageState) &&
+                MessageConfig.isValid(messageBridge.config);
+    }
+
+    @Struct
+    static public class MessageConfig {
+        /**
+         * The fee that is charged for each message sent from N3 to EVM.
+         */
+        public int sendingFee;
+
+        /**
+         * The maximum size (in bytes) of a message that can be sent from N3 to EVM.
+         */
+        public int maxBytesForSending;
+
+        /**
+         * The maximum number of messages that can be batched together by the relayer in a single invocation of
+         * {@code BridgeContract#storeMessages()}.
+         */
+        public int maxNrMessagesForStoring;
+
+        public MessageConfig(int sendingFee, int maxBytesForSending, int maxNrMessagesForStoring) {
+            this.sendingFee = sendingFee;
+            this.maxBytesForSending = maxBytesForSending;
+            this.maxNrMessagesForStoring = maxNrMessagesForStoring;
+        }
+
+        public static boolean isValid(MessageConfig config) {
+            return config != null &&
+                    config.sendingFee >= 0 &&
+                    config.maxBytesForSending > 0 &&
+                    config.maxNrMessagesForStoring > 0;
+        }
+
+    }
+
+}

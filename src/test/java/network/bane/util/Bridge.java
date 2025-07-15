@@ -15,6 +15,7 @@ import io.neow3j.types.Hash256;
 import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 import network.bane.util.helper.SmartContractHelper;
+import network.bane.util.structs.MessageBridgeDto;
 import network.bane.util.structs.NativeBridge;
 import network.bane.util.structs.State;
 import network.bane.util.structs.TokenBridge;
@@ -36,8 +37,12 @@ import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.securityGuard;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_DEPOSIT;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_DEPOSIT;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_MAX_BYTES_FOR_SENDING;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_SENDING_FEE;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_TOTAL_MAX_DEPOSITED_NATIVE;
 import static network.bane.util.structs.TokenBridge.getAsContractParameter;
 
@@ -536,6 +541,133 @@ public class Bridge extends SmartContractHelper {
 
     public String tokenWithdrawalRoot(Hash160 tokenHash) throws IOException {
         return callFunctionReturningString("tokenWithdrawalRoot", hash160(tokenHash));
+    }
+
+    // endregion
+    // endregion
+    // endregion
+    // region message bridge
+    // region message bridge setting
+
+    public Hash256 setDefaultMessageBridge() throws Throwable {
+        return setMessageBridge(governor, DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH, DEFAULT_MSG_SENDING_FEE,
+                DEFAULT_MSG_MAX_BYTES_FOR_SENDING, DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION);
+    }
+
+    public Hash256 setMessageBridge(Account sender, Hash160 executionManager, BigInteger sendingFee,
+            int maxMsgSizeForStoring, int maxNrMessagesPerStoring) throws Throwable {
+        return sendAndAwaitExecution(
+                invokeFunction("setMessageBridge",
+                        hash160(executionManager),
+                        integer(sendingFee),
+                        integer(maxMsgSizeForStoring),
+                        integer(maxNrMessagesPerStoring)
+                ).signers(calledByEntry(sender)));
+    }
+
+    // endregion
+    // region message bridge configuration/state
+    // region message bridge configuration
+
+    public boolean messageBridgeIsSet() throws IOException {
+        return callFunctionReturningBool("messageBridgeIsSet");
+    }
+
+    public MessageBridgeDto getMessageBridge() throws IOException {
+        List<StackItem> messageBridgeList = callInvokeFunction("getMessageBridge")
+                .getInvocationResult().getFirstStackItem().getList();
+        boolean paused = messageBridgeList.get(0).getBoolean();
+        List<StackItem> evmToN3StateList = messageBridgeList.get(1).getList();
+        State evmToN3State = new State(
+                evmToN3StateList.get(0).getInteger(),
+                new Hash256(evmToN3StateList.get(1).getByteArray())
+        );
+        List<StackItem> n3ToEvmStateList = messageBridgeList.get(2).getList();
+        State n3ToEvmState = new State(
+                n3ToEvmStateList.get(0).getInteger(),
+                new Hash256(n3ToEvmStateList.get(1).getByteArray())
+        );
+        List<StackItem> messageConfigList = messageBridgeList.get(3).getList();
+        MessageBridgeDto.MessageConfig messageConfig = new MessageBridgeDto.MessageConfig(
+                messageConfigList.get(0).getInteger(),
+                messageConfigList.get(1).getInteger().intValue(),
+                messageConfigList.get(2).getInteger().intValue()
+        );
+        return new MessageBridgeDto(paused, evmToN3State, n3ToEvmState, messageConfig);
+    }
+
+    public Hash160 messageExecutionManager() throws IOException {
+        return callFunctionReturningScriptHash("messageExecutionManager");
+    }
+
+    public Hash256 setMessageExecutionManager(Hash160 newExecutionManager) throws Throwable {
+        return setMessageExecutionManager(governor, newExecutionManager);
+    }
+
+    public Hash256 setMessageExecutionManager(Account sender, Hash160 newExecutionManager) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("setMessageExecutionManager", hash160(newExecutionManager))
+                .signers(signer));
+    }
+
+    public BigInteger messageSendingFee() throws IOException {
+        return callFunctionReturningInt("messageSendingFee");
+    }
+
+    public Hash256 setMessageSendingFee(BigInteger newFee) throws Throwable {
+        return setMessageSendingFee(governor, newFee);
+    }
+
+    public Hash256 setMessageSendingFee(Account sender, BigInteger newFee) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("setMessageSendingFee", integer(newFee)).signers(signer));
+    }
+
+    public BigInteger maxBytesForSending() throws IOException {
+        return callFunctionReturningInt("maxBytesForSending");
+    }
+
+    public Hash256 setMaxBytesForSending(BigInteger newMaxSize) throws Throwable {
+        return setMaxBytesForSending(governor, newMaxSize);
+    }
+
+    public Hash256 setMaxBytesForSending(Account sender, BigInteger newMaxSize) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(
+                invokeFunction("setMaxBytesForSending", integer(newMaxSize)).signers(signer));
+    }
+
+    public BigInteger maxNrMessagesForStoring() throws IOException {
+        return callFunctionReturningInt("maxNrMessagesForStoring");
+    }
+
+    public Hash256 setMaxNrMessagesForStoring(BigInteger newMaxNrMessages) throws Throwable {
+        return setMaxNrMessagesForStoring(governor, newMaxNrMessages);
+    }
+
+    public Hash256 setMaxNrMessagesForStoring(Account sender, BigInteger newMaxNrMessages) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(
+                invokeFunction("setMaxNrMessagesForStoring", integer(newMaxNrMessages)).signers(signer));
+    }
+
+    // endregion
+    // region message bridge state
+
+    public BigInteger messageEvmToN3Nonce() throws IOException {
+        return getMessageBridge().evmToN3MessageState.nonce;
+    }
+
+    public String messageEvmToN3Root() throws IOException {
+        return Numeric.toHexString(getMessageBridge().evmToN3MessageState.root.toArray());
+    }
+
+    public BigInteger messageN3ToEvmNonce() throws IOException {
+        return getMessageBridge().n3ToEvmMessageState.nonce;
+    }
+
+    public String messageN3ToEvmRoot() throws IOException {
+        return Numeric.toHexString(getMessageBridge().n3ToEvmMessageState.root.toArray());
     }
 
     // endregion

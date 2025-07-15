@@ -18,5 +18,13 @@ public class DefaultTestValues {
     public static final Hash160 DEFAULT_NATIVE_TOKEN_HASH = GasToken.SCRIPT_HASH;
     public static final int DEFAULT_NATIVE_DECIMAL_SCALING_FACTOR = 0;
 
+    // Todo: use the actual execution manager script hash once there.
+    public static final Hash160 DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH =
+            new Hash160("0x74eace325d73d7fa70c6b8772fabaac20a632706");
+    public static final BigInteger DEFAULT_MSG_SENDING_FEE = new BigInteger("100000000");
+    public static final int DEFAULT_MSG_MAX_BYTES_FOR_SENDING = 10000;
+    public static final int DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION = 10;
+
+
     public static final Hash160 DUMMY_TARGET_CONTRACT_HASH = new Hash160("0x605edab7b33d187e9a22f33cc0722f9c3ccab3b3");
 }
