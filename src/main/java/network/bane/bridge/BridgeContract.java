@@ -46,6 +46,8 @@ import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlyWhenNotPaused;
 import static network.bane.bridge.BridgeImpl.enteringNonReentrant;
 import static network.bane.bridge.BridgeImpl.exitingNonReentrant;
+import static network.bane.bridge.MessageBridgeImpl.onlyWhenMessageBridgeNotPaused;
+import static network.bane.bridge.MessageBridgeImpl.onlyWhenMessageBridgePaused;
 import static network.bane.bridge.NativeBridgeImpl.onlyWhenDepositsNotPaused;
 import static network.bane.bridge.NativeBridgeImpl.onlyWhenDepositsPaused;
 import static network.bane.bridge.NativeBridgeImpl.onlyWhenNativeBridgePaused;
@@ -213,6 +215,12 @@ public class BridgeContract {
 
     @DisplayName("MessageBridgeSet")
     static Event onMessageBridgeSet;
+
+    @DisplayName("MessageBridgePause")
+    static Event onMessageBridgePause;
+
+    @DisplayName("MessageBridgeUnpause")
+    static Event onMessageBridgeUnpause;
 
     // endregion
     // endregion
@@ -899,13 +907,17 @@ public class BridgeContract {
     // region message bridge pausing
 
     public static void pauseMessageBridge() {
-        // todo: pause message bridge.
-        abort("Not implemented yet");
+        onlyGovernorOrSecurityGuard();
+        onlyWhenMessageBridgeNotPaused();
+        MessageBridgeImpl.pauseMessageBridge();
+        onMessageBridgePause.fire();
     }
 
     public static void unpauseMessageBridge() {
-        // todo: pause message bridge.
-        abort("Not implemented yet");
+        onlyGovernor();
+        onlyWhenMessageBridgePaused();
+        MessageBridgeImpl.unpauseMessageBridge();
+        onMessageBridgeUnpause.fire();
     }
 
     // endregion
