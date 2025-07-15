@@ -56,7 +56,6 @@ import static network.bane.bridge.StorageConstants.KEY_DEPOSIT_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_LINKED_CHAIN_ID;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
-import static network.bane.bridge.StorageConstants.KEY_MESSAGE_EXECUTION_MANAGER;
 import static network.bane.bridge.StorageConstants.KEY_NATIVE_BRIDGE;
 import static network.bane.bridge.StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS;
 import static network.bane.bridge.StorageConstants.KEY_VERSION;
@@ -894,12 +893,13 @@ public class BridgeContract {
     // region message bridge
     // region set message bridge
 
-    public static void setMessageBridge(Hash160 executionManager, int sendingFee, int maxBytesForSending,
-            int maxNrMsgsForStoring) {
+    public static void setMessageBridge(int sendingFee, int maxBytesForSending, int maxNrMsgsForStoring,
+            Hash160 executionManager, int executionWindowSeconds) {
 
         onlyGovernor();
         // Set the message bridge. Aborts if the message bridge is already set.
-        MessageBridgeImpl.setMessageBridge(executionManager, sendingFee, maxBytesForSending, maxNrMsgsForStoring);
+        MessageBridgeImpl.setMessageBridge(sendingFee, maxBytesForSending, maxNrMsgsForStoring,
+                executionManager, executionWindowSeconds);
         onMessageBridgeSet.fire();
     }
 
@@ -962,8 +962,7 @@ public class BridgeContract {
 
     @Safe
     public static Hash160 messageExecutionManager() {
-        // todo: add execution manager to the message bridge config.
-        return baseMap.getHash160(KEY_MESSAGE_EXECUTION_MANAGER);
+        return MessageBridgeImpl.getMessageBridge().config.executionManager;
     }
 
     public static void setMessageExecutionManager(Hash160 newMessageExecutionManager) {

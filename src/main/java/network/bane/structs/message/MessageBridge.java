@@ -1,5 +1,6 @@
 package network.bane.structs.message;
 
+import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.annotations.Struct;
 import network.bane.structs.State;
 
@@ -42,17 +43,33 @@ public class MessageBridge {
          */
         public int maxNrMessagesForStoring;
 
-        public MessageConfig(int sendingFee, int maxBytesForSending, int maxNrMessagesForStoring) {
+        /**
+         * The address of the contract that manages the execution of messages.
+         */
+        public Hash160 executionManager;
+
+        /**
+         * The time window (in seconds) during which a message can be executed after it has been stored on-chain.
+         */
+        public int executionWindowSeconds;
+
+        public MessageConfig(int sendingFee, int maxBytesForSending, int maxNrMessagesForStoring,
+                Hash160 executionManager, int executionWindowSeconds) {
             this.sendingFee = sendingFee;
             this.maxBytesForSending = maxBytesForSending;
             this.maxNrMessagesForStoring = maxNrMessagesForStoring;
+            this.executionManager = executionManager;
+            this.executionWindowSeconds = executionWindowSeconds;
         }
 
         public static boolean isValid(MessageConfig config) {
             return config != null &&
                     config.sendingFee >= 0 &&
                     config.maxBytesForSending > 0 &&
-                    config.maxNrMessagesForStoring > 0;
+                    config.maxNrMessagesForStoring > 0 &&
+                    config.executionManager != null && !config.executionManager.isZero() &&
+                    Hash160.isValid(config.executionManager) &&
+                    config.executionWindowSeconds > 0;
         }
 
     }
