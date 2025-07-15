@@ -566,8 +566,8 @@ public class Bridge extends SmartContractHelper {
     }
 
     // endregion
-    // region native bridge configuration/state
-    // region native bridge configuration
+    // region message bridge configuration/state
+    // region message bridge configuration
 
     public boolean messageBridgeIsSet() throws IOException {
         return callFunctionReturningBool("messageBridgeIsSet");
@@ -652,9 +652,7 @@ public class Bridge extends SmartContractHelper {
     }
 
     // endregion
-    // region token bridge state
-
-    // region native bridge state
+    // region message bridge state
 
     public BigInteger messageEvmToN3Nonce() throws IOException {
         return getMessageBridge().evmToN3MessageState.nonce;
@@ -672,7 +670,6 @@ public class Bridge extends SmartContractHelper {
         return Numeric.toHexString(getMessageBridge().n3ToEvmMessageState.root.toArray());
     }
 
-    // endregion
     // endregion
     // endregion
     // endregion
