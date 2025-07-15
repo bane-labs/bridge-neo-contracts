@@ -64,7 +64,7 @@ public class MessageBridge {
 
         public static boolean isValid(MessageConfig config) {
             return config != null &&
-                    config.sendingFee >= 0 &&
+                    config.sendingFee > 0 &&
                     config.maxBytesForSending > 0 &&
                     config.maxNrMessagesForStoring > 0 &&
                     config.executionManager != null && !config.executionManager.isZero() &&
