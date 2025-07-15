@@ -98,6 +98,13 @@ public class MessageBridgeImpl {
         storeMessageBridge(messageBridge);
     }
 
+    public static void setExecutionWindowSeconds(int newExecutionWindowSeconds) {
+        MessageBridge messageBridge = getMessageBridge();
+        if (newExecutionWindowSeconds <= 0) abort("Execution window seconds must be positive");
+        messageBridge.config.executionWindowSeconds = newExecutionWindowSeconds;
+        storeMessageBridge(messageBridge);
+    }
+
     // endregion
 
 }

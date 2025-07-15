@@ -2,6 +2,7 @@ package network.bane.util;
 
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
+import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
@@ -673,6 +674,20 @@ public class Bridge extends SmartContractHelper {
         Signer signer = AccountSigner.calledByEntry(sender);
         return sendAndAwaitExecution(
                 invokeFunction("setMaxNrMessagesForStoring", integer(newMaxNrMessages)).signers(signer));
+    }
+
+    public BigInteger executionWindowSeconds() throws IOException {
+        return callFunctionReturningInt("executionWindowSeconds");
+    }
+
+    public Hash256 setExecutionWindowSeconds(BigInteger newExecutionWindowSeconds) throws Throwable {
+        return setExecutionWindowSeconds(governor, newExecutionWindowSeconds);
+    }
+
+    public Hash256 setExecutionWindowSeconds(Account sender, BigInteger newExecutionWindowSeconds) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(
+                invokeFunction("setExecutionWindowSeconds", integer(newExecutionWindowSeconds)).signers(signer));
     }
 
     // endregion

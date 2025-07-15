@@ -233,6 +233,10 @@ public class BridgeContract {
     @EventParameterNames({"NewMaxNrMessages"})
     static Event1Arg<Integer> onMaxNrMessagesForStoringChange;
 
+    @DisplayName("ExecutionWindowSecondsChange")
+    @EventParameterNames({"NewExecutionWindowSeconds"})
+    static Event1Arg<Integer> onExecutionWindowSecondsChange;
+
     @DisplayName("MessageExecutionManagerChange")
     @EventParameterNames({"NewExecutionManager"})
     static Event1Arg<Hash160> onMessageExecutionManagerChange;
@@ -1018,6 +1022,17 @@ public class BridgeContract {
         onlyGovernor();
         MessageBridgeImpl.setMaxNrMessagesForStoring(newMaxNrMessages);
         onMaxNrMessagesForStoringChange.fire(newMaxNrMessages);
+    }
+
+    @Safe
+    public static int executionWindowSeconds() {
+        return MessageBridgeImpl.getMessageBridge().config.executionWindowSeconds;
+    }
+
+    public static void setExecutionWindowSeconds(int newExecutionWindowSeconds) {
+        onlyGovernor();
+        MessageBridgeImpl.setExecutionWindowSeconds(newExecutionWindowSeconds);
+        onExecutionWindowSecondsChange.fire(newExecutionWindowSeconds);
     }
 
     // endregion

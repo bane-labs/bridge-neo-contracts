@@ -238,6 +238,45 @@ public class MessageBridgeTest {
 
     @Test
     @Order(0)
+    public void test_setExecutionWindowSeconds() throws Throwable {
+        BigInteger execWindowSecondsBefore = bridge.executionWindowSeconds();
+        BigInteger newExecWindowSeconds = new BigInteger("3600");
+        assertThat(newExecWindowSeconds, is(not(execWindowSecondsBefore)));
+
+        Hash256 tx = bridge.setExecutionWindowSeconds(newExecWindowSeconds);
+        assertThat(bridge.executionWindowSeconds(), is(newExecWindowSeconds));
+
+        Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
+                .getFirstNotification();
+        assertThat(notification.getContract(), is(bridge.getScriptHash()));
+        assertThat(notification.getEventName(), is("ExecutionWindowSecondsChange"));
+        assertThat(notification.getState().getList(), hasSize(1));
+        assertThat(notification.getState().getList().get(0).getInteger(), is(newExecWindowSeconds));
+
+        // revert the state for further tests
+        bridge.setExecutionWindowSeconds(execWindowSecondsBefore);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setExecutionWindowSeconds_invalidValue() {
+        BigInteger invalidExecWindowSeconds = BigInteger.ZERO;
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setExecutionWindowSeconds(invalidExecWindowSeconds));
+        assertThat(thrown.getMessage(), containsString("Execution window seconds must be positive"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_setExecutionWindowSeconds_notGovernor(){
+        BigInteger newExecWindowSeconds = new BigInteger("3600");
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setExecutionWindowSeconds(alice, newExecWindowSeconds));
+        assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
+    }
+
+    @Test
+    @Order(0)
     public void test_setExecutionManager() throws Throwable {
         Hash160 executionManagerBefore = bridge.messageExecutionManager();
         Hash160 newExecutionManager = testContract;
