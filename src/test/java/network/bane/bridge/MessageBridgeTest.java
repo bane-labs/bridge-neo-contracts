@@ -302,7 +302,7 @@ public class MessageBridgeTest {
         Hash160 newExecutionManager = new Hash160("0x1253c2c30b51514e805ddae9ff34df1dc67871b8");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.setMessageExecutionManager(newExecutionManager));
-        assertThat(thrown.getMessage(), containsString("ExecutionManager must be a contract"));
+        assertThat(thrown.getMessage(), containsString("Execution manager must be a contract"));
     }
 
     @Test

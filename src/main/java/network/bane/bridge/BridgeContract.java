@@ -233,13 +233,13 @@ public class BridgeContract {
     @EventParameterNames({"NewMaxNrMessages"})
     static Event1Arg<Integer> onMaxNrMessagesForStoringChange;
 
-    @DisplayName("ExecutionWindowSecondsChange")
-    @EventParameterNames({"NewExecutionWindowSeconds"})
-    static Event1Arg<Integer> onExecutionWindowSecondsChange;
-
     @DisplayName("MessageExecutionManagerChange")
     @EventParameterNames({"NewExecutionManager"})
     static Event1Arg<Hash160> onMessageExecutionManagerChange;
+
+    @DisplayName("ExecutionWindowSecondsChange")
+    @EventParameterNames({"NewExecutionWindowSeconds"})
+    static Event1Arg<Integer> onExecutionWindowSecondsChange;
 
     // endregion
     // endregion
@@ -727,7 +727,7 @@ public class BridgeContract {
     }
 
     /**
-     * Deposits a token to the linked chain and allows to specify a sponsor to pay the bridge fee..
+     * Deposits a token to the linked chain and allows to specify a sponsor to pay the bridge fee.
      *
      * @param token      the token to deposit.
      * @param from       the sender.
@@ -981,17 +981,6 @@ public class BridgeContract {
     }
 
     @Safe
-    public static Hash160 messageExecutionManager() {
-        return MessageBridgeImpl.getMessageBridge().config.executionManager;
-    }
-
-    public static void setMessageExecutionManager(Hash160 newExecutionManager) {
-        onlyGovernor();
-        MessageBridgeImpl.setMessageExecutionManager(newExecutionManager);
-        onMessageExecutionManagerChange.fire(newExecutionManager);
-    }
-
-    @Safe
     public static int messageSendingFee() {
         return MessageBridgeImpl.getMessageBridge().config.sendingFee;
     }
@@ -1022,6 +1011,17 @@ public class BridgeContract {
         onlyGovernor();
         MessageBridgeImpl.setMaxNrMessagesForStoring(newMaxNrMessages);
         onMaxNrMessagesForStoringChange.fire(newMaxNrMessages);
+    }
+
+    @Safe
+    public static Hash160 messageExecutionManager() {
+        return MessageBridgeImpl.getMessageBridge().config.executionManager;
+    }
+
+    public static void setMessageExecutionManager(Hash160 newExecutionManager) {
+        onlyGovernor();
+        MessageBridgeImpl.setExecutionManager(newExecutionManager);
+        onMessageExecutionManagerChange.fire(newExecutionManager);
     }
 
     @Safe

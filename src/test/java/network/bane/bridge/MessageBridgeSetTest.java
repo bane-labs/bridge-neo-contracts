@@ -88,7 +88,7 @@ public class MessageBridgeSetTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.setMessageBridge(governor, DEFAULT_MSG_SENDING_FEE, DEFAULT_MSG_MAX_BYTES_FOR_SENDING,
                         DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION, eoa, DEFAULT_MSG_EXEC_WINDOW_SECONDS));
-        assertThat(thrown.getMessage(), containsString("ExecutionManager must be a contract"));
+        assertThat(thrown.getMessage(), containsString("Execution manager must be a contract"));
     }
 
     @Test
@@ -148,7 +148,11 @@ public class MessageBridgeSetTest {
         MessageBridgeDto expectedMsgBridge = new MessageBridgeDto(true, initState, initState, messageConfig);
 
         assertThat(messageBridge, is(expectedMsgBridge));
+        assertThat(bridge.messageSendingFee(), is(DEFAULT_MSG_SENDING_FEE));
+        assertThat(bridge.maxBytesForSending(), is(DEFAULT_MSG_MAX_BYTES_FOR_SENDING));
+        assertThat(bridge.maxNrMessagesForStoring(), is(DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION));
         assertThat(bridge.messageExecutionManager(), is(DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH));
+        assertThat(bridge.executionWindowSeconds(), is(DEFAULT_MSG_EXEC_WINDOW_SECONDS));
 
         // Unpause the message bridge for further tests
         bridge.unpauseMessageBridge();

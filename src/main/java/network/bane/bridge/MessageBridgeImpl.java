@@ -29,7 +29,7 @@ public class MessageBridgeImpl {
             Hash160 executionManager, int executionWindowSeconds) {
 
         if (messageBridgeIsSet()) abort("Message bridge already set");
-        if (!new ContractManagement().isContract(executionManager)) abort("ExecutionManager must be a contract");
+        if (!new ContractManagement().isContract(executionManager)) abort("Execution manager must be a contract");
 
         ByteString zeroHash = Hash256.zero().toByteString();
         MessageBridge messageBridge = new MessageBridge(true, new State(0, zeroHash), new State(0, zeroHash),
@@ -77,13 +77,6 @@ public class MessageBridgeImpl {
         storeMessageBridge(messageBridge);
     }
 
-    static void setMessageExecutionManager(Hash160 newExecutionManager) {
-        MessageBridge messageBridge = getMessageBridge();
-        if (!new ContractManagement().isContract(newExecutionManager)) abort("ExecutionManager must be a contract");
-        messageBridge.config.executionManager = newExecutionManager;
-        storeMessageBridge(messageBridge);
-    }
-
     public static void setMaxBytesForSending(int newMaxBytes) {
         MessageBridge messageBridge = getMessageBridge();
         if (newMaxBytes <= 0) abort("Max bytes for sending must be positive");
@@ -95,6 +88,13 @@ public class MessageBridgeImpl {
         MessageBridge messageBridge = getMessageBridge();
         if (newMaxNrMessages <= 0) abort("Max number of messages for storing must be positive");
         messageBridge.config.maxNrMessagesForStoring = newMaxNrMessages;
+        storeMessageBridge(messageBridge);
+    }
+
+    static void setExecutionManager(Hash160 newExecutionManager) {
+        MessageBridge messageBridge = getMessageBridge();
+        if (!new ContractManagement().isContract(newExecutionManager)) abort("Execution manager must be a contract");
+        messageBridge.config.executionManager = newExecutionManager;
         storeMessageBridge(messageBridge);
     }
 

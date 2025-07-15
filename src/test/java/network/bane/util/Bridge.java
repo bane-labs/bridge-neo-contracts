@@ -621,20 +621,6 @@ public class Bridge extends SmartContractHelper {
         return new MessageBridgeDto(paused, evmToN3State, n3ToEvmState, messageConfig);
     }
 
-    public Hash160 messageExecutionManager() throws IOException {
-        return callFunctionReturningScriptHash("messageExecutionManager");
-    }
-
-    public Hash256 setMessageExecutionManager(Hash160 newExecutionManager) throws Throwable {
-        return setMessageExecutionManager(governor, newExecutionManager);
-    }
-
-    public Hash256 setMessageExecutionManager(Account sender, Hash160 newExecutionManager) throws Throwable {
-        Signer signer = AccountSigner.calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("setMessageExecutionManager", hash160(newExecutionManager))
-                .signers(signer));
-    }
-
     public BigInteger messageSendingFee() throws IOException {
         return callFunctionReturningInt("messageSendingFee");
     }
@@ -674,6 +660,20 @@ public class Bridge extends SmartContractHelper {
         Signer signer = AccountSigner.calledByEntry(sender);
         return sendAndAwaitExecution(
                 invokeFunction("setMaxNrMessagesForStoring", integer(newMaxNrMessages)).signers(signer));
+    }
+
+    public Hash160 messageExecutionManager() throws IOException {
+        return callFunctionReturningScriptHash("messageExecutionManager");
+    }
+
+    public Hash256 setMessageExecutionManager(Hash160 newExecutionManager) throws Throwable {
+        return setMessageExecutionManager(governor, newExecutionManager);
+    }
+
+    public Hash256 setMessageExecutionManager(Account sender, Hash160 newExecutionManager) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("setMessageExecutionManager", hash160(newExecutionManager))
+                .signers(signer));
     }
 
     public BigInteger executionWindowSeconds() throws IOException {
