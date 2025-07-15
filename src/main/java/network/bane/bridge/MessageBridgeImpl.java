@@ -43,5 +43,28 @@ public class MessageBridgeImpl {
     }
 
     // endregion
+    // region pause
+
+    static void onlyWhenMessageBridgePaused() {
+        if (!getMessageBridge().paused) abort("Message bridge not paused");
+    }
+
+    static void onlyWhenMessageBridgeNotPaused() {
+        if (getMessageBridge().paused) abort("Message bridge paused");
+    }
+
+    static void pauseMessageBridge() {
+        MessageBridge messageBridge = getMessageBridge();
+        messageBridge.paused = true;
+        BridgeContract.baseMap.put(KEY_MESSAGE_BRIDGE, new StdLib().serialize(messageBridge));
+    }
+
+    static void unpauseMessageBridge() {
+        MessageBridge messageBridge = getMessageBridge();
+        messageBridge.paused = false;
+        BridgeContract.baseMap.put(KEY_MESSAGE_BRIDGE, new StdLib().serialize(messageBridge));
+    }
+
+    // endregion
 
 }

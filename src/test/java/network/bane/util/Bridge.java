@@ -566,6 +566,25 @@ public class Bridge extends SmartContractHelper {
     }
 
     // endregion
+    // region message bridge pausing
+
+    public Hash256 pauseMessageBridge() throws Throwable {
+        return pauseMessageBridge(securityGuard);
+    }
+
+    public Hash256 pauseMessageBridge(Account sender) throws Throwable {
+        return sendAndAwaitExecution(invokeFunction("pauseMessageBridge").signers(calledByEntry(sender)));
+    }
+
+    public Hash256 unpauseMessageBridge() throws Throwable {
+        return unpauseMessageBridge(governor);
+    }
+
+    public Hash256 unpauseMessageBridge(Account sender) throws Throwable {
+        return sendAndAwaitExecution(invokeFunction("unpauseMessageBridge").signers(calledByEntry(sender)));
+    }
+
+    // endregion
     // region message bridge configuration/state
     // region message bridge configuration
 
