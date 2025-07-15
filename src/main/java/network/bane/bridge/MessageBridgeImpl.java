@@ -84,6 +84,13 @@ public class MessageBridgeImpl {
         storeMessageBridge(messageBridge);
     }
 
+    public static void setMaxBytesForSending(int newMaxBytes) {
+        MessageBridge messageBridge = getMessageBridge();
+        if (newMaxBytes <= 0) abort("Max bytes for sending must be positive");
+        messageBridge.config.maxBytesForSending = newMaxBytes;
+        storeMessageBridge(messageBridge);
+    }
+
     // endregion
 
 }

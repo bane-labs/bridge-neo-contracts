@@ -225,6 +225,10 @@ public class BridgeContract {
     @EventParameterNames({"NewFee"})
     static Event1Arg<Integer> onMessageSendingFeeChange;
 
+    @DisplayName("MessageMaxBytesForSendingChange")
+    @EventParameterNames({"NewMaxBytes"})
+    static Event1Arg<Integer> onMessageMaxBytesForSendingChange;
+
     @DisplayName("MessageExecutionManagerChange")
     @EventParameterNames({"NewExecutionManager"})
     static Event1Arg<Hash160> onMessageExecutionManagerChange;
@@ -996,7 +1000,9 @@ public class BridgeContract {
     }
 
     public static void setMaxBytesForSending(int newMaxBytes) {
-        abort("Not implemented yet");
+        onlyGovernor();
+        MessageBridgeImpl.setMaxBytesForSending(newMaxBytes);
+        onMessageMaxBytesForSendingChange.fire(newMaxBytes);
     }
 
     @Safe

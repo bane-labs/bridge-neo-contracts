@@ -160,6 +160,45 @@ public class MessageBridgeTest {
 
     @Test
     @Order(0)
+    public void test_setMaxBytesForSending() throws Throwable {
+        BigInteger maxBytesBefore = bridge.maxBytesForSending();
+        BigInteger newMaxBytes = new BigInteger("200");
+        assertThat(newMaxBytes, is(not(maxBytesBefore)));
+
+        Hash256 tx = bridge.setMaxBytesForSending(newMaxBytes);
+        assertThat(bridge.maxBytesForSending(), is(newMaxBytes));
+
+        Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
+                .getFirstNotification();
+        assertThat(notification.getContract(), is(bridge.getScriptHash()));
+        assertThat(notification.getEventName(), is("MessageMaxBytesForSendingChange"));
+        assertThat(notification.getState().getList(), hasSize(1));
+        assertThat(notification.getState().getList().get(0).getInteger(), is(newMaxBytes));
+
+        // revert the state for further tests
+        bridge.setMessageSendingFee(maxBytesBefore);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setMaxBytesForSending_invalidValue() {
+        BigInteger invalidMaxBytes = BigInteger.ZERO;
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMaxBytesForSending(invalidMaxBytes));
+        assertThat(thrown.getMessage(), containsString("Max bytes for sending must be positive"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_setMaxBytesForSending_notGovernor(){
+        BigInteger newMaxBytes = new BigInteger("200");
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMaxBytesForSending(alice, newMaxBytes));
+        assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
+    }
+
+    @Test
+    @Order(0)
     public void test_setExecutionManager() throws Throwable {
         Hash160 executionManagerBefore = bridge.messageExecutionManager();
         Hash160 newExecutionManager = testContract;
