@@ -221,6 +221,10 @@ public class BridgeContract {
     @DisplayName("MessageBridgeUnpause")
     static Event onMessageBridgeUnpause;
 
+    @DisplayName("MessageSendingFeeChange")
+    @EventParameterNames({"NewFee"})
+    static Event1Arg<Integer> onMessageSendingFeeChange;
+
     @DisplayName("MessageExecutionManagerChange")
     @EventParameterNames({"NewExecutionManager"})
     static Event1Arg<Hash160> onMessageExecutionManagerChange;
@@ -981,7 +985,9 @@ public class BridgeContract {
     }
 
     public static void setMessageSendingFee(int newFee) {
-        abort("Not implemented yet");
+        onlyGovernor();
+        MessageBridgeImpl.setMessageSendingFee(newFee);
+        onMessageSendingFeeChange.fire(newFee);
     }
 
     @Safe

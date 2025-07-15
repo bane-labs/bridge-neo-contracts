@@ -70,6 +70,13 @@ public class MessageBridgeImpl {
     // endregion
     // region config
 
+    static void setMessageSendingFee(int newFee) {
+        MessageBridge messageBridge = getMessageBridge();
+        if (newFee < 0) abort("Sending fee must be nonnegative");
+        messageBridge.config.sendingFee = newFee;
+        storeMessageBridge(messageBridge);
+    }
+
     static void setMessageExecutionManager(Hash160 newExecutionManager) {
         MessageBridge messageBridge = getMessageBridge();
         if (!new ContractManagement().isContract(newExecutionManager)) abort("ExecutionManager must be a contract");

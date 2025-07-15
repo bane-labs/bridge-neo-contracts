@@ -18,6 +18,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
+import java.math.BigInteger;
 
 import static network.bane.util.TestHelper.governor;
 import static network.bane.util.TestHelper.securityGuard;
@@ -117,6 +118,45 @@ public class MessageBridgeTest {
 
     // endregion
     // region config
+
+    @Test
+    @Order(0)
+    public void test_setSendingFee() throws Throwable {
+        BigInteger sendingFeeBefore = bridge.messageSendingFee();
+        BigInteger newSendingFee = new BigInteger("200");
+        assertThat(newSendingFee, is(not(sendingFeeBefore)));
+
+        Hash256 tx = bridge.setMessageSendingFee(newSendingFee);
+        assertThat(bridge.messageSendingFee(), is(newSendingFee));
+
+        Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
+                .getFirstNotification();
+        assertThat(notification.getContract(), is(bridge.getScriptHash()));
+        assertThat(notification.getEventName(), is("MessageSendingFeeChange"));
+        assertThat(notification.getState().getList(), hasSize(1));
+        assertThat(notification.getState().getList().get(0).getInteger(), is(newSendingFee));
+
+        // revert the state for further tests
+        bridge.setMessageSendingFee(sendingFeeBefore);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setSendingFee_invalidValue() {
+        BigInteger invalidSendingFee = new BigInteger("-1");
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMessageSendingFee(invalidSendingFee));
+        assertThat(thrown.getMessage(), containsString("Sending fee must be nonnegative"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_setSendingFee_notGovernor(){
+        BigInteger newSendingFee = new BigInteger("200");
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMessageSendingFee(alice, newSendingFee));
+        assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
+    }
 
     @Test
     @Order(0)
