@@ -68,5 +68,15 @@ public class MessageBridgeImpl {
     }
 
     // endregion
+    // region config
+
+    static void setMessageExecutionManager(Hash160 newExecutionManager) {
+        MessageBridge messageBridge = getMessageBridge();
+        if (!new ContractManagement().isContract(newExecutionManager)) abort("ExecutionManager must be a contract");
+        messageBridge.config.executionManager = newExecutionManager;
+        storeMessageBridge(messageBridge);
+    }
+
+    // endregion
 
 }

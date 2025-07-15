@@ -221,6 +221,10 @@ public class BridgeContract {
     @DisplayName("MessageBridgeUnpause")
     static Event onMessageBridgeUnpause;
 
+    @DisplayName("MessageExecutionManagerChange")
+    @EventParameterNames({"NewExecutionManager"})
+    static Event1Arg<Hash160> onMessageExecutionManagerChange;
+
     // endregion
     // endregion
     // region deployment/update
@@ -965,8 +969,10 @@ public class BridgeContract {
         return MessageBridgeImpl.getMessageBridge().config.executionManager;
     }
 
-    public static void setMessageExecutionManager(Hash160 newMessageExecutionManager) {
-        abort("Not implemented yet");
+    public static void setMessageExecutionManager(Hash160 newExecutionManager) {
+        onlyGovernor();
+        MessageBridgeImpl.setMessageExecutionManager(newExecutionManager);
+        onMessageExecutionManagerChange.fire(newExecutionManager);
     }
 
     @Safe
