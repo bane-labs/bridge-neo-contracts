@@ -39,6 +39,10 @@ public class MessageBridgeImpl {
                 new MessageBridge.MessageConfig(sendingFee, maxBytesForSending, maxNrMsgsForStoring)
         );
         if (!MessageBridge.isValid(messageBridge)) abort("Invalid message bridge configuration");
+        storeMessageBridge(messageBridge);
+    }
+
+    private static void storeMessageBridge(MessageBridge messageBridge) {
         BridgeContract.baseMap.put(KEY_MESSAGE_BRIDGE, new StdLib().serialize(messageBridge));
     }
 
@@ -56,13 +60,13 @@ public class MessageBridgeImpl {
     static void pauseMessageBridge() {
         MessageBridge messageBridge = getMessageBridge();
         messageBridge.paused = true;
-        BridgeContract.baseMap.put(KEY_MESSAGE_BRIDGE, new StdLib().serialize(messageBridge));
+        storeMessageBridge(messageBridge);
     }
 
     static void unpauseMessageBridge() {
         MessageBridge messageBridge = getMessageBridge();
         messageBridge.paused = false;
-        BridgeContract.baseMap.put(KEY_MESSAGE_BRIDGE, new StdLib().serialize(messageBridge));
+        storeMessageBridge(messageBridge);
     }
 
     // endregion

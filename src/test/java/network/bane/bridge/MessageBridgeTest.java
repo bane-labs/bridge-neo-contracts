@@ -88,7 +88,7 @@ public class MessageBridgeTest {
     public void test_pauseMessageBridge_notGovernor() throws IOException {
         assertFalse(bridge.getMessageBridge().paused);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () ->bridge.pauseMessageBridge(alice));
+                () -> bridge.pauseMessageBridge(alice));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor or security guard"));
     }
 
