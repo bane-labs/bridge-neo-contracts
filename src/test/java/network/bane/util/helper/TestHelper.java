@@ -70,6 +70,9 @@ public class TestHelper {
     public static BigInteger withdrawalNonce = BigInteger.ZERO;
     public static BigInteger depositNonce = BigInteger.ZERO;
 
+    public static BigInteger n3MessageNonce = BigInteger.ZERO;
+    public static BigInteger evmMessageNonce = BigInteger.ZERO;
+
     public static Account alice;
     public static Account bob;
     public static Account charlie;
@@ -170,6 +173,15 @@ public class TestHelper {
     public static BigInteger incrementAndGetDepositNonce() {
         depositNonce = depositNonce.add(BigInteger.ONE);
         return depositNonce;
+    }
+
+    public static BigInteger incrementAndGetN3MessageNonce() {
+        n3MessageNonce = n3MessageNonce.add(BigInteger.ONE);
+        return n3MessageNonce;
+    }
+
+    public static void decrementN3MessageNonce() {
+        n3MessageNonce = n3MessageNonce.subtract(BigInteger.ONE);
     }
 
     public static void registerNeoTokenBridge() throws Throwable {

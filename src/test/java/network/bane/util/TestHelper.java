@@ -15,7 +15,9 @@ import io.neow3j.types.Hash256;
 import io.neow3j.utils.ArrayUtils;
 import io.neow3j.utils.Await;
 import io.neow3j.utils.BigIntegers;
+import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
+import network.bane.util.structs.N3MessageDto;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -40,6 +42,7 @@ import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_LINKED_CHAIN_ID;
+import static network.bane.util.helper.TestHelper.bridge;
 import static network.bane.util.helper.TestHelper.neow3j;
 
 public class TestHelper {
@@ -310,6 +313,28 @@ public class TestHelper {
         );
     }
 
+    public static String createN3MessageHash(BigInteger nonce, BigInteger timestamp, Hash160 sender,
+            String executableCodeHex) {
+        return keccak256Hex(concatN3MessageData(nonce, timestamp, sender, executableCodeHex));
+    }
+
+    private static byte[] concatN3MessageData(BigInteger nonce, BigInteger timestamp, Hash160 sender,
+            String executableCodeHex) {
+        byte[] noncePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
+        byte[] timestampPadded = BigIntegers.toLittleEndianByteArrayZeroPadded(timestamp, UINT256_SIZE);
+        byte[] senderArray = ArrayUtils.reverseArray(sender.toArray());
+        byte[] executableCodeArray = hexStringToByteArray(executableCodeHex);
+        byte[] concatenated = concatenate(
+                concatenate(
+                        concatenate(
+                                executableCodeArray,
+                                senderArray
+                        ), timestampPadded
+                ), noncePadded
+        );
+        return ArrayUtils.reverseArray(concatenated);
+    }
+
     private static byte[] padToBytes(byte[] data, int padToSize) {
         int dataSize = data.length;
         int toPad = padToSize - dataSize;
@@ -340,7 +365,8 @@ public class TestHelper {
         return neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getNotifications();
     }
 
-    public static List<DepositEvent> getDepositEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge) throws IOException {
+    public static List<DepositEvent> getDepositEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge)
+            throws IOException {
         // GasToken Transfer is first notification, OnDeposit is second notification.
         return neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution().getNotifications().stream()
@@ -349,7 +375,8 @@ public class TestHelper {
                 .collect(Collectors.toList());
     }
 
-    public static List<WithdrawEvent> getWithdrawEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge) throws IOException {
+    public static List<WithdrawEvent> getWithdrawEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge)
+            throws IOException {
         // GasToken Transfer is first notification, onWithdrawal is second notification.
         return neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution().getNotifications().stream()
@@ -358,7 +385,8 @@ public class TestHelper {
                 .collect(Collectors.toList());
     }
 
-    public static List<ClaimableEvent> getClaimableEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge) throws IOException {
+    public static List<ClaimableEvent> getClaimableEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge)
+            throws IOException {
         // GasToken Transfer is first notification, onClaimable is second notification.
         return neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution().getNotifications().stream()
@@ -388,6 +416,19 @@ public class TestHelper {
             return new DepositEvent(nonce, to, amount, from, depositHash, rootHash);
         }
         return new DepositEvent(nonce, to, amount, from);
+    }
+
+    public static List<N3MessageStoreEvent> getMessageStorEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge)
+            throws IOException {
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution().getNotifications().stream()
+                .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("N3MessageStore"))
+                .map(TestHelper::getN3MessageStoreEventFromNotification)
+                .collect(Collectors.toList());
+    }
+
+    private static N3MessageStoreEvent getN3MessageStoreEventFromNotification(Notification n3MessageStoreEvent) {
+        return N3MessageStoreEvent.fromNotification(n3MessageStoreEvent);
     }
 
     private static WithdrawEvent getWithdrawEventFromNotification(Notification depositEvent) {
@@ -588,4 +629,44 @@ public class TestHelper {
                     "\n";
         }
     }
+
+    public static class N3MessageStoreEvent {
+        public BigInteger nonce;
+        public N3MessageDto.N3MessageMetadataDto messageMetadata;
+
+        public N3MessageStoreEvent(BigInteger nonce, N3MessageDto.N3MessageMetadataDto messageMetadata) {
+            this.nonce = nonce;
+            this.messageMetadata = messageMetadata;
+        }
+
+        public static N3MessageStoreEvent fromNotification(Notification n3MessageStoreEvent) {
+            if (!n3MessageStoreEvent.getContract().equals(bridge.getScriptHash()) ||
+                    !n3MessageStoreEvent.getEventName().equals("N3MessageStore")) {
+                throw new IllegalArgumentException("Notification is not a N3MessageStore event.");
+            }
+            List<StackItem> items = n3MessageStoreEvent.getState().getList();
+            BigInteger nonce = items.get(0).getInteger();
+            List<StackItem> metadataItems = items.get(1).getList();
+            BigInteger timestamp = metadataItems.get(0).getInteger();
+            Hash160 sender = Hash160.fromAddress(metadataItems.get(1).getAddress());
+            return new N3MessageStoreEvent(nonce, new N3MessageDto.N3MessageMetadataDto(timestamp, sender));
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof N3MessageStoreEvent)) return false;
+            N3MessageStoreEvent that = (N3MessageStoreEvent) o;
+            return nonce.equals(that.nonce) && messageMetadata.equals(that.messageMetadata);
+        }
+
+        @Override
+        public String toString() {
+            return "N3MessageStoreEvent{" +
+                    "nonce=" + nonce +
+                    "metadata=" + messageMetadata +
+                    "}";
+        }
+    }
+
 }

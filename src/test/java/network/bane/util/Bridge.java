@@ -16,6 +16,7 @@ import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 import network.bane.util.helper.SmartContractHelper;
 import network.bane.util.structs.MessageBridgeDto;
+import network.bane.util.structs.N3MessageDto;
 import network.bane.util.structs.NativeBridge;
 import network.bane.util.structs.State;
 import network.bane.util.structs.TokenBridge;
@@ -571,6 +572,10 @@ public class Bridge extends SmartContractHelper {
     // endregion
     // region message bridge pausing
 
+    public boolean messageBridgeIsPaused() throws IOException {
+        return callFunctionReturningBool("messageBridgeIsPaused");
+    }
+
     public Hash256 pauseMessageBridge() throws Throwable {
         return pauseMessageBridge(securityGuard);
     }
@@ -585,6 +590,41 @@ public class Bridge extends SmartContractHelper {
 
     public Hash256 unpauseMessageBridge(Account sender) throws Throwable {
         return sendAndAwaitExecution(invokeFunction("unpauseMessageBridge").signers(calledByEntry(sender)));
+    }
+
+    // endregion
+    // region storing/executing messages
+
+    public Hash256 storeMessages(String n3MessageRoot, Map<ContractParameter, ContractParameter> signatures,
+            ContractParameter messages) throws Throwable {
+        return storeMessages(relayer, n3MessageRoot, signatures, messages);
+    }
+
+    public Hash256 storeMessages(Account sender, String n3MessageRoot,
+            Map<ContractParameter, ContractParameter> signatures, ContractParameter messages) throws Throwable {
+        return sendAndAwaitExecution(
+                invokeFunction("storeMessages", byteArray(n3MessageRoot), map(signatures), messages)
+                        .signers(calledByEntry(sender)));
+    }
+
+
+    public N3MessageDto getMessage(int nonce) throws IOException {
+        return getMessage(BigInteger.valueOf(nonce));
+    }
+
+    public N3MessageDto getMessage(BigInteger nonce) throws IOException {
+        List<StackItem> stackItemList = callInvokeFunction("getMessage", asList(integer(nonce))).getInvocationResult()
+                .getFirstStackItem().getList();
+        List<StackItem> metadataStackItemList = stackItemList.get(0).getList();
+        N3MessageDto.N3MessageMetadataDto metadata = new N3MessageDto.N3MessageMetadataDto(
+                metadataStackItemList.get(0).getInteger(),
+                Hash160.fromAddress(metadataStackItemList.get(1).getAddress())
+        );
+        return new N3MessageDto(metadata, stackItemList.get(1).getHexString());
+    }
+
+    public boolean messageHasBeenExecuted(BigInteger nonce) throws IOException {
+        return callFunctionReturningBool("messageHasBeenExecuted", integer(nonce));
     }
 
     // endregion
