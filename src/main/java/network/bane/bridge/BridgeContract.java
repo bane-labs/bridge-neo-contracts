@@ -34,6 +34,7 @@ import network.bane.structs.NativeTokenBridge;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
 import network.bane.structs.message.MessageBridge;
+import network.bane.structs.message.N3MessageEnvelope;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.checkWitness;
@@ -220,6 +221,14 @@ public class BridgeContract {
 
     @DisplayName("MessageBridgeUnpause")
     static Event onMessageBridgeUnpause;
+
+    @DisplayName("N3MessageRootUpdate")
+    @EventParameterNames({"Nonce", "N3MessageRoot"})
+    static Event2Args<Integer, ByteString> onEvmToN3MessageRootUpdate;
+
+    @DisplayName("N3MessageStore")
+    @EventParameterNames({"Nonce", "Metadata"})
+    static Event2Args<Integer, N3MessageEnvelope.N3ExecutableMessage.N3Metadata> onMessageStore;
 
     @DisplayName("MessageSendingFeeChange")
     @EventParameterNames({"NewFee"})
@@ -926,6 +935,11 @@ public class BridgeContract {
     // endregion
     // region message bridge pausing
 
+    @Safe
+    public static boolean messageBridgeIsPaused() {
+        return MessageBridgeImpl.getMessageBridge().paused;
+    }
+
     public static void pauseMessageBridge() {
         onlyGovernorOrSecurityGuard();
         onlyWhenMessageBridgeNotPaused();
@@ -951,9 +965,23 @@ public class BridgeContract {
     // endregion
     // region message storing and executing (EVM to N3)
 
-    public static void storeMessages() {
-        // todo: store messages from EVM to N3.
-        abort("Not implemented yet");
+    public static void storeMessages(ByteString n3MessageRoot, Map<ECPoint, ByteString> signatures,
+            List<N3MessageEnvelope> messages) {
+        onlyRelayer();
+        onlyWhenNotPaused();
+        onlyWhenMessageBridgeNotPaused();
+
+        MessageBridgeImpl.storeMessages(n3MessageRoot, signatures, messages);
+    }
+
+    @Safe
+    public static N3MessageEnvelope.N3ExecutableMessage getMessage(int nonce) {
+        return MessageBridgeImpl.getMessage(nonce);
+    }
+
+    @Safe
+    public static boolean messageHasBeenExecuted(int nonce) {
+        return MessageBridgeImpl.messageHasBeenExecuted(nonce);
     }
 
     public static void executeMessage() {
