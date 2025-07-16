@@ -1,5 +1,7 @@
 package network.bane.util.structs;
 
+import io.neow3j.types.Hash160;
+
 import java.math.BigInteger;
 import java.util.Objects;
 
@@ -40,11 +42,16 @@ public class MessageBridgeDto {
         public BigInteger sendingFee;
         public int maxBytesForSending;
         public int maxNrMessagesForStoring;
+        public Hash160 executionManager;
+        public int executionWindowSeconds;
 
-        public MessageConfig(BigInteger sendingFee, int maxBytesForSending, int maxNrMessagesForStoring) {
+        public MessageConfig(BigInteger sendingFee, int maxBytesForSending, int maxNrMessagesForStoring,
+                Hash160 executionManager, int executionWindowSeconds) {
             this.sendingFee = sendingFee;
             this.maxBytesForSending = maxBytesForSending;
             this.maxNrMessagesForStoring = maxNrMessagesForStoring;
+            this.executionManager = executionManager;
+            this.executionWindowSeconds = executionWindowSeconds;
         }
 
         @Override
@@ -58,12 +65,15 @@ public class MessageBridgeDto {
             MessageConfig that = (MessageConfig) other;
             return this.sendingFee.equals(that.sendingFee) &&
                     this.maxBytesForSending == that.maxBytesForSending &&
-                    this.maxNrMessagesForStoring == that.maxNrMessagesForStoring;
+                    this.maxNrMessagesForStoring == that.maxNrMessagesForStoring &&
+                    this.executionManager.equals(that.executionManager) &&
+                    this.executionWindowSeconds == that.executionWindowSeconds;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(sendingFee, maxBytesForSending, maxNrMessagesForStoring);
+            return Objects.hash(sendingFee, maxBytesForSending, maxNrMessagesForStoring, executionManager,
+                    executionWindowSeconds);
         }
 
     }

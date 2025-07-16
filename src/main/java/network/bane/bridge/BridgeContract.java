@@ -56,7 +56,6 @@ import static network.bane.bridge.StorageConstants.KEY_DEPOSIT_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_BRIDGE_PAUSE;
 import static network.bane.bridge.StorageConstants.KEY_LINKED_CHAIN_ID;
 import static network.bane.bridge.StorageConstants.KEY_ENTERED;
-import static network.bane.bridge.StorageConstants.KEY_MESSAGE_EXECUTION_MANAGER;
 import static network.bane.bridge.StorageConstants.KEY_NATIVE_BRIDGE;
 import static network.bane.bridge.StorageConstants.KEY_NEO_HOLDING_GAS_REWARDS;
 import static network.bane.bridge.StorageConstants.KEY_VERSION;
@@ -221,6 +220,26 @@ public class BridgeContract {
 
     @DisplayName("MessageBridgeUnpause")
     static Event onMessageBridgeUnpause;
+
+    @DisplayName("MessageSendingFeeChange")
+    @EventParameterNames({"NewFee"})
+    static Event1Arg<Integer> onMessageSendingFeeChange;
+
+    @DisplayName("MessageMaxBytesForSendingChange")
+    @EventParameterNames({"NewMaxBytes"})
+    static Event1Arg<Integer> onMessageMaxBytesForSendingChange;
+
+    @DisplayName("MaxNrMessagesForStoringChange")
+    @EventParameterNames({"NewMaxNrMessages"})
+    static Event1Arg<Integer> onMaxNrMessagesForStoringChange;
+
+    @DisplayName("MessageExecutionManagerChange")
+    @EventParameterNames({"NewExecutionManager"})
+    static Event1Arg<Hash160> onMessageExecutionManagerChange;
+
+    @DisplayName("ExecutionWindowSecondsChange")
+    @EventParameterNames({"NewExecutionWindowSeconds"})
+    static Event1Arg<Integer> onExecutionWindowSecondsChange;
 
     // endregion
     // endregion
@@ -708,7 +727,7 @@ public class BridgeContract {
     }
 
     /**
-     * Deposits a token to the linked chain and allows to specify a sponsor to pay the bridge fee..
+     * Deposits a token to the linked chain and allows to specify a sponsor to pay the bridge fee.
      *
      * @param token      the token to deposit.
      * @param from       the sender.
@@ -894,12 +913,13 @@ public class BridgeContract {
     // region message bridge
     // region set message bridge
 
-    public static void setMessageBridge(Hash160 executionManager, int sendingFee, int maxBytesForSending,
-            int maxNrMsgsForStoring) {
+    public static void setMessageBridge(int sendingFee, int maxBytesForSending, int maxNrMsgsForStoring,
+            Hash160 executionManager, int executionWindowSeconds) {
 
         onlyGovernor();
         // Set the message bridge. Aborts if the message bridge is already set.
-        MessageBridgeImpl.setMessageBridge(executionManager, sendingFee, maxBytesForSending, maxNrMsgsForStoring);
+        MessageBridgeImpl.setMessageBridge(sendingFee, maxBytesForSending, maxNrMsgsForStoring,
+                executionManager, executionWindowSeconds);
         onMessageBridgeSet.fire();
     }
 
@@ -961,22 +981,14 @@ public class BridgeContract {
     }
 
     @Safe
-    public static Hash160 messageExecutionManager() {
-        // todo: add execution manager to the message bridge config.
-        return baseMap.getHash160(KEY_MESSAGE_EXECUTION_MANAGER);
-    }
-
-    public static void setMessageExecutionManager(Hash160 newMessageExecutionManager) {
-        abort("Not implemented yet");
-    }
-
-    @Safe
     public static int messageSendingFee() {
         return MessageBridgeImpl.getMessageBridge().config.sendingFee;
     }
 
     public static void setMessageSendingFee(int newFee) {
-        abort("Not implemented yet");
+        onlyGovernor();
+        MessageBridgeImpl.setMessageSendingFee(newFee);
+        onMessageSendingFeeChange.fire(newFee);
     }
 
     @Safe
@@ -985,7 +997,9 @@ public class BridgeContract {
     }
 
     public static void setMaxBytesForSending(int newMaxBytes) {
-        abort("Not implemented yet");
+        onlyGovernor();
+        MessageBridgeImpl.setMaxBytesForSending(newMaxBytes);
+        onMessageMaxBytesForSendingChange.fire(newMaxBytes);
     }
 
     @Safe
@@ -994,7 +1008,31 @@ public class BridgeContract {
     }
 
     public static void setMaxNrMessagesForStoring(int newMaxNrMessages) {
-        abort("Not implemented yet");
+        onlyGovernor();
+        MessageBridgeImpl.setMaxNrMessagesForStoring(newMaxNrMessages);
+        onMaxNrMessagesForStoringChange.fire(newMaxNrMessages);
+    }
+
+    @Safe
+    public static Hash160 messageExecutionManager() {
+        return MessageBridgeImpl.getMessageBridge().config.executionManager;
+    }
+
+    public static void setMessageExecutionManager(Hash160 newExecutionManager) {
+        onlyGovernor();
+        MessageBridgeImpl.setExecutionManager(newExecutionManager);
+        onMessageExecutionManagerChange.fire(newExecutionManager);
+    }
+
+    @Safe
+    public static int executionWindowSeconds() {
+        return MessageBridgeImpl.getMessageBridge().config.executionWindowSeconds;
+    }
+
+    public static void setExecutionWindowSeconds(int newExecutionWindowSeconds) {
+        onlyGovernor();
+        MessageBridgeImpl.setExecutionWindowSeconds(newExecutionWindowSeconds);
+        onExecutionWindowSecondsChange.fire(newExecutionWindowSeconds);
     }
 
     // endregion

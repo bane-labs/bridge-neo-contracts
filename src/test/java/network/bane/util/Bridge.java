@@ -37,9 +37,10 @@ import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.securityGuard;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_DEPOSIT;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_DEPOSIT;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_EXEC_WINDOW_SECONDS;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_MAX_BYTES_FOR_SENDING;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_SENDING_FEE;
@@ -550,18 +551,20 @@ public class Bridge extends SmartContractHelper {
     // region message bridge setting
 
     public Hash256 setDefaultMessageBridge() throws Throwable {
-        return setMessageBridge(governor, DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH, DEFAULT_MSG_SENDING_FEE,
-                DEFAULT_MSG_MAX_BYTES_FOR_SENDING, DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION);
+        return setMessageBridge(governor, DEFAULT_MSG_SENDING_FEE, DEFAULT_MSG_MAX_BYTES_FOR_SENDING,
+                DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION, DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH,
+                DEFAULT_MSG_EXEC_WINDOW_SECONDS);
     }
 
-    public Hash256 setMessageBridge(Account sender, Hash160 executionManager, BigInteger sendingFee,
-            int maxMsgSizeForStoring, int maxNrMessagesPerStoring) throws Throwable {
+    public Hash256 setMessageBridge(Account sender, BigInteger sendingFee, int maxMsgSizeForStoring,
+            int maxNrMessagesPerStoring, Hash160 executionManager, int executionWindowSeconds) throws Throwable {
         return sendAndAwaitExecution(
                 invokeFunction("setMessageBridge",
-                        hash160(executionManager),
                         integer(sendingFee),
                         integer(maxMsgSizeForStoring),
-                        integer(maxNrMessagesPerStoring)
+                        integer(maxNrMessagesPerStoring),
+                        hash160(executionManager),
+                        integer(executionWindowSeconds)
                 ).signers(calledByEntry(sender)));
     }
 
@@ -610,23 +613,11 @@ public class Bridge extends SmartContractHelper {
         MessageBridgeDto.MessageConfig messageConfig = new MessageBridgeDto.MessageConfig(
                 messageConfigList.get(0).getInteger(),
                 messageConfigList.get(1).getInteger().intValue(),
-                messageConfigList.get(2).getInteger().intValue()
+                messageConfigList.get(2).getInteger().intValue(),
+                Hash160.fromAddress(messageConfigList.get(3).getAddress()),
+                messageConfigList.get(4).getInteger().intValue()
         );
         return new MessageBridgeDto(paused, evmToN3State, n3ToEvmState, messageConfig);
-    }
-
-    public Hash160 messageExecutionManager() throws IOException {
-        return callFunctionReturningScriptHash("messageExecutionManager");
-    }
-
-    public Hash256 setMessageExecutionManager(Hash160 newExecutionManager) throws Throwable {
-        return setMessageExecutionManager(governor, newExecutionManager);
-    }
-
-    public Hash256 setMessageExecutionManager(Account sender, Hash160 newExecutionManager) throws Throwable {
-        Signer signer = AccountSigner.calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("setMessageExecutionManager", hash160(newExecutionManager))
-                .signers(signer));
     }
 
     public BigInteger messageSendingFee() throws IOException {
@@ -668,6 +659,34 @@ public class Bridge extends SmartContractHelper {
         Signer signer = AccountSigner.calledByEntry(sender);
         return sendAndAwaitExecution(
                 invokeFunction("setMaxNrMessagesForStoring", integer(newMaxNrMessages)).signers(signer));
+    }
+
+    public Hash160 messageExecutionManager() throws IOException {
+        return callFunctionReturningScriptHash("messageExecutionManager");
+    }
+
+    public Hash256 setMessageExecutionManager(Hash160 newExecutionManager) throws Throwable {
+        return setMessageExecutionManager(governor, newExecutionManager);
+    }
+
+    public Hash256 setMessageExecutionManager(Account sender, Hash160 newExecutionManager) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("setMessageExecutionManager", hash160(newExecutionManager))
+                .signers(signer));
+    }
+
+    public BigInteger executionWindowSeconds() throws IOException {
+        return callFunctionReturningInt("executionWindowSeconds");
+    }
+
+    public Hash256 setExecutionWindowSeconds(BigInteger newExecutionWindowSeconds) throws Throwable {
+        return setExecutionWindowSeconds(governor, newExecutionWindowSeconds);
+    }
+
+    public Hash256 setExecutionWindowSeconds(Account sender, BigInteger newExecutionWindowSeconds) throws Throwable {
+        Signer signer = AccountSigner.calledByEntry(sender);
+        return sendAndAwaitExecution(
+                invokeFunction("setExecutionWindowSeconds", integer(newExecutionWindowSeconds)).signers(signer));
     }
 
     // endregion

@@ -10,7 +10,6 @@ import network.bane.structs.message.MessageBridge;
 
 import static io.neow3j.devpack.Helper.abort;
 import static network.bane.bridge.StorageConstants.KEY_MESSAGE_BRIDGE;
-import static network.bane.bridge.StorageConstants.KEY_MESSAGE_EXECUTION_MANAGER;
 
 public class MessageBridgeImpl {
 
@@ -26,17 +25,16 @@ public class MessageBridgeImpl {
         return (MessageBridge) new StdLib().deserialize(serialized);
     }
 
-    static void setMessageBridge(Hash160 executionManager, int sendingFee, int maxBytesForSending,
-            int maxNrMsgsForStoring) {
+    static void setMessageBridge(int sendingFee, int maxBytesForSending, int maxNrMsgsForStoring,
+            Hash160 executionManager, int executionWindowSeconds) {
 
         if (messageBridgeIsSet()) abort("Message bridge already set");
-
-        if (!new ContractManagement().isContract(executionManager)) abort("ExecutionManager must be a contract");
-        BridgeContract.baseMap.put(KEY_MESSAGE_EXECUTION_MANAGER, executionManager);
+        if (!new ContractManagement().isContract(executionManager)) abort("Execution manager must be a contract");
 
         ByteString zeroHash = Hash256.zero().toByteString();
         MessageBridge messageBridge = new MessageBridge(true, new State(0, zeroHash), new State(0, zeroHash),
-                new MessageBridge.MessageConfig(sendingFee, maxBytesForSending, maxNrMsgsForStoring)
+                new MessageBridge.MessageConfig(sendingFee, maxBytesForSending, maxNrMsgsForStoring,
+                        executionManager, executionWindowSeconds)
         );
         if (!MessageBridge.isValid(messageBridge)) abort("Invalid message bridge configuration");
         storeMessageBridge(messageBridge);
@@ -66,6 +64,44 @@ public class MessageBridgeImpl {
     static void unpauseMessageBridge() {
         MessageBridge messageBridge = getMessageBridge();
         messageBridge.paused = false;
+        storeMessageBridge(messageBridge);
+    }
+
+    // endregion
+    // region config
+
+    static void setMessageSendingFee(int newFee) {
+        MessageBridge messageBridge = getMessageBridge();
+        if (newFee < 0) abort("Sending fee must be nonnegative");
+        messageBridge.config.sendingFee = newFee;
+        storeMessageBridge(messageBridge);
+    }
+
+    public static void setMaxBytesForSending(int newMaxBytes) {
+        MessageBridge messageBridge = getMessageBridge();
+        if (newMaxBytes <= 0) abort("Max bytes for sending must be positive");
+        messageBridge.config.maxBytesForSending = newMaxBytes;
+        storeMessageBridge(messageBridge);
+    }
+
+    public static void setMaxNrMessagesForStoring(int newMaxNrMessages) {
+        MessageBridge messageBridge = getMessageBridge();
+        if (newMaxNrMessages <= 0) abort("Max number of messages for storing must be positive");
+        messageBridge.config.maxNrMessagesForStoring = newMaxNrMessages;
+        storeMessageBridge(messageBridge);
+    }
+
+    static void setExecutionManager(Hash160 newExecutionManager) {
+        MessageBridge messageBridge = getMessageBridge();
+        if (!new ContractManagement().isContract(newExecutionManager)) abort("Execution manager must be a contract");
+        messageBridge.config.executionManager = newExecutionManager;
+        storeMessageBridge(messageBridge);
+    }
+
+    public static void setExecutionWindowSeconds(int newExecutionWindowSeconds) {
+        MessageBridge messageBridge = getMessageBridge();
+        if (newExecutionWindowSeconds <= 0) abort("Execution window seconds must be positive");
+        messageBridge.config.executionWindowSeconds = newExecutionWindowSeconds;
         storeMessageBridge(messageBridge);
     }
 

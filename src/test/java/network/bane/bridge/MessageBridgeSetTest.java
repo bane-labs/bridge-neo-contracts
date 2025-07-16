@@ -27,7 +27,8 @@ import java.math.BigInteger;
 import static network.bane.util.TestHelper.account0;
 import static network.bane.util.TestHelper.governor;
 import static network.bane.util.TestHelper.securityGuard;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH;
+import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_EXEC_WINDOW_SECONDS;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_MAX_BYTES_FOR_SENDING;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_SENDING_FEE;
@@ -74,9 +75,9 @@ public class MessageBridgeSetTest {
     public void test_setMessageBridge_notGovernor() {
         Account notGovernor = securityGuard;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMessageBridge(notGovernor, DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH,
-                        DEFAULT_MSG_SENDING_FEE, DEFAULT_MSG_MAX_BYTES_FOR_SENDING,
-                        DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION));
+                () -> bridge.setMessageBridge(notGovernor, DEFAULT_MSG_SENDING_FEE, DEFAULT_MSG_MAX_BYTES_FOR_SENDING,
+                        DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION, DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH,
+                        DEFAULT_MSG_EXEC_WINDOW_SECONDS));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
@@ -85,9 +86,9 @@ public class MessageBridgeSetTest {
     public void test_setMessageBridge_execManagerNotContract() {
         Hash160 eoa = account0.getScriptHash();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMessageBridge(governor, eoa, DEFAULT_MSG_SENDING_FEE,
-                        DEFAULT_MSG_MAX_BYTES_FOR_SENDING, DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION));
-        assertThat(thrown.getMessage(), containsString("ExecutionManager must be a contract"));
+                () -> bridge.setMessageBridge(governor, DEFAULT_MSG_SENDING_FEE, DEFAULT_MSG_MAX_BYTES_FOR_SENDING,
+                        DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION, eoa, DEFAULT_MSG_EXEC_WINDOW_SECONDS));
+        assertThat(thrown.getMessage(), containsString("Execution manager must be a contract"));
     }
 
     @Test
@@ -96,31 +97,40 @@ public class MessageBridgeSetTest {
         BigInteger invalidFee = new BigInteger("-1");
         int invalidMaxMsgBytes = 0;
         int invalidMaxNrMsgs = 0;
+        int invalidExecWindowSeconds = 0;
 
         String invalidMsgBridgeConfigAbortMsg = "Invalid message bridge configuration";
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMessageBridge(governor, DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH, invalidFee,
-                        DEFAULT_MSG_MAX_BYTES_FOR_SENDING, DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION));
+                () -> bridge.setMessageBridge(governor, invalidFee, DEFAULT_MSG_MAX_BYTES_FOR_SENDING,
+                        DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION, DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH,
+                        DEFAULT_MSG_EXEC_WINDOW_SECONDS));
         assertThat(thrown.getMessage(), containsString(invalidMsgBridgeConfigAbortMsg));
 
         thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMessageBridge(governor, DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH, DEFAULT_MSG_SENDING_FEE,
-                        invalidMaxMsgBytes, DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION));
+                () -> bridge.setMessageBridge(governor, DEFAULT_MSG_SENDING_FEE, invalidMaxMsgBytes,
+                        DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION, DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH,
+                        DEFAULT_MSG_EXEC_WINDOW_SECONDS));
         assertThat(thrown.getMessage(), containsString(invalidMsgBridgeConfigAbortMsg));
 
         thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMessageBridge(governor, DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH, DEFAULT_MSG_SENDING_FEE,
-                        DEFAULT_MSG_MAX_BYTES_FOR_SENDING, invalidMaxNrMsgs));
+                () -> bridge.setMessageBridge(governor, DEFAULT_MSG_SENDING_FEE, DEFAULT_MSG_MAX_BYTES_FOR_SENDING,
+                        invalidMaxNrMsgs, DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH, DEFAULT_MSG_EXEC_WINDOW_SECONDS));
+        assertThat(thrown.getMessage(), containsString(invalidMsgBridgeConfigAbortMsg));
+
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMessageBridge(governor, DEFAULT_MSG_SENDING_FEE, DEFAULT_MSG_MAX_BYTES_FOR_SENDING,
+                        DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION, DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH,
+                        invalidExecWindowSeconds));
         assertThat(thrown.getMessage(), containsString(invalidMsgBridgeConfigAbortMsg));
     }
 
     @Test
     @Order(1)
     public void test_setMessageBridge() throws Throwable {
-        Hash256 bridgeMsgSetTx = bridge.setMessageBridge(governor, DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH,
-                DEFAULT_MSG_SENDING_FEE, DEFAULT_MSG_MAX_BYTES_FOR_SENDING,
-                DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION);
+        Hash256 bridgeMsgSetTx = bridge.setMessageBridge(governor, DEFAULT_MSG_SENDING_FEE,
+                DEFAULT_MSG_MAX_BYTES_FOR_SENDING, DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION,
+                DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH, DEFAULT_MSG_EXEC_WINDOW_SECONDS);
 
         Notification setEvent = ext.getNeow3j().getApplicationLog(bridgeMsgSetTx).send().getApplicationLog()
                 .getFirstExecution().getFirstNotification();
@@ -133,11 +143,16 @@ public class MessageBridgeSetTest {
         MessageBridgeDto messageBridge = bridge.getMessageBridge();
         State initState = new State(BigInteger.ZERO, Hash256.ZERO);
         MessageBridgeDto.MessageConfig messageConfig = new MessageBridgeDto.MessageConfig(DEFAULT_MSG_SENDING_FEE,
-                DEFAULT_MSG_MAX_BYTES_FOR_SENDING, DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION);
+                DEFAULT_MSG_MAX_BYTES_FOR_SENDING, DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION,
+                DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH, DEFAULT_MSG_EXEC_WINDOW_SECONDS);
         MessageBridgeDto expectedMsgBridge = new MessageBridgeDto(true, initState, initState, messageConfig);
 
         assertThat(messageBridge, is(expectedMsgBridge));
-        assertThat(bridge.messageExecutionManager(), is(DEFAULT_EXECUTION_MANAGER_SCRIPT_HASH));
+        assertThat(bridge.messageSendingFee(), is(DEFAULT_MSG_SENDING_FEE));
+        assertThat(bridge.maxBytesForSending(), is(DEFAULT_MSG_MAX_BYTES_FOR_SENDING));
+        assertThat(bridge.maxNrMessagesForStoring(), is(DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION));
+        assertThat(bridge.messageExecutionManager(), is(DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH));
+        assertThat(bridge.executionWindowSeconds(), is(DEFAULT_MSG_EXEC_WINDOW_SECONDS));
 
         // Unpause the message bridge for further tests
         bridge.unpauseMessageBridge();
