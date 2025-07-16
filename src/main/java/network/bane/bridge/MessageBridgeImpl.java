@@ -6,7 +6,10 @@ import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.Hash256;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
+import io.neow3j.devpack.Runtime;
 import io.neow3j.devpack.StorageMap;
+import io.neow3j.devpack.annotations.CallFlags;
+import io.neow3j.devpack.contracts.ContractInterface;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.lib.MessageBridgeLib;
@@ -148,15 +151,11 @@ public class MessageBridgeImpl {
 
     private static void storeMessagesToContractStorage(List<N3MessageEnvelope> messages) {
         StorageMap messageMap = new StorageMap(BridgeContract.ctx, PREFIX_MSG_MESSAGES);
-        StorageMap msgExecutedMap = new StorageMap(BridgeContract.ctx, PREFIX_MSG_EXECUTED);
         int nrMessages = messages.size();
         for (int i = 0; i < nrMessages; i++) {
             N3MessageEnvelope n3Message = messages.get(i);
             // Store the message in storage.
             messageMap.put(n3Message.nonce, new StdLib().serialize(n3Message.message));
-            // Todo: consider not storing anything in the executedMap and just storing a value (e.g., timestamp of
-            //  execution) once executed.
-            msgExecutedMap.put(n3Message.nonce, false);
             // Fire event including the nonce and the message's metadata.
             BridgeContract.onMessageStore.fire(n3Message.nonce, n3Message.message.metadata);
         }
@@ -181,6 +180,40 @@ public class MessageBridgeImpl {
 
     static boolean messageHasBeenExecuted(int nonce) {
         return new StorageMap(BridgeContract.ctx, PREFIX_MSG_EXECUTED).getBoolean(nonce);
+    }
+
+    public static void executeMessage(int nonce) {
+        // Check if the message has been executed before.
+        StorageMap executedMap = new StorageMap(BridgeContract.ctx, PREFIX_MSG_EXECUTED);
+        ByteString executedStatus = executedMap.get(nonce);
+        if (executedStatus != null) abort("Message already executed");
+
+        N3MessageEnvelope.N3ExecutableMessage message = getMessage(nonce);
+
+        // Check that the message's execution window has not expired yet.
+        // Todo: Consider overwriting the message metadata's timestamp with the expiration time or setting the
+        //  expiration time when initially storing it.
+        int currentTime = Runtime.getTime();
+        int maxTimeForExecution = message.metadata.timestamp +
+                (getMessageBridge().config.executionWindowSeconds * 1000); // Convert to milliseconds
+        if (currentTime > maxTimeForExecution) {
+            abort("Message execution window expired");
+        }
+
+        // Mark the message as executed.
+        executedMap.put(nonce, currentTime);
+
+        BridgeContract.onMessageExecution.fire(nonce, message.metadata);
+        new ExecutionManager(getMessageBridge().config.executionManager).executeMessage(nonce, message.executableCode);
+    }
+
+    static class ExecutionManager extends ContractInterface {
+        public ExecutionManager(Hash160 contractHash) {
+            super(contractHash);
+        }
+
+        @CallFlags(io.neow3j.devpack.constants.CallFlags.All)
+        public native void executeMessage(int nonce, ByteString executableCode);
     }
 
     // endregion

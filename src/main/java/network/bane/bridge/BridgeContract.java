@@ -230,6 +230,10 @@ public class BridgeContract {
     @EventParameterNames({"Nonce", "Metadata"})
     static Event2Args<Integer, N3MessageEnvelope.N3ExecutableMessage.N3Metadata> onMessageStore;
 
+    @DisplayName("N3MessageExecution")
+    @EventParameterNames({"Nonce", "Metadata"})
+    static Event2Args<Integer, N3MessageEnvelope.N3ExecutableMessage.N3Metadata> onMessageExecution;
+
     @DisplayName("MessageSendingFeeChange")
     @EventParameterNames({"NewFee"})
     static Event1Arg<Integer> onMessageSendingFeeChange;
@@ -984,9 +988,11 @@ public class BridgeContract {
         return MessageBridgeImpl.messageHasBeenExecuted(nonce);
     }
 
-    public static void executeMessage() {
-        // todo: execute messages from EVM to N3.
-        abort("Not implemented yet");
+    public static void executeMessage(int nonce) {
+        onlyWhenNotPaused();
+        onlyWhenMessageBridgeNotPaused();
+
+        MessageBridgeImpl.executeMessage(nonce);
     }
 
     // endregion
