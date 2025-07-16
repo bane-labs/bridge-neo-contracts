@@ -143,10 +143,10 @@ public class MessageBridgeImpl {
                 messageBridge.evmToN3MessageState.root);
 
         // Store the messages in the contract storage
-        storeMessages(messages);
+        storeMessagesToContractStorage(messages);
     }
 
-    private static void storeMessages(List<N3MessageEnvelope> messages) {
+    private static void storeMessagesToContractStorage(List<N3MessageEnvelope> messages) {
         StorageMap messageMap = new StorageMap(BridgeContract.ctx, PREFIX_MSG_MESSAGES);
         StorageMap msgExecutedMap = new StorageMap(BridgeContract.ctx, PREFIX_MSG_EXECUTED);
         int nrMessages = messages.size();
