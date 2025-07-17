@@ -9,6 +9,7 @@ import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Signer;
 import io.neow3j.transaction.TransactionBuilder;
+import io.neow3j.types.CallFlags;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -28,10 +29,12 @@ import java.util.Map;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.any;
+import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.map;
+import static io.neow3j.types.ContractParameter.string;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.governor;
 import static network.bane.util.TestHelper.owner;
@@ -595,6 +598,16 @@ public class Bridge extends SmartContractHelper {
     // endregion
     // region storing/executing messages
 
+    public byte[] getSerializedN3MethodCall(Hash160 target, String method, CallFlags callFlags,
+            List<ContractParameter> args) throws IOException {
+        return callInvokeFunction("getSerializedN3MethodCall", asList(
+                hash160(target),
+                string(method),
+                integer(callFlags.getValue()),
+                array(args)
+        )).getInvocationResult().getFirstStackItem().getByteArray();
+    }
+
     public Hash256 storeMessages(String n3MessageRoot, Map<ContractParameter, ContractParameter> signatures,
             ContractParameter messages) throws Throwable {
         return storeMessages(relayer, n3MessageRoot, signatures, messages);
@@ -606,7 +619,6 @@ public class Bridge extends SmartContractHelper {
                 invokeFunction("storeMessages", byteArray(n3MessageRoot), map(signatures), messages)
                         .signers(calledByEntry(sender)));
     }
-
 
     public N3MessageDto getMessage(int nonce) throws IOException {
         return getMessage(BigInteger.valueOf(nonce));
@@ -623,8 +635,15 @@ public class Bridge extends SmartContractHelper {
         return new N3MessageDto(metadata, stackItemList.get(1).getHexString());
     }
 
+    // endregion
+    // region execution
+
     public boolean messageHasBeenExecuted(BigInteger nonce) throws IOException {
         return callFunctionReturningBool("messageHasBeenExecuted", integer(nonce));
+    }
+
+    public Hash256 executeMessage(AccountSigner signer, BigInteger nonce) throws Throwable {
+        return sendAndAwaitExecution(invokeFunction("executeMessage", integer(nonce)).signers(signer));
     }
 
     // endregion
