@@ -11,6 +11,7 @@ import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Numeric.cleanHexPrefix;
+import static io.neow3j.utils.Numeric.toHexString;
 
 public class N3MessageDto {
     public N3MessageMetadataDto metadata;
@@ -19,6 +20,11 @@ public class N3MessageDto {
     public N3MessageDto(N3MessageMetadataDto metadata, String messageCodeHex) {
         this.metadata = metadata;
         this.messageCodeHex = cleanHexPrefix(messageCodeHex);
+    }
+
+    public N3MessageDto(N3MessageMetadataDto metadata, byte[] n3MethodCallBytes) {
+        this.metadata = metadata;
+        this.messageCodeHex = cleanHexPrefix(toHexString(n3MethodCallBytes));
     }
 
     public ContractParameter toContractParameter() {
