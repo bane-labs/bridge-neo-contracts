@@ -40,6 +40,7 @@ public class N3MessageEnvelope {
                     execN3Message.executableCode != null;
         }
 
+        @Struct
         public static class N3Metadata {
             /**
              * Timestamp of the message indicating when it was sent.

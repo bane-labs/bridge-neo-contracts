@@ -35,6 +35,7 @@ import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
 import network.bane.structs.message.MessageBridge;
 import network.bane.structs.message.N3MessageEnvelope;
+import network.bane.structs.message.N3MethodCall;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.checkWitness;
@@ -233,6 +234,10 @@ public class BridgeContract {
     @DisplayName("N3MessageExecution")
     @EventParameterNames({"Nonce", "Metadata"})
     static Event2Args<Integer, N3MessageEnvelope.N3ExecutableMessage.N3Metadata> onMessageExecution;
+
+    @DisplayName("N3MessageExecutionResult")
+    @EventParameterNames({"Nonce", "Result"})
+    static Event2Args<Integer, Object> onMessageExecutionResult;
 
     @DisplayName("MessageSendingFeeChange")
     @EventParameterNames({"NewFee"})
@@ -968,6 +973,11 @@ public class BridgeContract {
 
     // endregion
     // region message storing and executing (EVM to N3)
+
+    @Safe
+    public static ByteString getSerializedN3MethodCall(Hash160 target, String method, byte callFlags, Object[] args) {
+        return new StdLib().serialize(new N3MethodCall(target, method, callFlags, args));
+    }
 
     public static void storeMessages(ByteString n3MessageRoot, Map<ECPoint, ByteString> signatures,
             List<N3MessageEnvelope> messages) {

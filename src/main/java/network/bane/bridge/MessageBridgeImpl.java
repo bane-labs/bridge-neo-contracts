@@ -204,7 +204,9 @@ public class MessageBridgeImpl {
         executedMap.put(nonce, currentTime);
 
         BridgeContract.onMessageExecution.fire(nonce, message.metadata);
-        new ExecutionManager(getMessageBridge().config.executionManager).executeMessage(nonce, message.executableCode);
+        Object result = new ExecutionManager(getMessageBridge().config.executionManager).executeMessage(nonce,
+                message.executableCode);
+        BridgeContract.onMessageExecutionResult.fire(nonce, result);
     }
 
     static class ExecutionManager extends ContractInterface {
@@ -213,7 +215,7 @@ public class MessageBridgeImpl {
         }
 
         @CallFlags(io.neow3j.devpack.constants.CallFlags.All)
-        public native void executeMessage(int nonce, ByteString executableCode);
+        public native Object executeMessage(int nonce, ByteString executableCode);
     }
 
     // endregion
