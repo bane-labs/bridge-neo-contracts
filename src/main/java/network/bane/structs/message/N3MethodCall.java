@@ -21,10 +21,10 @@ public class N3MethodCall {
         if (call == null) {
             return false;
         }
-        boolean targetIsInvalid = call.target == null || !Hash160.isValid(call.target) || call.target.isZero();
+        boolean targetIsValid = call.target != null && Hash160.isValid(call.target) && !call.target.isZero();
         // Note: String#length() works while String#isEmpty() does not work in the devpack as it embeds additional
         // logic rather than just getting the size of the string.
-        boolean methodIsInvalid = call.method == null || call.method.length() == 0;
-        return !targetIsInvalid && !methodIsInvalid;
+        boolean methodIsValid = call.method != null && call.method.length() > 0;
+        return targetIsValid && methodIsValid;
     }
 }

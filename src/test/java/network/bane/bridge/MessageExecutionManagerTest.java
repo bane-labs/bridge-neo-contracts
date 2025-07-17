@@ -147,7 +147,7 @@ public class MessageExecutionManagerTest {
 
     @Test
     @Order(0)
-    public void test_pause_notGovernor() throws IOException {
+    public void test_pause_fail_notGovernor() throws IOException {
         assertFalse(executionManager.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> executionManager.pause(alice));
@@ -156,7 +156,20 @@ public class MessageExecutionManagerTest {
 
     @Test
     @Order(0)
-    public void test_unpause_notGovernor() throws Throwable {
+    public void test_pause_fail_alreadyPaused() throws Throwable {
+        executionManager.pause();
+        assertTrue(executionManager.isPaused());
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> executionManager.pause());
+        assertThat(thrown.getMessage(), containsString("Contract paused"));
+
+        // revert the state for further tests
+        executionManager.unpause();
+    }
+
+    @Test
+    @Order(0)
+    public void test_unpause_fail_notGovernor() throws Throwable {
         executionManager.pause();
         assertTrue(executionManager.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
@@ -165,6 +178,15 @@ public class MessageExecutionManagerTest {
 
         // revert the state for further tests
         executionManager.unpause();
+    }
+
+    @Test
+    @Order(0)
+    public void test_unpause_fail_alreadyUnpaused() throws Throwable {
+        assertFalse(executionManager.isPaused());
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> executionManager.unpause());
+        assertThat(thrown.getMessage(), containsString("Contract not paused"));
     }
 
     // endregion
@@ -176,7 +198,7 @@ public class MessageExecutionManagerTest {
      */
     @Test
     @Order(0)
-    public void test_executeMessage_fail_notViaBridge() throws Throwable {
+    public void test_executeMessage_fail_bridgeNotCallingScriptHash() throws Throwable {
         BigInteger nonce = storeDefaultMessageForTestStoring("hello", string("world"));
         byte[] n3FuncCall = getSerializedN3MethodForTestStoring("test_exec_notViaBridge", string("hello"));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,

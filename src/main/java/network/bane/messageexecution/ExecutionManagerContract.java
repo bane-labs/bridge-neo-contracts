@@ -174,7 +174,7 @@ public class ExecutionManagerContract {
     }
 
     private static void onlyWhenNotPaused() {
-        if (isPaused()) abort("Contract not paused");
+        if (isPaused()) abort("Contract paused");
     }
 
     private static void onlyBridge() {
