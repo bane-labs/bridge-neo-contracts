@@ -18,9 +18,13 @@ import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
 import network.bane.bridge.BridgeContract;
 import network.bane.management.BridgeManagementContract;
+import network.bane.messageexecution.ExecutionManagerContract;
+import network.bane.testhelper.MessageTestStoreContract;
 import network.bane.testhelper.TestContract;
 import network.bane.util.Bridge;
+import network.bane.util.ExecutionManager;
 import network.bane.util.Management;
+import network.bane.util.MessageTestStorer;
 import network.bane.util.structs.TokenBridge;
 
 import java.math.BigDecimal;
@@ -43,6 +47,7 @@ import static network.bane.util.TestHelper.validator4PubKey;
 import static network.bane.util.TestHelper.validator5PubKey;
 import static network.bane.util.TestHelper.validator6PubKey;
 import static network.bane.util.TestHelper.validator7PubKey;
+import static network.bane.util.helper.DefaultTestValues.BRIDGE_CONTRACT_HASH;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_LINKED_CHAIN_ID;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
 import static network.bane.util.helper.NetworkSettingsHelper.updateNetworkSettings;
@@ -57,6 +62,8 @@ public class TestHelper {
 
     public static Bridge bridge;
     public static Management management;
+    public static ExecutionManager executionManager;
+    public static MessageTestStorer messageTestStorer;
 
     public static Hash160 testContract;
     public static final Hash160 neoXNeoTokenHash = new Hash160("0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f");
@@ -111,6 +118,13 @@ public class TestHelper {
         testContract = ext.getDeployedContract(TestContract.class).getScriptHash();
     }
 
+    public static void setupExecutionManager(ContractTestExtension ext) {
+        executionManager = new ExecutionManager(ext.getDeployedContract(ExecutionManagerContract.class).getScriptHash(),
+                neow3j);
+        messageTestStorer = new MessageTestStorer(
+                ext.getDeployedContract(MessageTestStoreContract.class).getScriptHash(), neow3j);
+    }
+
     public static DeployConfiguration createBridgeManagementDeployConfig() {
         DeployConfiguration config = new DeployConfiguration();
         config.setDeployParam(
@@ -157,11 +171,32 @@ public class TestHelper {
         return config;
     }
 
+    public static DeployConfiguration createExecutionManagerDeployConfig() {
+        DeployConfiguration config = new DeployConfiguration();
+        config.setDeployParam(
+                prepareExecutionManagerDeployParameter(
+                        MANAGEMENT_CONTRACT_HASH,
+                        BRIDGE_CONTRACT_HASH
+                )
+        );
+        AccountSigner deploySigner = AccountSigner.none(owner);
+        config.setSigner(deploySigner);
+        return config;
+    }
+
     public static ContractParameter prepareBridgeDeployParameter(BigInteger linkedChainId,
             Hash160 managementContractHash) {
         return array(
                 integer(linkedChainId),
                 hash160(managementContractHash)
+        );
+    }
+
+    private static ContractParameter prepareExecutionManagerDeployParameter(Hash160 managementContractHash,
+            Hash160 bridgeContractHash) {
+        return array(
+                hash160(managementContractHash),
+                hash160(bridgeContractHash)
         );
     }
 
