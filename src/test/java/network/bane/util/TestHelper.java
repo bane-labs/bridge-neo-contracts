@@ -15,7 +15,6 @@ import io.neow3j.types.Hash256;
 import io.neow3j.utils.ArrayUtils;
 import io.neow3j.utils.Await;
 import io.neow3j.utils.BigIntegers;
-import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 import network.bane.util.structs.N3MessageDto;
 
@@ -311,6 +310,11 @@ public class TestHelper {
                 previousRoot,
                 createTokenOpHashNoPrefix(neoN3Token, neoXToken, nonce, recipient, value)
         );
+    }
+
+    public static String createN3MessageHash(BigInteger nonce, BigInteger timestamp, Hash160 sender,
+            byte[] n3MethodCallBytes) {
+        return keccak256Hex(concatN3MessageData(nonce, timestamp, sender, toHexString(n3MethodCallBytes)));
     }
 
     public static String createN3MessageHash(BigInteger nonce, BigInteger timestamp, Hash160 sender,
