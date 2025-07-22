@@ -9,7 +9,10 @@ public class DefaultTestValues {
     public static final BigInteger DEFAULT_LINKED_CHAIN_ID = BigInteger.valueOf(12345);
 
     public static final Hash160 MANAGEMENT_CONTRACT_HASH = new Hash160("0x74eace325d73d7fa70c6b8772fabaac20a632706");
-    public static final Hash160 BRIDGE_CONTRACT_HASH = new Hash160("0xd720c7a67d3a6f2fff5cfa9accedbeeae80a2ee4");
+    public static final Hash160 MESSAGE_BRIDGE_CONTRACT_HASH = new Hash160(
+            "0x3dd9f1b28f4241aada57ce3873a84e0c68dd0ccc");
+    public static final Hash160 EXECUTION_MANAGER_CONTRACT_HASH =
+            new Hash160("0x3d05286c1834c3077d6547d2a3a173dec1cb588f");
     public static final Hash160 DUMMY_EXEC_MANAGER = new Hash160("0x5cd87a79046523454325a77827006ebfae27e05f");
 
     public static final BigInteger DEFAULT_DEPOSIT_FEE = new BigInteger("10000000");
@@ -23,8 +26,7 @@ public class DefaultTestValues {
     public static final int DEFAULT_MSG_MAX_BYTES_FOR_SENDING = 10000;
     public static final int DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION = 10;
     public static final int DEFAULT_MSG_EXEC_WINDOW_SECONDS = 60 * 60 * 24 * 7 * 2; // 2 weeks
-    public static final BigInteger DEFAULT_MSG_SENDING_FEE = new BigInteger("100000000");
-    public static final Hash160 DEFAULT_MSG_EXEC_MANAGER_SCRIPT_HASH = DUMMY_EXEC_MANAGER;
+    public static final int DEFAULT_MSG_SENDING_FEE = 10000000; // 0.1 GAS
 
     public static final Hash160 DUMMY_TARGET_CONTRACT_HASH = new Hash160("0x605edab7b33d187e9a22f33cc0722f9c3ccab3b3");
 }

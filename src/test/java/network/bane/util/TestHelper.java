@@ -42,6 +42,7 @@ import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_LINKED_CHAIN_ID;
 import static network.bane.util.helper.TestHelper.bridge;
+import static network.bane.util.helper.TestHelper.messageBridge;
 import static network.bane.util.helper.TestHelper.neow3j;
 
 public class TestHelper {
@@ -87,15 +88,8 @@ public class TestHelper {
     public static final ECPublicKey validator7PubKey = validator7.getECKeyPair().getPublicKey();
     public static final Hash160 validator7ScriptHash = validator7.getScriptHash();
 
-    public static final List<ECPublicKey> defaultValidators = asList(
-            validator1PubKey,
-            validator2PubKey,
-            validator3PubKey,
-            validator4PubKey,
-            validator5PubKey,
-            validator6PubKey,
-            validator7PubKey
-    );
+    public static final List<ECPublicKey> defaultValidators = asList(validator1PubKey, validator2PubKey,
+            validator3PubKey, validator4PubKey, validator5PubKey, validator6PubKey, validator7PubKey);
     public static int defaultValidatorThreshold = 5;
 
     public static final Account governor = Account.fromWIF("L31FLxpHiSuZLzjzJAVY5z9gSu25pZxRB2yBCzqjc3JDUz2GkLBH");
@@ -127,46 +121,23 @@ public class TestHelper {
     public static final Hash160 recipient8 = new Hash160("0xdD2FD4581271e230360230F9337D5c0430Bf44C0");
     public static final Hash160 recipient9 = new Hash160("0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199");
 
-    public static ContractParameter prepareManagementDeployParameter(
-            Hash160 owner,
-            Hash160 relayer,
-            List<ECPublicKey> validators,
-            Integer threshold,
-            Hash160 governor,
-            Hash160 securityGuard
-    ) {
-        return array(
-                hash160(owner),
-                hash160(relayer),
-                array(
-                        publicKey(validators.get(0)),
-                        publicKey(validators.get(1)),
-                        publicKey(validators.get(2)),
-                        publicKey(validators.get(3)),
-                        publicKey(validators.get(4)),
-                        publicKey(validators.get(5)),
-                        publicKey(validators.get(6))
-                ),
-                integer(threshold),
-                hash160(governor),
-                hash160(securityGuard)
-        );
+    public static ContractParameter prepareManagementDeployParameter(Hash160 owner, Hash160 relayer,
+            List<ECPublicKey> validators, Integer threshold, Hash160 governor, Hash160 securityGuard) {
+        return array(hash160(owner), hash160(relayer),
+                array(publicKey(validators.get(0)), publicKey(validators.get(1)), publicKey(validators.get(2)),
+                        publicKey(validators.get(3)), publicKey(validators.get(4)), publicKey(validators.get(5)),
+                        publicKey(validators.get(6))), integer(threshold), hash160(governor), hash160(securityGuard));
     }
 
     public static void setDefaultValidators(Management management, Neow3j neow3j) throws Throwable {
-        NeoSendRawTransaction response =
-                management.invokeFunction("setValidators", array(defaultValidators), integer(5))
-                        .signers(calledByEntry(owner))
-                        .sign()
-                        .send();
+        NeoSendRawTransaction response = management.invokeFunction("setValidators", array(defaultValidators),
+                integer(5)).signers(calledByEntry(owner)).sign().send();
         waitUntilTransactionIsExecuted(response, neow3j);
     }
 
     public static Hash256 setDepositFee(Bridge bridge, Neow3j neow3j, BigInteger fee) throws Throwable {
-        Transaction transaction =
-                bridge.invokeFunction("setNativeDepositFee", integer(fee))
-                        .signers(calledByEntry(governor))
-                        .sign();
+        Transaction transaction = bridge.invokeFunction("setNativeDepositFee", integer(fee))
+                .signers(calledByEntry(governor)).sign();
         Hash256 txHash = transaction.getTxId();
         NeoSendRawTransaction response = transaction.send();
         waitUntilTransactionIsExecuted(response, neow3j);
@@ -174,10 +145,8 @@ public class TestHelper {
     }
 
     public static Hash256 setMinDeposit(Bridge bridge, Neow3j neow3j, BigInteger minDeposit) throws Throwable {
-        Transaction transaction =
-                bridge.invokeFunction("setMinNativeDeposit", integer(minDeposit))
-                        .signers(calledByEntry(governor))
-                        .sign();
+        Transaction transaction = bridge.invokeFunction("setMinNativeDeposit", integer(minDeposit))
+                .signers(calledByEntry(governor)).sign();
         Hash256 txHash = transaction.getTxId();
         NeoSendRawTransaction response = transaction.send();
         waitUntilTransactionIsExecuted(response, neow3j);
@@ -185,10 +154,8 @@ public class TestHelper {
     }
 
     public static Hash256 setMaxNativeDeposit(Bridge bridge, Neow3j neow3j, BigInteger maxDeposit) throws Throwable {
-        Transaction transaction =
-                bridge.invokeFunction("setMaxNativeDeposit", integer(maxDeposit))
-                        .signers(calledByEntry(governor))
-                        .sign();
+        Transaction transaction = bridge.invokeFunction("setMaxNativeDeposit", integer(maxDeposit))
+                .signers(calledByEntry(governor)).sign();
         Hash256 txHash = transaction.getTxId();
         NeoSendRawTransaction response = transaction.send();
         waitUntilTransactionIsExecuted(response, neow3j);
@@ -201,10 +168,8 @@ public class TestHelper {
 
     public static boolean hasFiredEvent(Neow3j neow3j, Hash256 txHash, Hash160 contract, String eventName,
             StackItem state) throws IOException {
-        return getEvents(txHash, neow3j).stream()
-                .filter(e -> e.getEventName().equals(eventName))
-                .filter(e -> e.getContract().equals(contract))
-                .anyMatch(e -> e.getState().equals(state));
+        return getEvents(txHash, neow3j).stream().filter(e -> e.getEventName().equals(eventName))
+                .filter(e -> e.getContract().equals(contract)).anyMatch(e -> e.getState().equals(state));
     }
 
     // region concat and keccak256 functions
@@ -225,8 +190,8 @@ public class TestHelper {
         return keccak256Hex(concatLeftRight(leftHex, rightHex));
     }
 
-    public static Map<ContractParameter, ContractParameter> signMsg(List<Account> validators,
-            String root) throws IOException {
+    public static Map<ContractParameter, ContractParameter> signMsg(List<Account> validators, String root)
+            throws IOException {
         return signMsg(DEFAULT_LINKED_CHAIN_ID, validators, root);
     }
 
@@ -244,9 +209,7 @@ public class TestHelper {
     }
 
     public static String createWithdrawalMessageToSign(BigInteger network, BigInteger linkedChainId, String root) {
-        return prependIntToStringLittleEndian(network,
-                prependIntToStringLittleEndian(linkedChainId, root)
-        );
+        return prependIntToStringLittleEndian(network, prependIntToStringLittleEndian(linkedChainId, root));
     }
 
     public static String prependIntToStringLittleEndian(BigInteger intValue, String stringValue) {
@@ -278,14 +241,8 @@ public class TestHelper {
         byte[] recipientArray = ArrayUtils.reverseArray(recipient.toArray());
         byte[] valuePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(value, UINT256_SIZE);
         byte[] concatenated = concatenate(
-                concatenate(
-                        concatenate(
-                                concatenate(
-                                        valuePadded, recipientArray
-                                ), noncePadded
-                        ), neoXTokenArray
-                ), neoN3TokenArray
-        );
+                concatenate(concatenate(concatenate(valuePadded, recipientArray), noncePadded), neoXTokenArray),
+                neoN3TokenArray);
         return ArrayUtils.reverseArray(concatenated);
     }
 
@@ -306,10 +263,8 @@ public class TestHelper {
 
     public static String computeNewTokenRoot(String previousRoot, Hash160 neoN3Token, Hash160 neoXToken,
             BigInteger nonce, Hash160 recipient, BigInteger value) {
-        return concatAndKeccak256(
-                previousRoot,
-                createTokenOpHashNoPrefix(neoN3Token, neoXToken, nonce, recipient, value)
-        );
+        return concatAndKeccak256(previousRoot,
+                createTokenOpHashNoPrefix(neoN3Token, neoXToken, nonce, recipient, value));
     }
 
     public static String createN3MessageHash(BigInteger nonce, BigInteger timestamp, Hash160 sender,
@@ -328,14 +283,8 @@ public class TestHelper {
         byte[] timestampPadded = BigIntegers.toLittleEndianByteArrayZeroPadded(timestamp, UINT256_SIZE);
         byte[] senderArray = ArrayUtils.reverseArray(sender.toArray());
         byte[] executableCodeArray = hexStringToByteArray(executableCodeHex);
-        byte[] concatenated = concatenate(
-                concatenate(
-                        concatenate(
-                                executableCodeArray,
-                                senderArray
-                        ), timestampPadded
-                ), noncePadded
-        );
+        byte[] concatenated = concatenate(concatenate(concatenate(executableCodeArray, senderArray), timestampPadded),
+                noncePadded);
         return ArrayUtils.reverseArray(concatenated);
     }
 
@@ -352,8 +301,9 @@ public class TestHelper {
         // BigInteger.toByteArray() returns the two's complement of the number in big-endian order.
         byte[] bytes = value.toByteArray();
         if (bytes.length > length) {
-            throw new IllegalArgumentException(format("given integer needs more space (%s bytes) than the given " +
-                    "minimum length (%s bytes).", bytes.length, length));
+            throw new IllegalArgumentException(
+                    format("given integer needs more space (%s bytes) than the given " + "minimum length (%s bytes).",
+                            bytes.length, length));
         }
         if (bytes.length < length) {
             byte[] temp = new byte[length];
@@ -372,40 +322,32 @@ public class TestHelper {
     public static List<DepositEvent> getDepositEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge)
             throws IOException {
         // GasToken Transfer is first notification, OnDeposit is second notification.
-        return neow3j.getApplicationLog(txHash).send().getApplicationLog()
-                .getFirstExecution().getNotifications().stream()
-                .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("NativeDeposit"))
-                .map(TestHelper::depositEventFromNotification)
-                .collect(Collectors.toList());
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getNotifications()
+                .stream().filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("NativeDeposit"))
+                .map(TestHelper::depositEventFromNotification).collect(Collectors.toList());
     }
 
     public static List<WithdrawEvent> getWithdrawEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge)
             throws IOException {
         // GasToken Transfer is first notification, onWithdrawal is second notification.
-        return neow3j.getApplicationLog(txHash).send().getApplicationLog()
-                .getFirstExecution().getNotifications().stream()
-                .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("NativeWithdrawal"))
-                .map(TestHelper::getWithdrawEventFromNotification)
-                .collect(Collectors.toList());
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getNotifications()
+                .stream().filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("NativeWithdrawal"))
+                .map(TestHelper::getWithdrawEventFromNotification).collect(Collectors.toList());
     }
 
     public static List<ClaimableEvent> getClaimableEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge)
             throws IOException {
         // GasToken Transfer is first notification, onClaimable is second notification.
-        return neow3j.getApplicationLog(txHash).send().getApplicationLog()
-                .getFirstExecution().getNotifications().stream()
-                .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("NativeClaimable"))
-                .map(TestHelper::claimableEventFromNotification)
-                .collect(Collectors.toList());
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getNotifications()
+                .stream().filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("NativeClaimable"))
+                .map(TestHelper::claimableEventFromNotification).collect(Collectors.toList());
     }
 
     public static List<ClaimEvent> getClaimEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge) throws IOException {
         // GasToken Transfer is first notification, onClaimable is second notification.
-        return neow3j.getApplicationLog(txHash).send().getApplicationLog()
-                .getFirstExecution().getNotifications().stream()
-                .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("NativeClaim"))
-                .map(TestHelper::claimEventFromNotification)
-                .collect(Collectors.toList());
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getNotifications()
+                .stream().filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("NativeClaim"))
+                .map(TestHelper::claimEventFromNotification).collect(Collectors.toList());
     }
 
     public static DepositEvent depositEventFromNotification(Notification depositEvent) {
@@ -424,11 +366,10 @@ public class TestHelper {
 
     public static List<N3MessageStoreEvent> getMessageStorEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge)
             throws IOException {
-        return neow3j.getApplicationLog(txHash).send().getApplicationLog()
-                .getFirstExecution().getNotifications().stream()
-                .filter(n -> n.getContract().equals(bridge) && n.getEventName().equals("N3MessageStore"))
-                .map(TestHelper::getN3MessageStoreEventFromNotification)
-                .collect(Collectors.toList());
+        return neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getNotifications()
+                .stream()
+                .filter(n -> n.getContract().equals(messageBridge.getScriptHash()) && n.getEventName().equals("Store"))
+                .map(TestHelper::getN3MessageStoreEventFromNotification).collect(Collectors.toList());
     }
 
     private static N3MessageStoreEvent getN3MessageStoreEventFromNotification(Notification n3MessageStoreEvent) {
@@ -489,24 +430,15 @@ public class TestHelper {
             if (this == o) return true;
             if (!(o instanceof DepositEvent)) return false;
             DepositEvent that = (DepositEvent) o;
-            return nonce.equals(that.nonce) &&
-                    to.equals(that.to) &&
-                    amount.equals(that.amount) &&
-                    from.equals(that.from) &&
-                    depositHashHex.equals(that.depositHashHex) &&
+            return nonce.equals(that.nonce) && to.equals(that.to) && amount.equals(that.amount) &&
+                    from.equals(that.from) && depositHashHex.equals(that.depositHashHex) &&
                     rootHashHex.equals(that.rootHashHex);
         }
 
         @Override
         public String toString() {
-            return "\nDepositEvent\n" +
-                    "\n  nonce=" + nonce +
-                    "\n  from=" + from +
-                    "\n  to=" + to +
-                    "\n  amount=" + amount +
-                    "\n  depositHash=" + depositHashHex +
-                    "\n  rootHash=" + rootHashHex +
-                    "\n";
+            return "\nDepositEvent\n" + "\n  nonce=" + nonce + "\n  from=" + from + "\n  to=" + to + "\n  amount=" +
+                    amount + "\n  depositHash=" + depositHashHex + "\n  rootHash=" + rootHashHex + "\n";
         }
     }
 
@@ -526,18 +458,12 @@ public class TestHelper {
             if (this == o) return true;
             if (!(o instanceof WithdrawEvent)) return false;
             WithdrawEvent that = (WithdrawEvent) o;
-            return nonce.equals(that.nonce) &&
-                    to.equals(that.to) &&
-                    amount.equals(that.amount);
+            return nonce.equals(that.nonce) && to.equals(that.to) && amount.equals(that.amount);
         }
 
         @Override
         public String toString() {
-            return "\nWithdrawEvent\n" +
-                    "\n  nonce=" + nonce +
-                    "\n  to=" + to +
-                    "\n  amount=" + amount +
-                    "\n";
+            return "\nWithdrawEvent\n" + "\n  nonce=" + nonce + "\n  to=" + to + "\n  amount=" + amount + "\n";
         }
     }
 
@@ -557,18 +483,12 @@ public class TestHelper {
             if (this == o) return true;
             if (!(o instanceof TransferEvent)) return false;
             TransferEvent that = (TransferEvent) o;
-            return from.equals(that.from) &&
-                    to.equals(that.to) &&
-                    amount.equals(that.amount);
+            return from.equals(that.from) && to.equals(that.to) && amount.equals(that.amount);
         }
 
         @Override
         public String toString() {
-            return "\nTransferEvent\n" +
-                    "\n  from=" + from +
-                    "\n  to=" + to +
-                    "\n  amount=" + amount +
-                    "\n";
+            return "\nTransferEvent\n" + "\n  from=" + from + "\n  to=" + to + "\n  amount=" + amount + "\n";
         }
     }
 
@@ -588,18 +508,12 @@ public class TestHelper {
             if (this == o) return true;
             if (!(o instanceof ClaimableEvent)) return false;
             ClaimableEvent that = (ClaimableEvent) o;
-            return nonce.equals(that.nonce) &&
-                    to.equals(that.to) &&
-                    amount.equals(that.amount);
+            return nonce.equals(that.nonce) && to.equals(that.to) && amount.equals(that.amount);
         }
 
         @Override
         public String toString() {
-            return "\nClaimableEvent\n" +
-                    "\n  nonce=" + nonce +
-                    "\n  to=" + to +
-                    "\n  amount=" + amount +
-                    "\n";
+            return "\nClaimableEvent\n" + "\n  nonce=" + nonce + "\n  to=" + to + "\n  amount=" + amount + "\n";
         }
     }
 
@@ -619,18 +533,12 @@ public class TestHelper {
             if (this == o) return true;
             if (!(o instanceof ClaimEvent)) return false;
             ClaimEvent that = (ClaimEvent) o;
-            return nonce.equals(that.nonce) &&
-                    to.equals(that.to) &&
-                    amount.equals(that.amount);
+            return nonce.equals(that.nonce) && to.equals(that.to) && amount.equals(that.amount);
         }
 
         @Override
         public String toString() {
-            return "\nClaimEvent\n" +
-                    "\n  nonce=" + nonce +
-                    "\n  to=" + to +
-                    "\n  amount=" + amount +
-                    "\n";
+            return "\nClaimEvent\n" + "\n  nonce=" + nonce + "\n  to=" + to + "\n  amount=" + amount + "\n";
         }
     }
 
@@ -644,9 +552,9 @@ public class TestHelper {
         }
 
         public static N3MessageStoreEvent fromNotification(Notification n3MessageStoreEvent) {
-            if (!n3MessageStoreEvent.getContract().equals(bridge.getScriptHash()) ||
-                    !n3MessageStoreEvent.getEventName().equals("N3MessageStore")) {
-                throw new IllegalArgumentException("Notification is not a N3MessageStore event.");
+            if (!n3MessageStoreEvent.getContract().equals(messageBridge.getScriptHash()) ||
+                    !n3MessageStoreEvent.getEventName().equals("Store")) {
+                throw new IllegalArgumentException("Notification is not a Store event.");
             }
             List<StackItem> items = n3MessageStoreEvent.getState().getList();
             BigInteger nonce = items.get(0).getInteger();
@@ -666,10 +574,7 @@ public class TestHelper {
 
         @Override
         public String toString() {
-            return "N3MessageStoreEvent{" +
-                    "nonce=" + nonce +
-                    "metadata=" + messageMetadata +
-                    "}";
+            return "StoreEvent{" + "nonce=" + nonce + "metadata=" + messageMetadata + "}";
         }
     }
 

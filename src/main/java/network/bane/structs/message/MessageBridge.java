@@ -6,13 +6,11 @@ import network.bane.structs.State;
 
 @Struct
 public class MessageBridge {
-    public boolean paused;
     public State evmToN3MessageState;
     public State n3ToEvmMessageState;
-    public MessageConfig config;
+    public MessageBridgeConfig config;
 
-    public MessageBridge(boolean paused, State evmToN3MessageState, State n3ToEvmMessageState, MessageConfig config) {
-        this.paused = paused;
+    public MessageBridge(State evmToN3MessageState, State n3ToEvmMessageState, MessageBridgeConfig config) {
         this.evmToN3MessageState = evmToN3MessageState;
         this.n3ToEvmMessageState = n3ToEvmMessageState;
         this.config = config;
@@ -22,11 +20,11 @@ public class MessageBridge {
         return messageBridge != null &&
                 State.isValid(messageBridge.evmToN3MessageState) &&
                 State.isValid(messageBridge.n3ToEvmMessageState) &&
-                MessageConfig.isValid(messageBridge.config);
+                MessageBridgeConfig.isValid(messageBridge.config);
     }
 
     @Struct
-    static public class MessageConfig {
+    static public class MessageBridgeConfig {
         /**
          * The fee that is charged for each message sent from N3 to EVM.
          */
@@ -53,7 +51,7 @@ public class MessageBridge {
          */
         public int executionWindowSeconds;
 
-        public MessageConfig(int sendingFee, int maxBytesForSending, int maxNrMessagesForStoring,
+        public MessageBridgeConfig(int sendingFee, int maxBytesForSending, int maxNrMessagesForStoring,
                 Hash160 executionManager, int executionWindowSeconds) {
             this.sendingFee = sendingFee;
             this.maxBytesForSending = maxBytesForSending;
@@ -62,7 +60,7 @@ public class MessageBridge {
             this.executionWindowSeconds = executionWindowSeconds;
         }
 
-        public static boolean isValid(MessageConfig config) {
+        public static boolean isValid(MessageBridgeConfig config) {
             return config != null &&
                     config.sendingFee >= 0 &&
                     config.maxBytesForSending > 0 &&

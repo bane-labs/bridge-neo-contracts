@@ -77,37 +77,37 @@ public class MessageBridgeContract {
     @DisplayName("SendAndExecuteUnpause")
     static Event onSendAndExecuteUnpause;
 
-    @DisplayName("N3MessageRootUpdate")
+    @DisplayName("N3RootUpdate")
     @EventParameterNames({"Nonce", "N3MessageRoot"})
-    static Event2Args<Integer, ByteString> onEvmToN3MessageRootUpdate;
+    static Event2Args<Integer, ByteString> onN3RootUpdate;
 
-    @DisplayName("N3MessageStore")
+    @DisplayName("Store")
     @EventParameterNames({"Nonce", "Metadata"})
-    static Event2Args<Integer, N3MessageEnvelope.N3ExecutableMessage.N3Metadata> onMessageStore;
+    static Event2Args<Integer, N3MessageEnvelope.N3ExecutableMessage.N3Metadata> onStore;
 
-    @DisplayName("N3MessageExecution")
+    @DisplayName("Execute")
     @EventParameterNames({"Nonce", "Metadata"})
-    static Event2Args<Integer, N3MessageEnvelope.N3ExecutableMessage.N3Metadata> onMessageExecution;
+    static Event2Args<Integer, N3MessageEnvelope.N3ExecutableMessage.N3Metadata> onExecution;
 
-    @DisplayName("N3MessageExecutionResult")
+    @DisplayName("ExecutionResult")
     @EventParameterNames({"Nonce", "Result"})
-    static Event2Args<Integer, Object> onMessageExecutionResult;
+    static Event2Args<Integer, Object> onExecutionResult;
 
-    @DisplayName("MessageSendingFeeChange")
+    @DisplayName("SendingFeeChange")
     @EventParameterNames({"NewFee"})
-    static Event1Arg<Integer> onMessageSendingFeeChange;
+    static Event1Arg<Integer> onSendingFeeChange;
 
-    @DisplayName("MessageMaxBytesForSendingChange")
+    @DisplayName("MaxBytesForSendingChange")
     @EventParameterNames({"NewMaxBytes"})
-    static Event1Arg<Integer> onMessageMaxBytesForSendingChange;
+    static Event1Arg<Integer> onMaxBytesForSendingChange;
 
     @DisplayName("MaxNrMessagesForStoringChange")
     @EventParameterNames({"NewMaxNrMessages"})
     static Event1Arg<Integer> onMaxNrMessagesForStoringChange;
 
-    @DisplayName("MessageExecutionManagerChange")
+    @DisplayName("ExecutionManagerChange")
     @EventParameterNames({"NewExecutionManager"})
-    static Event1Arg<Hash160> onMessageExecutionManagerChange;
+    static Event1Arg<Hash160> onExecutionManagerChange;
 
     @DisplayName("ExecutionWindowSecondsChange")
     @EventParameterNames({"NewExecutionWindowSeconds"})
@@ -126,16 +126,18 @@ public class MessageBridgeContract {
             baseMap.put(KEY_VERSION, 4);
             // Migrate storage here if required.
         } else {
-            MessageDeploymentData deploymentData = (MessageDeploymentData) data;
-            if (deploymentData.bridgeManagementContract == null ||
-                    !Hash160.isValid(deploymentData.bridgeManagementContract))
+            DeploymentData deploymentData = (DeploymentData) data;
+            if (deploymentData.managementContract == null ||
+                    !Hash160.isValid(deploymentData.managementContract))
                 abort("Invalid bridge management");
             if (deploymentData.linkedChainId == null || deploymentData.linkedChainId <= 0)
                 abort("Invalid linked chain id");
 
             baseMap.put(KEY_LINKED_CHAIN_ID, deploymentData.linkedChainId);
-            baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.bridgeManagementContract);
-            baseMap.put(KEY_BRIDGE_PAUSE, false);
+            baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.managementContract);
+            // Todo: Add execution manager in baseMap instead of bridge configuration.
+            // Pause initially
+            baseMap.put(KEY_BRIDGE_PAUSE, true);
 
             baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
             baseMap.put(KEY_SEND_AND_EXECUTE_PAUSE, false);
@@ -144,13 +146,8 @@ public class MessageBridgeContract {
             baseMap.put(KEY_VERSION, 4);
 
             // Set message bridge configuration upon deployment
-            // Todo: add configuration parameters to the deployment data.
-            setMessageBridge(deploymentData);
+            MessageBridgeImpl.setDefaultMessageBridge(deploymentData.executionManager);
         }
-    }
-
-    private static void setMessageBridge(MessageDeploymentData deploymentData) {
-        abort();
     }
 
     public static void update(ByteString nef, String manifest, Object data) {
@@ -304,14 +301,14 @@ public class MessageBridgeContract {
     }
 
     @Safe
-    public static int messageSendingFee() {
+    public static int sendingFee() {
         return MessageBridgeImpl.getMessageBridge().config.sendingFee;
     }
 
-    public static void setMessageSendingFee(int newFee) {
+    public static void setSendingFee(int newFee) {
         onlyGovernor();
-        MessageBridgeImpl.setMessageSendingFee(newFee);
-        onMessageSendingFeeChange.fire(newFee);
+        MessageBridgeImpl.setSendingFee(newFee);
+        onSendingFeeChange.fire(newFee);
     }
 
     @Safe
@@ -322,7 +319,7 @@ public class MessageBridgeContract {
     public static void setMaxBytesForSending(int newMaxBytes) {
         onlyGovernor();
         MessageBridgeImpl.setMaxBytesForSending(newMaxBytes);
-        onMessageMaxBytesForSendingChange.fire(newMaxBytes);
+        onMaxBytesForSendingChange.fire(newMaxBytes);
     }
 
     @Safe
@@ -337,14 +334,14 @@ public class MessageBridgeContract {
     }
 
     @Safe
-    public static Hash160 messageExecutionManager() {
+    public static Hash160 executionManager() {
         return MessageBridgeImpl.getMessageBridge().config.executionManager;
     }
 
-    public static void setMessageExecutionManager(Hash160 newExecutionManager) {
+    public static void setExecutionManager(Hash160 newExecutionManager) {
         onlyGovernor();
         MessageBridgeImpl.setExecutionManager(newExecutionManager);
-        onMessageExecutionManagerChange.fire(newExecutionManager);
+        onExecutionManagerChange.fire(newExecutionManager);
     }
 
     @Safe

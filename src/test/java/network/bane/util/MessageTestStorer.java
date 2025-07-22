@@ -27,7 +27,7 @@ import static io.neow3j.types.ContractParameter.string;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.helper.TestHelper.alice;
-import static network.bane.util.helper.TestHelper.bridge;
+import static network.bane.util.helper.TestHelper.messageBridge;
 
 public class MessageTestStorer extends SmartContractHelper {
 
@@ -37,9 +37,9 @@ public class MessageTestStorer extends SmartContractHelper {
 
     // region bridge
 
-    public Hash256 setBridge() throws Throwable {
+    public Hash256 setMessageBridge() throws Throwable {
         return sendAndAwaitExecution(
-                invokeFunction("setBridge", hash160(bridge.getScriptHash())).signers(none(alice))
+                invokeFunction("setMessageBridge", hash160(messageBridge.getScriptHash())).signers(none(alice))
         );
     }
 

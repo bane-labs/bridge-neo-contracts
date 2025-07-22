@@ -6,13 +6,11 @@ import java.math.BigInteger;
 import java.util.Objects;
 
 public class MessageBridgeDto {
-    public boolean paused;
     public State evmToN3MessageState;
     public State n3ToEvmMessageState;
-    public MessageConfig config;
+    public MessageConfigDto config;
 
-    public MessageBridgeDto(boolean paused, State evmToN3MessageState, State n3ToEvmMessageState, MessageConfig config) {
-        this.paused = paused;
+    public MessageBridgeDto(State evmToN3MessageState, State n3ToEvmMessageState, MessageConfigDto config) {
         this.evmToN3MessageState = evmToN3MessageState;
         this.n3ToEvmMessageState = n3ToEvmMessageState;
         this.config = config;
@@ -27,25 +25,24 @@ public class MessageBridgeDto {
             return false;
         }
         MessageBridgeDto that = (MessageBridgeDto) other;
-        return this.paused == that.paused &&
-                this.evmToN3MessageState.equals(that.evmToN3MessageState) &&
+        return this.evmToN3MessageState.equals(that.evmToN3MessageState) &&
                 this.n3ToEvmMessageState.equals(that.n3ToEvmMessageState) &&
                 this.config.equals(that.config);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(paused, evmToN3MessageState, n3ToEvmMessageState, config);
+        return Objects.hash(evmToN3MessageState, n3ToEvmMessageState, config);
     }
 
-    public static class MessageConfig {
+    public static class MessageConfigDto {
         public BigInteger sendingFee;
         public int maxBytesForSending;
         public int maxNrMessagesForStoring;
         public Hash160 executionManager;
         public int executionWindowSeconds;
 
-        public MessageConfig(BigInteger sendingFee, int maxBytesForSending, int maxNrMessagesForStoring,
+        public MessageConfigDto(BigInteger sendingFee, int maxBytesForSending, int maxNrMessagesForStoring,
                 Hash160 executionManager, int executionWindowSeconds) {
             this.sendingFee = sendingFee;
             this.maxBytesForSending = maxBytesForSending;
@@ -59,10 +56,10 @@ public class MessageBridgeDto {
             if (other == null) {
                 return false;
             }
-            if (!(other instanceof MessageConfig)) {
+            if (!(other instanceof MessageConfigDto)) {
                 return false;
             }
-            MessageConfig that = (MessageConfig) other;
+            MessageConfigDto that = (MessageConfigDto) other;
             return this.sendingFee.equals(that.sendingFee) &&
                     this.maxBytesForSending == that.maxBytesForSending &&
                     this.maxNrMessagesForStoring == that.maxNrMessagesForStoring &&

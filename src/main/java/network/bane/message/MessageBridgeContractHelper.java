@@ -6,7 +6,7 @@ import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.checkWitness;
 import static network.bane.message.StorageConstants.KEY_BRIDGE_MANAGEMENT;
 
-public class MessageBridgeContractHelper {
+class MessageBridgeContractHelper {
 
     // region state based modifiers
 

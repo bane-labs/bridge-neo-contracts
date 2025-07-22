@@ -18,13 +18,16 @@ import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
 import network.bane.bridge.BridgeContract;
 import network.bane.management.BridgeManagementContract;
+import network.bane.message.MessageBridgeContract;
 import network.bane.messageexecution.ExecutionManagerContract;
 import network.bane.testhelper.MessageTestStoreContract;
 import network.bane.testhelper.TestContract;
 import network.bane.util.Bridge;
 import network.bane.util.ExecutionManager;
 import network.bane.util.Management;
+import network.bane.util.MessageBridge;
 import network.bane.util.MessageTestStorer;
+import network.bane.util.structs.MessageBridgeDto;
 import network.bane.util.structs.TokenBridge;
 
 import java.math.BigDecimal;
@@ -47,9 +50,10 @@ import static network.bane.util.TestHelper.validator4PubKey;
 import static network.bane.util.TestHelper.validator5PubKey;
 import static network.bane.util.TestHelper.validator6PubKey;
 import static network.bane.util.TestHelper.validator7PubKey;
-import static network.bane.util.helper.DefaultTestValues.BRIDGE_CONTRACT_HASH;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_LINKED_CHAIN_ID;
+import static network.bane.util.helper.DefaultTestValues.EXECUTION_MANAGER_CONTRACT_HASH;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
+import static network.bane.util.helper.DefaultTestValues.MESSAGE_BRIDGE_CONTRACT_HASH;
 import static network.bane.util.helper.NetworkSettingsHelper.updateNetworkSettings;
 
 public class TestHelper {
@@ -62,6 +66,7 @@ public class TestHelper {
 
     public static Bridge bridge;
     public static Management management;
+    public static MessageBridge messageBridge;
     public static ExecutionManager executionManager;
     public static MessageTestStorer messageTestStorer;
 
@@ -112,10 +117,24 @@ public class TestHelper {
         updateNetworkSettings(neow3j, committee, alice);
     }
 
-    public static void setupBridge(ContractTestExtension ext) {
+    public static void setupManagement(ContractTestExtension ext) {
         management = new Management(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
+    }
+
+    public static void setupBridge(ContractTestExtension ext) {
+        setupManagement(ext);
         bridge = new Bridge(ext.getDeployedContract(BridgeContract.class).getScriptHash(), neow3j);
+        setupTestContract(ext);
+    }
+
+    public static void setupTestContract(ContractTestExtension ext) {
         testContract = ext.getDeployedContract(TestContract.class).getScriptHash();
+    }
+
+    public static void setupMessageBridge(ContractTestExtension ext) {
+        setupManagement(ext);
+        setupTestContract(ext);
+        messageBridge = new MessageBridge(ext.getDeployedContract(MessageBridgeContract.class).getScriptHash(), neow3j);
     }
 
     public static void setupExecutionManager(ContractTestExtension ext) {
@@ -172,7 +191,25 @@ public class TestHelper {
     }
 
     public static DeployConfiguration createMessageBridgeDeployConfig() {
-        throw new RuntimeException("Not implemented yet.");
+        DeployConfiguration config = new DeployConfiguration();
+        config.setDeployParam(
+                prepareMessageBridgeDeployParameter(
+                        DEFAULT_LINKED_CHAIN_ID,
+                        MANAGEMENT_CONTRACT_HASH,
+                        EXECUTION_MANAGER_CONTRACT_HASH
+                )
+        );
+        config.setSigner(AccountSigner.none(owner));
+        return config;
+    }
+
+    private static ContractParameter prepareMessageBridgeDeployParameter(BigInteger linkedChain,
+            Hash160 managementContractHash, Hash160 executionManager) {
+        return array(
+                integer(linkedChain),
+                hash160(managementContractHash),
+                hash160(executionManager)
+        );
     }
 
     public static DeployConfiguration createExecutionManagerDeployConfig() {
@@ -180,7 +217,7 @@ public class TestHelper {
         config.setDeployParam(
                 prepareExecutionManagerDeployParameter(
                         MANAGEMENT_CONTRACT_HASH,
-                        BRIDGE_CONTRACT_HASH
+                        MESSAGE_BRIDGE_CONTRACT_HASH
                 )
         );
         AccountSigner deploySigner = AccountSigner.none(owner);

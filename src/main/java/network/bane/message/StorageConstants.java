@@ -1,6 +1,6 @@
 package network.bane.message;
 
-public class StorageConstants {
+class StorageConstants {
 
     // map prefixes
     static final byte PREFIX_BASE = 0x0a;
