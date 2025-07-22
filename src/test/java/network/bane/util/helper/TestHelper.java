@@ -171,6 +171,10 @@ public class TestHelper {
         return config;
     }
 
+    public static DeployConfiguration createMessageBridgeDeployConfig() {
+        throw new RuntimeException("Not implemented yet.");
+    }
+
     public static DeployConfiguration createExecutionManagerDeployConfig() {
         DeployConfiguration config = new DeployConfiguration();
         config.setDeployParam(

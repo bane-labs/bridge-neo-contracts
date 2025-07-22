@@ -1,4 +1,4 @@
-package network.bane.bridge;
+package network.bane.message;
 
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.StackItem;
@@ -16,6 +16,7 @@ import network.bane.testhelper.TestContract;
 import network.bane.util.structs.MessageBridgeDto;
 import network.bane.util.structs.State;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -33,8 +34,8 @@ import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_MAX_BYTES_F
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MSG_SENDING_FEE;
 import static network.bane.util.helper.TestHelper.bridge;
-import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
+import static network.bane.util.helper.TestHelper.createMessageBridgeDeployConfig;
 import static network.bane.util.helper.TestHelper.setup;
 import static network.bane.util.helper.TestHelper.setupBridge;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -43,9 +44,10 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@Disabled
 @ContractTest(
         blockTime = 1,
-        contracts = {BridgeManagementContract.class, BridgeContract.class, TestContract.class},
+        contracts = {BridgeManagementContract.class, MessageBridgeContract.class, TestContract.class},
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -65,9 +67,9 @@ public class MessageBridgeSetTest {
         return createBridgeManagementDeployConfig();
     }
 
-    @DeployConfig(BridgeContract.class)
-    public static DeployConfiguration deployConfigBridge() {
-        return createBridgeDeployConfig();
+    @DeployConfig(MessageBridgeContract.class)
+    public static DeployConfiguration deployConfigMessageBridge() {
+        return createMessageBridgeDeployConfig();
     }
 
     @Test

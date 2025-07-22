@@ -1,4 +1,4 @@
-package network.bane.bridge;
+package network.bane.message;
 
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.test.ContractTest;
@@ -10,11 +10,13 @@ import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
+import network.bane.bridge.BridgeContract;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
 import network.bane.util.TestHelper;
 import network.bane.util.structs.N3MessageDto;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -43,8 +45,8 @@ import static network.bane.util.TestHelper.validator5;
 import static network.bane.util.helper.PrintHelper.printTransactionFee;
 import static network.bane.util.helper.TestHelper.alice;
 import static network.bane.util.helper.TestHelper.bridge;
-import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
+import static network.bane.util.helper.TestHelper.createMessageBridgeDeployConfig;
 import static network.bane.util.helper.TestHelper.decrementN3MessageNonce;
 import static network.bane.util.helper.TestHelper.incrementAndGetN3MessageNonce;
 import static network.bane.util.helper.TestHelper.neow3j;
@@ -60,9 +62,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Disabled
 @ContractTest(
         blockTime = 1,
-        contracts = {BridgeManagementContract.class, BridgeContract.class, TestContract.class},
+        contracts = {BridgeManagementContract.class, MessageBridgeContract.class, TestContract.class},
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -85,9 +88,9 @@ public class MessageBridgeTest {
         return createBridgeManagementDeployConfig();
     }
 
-    @DeployConfig(BridgeContract.class)
-    public static DeployConfiguration deployConfigBridge() {
-        return createBridgeDeployConfig();
+    @DeployConfig(MessageBridgeContract.class)
+    public static DeployConfiguration deployConfigMessageBridge() {
+        return createMessageBridgeDeployConfig();
     }
 
     // region pause

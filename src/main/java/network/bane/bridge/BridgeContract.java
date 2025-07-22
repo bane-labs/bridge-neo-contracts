@@ -33,9 +33,6 @@ import network.bane.structs.BridgeDeploymentData;
 import network.bane.structs.NativeTokenBridge;
 import network.bane.structs.TokenBridge;
 import network.bane.structs.Withdrawal;
-import network.bane.structs.message.MessageBridge;
-import network.bane.structs.message.N3MessageEnvelope;
-import network.bane.structs.message.N3MethodCall;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.checkWitness;
@@ -48,8 +45,6 @@ import static network.bane.bridge.BridgeHelper.onlyRelayer;
 import static network.bane.bridge.BridgeHelper.onlyWhenNotPaused;
 import static network.bane.bridge.BridgeImpl.enteringNonReentrant;
 import static network.bane.bridge.BridgeImpl.exitingNonReentrant;
-import static network.bane.bridge.MessageBridgeImpl.onlyWhenMessageBridgeNotPaused;
-import static network.bane.bridge.MessageBridgeImpl.onlyWhenMessageBridgePaused;
 import static network.bane.bridge.NativeBridgeImpl.onlyWhenDepositsNotPaused;
 import static network.bane.bridge.NativeBridgeImpl.onlyWhenDepositsPaused;
 import static network.bane.bridge.NativeBridgeImpl.onlyWhenNativeBridgePaused;
@@ -210,54 +205,6 @@ public class BridgeContract {
     @DisplayName("MaxTokenWithdrawalsChange")
     @EventParameterNames({"NeoN3Token", "NewMaxWithdrawals"})
     static Event2Args<Hash160, Integer> onMaxTokenWithdrawalsChange;
-
-    // endregion
-    // region message bridge events
-
-    @DisplayName("MessageBridgeSet")
-    static Event onMessageBridgeSet;
-
-    @DisplayName("MessageBridgePause")
-    static Event onMessageBridgePause;
-
-    @DisplayName("MessageBridgeUnpause")
-    static Event onMessageBridgeUnpause;
-
-    @DisplayName("N3MessageRootUpdate")
-    @EventParameterNames({"Nonce", "N3MessageRoot"})
-    static Event2Args<Integer, ByteString> onEvmToN3MessageRootUpdate;
-
-    @DisplayName("N3MessageStore")
-    @EventParameterNames({"Nonce", "Metadata"})
-    static Event2Args<Integer, N3MessageEnvelope.N3ExecutableMessage.N3Metadata> onMessageStore;
-
-    @DisplayName("N3MessageExecution")
-    @EventParameterNames({"Nonce", "Metadata"})
-    static Event2Args<Integer, N3MessageEnvelope.N3ExecutableMessage.N3Metadata> onMessageExecution;
-
-    @DisplayName("N3MessageExecutionResult")
-    @EventParameterNames({"Nonce", "Result"})
-    static Event2Args<Integer, Object> onMessageExecutionResult;
-
-    @DisplayName("MessageSendingFeeChange")
-    @EventParameterNames({"NewFee"})
-    static Event1Arg<Integer> onMessageSendingFeeChange;
-
-    @DisplayName("MessageMaxBytesForSendingChange")
-    @EventParameterNames({"NewMaxBytes"})
-    static Event1Arg<Integer> onMessageMaxBytesForSendingChange;
-
-    @DisplayName("MaxNrMessagesForStoringChange")
-    @EventParameterNames({"NewMaxNrMessages"})
-    static Event1Arg<Integer> onMaxNrMessagesForStoringChange;
-
-    @DisplayName("MessageExecutionManagerChange")
-    @EventParameterNames({"NewExecutionManager"})
-    static Event1Arg<Hash160> onMessageExecutionManagerChange;
-
-    @DisplayName("ExecutionWindowSecondsChange")
-    @EventParameterNames({"NewExecutionWindowSeconds"})
-    static Event1Arg<Integer> onExecutionWindowSecondsChange;
 
     // endregion
     // endregion
@@ -923,183 +870,6 @@ public class BridgeContract {
     @Safe
     public static ByteString tokenWithdrawalRoot(Hash160 token) {
         return getTokenBridge(token).withdrawalState.root;
-    }
-
-    // endregion
-    // endregion
-    // endregion
-    // region message bridge
-    // region set message bridge
-
-    public static void setMessageBridge(int sendingFee, int maxBytesForSending, int maxNrMsgsForStoring,
-            Hash160 executionManager, int executionWindowSeconds) {
-
-        onlyGovernor();
-        // Set the message bridge. Aborts if the message bridge is already set.
-        MessageBridgeImpl.setMessageBridge(sendingFee, maxBytesForSending, maxNrMsgsForStoring,
-                executionManager, executionWindowSeconds);
-        onMessageBridgeSet.fire();
-    }
-
-    // endregion
-    // region message bridge pausing
-
-    @Safe
-    public static boolean messageBridgeIsPaused() {
-        return MessageBridgeImpl.getMessageBridge().paused;
-    }
-
-    public static void pauseMessageBridge() {
-        onlyGovernorOrSecurityGuard();
-        onlyWhenMessageBridgeNotPaused();
-        MessageBridgeImpl.pauseMessageBridge();
-        onMessageBridgePause.fire();
-    }
-
-    public static void unpauseMessageBridge() {
-        onlyGovernor();
-        onlyWhenMessageBridgePaused();
-        MessageBridgeImpl.unpauseMessageBridge();
-        onMessageBridgeUnpause.fire();
-    }
-
-    // endregion
-    // region message sending (N3 to EVM)
-
-    public static void sendMessage() {
-        // todo: send messages from N3 to EVM.
-        abort("Not implemented yet");
-    }
-
-    // endregion
-    // region message storing and executing (EVM to N3)
-
-    @Safe
-    public static ByteString getSerializedN3MethodCall(Hash160 target, String method, byte callFlags, Object[] args) {
-        return new StdLib().serialize(new N3MethodCall(target, method, callFlags, args));
-    }
-
-    public static void storeMessages(ByteString n3MessageRoot, Map<ECPoint, ByteString> signatures,
-            List<N3MessageEnvelope> messages) {
-        onlyRelayer();
-        onlyWhenNotPaused();
-        onlyWhenMessageBridgeNotPaused();
-
-        MessageBridgeImpl.storeMessages(n3MessageRoot, signatures, messages);
-    }
-
-    @Safe
-    public static N3MessageEnvelope.N3ExecutableMessage getMessage(int nonce) {
-        return MessageBridgeImpl.getMessage(nonce);
-    }
-
-    @Safe
-    public static boolean messageHasBeenExecuted(int nonce) {
-        return MessageBridgeImpl.messageHasBeenExecuted(nonce);
-    }
-
-    public static void executeMessage(int nonce) {
-        onlyWhenNotPaused();
-        onlyWhenMessageBridgeNotPaused();
-
-        MessageBridgeImpl.executeMessage(nonce);
-    }
-
-    // endregion
-    // region message execution results from EVM
-
-    // todo: handle message execution results from EVM.
-
-    // endregion
-    // region message bridge configuration/state
-    // region message bridge configuration
-
-    @Safe
-    public static boolean messageBridgeIsSet() {
-        return MessageBridgeImpl.messageBridgeIsSet();
-    }
-
-    @Safe
-    public static MessageBridge getMessageBridge() {
-        return MessageBridgeImpl.getMessageBridge();
-    }
-
-    @Safe
-    public static int messageSendingFee() {
-        return MessageBridgeImpl.getMessageBridge().config.sendingFee;
-    }
-
-    public static void setMessageSendingFee(int newFee) {
-        onlyGovernor();
-        MessageBridgeImpl.setMessageSendingFee(newFee);
-        onMessageSendingFeeChange.fire(newFee);
-    }
-
-    @Safe
-    public static int maxBytesForSending() {
-        return MessageBridgeImpl.getMessageBridge().config.maxBytesForSending;
-    }
-
-    public static void setMaxBytesForSending(int newMaxBytes) {
-        onlyGovernor();
-        MessageBridgeImpl.setMaxBytesForSending(newMaxBytes);
-        onMessageMaxBytesForSendingChange.fire(newMaxBytes);
-    }
-
-    @Safe
-    public static int maxNrMessagesForStoring() {
-        return MessageBridgeImpl.getMessageBridge().config.maxNrMessagesForStoring;
-    }
-
-    public static void setMaxNrMessagesForStoring(int newMaxNrMessages) {
-        onlyGovernor();
-        MessageBridgeImpl.setMaxNrMessagesForStoring(newMaxNrMessages);
-        onMaxNrMessagesForStoringChange.fire(newMaxNrMessages);
-    }
-
-    @Safe
-    public static Hash160 messageExecutionManager() {
-        return MessageBridgeImpl.getMessageBridge().config.executionManager;
-    }
-
-    public static void setMessageExecutionManager(Hash160 newExecutionManager) {
-        onlyGovernor();
-        MessageBridgeImpl.setExecutionManager(newExecutionManager);
-        onMessageExecutionManagerChange.fire(newExecutionManager);
-    }
-
-    @Safe
-    public static int executionWindowSeconds() {
-        return MessageBridgeImpl.getMessageBridge().config.executionWindowSeconds;
-    }
-
-    public static void setExecutionWindowSeconds(int newExecutionWindowSeconds) {
-        onlyGovernor();
-        MessageBridgeImpl.setExecutionWindowSeconds(newExecutionWindowSeconds);
-        onExecutionWindowSecondsChange.fire(newExecutionWindowSeconds);
-    }
-
-    // endregion
-    // region message bridge state
-
-    @Safe
-    public static int evmMessageNonce() {
-        return MessageBridgeImpl.getMessageBridge().n3ToEvmMessageState.nonce;
-    }
-
-    @Safe
-    public static ByteString evmMessageRoot() {
-        return MessageBridgeImpl.getMessageBridge().n3ToEvmMessageState.root;
-    }
-
-    @Safe
-    public static int n3MessageNonce() {
-        return MessageBridgeImpl.getMessageBridge().evmToN3MessageState.nonce;
-    }
-
-    @Safe
-    public static ByteString n3MessageRoot() {
-        return MessageBridgeImpl.getMessageBridge().evmToN3MessageState.root;
     }
 
     // endregion

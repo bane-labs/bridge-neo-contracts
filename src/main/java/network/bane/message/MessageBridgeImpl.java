@@ -1,29 +1,8 @@
-package network.bane.bridge;
-
-import io.neow3j.devpack.ByteString;
-import io.neow3j.devpack.ECPoint;
-import io.neow3j.devpack.Hash160;
-import io.neow3j.devpack.Hash256;
-import io.neow3j.devpack.List;
-import io.neow3j.devpack.Map;
-import io.neow3j.devpack.Runtime;
-import io.neow3j.devpack.StorageMap;
-import io.neow3j.devpack.annotations.CallFlags;
-import io.neow3j.devpack.contracts.ContractInterface;
-import io.neow3j.devpack.contracts.ContractManagement;
-import io.neow3j.devpack.contracts.StdLib;
-import network.bane.lib.MessageBridgeLib;
-import network.bane.structs.State;
-import network.bane.structs.message.MessageBridge;
-import network.bane.structs.message.N3MessageEnvelope;
-
-import static io.neow3j.devpack.Helper.abort;
-import static network.bane.bridge.StorageConstants.KEY_MESSAGE_BRIDGE;
-import static network.bane.bridge.StorageConstants.PREFIX_MSG_EXECUTED;
-import static network.bane.bridge.StorageConstants.PREFIX_MSG_MESSAGES;
+package network.bane.message;
 
 public class MessageBridgeImpl {
 
+    /*
     // region message bridge
 
     static boolean messageBridgeIsSet() {
@@ -219,5 +198,6 @@ public class MessageBridgeImpl {
     }
 
     // endregion
+     */
 
 }
