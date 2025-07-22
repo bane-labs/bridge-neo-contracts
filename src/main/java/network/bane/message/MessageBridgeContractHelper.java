@@ -42,7 +42,7 @@ class MessageBridgeContractHelper {
     }
 
     static void onlyGovernorOrSecurityGuard() {
-        if (!checkWitness(managementContract().governor()) && ! checkWitness(managementContract().securityGuard())) {
+        if (!checkWitness(managementContract().governor()) && !checkWitness(managementContract().securityGuard())) {
             abort("No authorization - only governor or security guard");
         }
     }

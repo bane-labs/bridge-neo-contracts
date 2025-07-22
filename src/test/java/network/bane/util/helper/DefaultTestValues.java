@@ -23,10 +23,5 @@ public class DefaultTestValues {
     public static final Hash160 DEFAULT_NATIVE_TOKEN_HASH = GasToken.SCRIPT_HASH;
     public static final int DEFAULT_NATIVE_DECIMAL_SCALING_FACTOR = 0;
 
-    public static final int DEFAULT_MSG_MAX_BYTES_FOR_SENDING = 10000;
-    public static final int DEFAULT_MSG_NR_MSGS_PER_STORING_INVOCATION = 10;
-    public static final int DEFAULT_MSG_EXEC_WINDOW_SECONDS = 60 * 60 * 24 * 7 * 2; // 2 weeks
-    public static final int DEFAULT_MSG_SENDING_FEE = 10000000; // 0.1 GAS
-
     public static final Hash160 DUMMY_TARGET_CONTRACT_HASH = new Hash160("0x605edab7b33d187e9a22f33cc0722f9c3ccab3b3");
 }
