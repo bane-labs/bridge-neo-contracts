@@ -59,18 +59,18 @@ public class MessageTestStoreContract {
         if (currentlyExecutedNonce == 0) {
             abort("No message is currently being executed");
         }
-        N3MessageEnvelope.N3ExecutableMessage.N3Metadata metadata = messageBridge().getMessage(
+        N3MessageEnvelope.N3Message.N3Metadata metadata = messageBridge().getMessage(
                 currentlyExecutedNonce).metadata;
         metadataMap.put(currentlyExecutedNonce, new StdLib().serialize(metadata));
     }
 
     @Safe
-    public static N3MessageEnvelope.N3ExecutableMessage.N3Metadata getStoredMetadata(int nonce) {
+    public static N3MessageEnvelope.N3Message.N3Metadata getStoredMetadata(int nonce) {
         ByteString byteString = metadataMap.get(nonce);
         if (byteString == null) {
             return null;
         }
-        return (N3MessageEnvelope.N3ExecutableMessage.N3Metadata) new StdLib().deserialize(byteString);
+        return (N3MessageEnvelope.N3Message.N3Metadata) new StdLib().deserialize(byteString);
     }
 
     static class ExecutionManager extends ContractInterface {
@@ -88,7 +88,7 @@ public class MessageTestStoreContract {
         }
 
         @CallFlags(io.neow3j.devpack.constants.CallFlags.ReadOnly)
-        public native N3MessageEnvelope.N3ExecutableMessage getMessage(int nonce);
+        public native N3MessageEnvelope.N3Message getMessage(int nonce);
     }
 
 }

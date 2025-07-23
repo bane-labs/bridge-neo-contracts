@@ -21,7 +21,9 @@ import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
+import io.neow3j.devpack.events.Event3Args;
 import network.bane.structs.message.MessageBridge;
+import network.bane.structs.message.N3Message;
 import network.bane.structs.message.N3MessageEnvelope;
 import network.bane.structs.message.N3MethodCall;
 
@@ -82,12 +84,12 @@ public class MessageBridgeContract {
     static Event2Args<Integer, ByteString> onN3RootUpdate;
 
     @DisplayName("Store")
-    @EventParameterNames({"Nonce", "Metadata"})
-    static Event2Args<Integer, N3MessageEnvelope.N3ExecutableMessage.N3Metadata> onStore;
+    @EventParameterNames({"Nonce", "MessageType", "MetadataBytes"})
+    static Event3Args<Integer, Integer, ByteString> onStore;
 
     @DisplayName("Execute")
     @EventParameterNames({"Nonce", "Metadata"})
-    static Event2Args<Integer, N3MessageEnvelope.N3ExecutableMessage.N3Metadata> onExecution;
+    static Event2Args<Integer, N3Message.N3MetadataExecutable> onExecution;
 
     @DisplayName("ExecutionResult")
     @EventParameterNames({"Nonce", "Result"})
@@ -271,13 +273,13 @@ public class MessageBridgeContract {
     }
 
     @Safe
-    public static N3MessageEnvelope.N3ExecutableMessage getMessage(int nonce) {
+    public static N3Message getMessage(int nonce) {
         return MessageBridgeImpl.getMessage(nonce);
     }
 
     @Safe
-    public static boolean messageHasBeenExecuted(int nonce) {
-        return MessageBridgeImpl.messageHasBeenExecuted(nonce);
+    public static boolean isPending(int nonce) {
+        return MessageBridgeImpl.isPending(nonce);
     }
 
     public static void executeMessage(int nonce) {
