@@ -34,7 +34,7 @@ public class ExecutionManagerContract {
     private static final byte PREFIX_BASE = 0x0a;
 
     private static final int KEY_BRIDGE_MANAGEMENT = 0x01;
-    private static final int KEY_BRIDGE = 0x02;
+    private static final int KEY_MESSAGE_BRIDGE = 0x02;
     private static final int KEY_PAUSE = 0x03;
 
     private static final int KEY_ENTERED = 0x70;
@@ -115,8 +115,8 @@ public class ExecutionManagerContract {
     }
 
     @Safe
-    public static Hash160 bridge() {
-        return baseMap.getHash160(KEY_BRIDGE);
+    public static Hash160 messageBridge() {
+        return baseMap.getHash160(KEY_MESSAGE_BRIDGE);
     }
 
     // endregion
@@ -125,11 +125,11 @@ public class ExecutionManagerContract {
     @Struct
     private static class MessageExecutorDeploymentData {
         Hash160 management;
-        Hash160 bridge;
+        Hash160 messageBridge;
 
         public static boolean isValid(MessageExecutorDeploymentData data) {
             return data.management != null && Hash160.isValid(data.management) && !data.management.isZero() &&
-                    data.bridge != null && Hash160.isValid(data.bridge) && !data.bridge.isZero();
+                    data.messageBridge != null && Hash160.isValid(data.messageBridge) && !data.messageBridge.isZero();
         }
     }
 
@@ -142,7 +142,7 @@ public class ExecutionManagerContract {
             }
             baseMap.put(KEY_VERSION, 4); // Using the release version of the bridge-neo-contracts repository.
             baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.management);
-            baseMap.put(KEY_BRIDGE, deploymentData.bridge);
+            baseMap.put(KEY_MESSAGE_BRIDGE, deploymentData.messageBridge);
             baseMap.put(KEY_PAUSE, false);
         }
     }
@@ -178,7 +178,7 @@ public class ExecutionManagerContract {
     }
 
     private static void onlyBridge() {
-        if (!checkWitness(bridge())) {
+        if (!checkWitness(messageBridge())) {
             abort("No authorization - only bridge");
         }
     }

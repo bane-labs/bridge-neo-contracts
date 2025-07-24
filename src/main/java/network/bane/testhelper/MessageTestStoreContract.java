@@ -25,20 +25,19 @@ public class MessageTestStoreContract {
     private static final byte PREFIX_STORING = 0x0b;
     private static final byte PREFIX_METADATA = 0x0c;
 
-    private static final int KEY_BRIDGE = 0x02;
-
+    private static final int KEY_MESSAGE_BRIDGE = 0x02;
 
     private static final StorageContext ctx = Storage.getStorageContext();
     private static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
     private static final StorageMap storeMap = new StorageMap(ctx, PREFIX_STORING);
     private static final StorageMap metadataMap = new StorageMap(ctx, PREFIX_METADATA);
 
-    public static void setBridge(Hash160 bridgeHash) {
-        baseMap.put(KEY_BRIDGE, bridgeHash);
+    public static void setMessageBridge(Hash160 messageBridgeHash) {
+        baseMap.put(KEY_MESSAGE_BRIDGE, messageBridgeHash);
     }
 
-    private static Bridge bridge() {
-        return new Bridge(baseMap.getHash160(KEY_BRIDGE));
+    private static MessageBridge messageBridge() {
+        return new MessageBridge(baseMap.getHash160(KEY_MESSAGE_BRIDGE));
     }
 
     public static void storeValue(String key, Object value) {
@@ -60,7 +59,7 @@ public class MessageTestStoreContract {
         if (currentlyExecutedNonce == 0) {
             abort("No message is currently being executed");
         }
-        N3MessageEnvelope.N3ExecutableMessage.N3Metadata metadata = bridge().getMessage(
+        N3MessageEnvelope.N3ExecutableMessage.N3Metadata metadata = messageBridge().getMessage(
                 currentlyExecutedNonce).metadata;
         metadataMap.put(currentlyExecutedNonce, new StdLib().serialize(metadata));
     }
@@ -83,8 +82,8 @@ public class MessageTestStoreContract {
         public native int getExecutingNonce();
     }
 
-    static class Bridge extends ContractInterface {
-        public Bridge(Hash160 contractHash) {
+    static class MessageBridge extends ContractInterface {
+        public MessageBridge(Hash160 contractHash) {
             super(contractHash);
         }
 

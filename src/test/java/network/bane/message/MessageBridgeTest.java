@@ -1,4 +1,4 @@
-package network.bane.bridge;
+package network.bane.message;
 
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.test.ContractTest;
@@ -42,14 +42,14 @@ import static network.bane.util.TestHelper.validator4;
 import static network.bane.util.TestHelper.validator5;
 import static network.bane.util.helper.PrintHelper.printTransactionFee;
 import static network.bane.util.helper.TestHelper.alice;
-import static network.bane.util.helper.TestHelper.bridge;
-import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
+import static network.bane.util.helper.TestHelper.createMessageBridgeDeployConfig;
 import static network.bane.util.helper.TestHelper.decrementN3MessageNonce;
 import static network.bane.util.helper.TestHelper.incrementAndGetN3MessageNonce;
+import static network.bane.util.helper.TestHelper.messageBridge;
 import static network.bane.util.helper.TestHelper.neow3j;
 import static network.bane.util.helper.TestHelper.setup;
-import static network.bane.util.helper.TestHelper.setupBridge;
+import static network.bane.util.helper.TestHelper.setupMessageBridge;
 import static network.bane.util.helper.TestHelper.testContract;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -62,7 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ContractTest(
         blockTime = 1,
-        contracts = {BridgeManagementContract.class, BridgeContract.class, TestContract.class},
+        contracts = {BridgeManagementContract.class, MessageBridgeContract.class},
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -74,10 +74,9 @@ public class MessageBridgeTest {
     @BeforeAll
     public static void setUp() throws Throwable {
         setup(ext);
-        setupBridge(ext);
+        setupMessageBridge(ext);
 
-        bridge.setDefaultMessageBridge();
-        bridge.unpauseMessageBridge();
+        messageBridge.unpause();
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -85,56 +84,56 @@ public class MessageBridgeTest {
         return createBridgeManagementDeployConfig();
     }
 
-    @DeployConfig(BridgeContract.class)
-    public static DeployConfiguration deployConfigBridge() {
-        return createBridgeDeployConfig();
+    @DeployConfig(MessageBridgeContract.class)
+    public static DeployConfiguration deployConfigMessageBridge() {
+        return createMessageBridgeDeployConfig();
     }
 
     // region pause
 
     @Test
     @Order(0)
-    public void test_pauseMessageBridge_governor() throws Throwable {
-        assertFalse(bridge.getMessageBridge().paused);
-        bridge.pauseMessageBridge(governor);
-        assertTrue(bridge.getMessageBridge().paused);
+    public void test_pause_governor() throws Throwable {
+        assertFalse(messageBridge.isPaused());
+        messageBridge.pause(governor);
+        assertTrue(messageBridge.isPaused());
 
         // revert the state for further tests
-        bridge.unpauseMessageBridge();
-        assertFalse(bridge.getMessageBridge().paused);
+        messageBridge.unpause();
+        assertFalse(messageBridge.isPaused());
     }
 
     @Test
     @Order(0)
-    public void test_pauseMessageBridge_securityGuard() throws Throwable {
-        assertFalse(bridge.getMessageBridge().paused);
-        bridge.pauseMessageBridge(securityGuard);
-        assertTrue(bridge.getMessageBridge().paused);
+    public void test_pause_securityGuard() throws Throwable {
+        assertFalse(messageBridge.isPaused());
+        messageBridge.pause(securityGuard);
+        assertTrue(messageBridge.isPaused());
 
         // revert the state for further tests
-        bridge.unpauseMessageBridge();
+        messageBridge.unpause();
     }
 
     @Test
     @Order(0)
-    public void test_pauseMessageBridge_notGovernor() throws IOException {
-        assertFalse(bridge.getMessageBridge().paused);
+    public void test_pause_notGovernor() throws IOException {
+        assertFalse(messageBridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.pauseMessageBridge(alice));
+                () -> messageBridge.pause(alice));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor or security guard"));
     }
 
     @Test
     @Order(0)
-    public void test_unpauseMessageBridge_notGovernor() throws Throwable {
-        bridge.pauseMessageBridge();
-        assertTrue(bridge.getMessageBridge().paused);
+    public void test_unpause_notGovernor() throws Throwable {
+        messageBridge.pause();
+        assertTrue(messageBridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.unpauseMessageBridge(alice));
+                () -> messageBridge.unpause(alice));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
 
         // revert the state for further tests
-        bridge.unpauseMessageBridge();
+        messageBridge.unpause();
     }
 
     // endregion
@@ -158,7 +157,7 @@ public class MessageBridgeTest {
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.storeMessages(governor, root, signMsg(validators, root), array(messageEnvelope)));
+                () -> messageBridge.storeMessages(governor, root, signMsg(validators, root), array(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("No authorization - only relayer"));
 
         decrementN3MessageNonce();
@@ -167,8 +166,8 @@ public class MessageBridgeTest {
     @Test
     @Order(0)
     public void test_storeMessages_1_bridgePaused() throws Throwable {
-        bridge.pauseBridge();
-        assertTrue(bridge.isPaused());
+        messageBridge.pause();
+        assertTrue(messageBridge.isPaused());
 
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
@@ -185,18 +184,18 @@ public class MessageBridgeTest {
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
+                () -> messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("Contract paused"));
 
-        bridge.unpause();
+        messageBridge.unpause();
         decrementN3MessageNonce();
     }
 
     @Test
     @Order(0)
     public void test_storeMessages_1_messageBridgePaused() throws Throwable {
-        bridge.pauseMessageBridge();
-        assertTrue(bridge.messageBridgeIsPaused());
+        messageBridge.pause();
+        assertTrue(messageBridge.isPaused());
 
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
@@ -213,10 +212,10 @@ public class MessageBridgeTest {
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
-        assertThat(thrown.getMessage(), containsString("Message bridge paused"));
+                () -> messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
+        assertThat(thrown.getMessage(), containsString("Contract paused"));
 
-        bridge.unpauseMessageBridge();
+        messageBridge.unpause();
         decrementN3MessageNonce();
     }
 
@@ -229,7 +228,7 @@ public class MessageBridgeTest {
         ContractParameter emptyN3MsgEnvelopeArray = array();
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.storeMessages(dummyRoot, dummyValidatorSigMap, emptyN3MsgEnvelopeArray));
+                () -> messageBridge.storeMessages(dummyRoot, dummyValidatorSigMap, emptyN3MsgEnvelopeArray));
         assertThat(thrown.getMessage(), containsString("At least one message required"));
     }
 
@@ -239,7 +238,6 @@ public class MessageBridgeTest {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
         BigInteger nonce = incrementAndGetN3MessageNonce().add(BigInteger.ONE);
-        System.out.println(nonce);
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String executableCode = "0x1234567890abcdef";
@@ -252,7 +250,7 @@ public class MessageBridgeTest {
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.storeMessages(root, signMsg(validators, root), messageEnvelope));
+                () -> messageBridge.storeMessages(root, signMsg(validators, root), messageEnvelope));
         assertThat(thrown.getMessage(), containsString("Provided messages are not subsequent"));
 
         decrementN3MessageNonce();
@@ -277,7 +275,7 @@ public class MessageBridgeTest {
         ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 // Root signed by validators, but not matching the messages.
-                () -> bridge.storeMessages(invalidRoot, signMsg(validators, invalidRoot), array(messageEnvelope)));
+                () -> messageBridge.storeMessages(invalidRoot, signMsg(validators, invalidRoot), array(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("Invalid root"));
 
         decrementN3MessageNonce();
@@ -301,7 +299,7 @@ public class MessageBridgeTest {
         List<Account> validators = asList(validator1, validator2, validator3, validator4);
         ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
+                () -> messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("Insufficient signatures"));
 
         decrementN3MessageNonce();
@@ -325,7 +323,7 @@ public class MessageBridgeTest {
         List<Account> validators = asList(validator1, validator2, validator3, validator4, alice); // Non-validator sig
         ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
+                () -> messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("Invalid validator signatures"));
 
         decrementN3MessageNonce();
@@ -353,20 +351,20 @@ public class MessageBridgeTest {
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter());
-        Hash256 txHash = bridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope));
+        Hash256 txHash = messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope));
         printTransactionFee(neow3j, "tx with 1 message", txHash);
         List<TestHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
-                bridge.getScriptHash());
+                messageBridge.getScriptHash());
         assertThat(n3MessageStoreEvents, hasSize(1));
         TestHelper.N3MessageStoreEvent n3MessageStoreEvent = n3MessageStoreEvents.get(0);
         assertThat(n3MessageStoreEvent.nonce, is(nonce));
         N3MessageDto.N3MessageMetadataDto expectedMetadata = metadata;
         assertThat(n3MessageStoreEvent.messageMetadata, is(expectedMetadata));
 
-        N3MessageDto message = bridge.getMessage(nonce);
+        N3MessageDto message = messageBridge.getMessage(nonce);
         assertThat(message, is(n3MessageDto));
 
-        assertFalse(bridge.messageHasBeenExecuted(nonce));
+        assertFalse(messageBridge.messageHasBeenExecuted(nonce));
     }
 
     // endregion
@@ -375,22 +373,22 @@ public class MessageBridgeTest {
     @Test
     @Order(0)
     public void test_setSendingFee() throws Throwable {
-        BigInteger sendingFeeBefore = bridge.messageSendingFee();
+        BigInteger sendingFeeBefore = messageBridge.sendingFee();
         BigInteger newSendingFee = new BigInteger("200");
         assertThat(newSendingFee, is(not(sendingFeeBefore)));
 
-        Hash256 tx = bridge.setMessageSendingFee(newSendingFee);
-        assertThat(bridge.messageSendingFee(), is(newSendingFee));
+        Hash256 tx = messageBridge.setSendingFee(newSendingFee);
+        assertThat(messageBridge.sendingFee(), is(newSendingFee));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
                 .getFirstNotification();
-        assertThat(notification.getContract(), is(bridge.getScriptHash()));
-        assertThat(notification.getEventName(), is("MessageSendingFeeChange"));
+        assertThat(notification.getContract(), is(messageBridge.getScriptHash()));
+        assertThat(notification.getEventName(), is("SendingFeeChange"));
         assertThat(notification.getState().getList(), hasSize(1));
         assertThat(notification.getState().getList().get(0).getInteger(), is(newSendingFee));
 
         // revert the state for further tests
-        bridge.setMessageSendingFee(sendingFeeBefore);
+        messageBridge.setSendingFee(sendingFeeBefore);
     }
 
     @Test
@@ -398,7 +396,7 @@ public class MessageBridgeTest {
     public void test_setSendingFee_invalidValue() {
         BigInteger invalidSendingFee = new BigInteger("-1");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMessageSendingFee(invalidSendingFee));
+                () -> messageBridge.setSendingFee(invalidSendingFee));
         assertThat(thrown.getMessage(), containsString("Sending fee must be nonnegative"));
     }
 
@@ -407,29 +405,29 @@ public class MessageBridgeTest {
     public void test_setSendingFee_notGovernor() {
         BigInteger newSendingFee = new BigInteger("200");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMessageSendingFee(alice, newSendingFee));
+                () -> messageBridge.setSendingFee(alice, newSendingFee));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
     @Test
     @Order(0)
     public void test_setMaxBytesForSending() throws Throwable {
-        BigInteger maxBytesBefore = bridge.maxBytesForSending();
+        BigInteger maxBytesBefore = messageBridge.maxBytesForSending();
         BigInteger newMaxBytes = new BigInteger("200");
         assertThat(newMaxBytes, is(not(maxBytesBefore)));
 
-        Hash256 tx = bridge.setMaxBytesForSending(newMaxBytes);
-        assertThat(bridge.maxBytesForSending(), is(newMaxBytes));
+        Hash256 tx = messageBridge.setMaxBytesForSending(newMaxBytes);
+        assertThat(messageBridge.maxBytesForSending(), is(newMaxBytes));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
                 .getFirstNotification();
-        assertThat(notification.getContract(), is(bridge.getScriptHash()));
-        assertThat(notification.getEventName(), is("MessageMaxBytesForSendingChange"));
+        assertThat(notification.getContract(), is(messageBridge.getScriptHash()));
+        assertThat(notification.getEventName(), is("MaxBytesForSendingChange"));
         assertThat(notification.getState().getList(), hasSize(1));
         assertThat(notification.getState().getList().get(0).getInteger(), is(newMaxBytes));
 
         // revert the state for further tests
-        bridge.setMaxBytesForSending(maxBytesBefore);
+        messageBridge.setMaxBytesForSending(maxBytesBefore);
     }
 
     @Test
@@ -437,7 +435,7 @@ public class MessageBridgeTest {
     public void test_setMaxBytesForSending_invalidValue() {
         BigInteger invalidMaxBytes = BigInteger.ZERO;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMaxBytesForSending(invalidMaxBytes));
+                () -> messageBridge.setMaxBytesForSending(invalidMaxBytes));
         assertThat(thrown.getMessage(), containsString("Max bytes for sending must be positive"));
     }
 
@@ -446,29 +444,29 @@ public class MessageBridgeTest {
     public void test_setMaxBytesForSending_notGovernor() {
         BigInteger newMaxBytes = new BigInteger("200");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMaxBytesForSending(alice, newMaxBytes));
+                () -> messageBridge.setMaxBytesForSending(alice, newMaxBytes));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
     @Test
     @Order(0)
     public void test_setMaxNrMessagesForStoring() throws Throwable {
-        BigInteger maxNrMessagesBefore = bridge.maxNrMessagesForStoring();
+        BigInteger maxNrMessagesBefore = messageBridge.maxNrMessagesForStoring();
         BigInteger newMaxNrMessages = new BigInteger("20");
         assertThat(newMaxNrMessages, is(not(maxNrMessagesBefore)));
 
-        Hash256 tx = bridge.setMaxNrMessagesForStoring(newMaxNrMessages);
-        assertThat(bridge.maxNrMessagesForStoring(), is(newMaxNrMessages));
+        Hash256 tx = messageBridge.setMaxNrMessagesForStoring(newMaxNrMessages);
+        assertThat(messageBridge.maxNrMessagesForStoring(), is(newMaxNrMessages));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
                 .getFirstNotification();
-        assertThat(notification.getContract(), is(bridge.getScriptHash()));
+        assertThat(notification.getContract(), is(messageBridge.getScriptHash()));
         assertThat(notification.getEventName(), is("MaxNrMessagesForStoringChange"));
         assertThat(notification.getState().getList(), hasSize(1));
         assertThat(notification.getState().getList().get(0).getInteger(), is(newMaxNrMessages));
 
         // revert the state for further tests
-        bridge.setMaxNrMessagesForStoring(maxNrMessagesBefore);
+        messageBridge.setMaxNrMessagesForStoring(maxNrMessagesBefore);
     }
 
     @Test
@@ -476,7 +474,7 @@ public class MessageBridgeTest {
     public void test_setMaxNrMessageForStoring_invalidValue() {
         BigInteger invalidMaxNrMessages = BigInteger.ZERO;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMaxNrMessagesForStoring(invalidMaxNrMessages));
+                () -> messageBridge.setMaxNrMessagesForStoring(invalidMaxNrMessages));
         assertThat(thrown.getMessage(), containsString("Max number of messages for storing must be positive"));
     }
 
@@ -485,29 +483,29 @@ public class MessageBridgeTest {
     public void test_setMaxNrMessagesForStoring_notGovernor() {
         BigInteger newMaxNrMessages = new BigInteger("20");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMaxNrMessagesForStoring(alice, newMaxNrMessages));
+                () -> messageBridge.setMaxNrMessagesForStoring(alice, newMaxNrMessages));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
     @Test
     @Order(0)
     public void test_setExecutionWindowSeconds() throws Throwable {
-        BigInteger execWindowSecondsBefore = bridge.executionWindowSeconds();
+        BigInteger execWindowSecondsBefore = messageBridge.executionWindowSeconds();
         BigInteger newExecWindowSeconds = new BigInteger("3600");
         assertThat(newExecWindowSeconds, is(not(execWindowSecondsBefore)));
 
-        Hash256 tx = bridge.setExecutionWindowSeconds(newExecWindowSeconds);
-        assertThat(bridge.executionWindowSeconds(), is(newExecWindowSeconds));
+        Hash256 tx = messageBridge.setExecutionWindowSeconds(newExecWindowSeconds);
+        assertThat(messageBridge.executionWindowSeconds(), is(newExecWindowSeconds));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
                 .getFirstNotification();
-        assertThat(notification.getContract(), is(bridge.getScriptHash()));
+        assertThat(notification.getContract(), is(messageBridge.getScriptHash()));
         assertThat(notification.getEventName(), is("ExecutionWindowSecondsChange"));
         assertThat(notification.getState().getList(), hasSize(1));
         assertThat(notification.getState().getList().get(0).getInteger(), is(newExecWindowSeconds));
 
         // revert the state for further tests
-        bridge.setExecutionWindowSeconds(execWindowSecondsBefore);
+        messageBridge.setExecutionWindowSeconds(execWindowSecondsBefore);
     }
 
     @Test
@@ -515,7 +513,7 @@ public class MessageBridgeTest {
     public void test_setExecutionWindowSeconds_invalidValue() {
         BigInteger invalidExecWindowSeconds = BigInteger.ZERO;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setExecutionWindowSeconds(invalidExecWindowSeconds));
+                () -> messageBridge.setExecutionWindowSeconds(invalidExecWindowSeconds));
         assertThat(thrown.getMessage(), containsString("Execution window seconds must be positive"));
     }
 
@@ -524,29 +522,26 @@ public class MessageBridgeTest {
     public void test_setExecutionWindowSeconds_notGovernor() {
         BigInteger newExecWindowSeconds = new BigInteger("3600");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setExecutionWindowSeconds(alice, newExecWindowSeconds));
+                () -> messageBridge.setExecutionWindowSeconds(alice, newExecWindowSeconds));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
     @Test
     @Order(0)
     public void test_setExecutionManager() throws Throwable {
-        Hash160 executionManagerBefore = bridge.messageExecutionManager();
+        Hash160 executionManagerBefore = messageBridge.executionManager();
         Hash160 newExecutionManager = testContract;
         assertThat(executionManagerBefore, is(not(newExecutionManager)));
 
-        Hash256 tx = bridge.setMessageExecutionManager(newExecutionManager);
-        assertThat(bridge.messageExecutionManager(), is(newExecutionManager));
+        Hash256 tx = messageBridge.setExecutionManager(newExecutionManager);
+        assertThat(messageBridge.executionManager(), is(newExecutionManager));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
                 .getFirstNotification();
-        assertThat(notification.getContract(), is(bridge.getScriptHash()));
-        assertThat(notification.getEventName(), is("MessageExecutionManagerChange"));
+        assertThat(notification.getContract(), is(messageBridge.getScriptHash()));
+        assertThat(notification.getEventName(), is("ExecutionManagerChange"));
         assertThat(notification.getState().getList(), hasSize(1));
         assertThat(Hash160.fromAddress(notification.getState().getList().get(0).getAddress()), is(newExecutionManager));
-
-        // revert the state for further tests
-        bridge.setMessageExecutionManager(executionManagerBefore);
     }
 
     @Test
@@ -554,7 +549,7 @@ public class MessageBridgeTest {
     public void test_setExecutionManager_notContract() {
         Hash160 newExecutionManager = new Hash160("0x1253c2c30b51514e805ddae9ff34df1dc67871b8");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMessageExecutionManager(newExecutionManager));
+                () -> messageBridge.setExecutionManager(newExecutionManager));
         assertThat(thrown.getMessage(), containsString("Execution manager must be a contract"));
     }
 
@@ -563,7 +558,7 @@ public class MessageBridgeTest {
     public void test_setExecutionManager_notGovernor() {
         Hash160 newExecutionManager = testContract;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMessageExecutionManager(alice, newExecutionManager));
+                () -> messageBridge.setExecutionManager(alice, newExecutionManager));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 

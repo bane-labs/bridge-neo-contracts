@@ -1,4 +1,4 @@
-package network.bane.bridge;
+package network.bane.message;
 
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
@@ -18,70 +18,46 @@ import network.bane.structs.message.MessageBridge;
 import network.bane.structs.message.N3MessageEnvelope;
 
 import static io.neow3j.devpack.Helper.abort;
-import static network.bane.bridge.StorageConstants.KEY_MESSAGE_BRIDGE;
-import static network.bane.bridge.StorageConstants.PREFIX_MSG_EXECUTED;
-import static network.bane.bridge.StorageConstants.PREFIX_MSG_MESSAGES;
+import static network.bane.message.MessageBridgeContractHelper.managementContract;
+import static network.bane.message.StorageConstants.KEY_MESSAGE_BRIDGE;
+import static network.bane.message.StorageConstants.KEY_UNCLAIMED_REWARDS;
+import static network.bane.message.StorageConstants.PREFIX_MSG_EXECUTED;
+import static network.bane.message.StorageConstants.PREFIX_MSG_MESSAGES;
 
-public class MessageBridgeImpl {
+class MessageBridgeImpl {
 
     // region message bridge
 
-    static boolean messageBridgeIsSet() {
-        return BridgeContract.baseMap.get(KEY_MESSAGE_BRIDGE) != null;
-    }
-
     static MessageBridge getMessageBridge() {
-        ByteString serialized = BridgeContract.baseMap.get(KEY_MESSAGE_BRIDGE);
+        ByteString serialized = MessageBridgeContract.baseMap.get(KEY_MESSAGE_BRIDGE);
         if (serialized == null) abort("Message bridge not set");
         return (MessageBridge) new StdLib().deserialize(serialized);
     }
 
-    static void setMessageBridge(int sendingFee, int maxBytesForSending, int maxNrMsgsForStoring,
-            Hash160 executionManager, int executionWindowSeconds) {
+    private static final int DEFAULT_SENDING_FEE = 10000000; // 0.1 GAS
+    private static final int DEFAULT_MAX_BYTES_FOR_SENDING = 10000;
+    private static final int DEFAULT_MAX_NR_MESSAGES_FOR_STORING = 10;
+    private static final int DEFAULT_EXECUTION_WINDOW_SECONDS = 60 * 60 * 24 * 7 * 2; // 2 weeks
 
-        if (messageBridgeIsSet()) abort("Message bridge already set");
-        if (!new ContractManagement().isContract(executionManager)) abort("Execution manager must be a contract");
-
+    static void setDefaultMessageBridge(Hash160 executionManager) {
+        // Todo: Consider checking that the execution manager is a contract.
         ByteString zeroHash = Hash256.zero().toByteString();
-        MessageBridge messageBridge = new MessageBridge(true, new State(0, zeroHash), new State(0, zeroHash),
-                new MessageBridge.MessageConfig(sendingFee, maxBytesForSending, maxNrMsgsForStoring,
-                        executionManager, executionWindowSeconds)
+        MessageBridge messageBridge = new MessageBridge(new State(0, zeroHash), new State(0, zeroHash),
+                new MessageBridge.MessageBridgeConfig(DEFAULT_SENDING_FEE, DEFAULT_MAX_BYTES_FOR_SENDING,
+                        DEFAULT_MAX_NR_MESSAGES_FOR_STORING, executionManager, DEFAULT_EXECUTION_WINDOW_SECONDS)
         );
         if (!MessageBridge.isValid(messageBridge)) abort("Invalid message bridge configuration");
         storeMessageBridge(messageBridge);
     }
 
     private static void storeMessageBridge(MessageBridge messageBridge) {
-        BridgeContract.baseMap.put(KEY_MESSAGE_BRIDGE, new StdLib().serialize(messageBridge));
-    }
-
-    // endregion
-    // region pause
-
-    static void onlyWhenMessageBridgePaused() {
-        if (!getMessageBridge().paused) abort("Message bridge not paused");
-    }
-
-    static void onlyWhenMessageBridgeNotPaused() {
-        if (getMessageBridge().paused) abort("Message bridge paused");
-    }
-
-    static void pauseMessageBridge() {
-        MessageBridge messageBridge = getMessageBridge();
-        messageBridge.paused = true;
-        storeMessageBridge(messageBridge);
-    }
-
-    static void unpauseMessageBridge() {
-        MessageBridge messageBridge = getMessageBridge();
-        messageBridge.paused = false;
-        storeMessageBridge(messageBridge);
+        MessageBridgeContract.baseMap.put(KEY_MESSAGE_BRIDGE, new StdLib().serialize(messageBridge));
     }
 
     // endregion
     // region config
 
-    static void setMessageSendingFee(int newFee) {
+    static void setSendingFee(int newFee) {
         MessageBridge messageBridge = getMessageBridge();
         if (newFee < 0) abort("Sending fee must be nonnegative");
         messageBridge.config.sendingFee = newFee;
@@ -128,11 +104,11 @@ public class MessageBridgeImpl {
         if (!subsequentNonces(messages, messageBridge.evmToN3MessageState.nonce)) {
             abort("Provided messages are not subsequent");
         }
-        if (!MessageBridgeLib.computeNewTopRoot(BridgeContract.cryptoLib, messageBridge.evmToN3MessageState.root,
+        if (!MessageBridgeLib.computeNewTopRoot(MessageBridgeContract.cryptoLib, messageBridge.evmToN3MessageState.root,
                 messages).equals(newN3MessageRoot)) {
             abort("Invalid root");
         }
-        if (!BridgeHelper.managementContract().verifyValidatorSignatures(BridgeContract.linkedChainId(),
+        if (!managementContract().verifyValidatorSignatures(MessageBridgeContract.linkedChainId(),
                 newN3MessageRoot, signatures)) {
             abort("Invalid validator signatures");
         }
@@ -142,7 +118,7 @@ public class MessageBridgeImpl {
         messageBridge.evmToN3MessageState.root = newN3MessageRoot;
         assert messageBridge.evmToN3MessageState.root == newN3MessageRoot : "Root not set correctly";
         storeMessageBridge(messageBridge);
-        BridgeContract.onEvmToN3MessageRootUpdate.fire(messageBridge.evmToN3MessageState.nonce,
+        MessageBridgeContract.onN3RootUpdate.fire(messageBridge.evmToN3MessageState.nonce,
                 messageBridge.evmToN3MessageState.root);
 
         // Store the messages in the contract storage
@@ -150,14 +126,14 @@ public class MessageBridgeImpl {
     }
 
     private static void storeMessagesToContractStorage(List<N3MessageEnvelope> messages) {
-        StorageMap messageMap = new StorageMap(BridgeContract.ctx, PREFIX_MSG_MESSAGES);
+        StorageMap messageMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_MESSAGES);
         int nrMessages = messages.size();
         for (int i = 0; i < nrMessages; i++) {
             N3MessageEnvelope n3Message = messages.get(i);
             // Store the message in storage.
             messageMap.put(n3Message.nonce, new StdLib().serialize(n3Message.message));
             // Fire event including the nonce and the message's metadata.
-            BridgeContract.onMessageStore.fire(n3Message.nonce, n3Message.message.metadata);
+            MessageBridgeContract.onStore.fire(n3Message.nonce, n3Message.message.metadata);
         }
     }
 
@@ -174,17 +150,17 @@ public class MessageBridgeImpl {
 
     static N3MessageEnvelope.N3ExecutableMessage getMessage(int nonce) {
         return (N3MessageEnvelope.N3ExecutableMessage) new StdLib().deserialize(
-                new StorageMap(BridgeContract.ctx, PREFIX_MSG_MESSAGES).get(nonce)
+                new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_MESSAGES).get(nonce)
         );
     }
 
     static boolean messageHasBeenExecuted(int nonce) {
-        return new StorageMap(BridgeContract.ctx, PREFIX_MSG_EXECUTED).getBoolean(nonce);
+        return new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTED).getBoolean(nonce);
     }
 
-    public static void executeMessage(int nonce) {
+    static void executeMessage(int nonce) {
         // Check if the message has been executed before.
-        StorageMap executedMap = new StorageMap(BridgeContract.ctx, PREFIX_MSG_EXECUTED);
+        StorageMap executedMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTED);
         ByteString executedStatus = executedMap.get(nonce);
         if (executedStatus != null) abort("Message already executed");
 
@@ -203,10 +179,14 @@ public class MessageBridgeImpl {
         // Mark the message as executed.
         executedMap.put(nonce, currentTime);
 
-        BridgeContract.onMessageExecution.fire(nonce, message.metadata);
+        MessageBridgeContract.onExecution.fire(nonce, message.metadata);
         Object result = new ExecutionManager(getMessageBridge().config.executionManager).executeMessage(nonce,
                 message.executableCode);
-        BridgeContract.onMessageExecutionResult.fire(nonce, result);
+        MessageBridgeContract.onExecutionResult.fire(nonce, result);
+    }
+
+    public static int getUnclaimedRewards() {
+        return MessageBridgeContract.baseMap.getInt(KEY_UNCLAIMED_REWARDS);
     }
 
     static class ExecutionManager extends ContractInterface {
