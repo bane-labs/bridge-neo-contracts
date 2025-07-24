@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.math.BigInteger;
 
 import static io.neow3j.types.ContractParameter.byteArray;
-import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static network.bane.util.structs.N3MessageDto.MESSAGE_TYPE_EXECUTABLE;
 
 public class N3MessageMetadataExecDto extends N3MessageMetadataDto {
@@ -21,8 +20,7 @@ public class N3MessageMetadataExecDto extends N3MessageMetadataDto {
 
     @Override
     public byte[] serialize(MessageBridge messageBridge) throws IOException {
-        byte[] serializedBytes = messageBridge.serializeMetadataExec(this);
-        return serializedBytes;
+        return messageBridge.serializeMetadataExec(this);
     }
 
     @Override

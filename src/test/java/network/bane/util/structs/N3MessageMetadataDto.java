@@ -36,17 +36,6 @@ public abstract class N3MessageMetadataDto {
         return Objects.hash(type, timestamp, sender);
     }
 
-    public int getType() {
-        if (this instanceof N3MessageMetadataExecDto) {
-            return 0; // EXECUTABLE
-        } else if (this instanceof N3MessageMetadataStoreOnlyDto) {
-            return 1; // STORE_ONLY
-        } else if (this instanceof N3MessageMetadataResultDto) {
-            return 2; // RESULT
-        }
-        throw new IllegalArgumentException("Unknown metadata type: " + this.getClass().getSimpleName());
-    }
-
     public byte[] serialize(MessageBridge messageBridge) throws IOException {
         throw new UnsupportedOperationException("This method should be overridden in subclasses");
     }
