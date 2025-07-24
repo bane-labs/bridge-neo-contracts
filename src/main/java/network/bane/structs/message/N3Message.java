@@ -4,6 +4,10 @@ import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.annotations.Struct;
 
+import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_EXECUTABLE;
+import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_RESULT;
+import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_STORE_ONLY;
+
 @Struct
 public class N3Message {
     /**
@@ -11,31 +15,25 @@ public class N3Message {
      */
     public ByteString messageBytes;
     /**
-     * Type of metadata associated with the message. This indicates how the metadata bytes should be interpreted.
-     */
-    public Integer messageType;
-    /**
      * Metadata for the message, which can be of different types. It includes context about how the message bytes
      * should be processed.
      */
     public ByteString metadataBytes;
 
-    public N3Message(ByteString messageBytes, int messageType, ByteString metadataBytes) {
+    public N3Message(ByteString messageBytes, ByteString metadataBytes) {
         this.messageBytes = messageBytes;
-        this.messageType = messageType;
         this.metadataBytes = metadataBytes;
     }
 
-    public static boolean isValid(N3Message execN3Message) {
-        // Todo: Implement validation logic for N3Message.
-        return true;
+    public static boolean isValid(N3Message message) {
+        return message.messageBytes != null && message.messageBytes.length() > 0 && message.metadataBytes != null;
     }
 
     @Struct
     public static class N3MetadataExecutable extends N3Metadata {
         public boolean storeResult;
         public N3MetadataExecutable(int timestamp, Hash160 sender, boolean storeResult) {
-            super(timestamp, sender);
+            super(MESSAGE_TYPE_EXECUTABLE, timestamp, sender);
             this.storeResult = storeResult;
         }
     }
@@ -43,7 +41,7 @@ public class N3Message {
     @Struct
     public static class N3MetadataStoreOnly extends N3Metadata {
         public N3MetadataStoreOnly(int timestamp, Hash160 sender) {
-            super(timestamp, sender);
+            super(MESSAGE_TYPE_STORE_ONLY, timestamp, sender);
         }
     }
 
@@ -51,13 +49,17 @@ public class N3Message {
     public static class N3MetadataResult extends N3Metadata {
         public int initialMessageNonce;
         public N3MetadataResult(int timestamp, Hash160 sender, int initialMessageNonce) {
-            super(timestamp, sender);
+            super(MESSAGE_TYPE_RESULT, timestamp, sender);
             this.initialMessageNonce = initialMessageNonce;
         }
     }
 
     @Struct
-    private static class N3Metadata {
+    public abstract static class N3Metadata {
+        /**
+         * Type of the metadata, indicating how the message should be processed.
+         */
+        public int type; // 0: EXECUTABLE, 1: STORE_ONLY, 2: RESULT
         /**
          * Timestamp of the message indicating when it was sent.
          */
@@ -67,7 +69,8 @@ public class N3Message {
          */
         public Hash160 sender;
 
-        public N3Metadata(int timestamp, Hash160 sender) {
+        public N3Metadata(int type, int timestamp, Hash160 sender) {
+            this.type = type;
             this.timestamp = timestamp;
             this.sender = sender;
         }

@@ -2,6 +2,7 @@ package network.bane.message;
 
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.Notification;
+import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
@@ -15,11 +16,11 @@ import io.neow3j.types.StackItemType;
 import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.messageexecution.ExecutionManagerContract;
-import network.bane.structs.message.MessageBridge;
 import network.bane.testhelper.DummyExecutionManagerContract;
 import network.bane.testhelper.MessageTestStoreContract;
-import network.bane.testhelper.TestContract;
 import network.bane.util.structs.N3MessageDto;
+import network.bane.util.structs.N3MessageMetadataDto;
+import network.bane.util.structs.N3MessageMetadataExecDto;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -60,6 +61,7 @@ import static network.bane.util.helper.TestHelper.setup;
 import static network.bane.util.helper.TestHelper.setupExecutionManager;
 import static network.bane.util.helper.TestHelper.setupMessageBridge;
 import static network.bane.util.helper.TestHelper.messageTestStorer;
+import static network.bane.util.structs.N3MessageDto.MESSAGE_TYPE_EXECUTABLE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -73,7 +75,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ContractTest(
         blockTime = 1,
         contracts = {BridgeManagementContract.class, MessageBridgeContract.class, ExecutionManagerContract.class,
-                MessageTestStoreContract.class, DummyExecutionManagerContract.class, TestContract.class},
+                MessageTestStoreContract.class, DummyExecutionManagerContract.class},
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -87,6 +89,8 @@ public class MessageExecutionManagerTest {
         setup(ext);
         setupMessageBridge(ext);
         setupExecutionManager(ext);
+
+        System.out.println(messageBridge.getScriptHash());
 
         messageBridge.unpause();
         messageTestStorer.setMessageBridge();
@@ -211,7 +215,8 @@ public class MessageExecutionManagerTest {
     @Test
     @Order(1)
     public void test_executeMessage_fail_n3MethodCallBytes_invalidTarget() throws Throwable {
-        byte[] n3MethodCallBytes = messageBridge.getSerializedN3MethodCall(Hash160.ZERO, "store", CallFlags.ALL, asList());
+        byte[] n3MethodCallBytes = messageBridge.getSerializedN3MethodCall(Hash160.ZERO, "store", CallFlags.ALL,
+                asList());
         BigInteger nonce = storeMessage(n3MethodCallBytes);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.executeMessage(none(alice), nonce));
@@ -283,9 +288,13 @@ public class MessageExecutionManagerTest {
         assertThat(event1.getContract(), is(messageBridge.getScriptHash()));
         assertThat(event1.getEventName(), is("Execute"));
         assertThat(event1.getState().getList(), hasSize(2));
-        assertThat(event1.getState().getList().get(0).getInteger(), is(nonce));
-        assertThat(event1.getState().getList().get(1).getList().get(0).getInteger(), lessThan(bestBlockTime()));
-        assertThat(event1.getState().getList().get(1).getList().get(1).getAddress(), is(alice.getAddress()));
+        StackItem eventNonce = event1.getState().getList().get(0);
+        assertThat(eventNonce.getInteger(), is(nonce));
+        List<StackItem> eventMetadata = event1.getState().getList().get(1).getList();
+        assertThat(eventMetadata.get(0).getInteger().intValue(), is(MESSAGE_TYPE_EXECUTABLE));
+        assertThat(eventMetadata.get(1).getInteger(), lessThan(bestBlockTime()));
+        assertThat(eventMetadata.get(2).getAddress(), is(alice.getAddress()));
+        assertTrue(eventMetadata.get(3).getBoolean());
 
         Notification event2 = exec.getNotifications().get(1);
         assertThat(event2.getContract(), is(messageBridge.getScriptHash()));
@@ -312,17 +321,15 @@ public class MessageExecutionManagerTest {
                 "storeMetadataOfExecutingMessage", CallFlags.ALL, asList());
         BigInteger timestamp = bestBlockTime();
         Hash160 sender = bob.getScriptHash();
-        BigInteger nonce = storeMessage(serializedN3MethodCall, timestamp, sender);
+        BigInteger nonce = storeMessage(serializedN3MethodCall, timestamp, sender, true);
 
         // Verify that nothing is stored yet - the interface returns zero values if there's nothing stored in the
         // contract.
-        N3MessageDto.N3MessageMetadataDto currentlyStoredMetadata = messageTestStorer.getStoredMetadata(nonce);
-        assertThat(currentlyStoredMetadata.timestamp, is(BigInteger.ZERO));
-        assertThat(currentlyStoredMetadata.sender, is(Hash160.ZERO));
+        assertFalse(messageTestStorer.hasMetadataStored(nonce));
 
         messageBridge.executeMessage(none(alice), nonce);
 
-        N3MessageDto.N3MessageMetadataDto storedMetadata = messageTestStorer.getStoredMetadata(nonce);
+        N3MessageMetadataDto storedMetadata = messageTestStorer.getStoredMetadata(nonce);
         assertThat(storedMetadata.timestamp, is(timestamp));
         assertThat(storedMetadata.sender, is(sender));
 
@@ -354,10 +361,11 @@ public class MessageExecutionManagerTest {
         long bestBlockTime = neow3j.getBlockHeader(bestBlockHash).send().getBlock().getTime();
         BigInteger timestamp = BigInteger.valueOf(bestBlockTime);
         Hash160 sender = alice.getScriptHash();
-        return storeMessage(n3FuncCall, timestamp, sender);
+        return storeMessage(n3FuncCall, timestamp, sender, true);
     }
 
-    private BigInteger storeMessage(byte[] n3FuncCall, BigInteger timestamp, Hash160 sender) throws Throwable {
+    private BigInteger storeMessage(byte[] n3FuncCall, BigInteger timestamp, Hash160 sender, boolean storeResult)
+            throws Throwable {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
         BigInteger nonce = incrementAndGetN3MessageNonce(); // Necessary if other tests are run besides this one.
@@ -367,14 +375,14 @@ public class MessageExecutionManagerTest {
         // 69ecca587293047be4c59159bf8bc399985c160d alice
         // efcdab9078563412 executable code reversed
 
-        String msgHash1 = createN3MessageHash(nonce, timestamp, sender, n3FuncCall);
-        N3MessageDto.N3MessageMetadataDto metadata = new N3MessageDto.N3MessageMetadataDto(timestamp, sender);
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, n3FuncCall);
+        N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, storeResult);
+        String msgHash1 = createN3MessageHash(nonce, n3FuncCall, metadata);
+        N3MessageDto n3MessageDto = new N3MessageDto(n3FuncCall, metadata);
 
         Hash256 currentRoot = messageBridge.getMessageBridge().evmToN3MessageState.root;
         String root = concatAndKeccak256(currentRoot.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter());
+        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
         Hash256 txHash = messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope));
         printTransactionFee(neow3j, "tx with 1 message", txHash);
         return nonce;

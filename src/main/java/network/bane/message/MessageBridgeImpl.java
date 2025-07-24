@@ -135,13 +135,13 @@ class MessageBridgeImpl {
             N3MessageEnvelope n3Message = messages.get(i);
             // Store the message in storage.
             messageMap.put(n3Message.nonce, new StdLib().serialize(n3Message.message));
-            if (n3Message.message.messageType == MESSAGE_TYPE_EXECUTABLE) {
+            int type = ((N3Message.N3Metadata) new StdLib().deserialize(n3Message.message.metadataBytes)).type;
+            if (type == MESSAGE_TYPE_EXECUTABLE) {
                 // Mark the message as pending for execution.
-                new StorageMap(MessageBridgeContract.ctx,PREFIX_MSG_EXECUTION_PENDING).put(n3Message.nonce, true);
+                new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTION_PENDING).put(n3Message.nonce, true);
             }
             // Fire event including the nonce and the message's metadata.
-            MessageBridgeContract.onStore.fire(n3Message.nonce, n3Message.message.messageType,
-                    n3Message.message.metadataBytes);
+            MessageBridgeContract.onStore.fire(n3Message.nonce, n3Message.message.metadataBytes);
         }
     }
 
@@ -162,6 +162,15 @@ class MessageBridgeImpl {
         );
     }
 
+    static Object getMetadata(int nonce) {
+        N3Message message = getMessage(nonce);
+        return new StdLib().deserialize(message.metadataBytes);
+    }
+
+    static N3Message.N3Metadata getMetadata(N3Message message) {
+        return (N3Message.N3Metadata) new StdLib().deserialize(message.metadataBytes);
+    }
+
     static boolean isPending(int nonce) {
         return new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTION_PENDING).get(nonce) != null;
     }
@@ -169,9 +178,11 @@ class MessageBridgeImpl {
     static void executeMessage(int nonce) {
         // Validate that the message is executable.
         N3Message message = getMessage(nonce);
-        if (message.messageType != MESSAGE_TYPE_EXECUTABLE) {
+        N3Message.N3Metadata metadataAbstract = getMetadata(message);
+        if (metadataAbstract.type != MESSAGE_TYPE_EXECUTABLE) {
             abort("Message is not executable");
         }
+        N3Message.N3MetadataExecutable metadata = (N3Message.N3MetadataExecutable) metadataAbstract;
 
         // Validate that the message is pending and has not been executed already.
         if (!isPending(nonce)) {
@@ -182,8 +193,6 @@ class MessageBridgeImpl {
         // Todo: Consider overwriting the message metadata's timestamp with the expiration time or setting the
         //  expiration time when initially storing it.
         int currentTime = Runtime.getTime();
-        N3Message.N3MetadataExecutable metadata =
-                (N3Message.N3MetadataExecutable) new StdLib().deserialize(message.metadataBytes);
 
         int maxTimeForExecution = metadata.timestamp +
                 (getMessageBridge().config.executionWindowSeconds * 1000); // Convert to milliseconds

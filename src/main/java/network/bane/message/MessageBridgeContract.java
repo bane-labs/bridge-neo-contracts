@@ -21,7 +21,6 @@ import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
-import io.neow3j.devpack.events.Event3Args;
 import network.bane.structs.message.MessageBridge;
 import network.bane.structs.message.N3Message;
 import network.bane.structs.message.N3MessageEnvelope;
@@ -84,8 +83,8 @@ public class MessageBridgeContract {
     static Event2Args<Integer, ByteString> onN3RootUpdate;
 
     @DisplayName("Store")
-    @EventParameterNames({"Nonce", "MessageType", "MetadataBytes"})
-    static Event3Args<Integer, Integer, ByteString> onStore;
+    @EventParameterNames({"Nonce", "MetadataBytes"})
+    static Event2Args<Integer, ByteString> onStore;
 
     @DisplayName("Execute")
     @EventParameterNames({"Nonce", "Metadata"})
@@ -275,6 +274,31 @@ public class MessageBridgeContract {
     @Safe
     public static N3Message getMessage(int nonce) {
         return MessageBridgeImpl.getMessage(nonce);
+    }
+
+    @Safe
+    public static Object deserialize(ByteString serializedMessage) {
+        return new StdLib().deserialize(serializedMessage);
+    }
+
+    @Safe
+    public static Object getMetadata(int nonce) {
+        return MessageBridgeImpl.getMetadata(nonce);
+    }
+
+    @Safe
+    public static Object serializeMetadataExecutable(int timestamp, Hash160 sender, boolean storeResult) {
+        return new StdLib().serialize(new N3Message.N3MetadataExecutable(timestamp, sender, storeResult));
+    }
+
+    @Safe
+    public static Object serializeMetadataStoreOnly(int timestamp, Hash160 sender) {
+        return new StdLib().serialize(new N3Message.N3MetadataStoreOnly(timestamp, sender));
+    }
+
+    @Safe
+    public static Object serializeMetadataResult(int timestamp, Hash160 sender, int initialMessageNonce) {
+        return new StdLib().serialize(new N3Message.N3MetadataResult(timestamp, sender, initialMessageNonce));
     }
 
     @Safe

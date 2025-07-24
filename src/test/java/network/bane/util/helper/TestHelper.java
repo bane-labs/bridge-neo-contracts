@@ -133,7 +133,6 @@ public class TestHelper {
 
     public static void setupMessageBridge(ContractTestExtension ext) {
         setupManagement(ext);
-        setupTestContract(ext);
         messageBridge = new MessageBridge(ext.getDeployedContract(MessageBridgeContract.class).getScriptHash(), neow3j);
     }
 
