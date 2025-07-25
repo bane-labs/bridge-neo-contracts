@@ -28,7 +28,9 @@ public abstract class N3MessageMetadataDto {
             return false;
         }
         N3MessageMetadataDto that = (N3MessageMetadataDto) other;
-        return type.equals(that.type) && timestamp.equals(that.timestamp) && sender.equals(that.sender);
+        return Objects.equals(type, that.type) &&
+                Objects.equals(timestamp, that.timestamp) &&
+                Objects.equals(sender, that.sender);
     }
 
     @Override

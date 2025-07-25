@@ -74,13 +74,11 @@ public class MessageTestStorer extends SmartContractHelper {
         throw new IllegalStateException("Unexpected metadata format");
     }
 
-    public boolean hasMetadataStored(BigInteger nonce) {
+    public boolean hasMetadataStored(BigInteger nonce) throws IOException {
         try {
             getStoredMetadata(nonce);
         } catch (IllegalStateException e) {
             return false;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
         return true;
     }

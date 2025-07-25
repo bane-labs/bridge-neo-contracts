@@ -52,7 +52,7 @@ public class MessageBridgeLib {
     }
 
     private static byte[] concatMetadata(N3Message.N3MetadataExecutable metadata) {
-        byte[] metadataBase = concateBaseMetadata(metadata.type, metadata.timestamp, metadata.sender);
+        byte[] metadataBase = concatBaseMetadata(metadata.type, metadata.timestamp, metadata.sender);
         int storeResultByte = 0;
         if (metadata.storeResult) {
             storeResultByte = 1;
@@ -61,15 +61,15 @@ public class MessageBridgeLib {
     }
 
     private static byte[] concatMetadata(N3Message.N3MetadataStoreOnly metadata) {
-        return concateBaseMetadata(metadata.type, metadata.timestamp, metadata.sender);
+        return concatBaseMetadata(metadata.type, metadata.timestamp, metadata.sender);
     }
 
     private static byte[] concatMetadata(N3Message.N3MetadataResult metadata) {
-        byte[] metadataBase = concateBaseMetadata(metadata.type, metadata.timestamp, metadata.sender);
+        byte[] metadataBase = concatBaseMetadata(metadata.type, metadata.timestamp, metadata.sender);
         return concat(padToBytes(toByteArray(metadata.initialMessageNonce), UINT256_SIZE), metadataBase);
     }
 
-    private static byte[] concateBaseMetadata(int type, int timestamp, Hash160 sender) {
+    private static byte[] concatBaseMetadata(int type, int timestamp, Hash160 sender) {
         byte[] msgType = padToBytes(toByteArray(type), UINT8_SIZE);
         byte[] timestampP = padToBytes(toByteArray(timestamp), UINT256_SIZE);
         return concat(concat(sender.toByteArray(), timestampP), msgType);
