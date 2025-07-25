@@ -21,32 +21,32 @@ public class N3MessageDto {
     public static final int MESSAGE_TYPE_STORE_ONLY = 1;
     public static final int MESSAGE_TYPE_RESULT = 2;
 
-    public String messageBytes;
     public N3MessageMetadataDto metadata;
+    public String messageBytes;
 
-    public N3MessageDto(String messageBytes, N3MessageMetadataDto metadata) {
-        this.messageBytes = cleanHexPrefix(messageBytes);
+    public N3MessageDto(N3MessageMetadataDto metadata, String messageBytes) {
         this.metadata = metadata;
+        this.messageBytes = cleanHexPrefix(messageBytes);
     }
 
-    public N3MessageDto(byte[] n3MethodCallBytes, N3MessageMetadataDto metadata) {
-        this.messageBytes = cleanHexPrefix(toHexString(n3MethodCallBytes));
+    public N3MessageDto(N3MessageMetadataDto metadata, byte[] messageBytes) {
         this.metadata = metadata;
+        this.messageBytes = cleanHexPrefix(toHexString(messageBytes));
     }
 
     public static N3MessageDto fromStackItem(StackItem item) throws IOException {
         List<StackItem> itemList = item.getList();
-        byte[] msgBytes = itemList.get(0).getByteArray();
         StackItem metadataItem = messageBridge.callInvokeFunction("deserialize",
-                asList(byteArray(itemList.get(1).getByteArray()))).getInvocationResult().getFirstStackItem();
+                asList(byteArray(itemList.get(0).getByteArray()))).getInvocationResult().getFirstStackItem();
         N3MessageMetadataDto metadata = getMetadataFromStackItem(metadataItem);
-        return new N3MessageDto(msgBytes, metadata);
+        byte[] msgBytes = itemList.get(1).getByteArray();
+        return new N3MessageDto(metadata, msgBytes);
     }
 
     public ContractParameter toContractParameter(MessageBridge messageBridge) throws IOException {
         return array(
-                byteArray(messageBytes),
-                metadata.serializeToContractParameter(messageBridge)
+                metadata.serializeToContractParameter(messageBridge),
+                byteArray(messageBytes)
         );
     }
 
@@ -59,13 +59,13 @@ public class N3MessageDto {
             return false;
         }
         N3MessageDto that = (N3MessageDto) other;
-        return messageBytes.equals(that.messageBytes) &&
-                metadata.equals(that.metadata);
+        return metadata.equals(that.metadata) &&
+                messageBytes.equals(that.messageBytes);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(messageBytes, metadata);
+        return Objects.hash(metadata, messageBytes);
     }
 
 }

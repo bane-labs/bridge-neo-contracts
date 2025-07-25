@@ -98,6 +98,11 @@ class MessageBridgeImpl {
     // endregion
     // region storing
 
+    static ByteString concatenateOperation(N3MessageEnvelope n3MessageEnvelope) {
+        return MessageBridgeLib.concatMessageBridgeOpData(n3MessageEnvelope.nonce,
+                n3MessageEnvelope.message.metadataBytes, n3MessageEnvelope.message.messageBytes);
+    }
+
     static void storeMessages(ByteString newN3MessageRoot, Map<ECPoint, ByteString> signatures,
             List<N3MessageEnvelope> messages) {
         int nrMessages = messages.size();

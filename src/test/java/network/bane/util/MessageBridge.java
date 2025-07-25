@@ -135,6 +135,11 @@ public class MessageBridge extends SmartContractHelper {
         )).getInvocationResult().getFirstStackItem().getByteArray();
     }
 
+    public String concatenateOperation(ContractParameter messageEnvelopeParam) throws IOException {
+        return callInvokeFunction("concatenateOperation", asList(messageEnvelopeParam))
+                .getInvocationResult().getFirstStackItem().getHexString();
+    }
+
     public Hash256 storeMessages(String n3MessageRoot, Map<ContractParameter, ContractParameter> signatures,
             ContractParameter messages) throws Throwable {
         return storeMessages(relayer, n3MessageRoot, signatures, messages);

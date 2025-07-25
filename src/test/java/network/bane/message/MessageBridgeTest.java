@@ -31,6 +31,7 @@ import java.util.Map;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.concatAndKeccak256;
 import static network.bane.util.TestHelper.createN3MessageHash;
@@ -43,12 +44,14 @@ import static network.bane.util.TestHelper.validator2;
 import static network.bane.util.TestHelper.validator3;
 import static network.bane.util.TestHelper.validator4;
 import static network.bane.util.TestHelper.validator5;
+import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
 import static network.bane.util.helper.PrintHelper.printTransactionFee;
 import static network.bane.util.helper.TestHelper.alice;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
 import static network.bane.util.helper.TestHelper.createMessageBridgeDeployConfig;
 import static network.bane.util.helper.TestHelper.decrementN3MessageNonce;
 import static network.bane.util.helper.TestHelper.incrementAndGetN3MessageNonce;
+import static network.bane.util.helper.TestHelper.management;
 import static network.bane.util.helper.TestHelper.messageBridge;
 import static network.bane.util.helper.TestHelper.neow3j;
 import static network.bane.util.helper.TestHelper.setup;
@@ -80,6 +83,13 @@ public class MessageBridgeTest {
         setup(ext);
         setupMessageBridge(ext);
         setupTestContract(ext);
+
+        // This test requires the constant MANAGEMENT_CONTRACT_HASH to be set correctly. The execution manager
+        // requires the contract address at deployment time, so we cannot change it later.
+        if (!MANAGEMENT_CONTRACT_HASH.equals(management.getScriptHash())) {
+            throw new RuntimeException(format("The management contract hash is not set correctly. Update the script " +
+                    "hash to 0x%s.", management.getScriptHash()));
+        }
 
         messageBridge.unpause();
     }
@@ -155,8 +165,8 @@ public class MessageBridgeTest {
         String msgBytes = "0x1234567890abcdef";
 
         N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
-        String msgHash1 = createN3MessageHash(nonce, msgBytes, metadata);
-        N3MessageDto n3MessageDto = new N3MessageDto(msgBytes, metadata);
+        String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
+        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
@@ -182,8 +192,8 @@ public class MessageBridgeTest {
         String msgBytes = "0x1234567890abcdef";
 
         N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
-        String msgHash1 = createN3MessageHash(nonce, msgBytes, metadata);
-        N3MessageDto n3MessageDto = new N3MessageDto(msgBytes, metadata);
+        String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
+        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
@@ -210,8 +220,8 @@ public class MessageBridgeTest {
         String msgBytes = "0x1234567890abcdef";
 
         N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
-        String msgHash1 = createN3MessageHash(nonce, msgBytes, metadata);
-        N3MessageDto n3MessageDto = new N3MessageDto(msgBytes, metadata);
+        String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
+        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
@@ -248,8 +258,8 @@ public class MessageBridgeTest {
         String msgBytes = "0x1234567890abcdef";
 
         N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
-        String msgHash1 = createN3MessageHash(nonce, msgBytes, metadata);
-        N3MessageDto n3MessageDto = new N3MessageDto(msgBytes, metadata);
+        String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
+        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
@@ -272,8 +282,8 @@ public class MessageBridgeTest {
         String msgBytes = "0x1234567890abcdef";
 
         N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
-        String msgHash1 = createN3MessageHash(nonce, msgBytes, metadata);
-        N3MessageDto n3MessageDto = new N3MessageDto(msgBytes, metadata);
+        String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
+        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
 
         String invalidRoot = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1) + "01"; // Invalid root
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
@@ -299,8 +309,8 @@ public class MessageBridgeTest {
         boolean storeResult = false;
 
         N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, storeResult);
-        String msgHash1 = createN3MessageHash(nonce, msgBytes, metadata);
-        N3MessageDto n3MessageDto = new N3MessageDto(msgBytes, metadata);
+        String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
+        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4);
@@ -320,11 +330,11 @@ public class MessageBridgeTest {
         BigInteger nonce = incrementAndGetN3MessageNonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
-        String executableCode = "0x1234567890abcdef";
+        String msgBytes = "0x1234567890abcdef";
 
         N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
-        String msgHash1 = createN3MessageHash(nonce, executableCode, metadata);
-        N3MessageDto n3MessageDto = new N3MessageDto(executableCode, metadata);
+        String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
+        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, alice); // Non-validator sig
@@ -352,8 +362,8 @@ public class MessageBridgeTest {
         // efcdab9078563412 executable code reversed
 
         N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
-        String msgHash1 = createN3MessageHash(nonce, msgBytes, metadata);
-        N3MessageDto n3MessageDto = new N3MessageDto(msgBytes, metadata);
+        String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
+        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);

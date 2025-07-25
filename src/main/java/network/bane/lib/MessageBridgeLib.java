@@ -14,6 +14,7 @@ import static io.neow3j.devpack.Helper.reverse;
 import static io.neow3j.devpack.Helper.toByteArray;
 import static network.bane.lib.BridgeLib.BOOL_SIZE;
 import static network.bane.lib.BridgeLib.UINT256_SIZE;
+import static network.bane.lib.BridgeLib.UINT8_SIZE;
 import static network.bane.lib.BridgeLib.computeNewRoot;
 import static network.bane.lib.BridgeLib.padToBytes;
 
@@ -23,64 +24,61 @@ public class MessageBridgeLib {
     public static final int MESSAGE_TYPE_STORE_ONLY = 1;
     public static final int MESSAGE_TYPE_RESULT = 2;
 
-    private static ByteString concatMessageBridgeOpData(int nonce, ByteString msgBytes, ByteString metadataBytes) {
+    public static ByteString concatMessageBridgeOpData(int nonce, ByteString metadataBytes, ByteString msgBytes) {
         N3Message.N3Metadata metadata = (N3Message.N3Metadata) new StdLib().deserialize(metadataBytes);
         if (metadata.type == MESSAGE_TYPE_EXECUTABLE) {
-            return concatenateExecutable(nonce, msgBytes, (N3Message.N3MetadataExecutable) metadata);
+            byte[] metadataConcatBytes = concatMetadata((N3Message.N3MetadataExecutable) metadata);
+            return new ByteString(concatMessage(nonce, metadataConcatBytes, msgBytes));
         }
         if (metadata.type == MESSAGE_TYPE_STORE_ONLY) {
-            return concatenateStoreOnly(nonce, msgBytes, (N3Message.N3MetadataStoreOnly) metadata);
+            byte[] metadataConcatBytes = concatMetadata((N3Message.N3MetadataStoreOnly) metadata);
+            return new ByteString(concatMessage(nonce, metadataConcatBytes, msgBytes));
         }
-        if (metadata.type != MESSAGE_TYPE_RESULT) {
-            abort("Unsupported message type");
+        if (metadata.type == MESSAGE_TYPE_RESULT) {
+            byte[] metadataConcatBytes = concatMetadata((N3Message.N3MetadataResult) metadata);
+            return new ByteString(concatMessage(nonce, metadataConcatBytes, msgBytes));
         }
-        return concatenateResult(nonce, msgBytes, (N3Message.N3MetadataResult) metadata);
+        abort("Unsupported message type");
+        return null; // This line will never be reached, but is needed to satisfy the compiler.
     }
 
-    // nonce-uint256, messagebytes-arbitrarysize, type-uint256, timestamp-uint256, sender-uint160, storeResult-bool
-    private static ByteString concatenateExecutable(int nonce, ByteString msgBytes,
-            N3Message.N3MetadataExecutable metadata) {
-        byte[] baseConcat = concatenate(nonce, msgBytes, metadata.type, metadata.timestamp, metadata.sender);
+    private static byte[] concatMessage(int nonce, byte[] metadataConcatBytes, ByteString msgBytes) {
+        byte[] noncePadded = padToBytes(toByteArray(nonce), UINT256_SIZE);
+        byte[] msgBytesByteArray = msgBytes.toByteArray();
+        reverse(msgBytesByteArray);
+        byte[] completeConcat = concat(concat(msgBytesByteArray, metadataConcatBytes), noncePadded);
+        reverse(completeConcat);
+        return completeConcat;
+    }
+
+    private static byte[] concatMetadata(N3Message.N3MetadataExecutable metadata) {
+        byte[] metadataBase = concateBaseMetadata(metadata.type, metadata.timestamp, metadata.sender);
         int storeResultByte = 0;
         if (metadata.storeResult) {
             storeResultByte = 1;
         }
-        byte[] c = concat(padToBytes(toByteArray(storeResultByte), BOOL_SIZE), baseConcat);
-        reverse(c);
-        return new ByteString(c);
+        return concat(padToBytes(toByteArray(storeResultByte), BOOL_SIZE), metadataBase);
     }
 
-    // nonce-uint256, messagebytes-arbitrarysize, type-uint256, timestamp-uint256, sender-uint160,
-    // initialMsgNonce-uint256
-    private static ByteString concatenateResult(int nonce, ByteString messageBytes,
-            N3Message.N3MetadataResult metadata) {
-        byte[] baseConcat = concatenate(nonce, messageBytes, metadata.type, metadata.timestamp, metadata.sender);
-        byte[] initialMsgNonceP = padToBytes(toByteArray(metadata.initialMessageNonce), UINT256_SIZE);
-        byte[] concatenated = concat(initialMsgNonceP, baseConcat);
-        reverse(concatenated);
-        return new ByteString(concatenated);
+    private static byte[] concatMetadata(N3Message.N3MetadataStoreOnly metadata) {
+        return concateBaseMetadata(metadata.type, metadata.timestamp, metadata.sender);
     }
 
-    // nonce-uint256, messagebytes-arbitrarysize, type-uint256, timestamp-uint256, sender-uint160
-    private static ByteString concatenateStoreOnly(int nonce, ByteString messageBytes,
-            N3Message.N3MetadataStoreOnly metadata) {
-        byte[] c = concatenate(nonce, messageBytes, metadata.type, metadata.timestamp, metadata.sender);
-        reverse(c);
-        return new ByteString(c);
+    private static byte[] concatMetadata(N3Message.N3MetadataResult metadata) {
+        byte[] metadataBase = concateBaseMetadata(metadata.type, metadata.timestamp, metadata.sender);
+        return concat(padToBytes(toByteArray(metadata.initialMessageNonce), UINT256_SIZE), metadataBase);
     }
 
-    private static byte[] concatenate(int nonce, ByteString messageBytes, int messageType, int timestamp,
-            Hash160 sender) {
-        byte[] nonceP = padToBytes(toByteArray(nonce), UINT256_SIZE);
-        byte[] messageTypeP = padToBytes(toByteArray(messageType), UINT256_SIZE);
+    private static byte[] concateBaseMetadata(int type, int timestamp, Hash160 sender) {
+        byte[] msgType = padToBytes(toByteArray(type), UINT8_SIZE);
         byte[] timestampP = padToBytes(toByteArray(timestamp), UINT256_SIZE);
-        return concat(concat(concat(concat(sender.toByteArray(), timestampP), messageTypeP), messageBytes), nonceP);
+        return concat(concat(sender.toByteArray(), timestampP), msgType);
     }
 
     private static ByteString hashMessageBridgeOp(CryptoLib cryptoLib, N3MessageEnvelope n3MessageEnvelope) {
         return cryptoLib.keccak256(
-                concatMessageBridgeOpData(n3MessageEnvelope.nonce, n3MessageEnvelope.message.messageBytes,
-                        n3MessageEnvelope.message.metadataBytes
+                concatMessageBridgeOpData(n3MessageEnvelope.nonce, n3MessageEnvelope.message.metadataBytes,
+                        n3MessageEnvelope.message.messageBytes
                 )
         );
     }

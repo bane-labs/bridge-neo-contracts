@@ -263,6 +263,11 @@ public class MessageBridgeContract {
         return new StdLib().serialize(new N3MethodCall(target, method, callFlags, args));
     }
 
+    @Safe
+    public static ByteString concatenateOperation(N3MessageEnvelope message) {
+        return MessageBridgeImpl.concatenateOperation(message);
+    }
+
     public static void storeMessages(ByteString n3MessageRoot, Map<ECPoint, ByteString> signatures,
             List<N3MessageEnvelope> messages) {
         onlyRelayer();

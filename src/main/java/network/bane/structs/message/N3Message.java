@@ -11,22 +11,22 @@ import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_STORE_ONLY;
 @Struct
 public class N3Message {
     /**
-     * The actual executable message bytes.
-     */
-    public ByteString messageBytes;
-    /**
      * Metadata for the message, which can be of different types. It includes context about how the message bytes
      * should be processed.
      */
     public ByteString metadataBytes;
+    /**
+     * The actual executable message bytes.
+     */
+    public ByteString messageBytes;
 
-    public N3Message(ByteString messageBytes, ByteString metadataBytes) {
-        this.messageBytes = messageBytes;
+    public N3Message(ByteString metadataBytes, ByteString messageBytes) {
         this.metadataBytes = metadataBytes;
+        this.messageBytes = messageBytes;
     }
 
     public static boolean isValid(N3Message message) {
-        return message.messageBytes != null && message.messageBytes.length() > 0 && message.metadataBytes != null;
+        return message.metadataBytes != null && message.messageBytes != null && message.messageBytes.length() > 0;
     }
 
     @Struct

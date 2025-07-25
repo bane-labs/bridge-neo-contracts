@@ -13,7 +13,6 @@ import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.contracts.ContractInterface;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.structs.message.N3Message;
-import network.bane.structs.message.N3MessageEnvelope;
 
 import static io.neow3j.devpack.Helper.abort;
 

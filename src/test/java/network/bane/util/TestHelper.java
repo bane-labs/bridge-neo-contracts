@@ -14,7 +14,9 @@ import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.utils.Await;
 import io.neow3j.utils.BigIntegers;
+import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
+import network.bane.util.structs.N3MessageMetadataDto;
 import network.bane.util.structs.N3MessageMetadataExecDto;
 import network.bane.util.structs.N3MessageMetadataResultDto;
 import network.bane.util.structs.N3MessageMetadataStoreOnlyDto;
@@ -34,10 +36,12 @@ import static io.neow3j.types.ContractParameter.publicKey;
 import static io.neow3j.types.ContractParameter.signature;
 import static io.neow3j.utils.ArrayUtils.concatenate;
 import static io.neow3j.utils.ArrayUtils.reverseArray;
+import static io.neow3j.utils.ArrayUtils.toByteArray;
 import static io.neow3j.utils.BigIntegers.toLittleEndianByteArrayZeroPadded;
 import static io.neow3j.utils.Numeric.cleanHexPrefix;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.prependHexPrefix;
+import static io.neow3j.utils.Numeric.reverseHexString;
 import static io.neow3j.utils.Numeric.toHexString;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
@@ -49,6 +53,8 @@ import static network.bane.util.helper.TestHelper.neow3j;
 public class TestHelper {
 
     private static final byte UINT256_SIZE = 32;
+    private static final byte UINT8_SIZE = 1;
+    private static final byte BOOL_SIZE = 1;
 
     // Account names available in the neo-express config file.
     public static final String ALICE = "NM7Aky765FG8NhhwtxjXRx7jEL1cnw7PBP";
@@ -269,62 +275,75 @@ public class TestHelper {
     }
 
     private static final int msgTypeExecutable = 0;
-    private static final int msgTypeStoreOnly = 1;
+    public static final int msgTypeStoreOnly = 1;
     private static final int msgTypeResult = 2;
 
-    public static byte[] concatenateOp(BigInteger nonce, String msgBytesHex,
-            N3MessageMetadataExecDto metadata) {
-        byte[] base = concatBase(nonce, msgBytesHex, msgTypeExecutable, metadata.timestamp, metadata.sender);
+    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataExecDto metadata, String msgBytesHex) {
+        return createN3MessageHash(nonce, metadata, hexStringToByteArray(msgBytesHex));
+    }
+
+    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataExecDto metadata, byte[] msgBytes) {
+        return keccak256Hex(concatenateOp(nonce, metadata, msgBytes));
+    }
+
+    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataStoreOnlyDto metadata, String msgBytesHex) {
+        return createN3MessageHash(nonce, metadata, hexStringToByteArray(msgBytesHex));
+    }
+
+    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataStoreOnlyDto metadata, byte[] msgBytes) {
+        return keccak256Hex(concatenateOp(nonce, metadata, msgBytes));
+    }
+
+    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataResultDto metadata, String msgBytesHex) {
+        return createN3MessageHash(nonce, metadata, hexStringToByteArray(msgBytesHex));
+    }
+
+    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataResultDto metadata, byte[] msgBytes) {
+        return keccak256Hex(concatenateOp(nonce, metadata, msgBytes));
+    }
+
+    public static byte[] concatenateOp(BigInteger nonce, N3MessageMetadataExecDto metadata, byte[] msgBytes) {
+        return concatenateOp(nonce, concatenateMetadata(metadata), msgBytes);
+    }
+
+    public static byte[] concatenateOp(BigInteger nonce, N3MessageMetadataStoreOnlyDto metadata, byte[] msgBytes) {
+        return concatenateOp(nonce, concatenateMetadata(metadata), msgBytes);
+    }
+
+    public static byte[] concatenateOp(BigInteger nonce, N3MessageMetadataResultDto metadata, byte[] msgBytes) {
+        return concatenateOp(nonce, concatenateMetadata(metadata), msgBytes);
+    }
+
+    private static byte[] concatenateOp(BigInteger nonce, byte[] metadataConcat, byte[] msgBytes) {
+        byte[] noncePadded = toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
+        return reverseArray(concatenate(concatenate(reverseArray(msgBytes), metadataConcat), noncePadded));
+    }
+
+    private static byte[] concatenateMetadata(N3MessageMetadataExecDto metadata) {
+        byte[] metadataBase = concatenateMetadataBase(metadata);
         byte storeResultByte = 0;
         if (metadata.storeResult) {
             storeResultByte = 1;
         }
-        byte[] completeConcat = concatenate(storeResultByte, base);
-        return reverseArray(completeConcat);
+        byte[] storeResultPadded = toLittleEndianByteArrayZeroPadded(storeResultByte, BOOL_SIZE);
+        return concatenate(storeResultPadded, metadataBase);
     }
 
-    public static String createN3MessageHash(BigInteger nonce, String msgBytesHex, N3MessageMetadataExecDto metadata) {
-        byte[] concatenated = concatenateOp(nonce, msgBytesHex, metadata);
-        return keccak256Hex(concatenated);
+    private static byte[] concatenateMetadata(N3MessageMetadataStoreOnlyDto metadata) {
+        return concatenateMetadataBase(metadata);
     }
 
-    public static String createN3MessageHash(BigInteger nonce, byte[] msgBytes, N3MessageMetadataExecDto metadata) {
-        return createN3MessageHash(nonce, toHexString(msgBytes), metadata);
+    private static byte[] concatenateMetadata(N3MessageMetadataResultDto metadata) {
+        byte[] metadataBase = concatenateMetadataBase(metadata);
+        byte[] relatedMsgNonce = toLittleEndianByteArrayZeroPadded(metadata.initialMessageNonce, UINT256_SIZE);
+        return concatenate(relatedMsgNonce, metadataBase);
     }
 
-    public static String createN3MessageHash(BigInteger nonce, String msgBytesHex,
-            N3MessageMetadataStoreOnlyDto metadata) {
-        byte[] base = concatBase(nonce, msgBytesHex, msgTypeStoreOnly, metadata.timestamp, metadata.sender);
-        return keccak256Hex(reverseArray(base));
-    }
-
-    public static String createN3MessageHash(BigInteger nonce, byte[] msgBytes,
-            N3MessageMetadataStoreOnlyDto metadata) {
-        return createN3MessageHash(nonce, toHexString(msgBytes), metadata);
-    }
-
-    public static String createN3MessageHash(BigInteger nonce, String msgBytesHex,
-            N3MessageMetadataResultDto metadata) {
-        byte[] base = concatBase(nonce, msgBytesHex, msgTypeResult, metadata.timestamp, metadata.sender);
-        byte[] initMsgNoncePadded = toLittleEndianByteArrayZeroPadded(metadata.initialMessageNonce, UINT256_SIZE);
-        byte[] completeConcat = concatenate(initMsgNoncePadded, base);
-        return keccak256Hex(reverseArray(completeConcat));
-    }
-
-    public static String createN3MessageHash(BigInteger nonce, byte[] msgBytes, N3MessageMetadataResultDto metadata) {
-        return createN3MessageHash(nonce, toHexString(msgBytes), metadata);
-    }
-
-    private static byte[] concatBase(BigInteger nonce, String msgBytesHex, int msgType, BigInteger timestamp,
-            Hash160 sender) {
-        byte[] noncePadded = toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
-        byte[] msgTypePadded = toLittleEndianByteArrayZeroPadded(msgType, UINT256_SIZE);
-        byte[] msgBytesPadded = hexStringToByteArray(msgBytesHex);
-        byte[] timestampPadded = toLittleEndianByteArrayZeroPadded(timestamp, UINT256_SIZE);
-        byte[] senderArray = reverseArray(sender.toArray());
-
-        return concatenate(concatenate(concatenate(
-                concatenate(senderArray, timestampPadded), msgTypePadded), msgBytesPadded), noncePadded);
+    private static byte[] concatenateMetadataBase(N3MessageMetadataDto metadata) {
+        byte[] msgTypePadded = toLittleEndianByteArrayZeroPadded(metadata.type, UINT8_SIZE);
+        byte[] timestampPadded = toLittleEndianByteArrayZeroPadded(metadata.timestamp, UINT256_SIZE);
+        byte[] senderArray = reverseArray(metadata.sender.toArray());
+        return concatenate(concatenate(senderArray, timestampPadded), msgTypePadded);
     }
 
     private static byte[] padToBytes(byte[] data, int padToSize) {
