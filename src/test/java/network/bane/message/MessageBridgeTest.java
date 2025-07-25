@@ -12,7 +12,7 @@ import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
-import network.bane.util.TestHelper;
+import network.bane.util.MessageHelper;
 import network.bane.util.structs.N3MessageDto;
 import network.bane.util.structs.N3MessageMetadataDto;
 import network.bane.util.structs.N3MessageMetadataExecDto;
@@ -33,9 +33,9 @@ import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static network.bane.util.MessageHelper.createN3MessageHash;
+import static network.bane.util.MessageHelper.getMessageStorEvents;
 import static network.bane.util.TestHelper.concatAndKeccak256;
-import static network.bane.util.TestHelper.createN3MessageHash;
-import static network.bane.util.TestHelper.getMessageStorEvents;
 import static network.bane.util.TestHelper.governor;
 import static network.bane.util.TestHelper.securityGuard;
 import static network.bane.util.TestHelper.signMsg;
@@ -370,10 +370,10 @@ public class MessageBridgeTest {
         ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
         Hash256 txHash = messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope));
         printTransactionFee(neow3j, "tx with 1 message", txHash);
-        List<TestHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
+        List<MessageHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
                 messageBridge.getScriptHash());
         assertThat(n3MessageStoreEvents, hasSize(1));
-        TestHelper.N3MessageStoreEvent n3MessageStoreEvent = n3MessageStoreEvents.get(0);
+        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent = n3MessageStoreEvents.get(0);
         assertThat(n3MessageStoreEvent.nonce, is(nonce));
         N3MessageMetadataDto expectedMetadata = metadata;
         assertThat(n3MessageStoreEvent.metadataSerializedHex,
