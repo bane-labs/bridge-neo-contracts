@@ -172,8 +172,8 @@ public class MessageSyncTest {
     @Test
     @Order(2)
     public void test_storeMessage_2_storeOnly() throws Throwable {
-        // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
-        // the nonce, to and amount.
+        // This test only works as the second test in the order of storing messages, due to the use of raw data for
+        // the nonce, to and amount. It assumes that the first test has already set up the necessary state.
         BigInteger nonce = BigInteger.valueOf(2);
         BigInteger timestamp = new BigInteger("1753100005");
         Hash160 sender = new Hash160("0x82d53419cdb80a84a1a9c699c6cc333236169b98");
@@ -208,7 +208,8 @@ public class MessageSyncTest {
         N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
 
         // Validating the root.
-        String root = concatAndKeccak256(messageBridge.getMessageBridge().evmToN3MessageState.root.toString(), msgHash1);
+        String root = concatAndKeccak256(messageBridge.getMessageBridge().evmToN3MessageState.root.toString(),
+                msgHash1);
         assertThat(root, is("0x0e13e3d88133f283e6592bb48f1405fb941fab340106cf74445aea07743ca91e"));
 
         ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
@@ -236,8 +237,8 @@ public class MessageSyncTest {
     @Test
     @Order(3)
     public void test_result_concatenation() throws Throwable {
-        // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
-        // the nonce, to and amount.
+        // This test depends on specific raw data for the nonce, to, and amount. Ensure the test setup matches the
+        // expected state.
         BigInteger nonce = new BigInteger("7592037"); //73d865
         BigInteger timestamp = new BigInteger("1753000097"); //687ca8a1
         Hash160 sender = new Hash160("0xfadd389577eae0af6e59f8476f9d808f120407c2");
