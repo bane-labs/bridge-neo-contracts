@@ -49,8 +49,7 @@ import static network.bane.util.helper.PrintHelper.printTransactionFee;
 import static network.bane.util.helper.TestHelper.alice;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
 import static network.bane.util.helper.TestHelper.createMessageBridgeDeployConfig;
-import static network.bane.util.helper.TestHelper.decrementN3MessageNonce;
-import static network.bane.util.helper.TestHelper.incrementAndGetN3MessageNonce;
+import static network.bane.util.helper.TestHelper.getNextN3Nonce;
 import static network.bane.util.helper.TestHelper.management;
 import static network.bane.util.helper.TestHelper.messageBridge;
 import static network.bane.util.helper.TestHelper.neow3j;
@@ -159,7 +158,7 @@ public class MessageBridgeTest {
     public void test_storeMessages_1_notRelayer() throws IOException {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = incrementAndGetN3MessageNonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
@@ -174,8 +173,6 @@ public class MessageBridgeTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.storeMessages(governor, root, signMsg(validators, root), array(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("No authorization - only relayer"));
-
-        decrementN3MessageNonce();
     }
 
     @Test
@@ -186,7 +183,7 @@ public class MessageBridgeTest {
 
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = incrementAndGetN3MessageNonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
@@ -203,7 +200,6 @@ public class MessageBridgeTest {
         assertThat(thrown.getMessage(), containsString("Contract paused"));
 
         messageBridge.unpause();
-        decrementN3MessageNonce();
     }
 
     @Test
@@ -214,7 +210,7 @@ public class MessageBridgeTest {
 
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = incrementAndGetN3MessageNonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
@@ -231,7 +227,6 @@ public class MessageBridgeTest {
         assertThat(thrown.getMessage(), containsString("Contract paused"));
 
         messageBridge.unpause();
-        decrementN3MessageNonce();
     }
 
     @Test
@@ -252,7 +247,7 @@ public class MessageBridgeTest {
     public void test_storeMessage_1_incorrectNextNonce() throws IOException {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = incrementAndGetN3MessageNonce().add(BigInteger.ONE);
+        BigInteger nonce = getNextN3Nonce().add(BigInteger.ONE);
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
@@ -267,8 +262,6 @@ public class MessageBridgeTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.storeMessages(root, signMsg(validators, root), messageEnvelope));
         assertThat(thrown.getMessage(), containsString("Provided messages are not subsequent"));
-
-        decrementN3MessageNonce();
     }
 
     @Test
@@ -276,7 +269,7 @@ public class MessageBridgeTest {
     public void test_storeMessage_1_invalidRoot() throws IOException {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = incrementAndGetN3MessageNonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
@@ -293,8 +286,6 @@ public class MessageBridgeTest {
                 () -> messageBridge.storeMessages(invalidRoot, signMsg(validators, invalidRoot),
                         array(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("Invalid root"));
-
-        decrementN3MessageNonce();
     }
 
     @Test
@@ -302,7 +293,7 @@ public class MessageBridgeTest {
     public void test_storeMessage_1_insufficientNrSigs() throws IOException {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = incrementAndGetN3MessageNonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
@@ -318,8 +309,6 @@ public class MessageBridgeTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("Insufficient signatures"));
-
-        decrementN3MessageNonce();
     }
 
     @Test
@@ -327,7 +316,7 @@ public class MessageBridgeTest {
     public void test_storeMessage_1_failingSigVerification() throws IOException {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = incrementAndGetN3MessageNonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
@@ -342,8 +331,6 @@ public class MessageBridgeTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("Invalid validator signatures"));
-
-        decrementN3MessageNonce();
     }
 
     @Test
@@ -351,7 +338,7 @@ public class MessageBridgeTest {
     public void test_storeMessage_1() throws Throwable {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = incrementAndGetN3MessageNonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";

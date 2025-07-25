@@ -58,7 +58,7 @@ import static network.bane.util.helper.TestHelper.createBridgeManagementDeployCo
 import static network.bane.util.helper.TestHelper.createExecutionManagerDeployConfig;
 import static network.bane.util.helper.TestHelper.createMessageBridgeDeployConfig;
 import static network.bane.util.helper.TestHelper.executionManager;
-import static network.bane.util.helper.TestHelper.incrementAndGetN3MessageNonce;
+import static network.bane.util.helper.TestHelper.getNextN3Nonce;
 import static network.bane.util.helper.TestHelper.management;
 import static network.bane.util.helper.TestHelper.messageBridge;
 import static network.bane.util.helper.TestHelper.neow3j;
@@ -198,7 +198,7 @@ public class MessageExecutionManagerTest {
     }
 
     // endregion
-    // region execution
+    // region execution failing
 
     /**
      * Tests that the invocation of the execution manager's `executeMessage` method with a calling script hash other
@@ -277,6 +277,9 @@ public class MessageExecutionManagerTest {
                 () -> messageBridge.executeMessage(none(alice), nonce));
         assertThat(thrown.getMessage(), containsString("Prohibited target"));
     }
+
+    // endregion
+    // region message execution
 
     /**
      * Tests the successful execution of a message. The test flow is as follows:
@@ -386,7 +389,8 @@ public class MessageExecutionManagerTest {
             throws Throwable {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = incrementAndGetN3MessageNonce(); // Necessary if other tests are run besides this one.
+
+        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
 
         // 0000000000000000000000000000000000000000000000000000000000000001 nonce hex padded
         // 00000000000000000000000000000000000000000000000000000000687ca840 1753000000 hex padded
