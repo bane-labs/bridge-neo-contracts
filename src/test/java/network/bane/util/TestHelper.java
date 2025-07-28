@@ -12,11 +12,9 @@ import io.neow3j.transaction.Transaction;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
-import io.neow3j.utils.ArrayUtils;
 import io.neow3j.utils.Await;
 import io.neow3j.utils.BigIntegers;
 import io.neow3j.wallet.Account;
-import network.bane.util.structs.N3MessageDto;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -25,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.hash160;
@@ -33,6 +30,8 @@ import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.publicKey;
 import static io.neow3j.types.ContractParameter.signature;
 import static io.neow3j.utils.ArrayUtils.concatenate;
+import static io.neow3j.utils.ArrayUtils.reverseArray;
+import static io.neow3j.utils.BigIntegers.toLittleEndianByteArrayZeroPadded;
 import static io.neow3j.utils.Numeric.cleanHexPrefix;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.prependHexPrefix;
@@ -41,13 +40,13 @@ import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_LINKED_CHAIN_ID;
-import static network.bane.util.helper.TestHelper.bridge;
-import static network.bane.util.helper.TestHelper.messageBridge;
 import static network.bane.util.helper.TestHelper.neow3j;
 
 public class TestHelper {
 
-    private static final byte UINT256_SIZE = 32;
+    static final byte UINT256_SIZE = 32;
+    static final byte UINT8_SIZE = 1;
+    static final byte BOOL_SIZE = 1;
 
     // Account names available in the neo-express config file.
     public static final String ALICE = "NM7Aky765FG8NhhwtxjXRx7jEL1cnw7PBP";
@@ -222,11 +221,11 @@ public class TestHelper {
     }
 
     public static byte[] concatDepositData(BigInteger nonce, Hash160 recipient, BigInteger amount) {
-        byte[] noncePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
-        byte[] recipientArray = ArrayUtils.reverseArray(recipient.toArray());
-        byte[] amountPadded = BigIntegers.toLittleEndianByteArrayZeroPadded(amount, UINT256_SIZE);
+        byte[] noncePadded = toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
+        byte[] recipientArray = reverseArray(recipient.toArray());
+        byte[] amountPadded = toLittleEndianByteArrayZeroPadded(amount, UINT256_SIZE);
         byte[] concatenated = concatenate(concatenate(amountPadded, recipientArray), noncePadded);
-        return ArrayUtils.reverseArray(concatenated);
+        return reverseArray(concatenated);
     }
 
     public static String createDepositHashNoPrefix(BigInteger nonce, Hash160 to, BigInteger amount) {
@@ -235,15 +234,15 @@ public class TestHelper {
 
     public static byte[] concatTokenOpData(Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce, Hash160 recipient,
             BigInteger value) {
-        byte[] neoN3TokenArray = ArrayUtils.reverseArray(neoN3Token.toArray());
-        byte[] neoXTokenArray = ArrayUtils.reverseArray(neoXToken.toArray());
-        byte[] noncePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
-        byte[] recipientArray = ArrayUtils.reverseArray(recipient.toArray());
-        byte[] valuePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(value, UINT256_SIZE);
+        byte[] neoN3TokenArray = reverseArray(neoN3Token.toArray());
+        byte[] neoXTokenArray = reverseArray(neoXToken.toArray());
+        byte[] noncePadded = toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
+        byte[] recipientArray = reverseArray(recipient.toArray());
+        byte[] valuePadded = toLittleEndianByteArrayZeroPadded(value, UINT256_SIZE);
         byte[] concatenated = concatenate(
                 concatenate(concatenate(concatenate(valuePadded, recipientArray), noncePadded), neoXTokenArray),
                 neoN3TokenArray);
-        return ArrayUtils.reverseArray(concatenated);
+        return reverseArray(concatenated);
     }
 
     public static String createTokenOpHash(Hash160 neoN3Token, Hash160 neoXToken, BigInteger nonce, Hash160 recipient,
@@ -267,33 +266,12 @@ public class TestHelper {
                 createTokenOpHashNoPrefix(neoN3Token, neoXToken, nonce, recipient, value));
     }
 
-    public static String createN3MessageHash(BigInteger nonce, BigInteger timestamp, Hash160 sender,
-            byte[] n3MethodCallBytes) {
-        return keccak256Hex(concatN3MessageData(nonce, timestamp, sender, toHexString(n3MethodCallBytes)));
-    }
-
-    public static String createN3MessageHash(BigInteger nonce, BigInteger timestamp, Hash160 sender,
-            String executableCodeHex) {
-        return keccak256Hex(concatN3MessageData(nonce, timestamp, sender, executableCodeHex));
-    }
-
-    private static byte[] concatN3MessageData(BigInteger nonce, BigInteger timestamp, Hash160 sender,
-            String executableCodeHex) {
-        byte[] noncePadded = BigIntegers.toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
-        byte[] timestampPadded = BigIntegers.toLittleEndianByteArrayZeroPadded(timestamp, UINT256_SIZE);
-        byte[] senderArray = ArrayUtils.reverseArray(sender.toArray());
-        byte[] executableCodeArray = hexStringToByteArray(executableCodeHex);
-        byte[] concatenated = concatenate(concatenate(concatenate(executableCodeArray, senderArray), timestampPadded),
-                noncePadded);
-        return ArrayUtils.reverseArray(concatenated);
-    }
-
     private static byte[] padToBytes(byte[] data, int padToSize) {
         int dataSize = data.length;
         int toPad = padToSize - dataSize;
         assert toPad >= 0 : "Data is too long.";
         byte[] padding = new byte[toPad];
-        return concat(data, padding);
+        return concatenate(data, padding);
     }
 
     // big-endian modification of io.neow3j.utils.BigIntegers.toLittleEndianByteArrayZeroPadded()
@@ -362,18 +340,6 @@ public class TestHelper {
             return new DepositEvent(nonce, to, amount, from, depositHash, rootHash);
         }
         return new DepositEvent(nonce, to, amount, from);
-    }
-
-    public static List<N3MessageStoreEvent> getMessageStorEvents(Hash256 txHash, Neow3j neow3j, Hash160 bridge)
-            throws IOException {
-        return neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getNotifications()
-                .stream()
-                .filter(n -> n.getContract().equals(messageBridge.getScriptHash()) && n.getEventName().equals("Store"))
-                .map(TestHelper::getN3MessageStoreEventFromNotification).collect(Collectors.toList());
-    }
-
-    private static N3MessageStoreEvent getN3MessageStoreEventFromNotification(Notification n3MessageStoreEvent) {
-        return N3MessageStoreEvent.fromNotification(n3MessageStoreEvent);
     }
 
     private static WithdrawEvent getWithdrawEventFromNotification(Notification depositEvent) {
@@ -539,42 +505,6 @@ public class TestHelper {
         @Override
         public String toString() {
             return "\nClaimEvent\n" + "\n  nonce=" + nonce + "\n  to=" + to + "\n  amount=" + amount + "\n";
-        }
-    }
-
-    public static class N3MessageStoreEvent {
-        public BigInteger nonce;
-        public N3MessageDto.N3MessageMetadataDto messageMetadata;
-
-        public N3MessageStoreEvent(BigInteger nonce, N3MessageDto.N3MessageMetadataDto messageMetadata) {
-            this.nonce = nonce;
-            this.messageMetadata = messageMetadata;
-        }
-
-        public static N3MessageStoreEvent fromNotification(Notification n3MessageStoreEvent) {
-            if (!n3MessageStoreEvent.getContract().equals(messageBridge.getScriptHash()) ||
-                    !n3MessageStoreEvent.getEventName().equals("Store")) {
-                throw new IllegalArgumentException("Notification is not a Store event.");
-            }
-            List<StackItem> items = n3MessageStoreEvent.getState().getList();
-            BigInteger nonce = items.get(0).getInteger();
-            List<StackItem> metadataItems = items.get(1).getList();
-            BigInteger timestamp = metadataItems.get(0).getInteger();
-            Hash160 sender = Hash160.fromAddress(metadataItems.get(1).getAddress());
-            return new N3MessageStoreEvent(nonce, new N3MessageDto.N3MessageMetadataDto(timestamp, sender));
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof N3MessageStoreEvent)) return false;
-            N3MessageStoreEvent that = (N3MessageStoreEvent) o;
-            return nonce.equals(that.nonce) && messageMetadata.equals(that.messageMetadata);
-        }
-
-        @Override
-        public String toString() {
-            return "StoreEvent{" + "nonce=" + nonce + "metadata=" + messageMetadata + "}";
         }
     }
 

@@ -13,9 +13,14 @@ import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
 import network.bane.util.helper.SmartContractHelper;
 import network.bane.util.structs.N3MessageDto;
+import network.bane.util.structs.N3MessageMetadataDto;
+import network.bane.util.structs.N3MessageMetadataExecDto;
+import network.bane.util.structs.N3MessageMetadataResultDto;
+import network.bane.util.structs.N3MessageMetadataStoreOnlyDto;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.List;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.none;
@@ -50,15 +55,41 @@ public class MessageTestStorer extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("storeMetadataOfExecutingMessage").signers(none(alice)));
     }
 
-    public N3MessageDto.N3MessageMetadataDto getStoredMetadata(BigInteger nonce) throws IOException {
+    public static N3MessageMetadataDto getMetadataFromStackItem(StackItem stackItem) {
+        List<StackItem> items = stackItem.getList();
+        int type = items.get(0).getInteger().intValue();
+        BigInteger timestamp = items.get(1).getInteger();
+        Hash160 sender = Hash160.fromAddress(items.get(2).getAddress());
+        if (type == N3MessageDto.MESSAGE_TYPE_STORE_ONLY) {
+            return new N3MessageMetadataStoreOnlyDto(timestamp, sender);
+        }
+        if (type == N3MessageDto.MESSAGE_TYPE_EXECUTABLE) {
+            boolean storeResult = items.get(3).getBoolean();
+            return new N3MessageMetadataExecDto(timestamp, sender, storeResult);
+        }
+        if (type == N3MessageDto.MESSAGE_TYPE_RESULT) {
+            BigInteger initialMsgNonce = items.get(3).getInteger();
+            return new N3MessageMetadataResultDto(timestamp, sender, initialMsgNonce);
+        }
+        throw new IllegalStateException("Unexpected metadata format");
+    }
+
+    public boolean hasMetadataStored(BigInteger nonce) throws IOException {
+        try {
+            getStoredMetadata(nonce);
+        } catch (IllegalStateException e) {
+            return false;
+        }
+        return true;
+    }
+
+    public N3MessageMetadataDto getStoredMetadata(BigInteger nonce) throws IOException {
         StackItem metadataItem = callInvokeFunction("getStoredMetadata",
                 asList(integer(nonce))).getInvocationResult().getFirstStackItem();
         if (metadataItem.getValue() == null) {
-            return new N3MessageDto.N3MessageMetadataDto(BigInteger.ZERO, Hash160.ZERO);
+            throw new IllegalStateException("No metadata found for nonce: " + nonce);
         }
-        BigInteger timestamp = metadataItem.getList().get(0).getInteger();
-        Hash160 sender = Hash160.fromAddress(metadataItem.getList().get(1).getAddress());
-        return new N3MessageDto.N3MessageMetadataDto(timestamp, sender);
+        return getMetadataFromStackItem(metadataItem);
     }
 
     // endregion

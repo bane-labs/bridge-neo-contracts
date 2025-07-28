@@ -27,9 +27,9 @@ import network.bane.util.ExecutionManager;
 import network.bane.util.Management;
 import network.bane.util.MessageBridge;
 import network.bane.util.MessageTestStorer;
-import network.bane.util.structs.MessageBridgeDto;
 import network.bane.util.structs.TokenBridge;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -133,7 +133,6 @@ public class TestHelper {
 
     public static void setupMessageBridge(ContractTestExtension ext) {
         setupManagement(ext);
-        setupTestContract(ext);
         messageBridge = new MessageBridge(ext.getDeployedContract(MessageBridgeContract.class).getScriptHash(), neow3j);
     }
 
@@ -251,13 +250,8 @@ public class TestHelper {
         return depositNonce;
     }
 
-    public static BigInteger incrementAndGetN3MessageNonce() {
-        n3MessageNonce = n3MessageNonce.add(BigInteger.ONE);
-        return n3MessageNonce;
-    }
-
-    public static void decrementN3MessageNonce() {
-        n3MessageNonce = n3MessageNonce.subtract(BigInteger.ONE);
+    public static BigInteger getNextN3Nonce() throws IOException {
+        return messageBridge.getMessageBridge().evmToN3MessageState.nonce.add(BigInteger.ONE);
     }
 
     public static void registerNeoTokenBridge() throws Throwable {
