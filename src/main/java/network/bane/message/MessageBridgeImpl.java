@@ -167,9 +167,8 @@ class MessageBridgeImpl {
         );
     }
 
-    static Object getMetadata(int nonce) {
-        N3Message message = getMessage(nonce);
-        return new StdLib().deserialize(message.metadataBytes);
+    static N3Message.N3Metadata getMetadata(int nonce) {
+        return getMetadata(getMessage(nonce));
     }
 
     static N3Message.N3Metadata getMetadata(N3Message message) {
@@ -183,11 +182,11 @@ class MessageBridgeImpl {
     static void executeMessage(int nonce) {
         // Validate that the message is executable.
         N3Message message = getMessage(nonce);
-        N3Message.N3Metadata metadataAbstract = getMetadata(message);
-        if (metadataAbstract.type != MESSAGE_TYPE_EXECUTABLE) {
+        N3Message.N3Metadata abstractMetadata = getMetadata(message);
+        if (abstractMetadata.type != MESSAGE_TYPE_EXECUTABLE) {
             abort("Message is not executable");
         }
-        N3Message.N3MetadataExecutable metadata = (N3Message.N3MetadataExecutable) metadataAbstract;
+        N3Message.N3MetadataExecutable metadata = (N3Message.N3MetadataExecutable) abstractMetadata;
 
         // Validate that the message is pending and has not been executed already.
         if (!isPending(nonce)) {
