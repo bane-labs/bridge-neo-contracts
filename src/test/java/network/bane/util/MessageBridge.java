@@ -37,10 +37,22 @@ import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.map;
 import static io.neow3j.types.ContractParameter.string;
 import static java.util.Arrays.asList;
+import static network.bane.util.MessageHelper.createN3MessageHash;
+import static network.bane.util.TestHelper.concatAndKeccak256;
 import static network.bane.util.TestHelper.governor;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.securityGuard;
+import static network.bane.util.TestHelper.signMsg;
+import static network.bane.util.TestHelper.validator1;
+import static network.bane.util.TestHelper.validator2;
+import static network.bane.util.TestHelper.validator3;
+import static network.bane.util.TestHelper.validator4;
+import static network.bane.util.TestHelper.validator5;
+import static network.bane.util.helper.PrintHelper.printTransactionFee;
+import static network.bane.util.helper.TestHelper.alice;
+import static network.bane.util.helper.TestHelper.getNextN3Nonce;
+import static network.bane.util.helper.TestHelper.messageBridge;
 
 public class MessageBridge extends SmartContractHelper {
 
@@ -99,26 +111,48 @@ public class MessageBridge extends SmartContractHelper {
         return callFunctionReturningBool("isPaused");
     }
 
-    public Hash256 pauseSendAndExecute() throws Throwable {
-        return pauseSendAndExecute(governor);
+    public Hash256 pauseSending() throws Throwable {
+        return pauseSending(governor);
     }
 
-    public Hash256 pauseSendAndExecute(Account sender) throws Throwable {
+    public Hash256 pauseSending(Account sender) throws Throwable {
         AccountSigner signer = calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("pauseSendAndExecute").signers(signer));
+        return sendAndAwaitExecution(invokeFunction("pauseSending").signers(signer));
     }
 
-    public Hash256 unpauseSendAndExecute() throws Throwable {
-        return unpauseSendAndExecute(governor);
+    public Hash256 unpauseSending() throws Throwable {
+        return unpauseSending(governor);
     }
 
-    public Hash256 unpauseSendAndExecute(Account sender) throws Throwable {
+    public Hash256 unpauseSending(Account sender) throws Throwable {
         AccountSigner signer = calledByEntry(sender);
-        return sendAndAwaitExecution(invokeFunction("unpauseSendAndExecute").signers(signer));
+        return sendAndAwaitExecution(invokeFunction("unpauseSending").signers(signer));
     }
 
-    public boolean sendAndExecuteIsPaused() throws IOException {
-        return callFunctionReturningBool("sendAndExecuteIsPaused");
+    public boolean sendingIsPaused() throws IOException {
+        return callFunctionReturningBool("sendingIsPaused");
+    }
+
+    public Hash256 pauseExecuting() throws Throwable {
+        return pauseExecuting(governor);
+    }
+
+    public Hash256 pauseExecuting(Account sender) throws Throwable {
+        AccountSigner signer = calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("pauseExecuting").signers(signer));
+    }
+
+    public Hash256 unpauseExecuting() throws Throwable {
+        return unpauseExecuting(governor);
+    }
+
+    public Hash256 unpauseExecuting(Account sender) throws Throwable {
+        AccountSigner signer = calledByEntry(sender);
+        return sendAndAwaitExecution(invokeFunction("unpauseExecuting").signers(signer));
+    }
+
+    public boolean executingIsPaused() throws IOException {
+        return callFunctionReturningBool("executingIsPaused");
     }
 
     // endregion
@@ -152,6 +186,32 @@ public class MessageBridge extends SmartContractHelper {
                         .signers(calledByEntry(sender)));
     }
 
+    public BigInteger storeMessage(byte[] n3FuncCall) throws Throwable {
+        Hash256 bestBlockHash = neow3j.getBestBlockHash().send().getBlockHash();
+        long bestBlockTime = neow3j.getBlockHeader(bestBlockHash).send().getBlock().getTime();
+        BigInteger timestamp = BigInteger.valueOf(bestBlockTime);
+        Hash160 sender = alice.getScriptHash();
+        return storeMessage(n3FuncCall, timestamp, sender, true);
+    }
+
+    public BigInteger storeMessage(byte[] msgBytes, BigInteger timestamp, Hash160 sender, boolean storeResult)
+            throws Throwable {
+
+        BigInteger nonce = getNextN3Nonce();
+
+        N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, storeResult);
+        String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
+        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+
+        Hash256 currentRoot = getMessageBridge().evmToN3MessageState.root;
+        String root = concatAndKeccak256(currentRoot.toString(), msgHash1);
+        List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
+        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
+        Hash256 txHash = storeMessages(root, signMsg(validators, root), array(messageEnvelope));
+        printTransactionFee(neow3j, "tx with 1 message", txHash);
+        return nonce;
+    }
+
     public N3MessageDto getMessage(int nonce) throws IOException {
         return getMessage(BigInteger.valueOf(nonce));
     }
@@ -161,10 +221,6 @@ public class MessageBridge extends SmartContractHelper {
                 .getFirstStackItem();
         return N3MessageDto.fromStackItem(item);
     }
-    // 40
-    // 03
-    // 21 04 40a87c68
-    // 28 140d165c9899c38bbf5991c5e47b04937258caec692001
 
     // endregion
     // region execution

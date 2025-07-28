@@ -18,12 +18,20 @@ class MessageBridgeContractHelper {
         if (MessageBridgeContract.isPaused()) abort("Contract paused");
     }
 
-    static void onlyWhenSendAndExecutePaused() {
-        if (!MessageBridgeContract.sendAndExecuteIsPaused()) abort("Send and execute not paused");
+    static void onlyWhenSendingPaused() {
+        if (!MessageBridgeContract.sendingIsPaused()) abort("Sending not paused");
     }
 
-    static void onlyWhenSendAndExecuteNotPaused() {
-        if (MessageBridgeContract.sendAndExecuteIsPaused()) abort("Send and execute paused");
+    static void onlyWhenSendingNotPaused() {
+        if (MessageBridgeContract.sendingIsPaused()) abort("Sending paused");
+    }
+
+    static void onlyWhenExecutingPaused() {
+        if (!MessageBridgeContract.executingIsPaused()) abort("Executing not paused");
+    }
+
+    static void onlyWhenExecutingNotPaused() {
+        if (MessageBridgeContract.executingIsPaused()) abort("Executing paused");
     }
 
     // endregion

@@ -1,11 +1,13 @@
 package network.bane.message;
 
+import io.neow3j.contract.GasToken;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
+import io.neow3j.types.CallFlags;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -28,6 +30,7 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 
+import static io.neow3j.transaction.AccountSigner.global;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
@@ -109,12 +112,20 @@ public class MessageBridgeTest {
     @Order(0)
     public void test_pause_governor() throws Throwable {
         assertFalse(messageBridge.isPaused());
-        messageBridge.pause(governor);
+        Hash256 tx = messageBridge.pause(governor);
         assertTrue(messageBridge.isPaused());
+        Notification firstEventInPausingTx = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
+                .getFirstNotification();
+        assertThat(firstEventInPausingTx.getContract(), is(messageBridge.getScriptHash()));
+        assertThat(firstEventInPausingTx.getEventName(), is("Pause"));
 
         // revert the state for further tests
-        messageBridge.unpause();
+        tx = messageBridge.unpause();
         assertFalse(messageBridge.isPaused());
+        Notification firstEventInUnpausingTx = neow3j.getApplicationLog(tx).send().getApplicationLog()
+                .getFirstExecution().getFirstNotification();
+        assertThat(firstEventInUnpausingTx.getContract(), is(messageBridge.getScriptHash()));
+        assertThat(firstEventInUnpausingTx.getEventName(), is("Unpause"));
     }
 
     @Test
@@ -370,6 +381,51 @@ public class MessageBridgeTest {
         assertThat(message, is(n3MessageDto));
 
         assertTrue(messageBridge.isPending(nonce));
+    }
+
+    // endregion
+    // region execution
+
+    @Test
+    @Order(2)
+    public void test_execute_failWhenContractPaused() throws Throwable {
+        byte[] n3FuncCall = messageBridge.getSerializedN3MethodCall(GasToken.SCRIPT_HASH, "symbol", CallFlags.ALL,
+                asList());
+        BigInteger nonce = messageBridge.storeMessage(n3FuncCall);
+
+        messageBridge.pause();
+        assertTrue(messageBridge.isPaused());
+
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.executeMessage(global(alice), nonce));
+        assertThat(thrown.getMessage(), containsString("Contract paused"));
+
+        messageBridge.unpause();
+    }
+
+    @Test
+    @Order(2)
+    public void test_execute_failWhenExecutingPaused() throws Throwable {
+        byte[] n3FuncCall = messageBridge.getSerializedN3MethodCall(GasToken.SCRIPT_HASH, "symbol", CallFlags.ALL,
+                asList());
+        BigInteger nonce = messageBridge.storeMessage(n3FuncCall);
+
+        Hash256 tx = messageBridge.pauseExecuting();
+        assertTrue(messageBridge.executingIsPaused());
+        Notification firstEventInPausingTx = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
+                .getFirstNotification();
+        assertThat(firstEventInPausingTx.getContract(), is(messageBridge.getScriptHash()));
+        assertThat(firstEventInPausingTx.getEventName(), is("ExecutingPause"));
+
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.executeMessage(global(alice), nonce));
+        assertThat(thrown.getMessage(), containsString("Executing paused"));
+
+        tx = messageBridge.unpauseExecuting();
+        Notification firstEventInUnpausingTx = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
+                .getFirstNotification();
+        assertThat(firstEventInUnpausingTx.getContract(), is(messageBridge.getScriptHash()));
+        assertThat(firstEventInUnpausingTx.getEventName(), is("ExecutingUnpause"));
     }
 
     // endregion
