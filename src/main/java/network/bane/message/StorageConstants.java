@@ -9,10 +9,11 @@ class StorageConstants {
     static final byte PREFIX_MSG_RESULT = 0x2c;
 
     static final int KEY_BRIDGE_MANAGEMENT = 0x01;
-    static final int KEY_BRIDGE_PAUSE = 0x02;
+    static final int KEY_PAUSE = 0x02;
 
     static final int KEY_UNCLAIMED_REWARDS = 0x04;
-    static final int KEY_SEND_AND_EXECUTE_PAUSE = 0x05;
+    static final int KEY_SENDING_PAUSE = 0x05;
+    static final int KEY_EXECUTING_PAUSE = 0x06;
 
     static final int KEY_LINKED_CHAIN_ID = 0x10;
 

@@ -32,14 +32,17 @@ import static network.bane.message.MessageBridgeContractHelper.managementContrac
 import static network.bane.message.MessageBridgeContractHelper.onlyGovernor;
 import static network.bane.message.MessageBridgeContractHelper.onlyGovernorOrSecurityGuard;
 import static network.bane.message.MessageBridgeContractHelper.onlyRelayer;
+import static network.bane.message.MessageBridgeContractHelper.onlyWhenExecutingNotPaused;
+import static network.bane.message.MessageBridgeContractHelper.onlyWhenExecutingPaused;
 import static network.bane.message.MessageBridgeContractHelper.onlyWhenNotPaused;
 import static network.bane.message.MessageBridgeContractHelper.onlyWhenPaused;
-import static network.bane.message.MessageBridgeContractHelper.onlyWhenSendAndExecuteNotPaused;
-import static network.bane.message.MessageBridgeContractHelper.onlyWhenSendAndExecutePaused;
+import static network.bane.message.MessageBridgeContractHelper.onlyWhenSendingNotPaused;
+import static network.bane.message.MessageBridgeContractHelper.onlyWhenSendingPaused;
 import static network.bane.message.StorageConstants.KEY_BRIDGE_MANAGEMENT;
-import static network.bane.message.StorageConstants.KEY_BRIDGE_PAUSE;
+import static network.bane.message.StorageConstants.KEY_PAUSE;
 import static network.bane.message.StorageConstants.KEY_ENTERED;
-import static network.bane.message.StorageConstants.KEY_SEND_AND_EXECUTE_PAUSE;
+import static network.bane.message.StorageConstants.KEY_EXECUTING_PAUSE;
+import static network.bane.message.StorageConstants.KEY_SENDING_PAUSE;
 import static network.bane.message.StorageConstants.KEY_LINKED_CHAIN_ID;
 import static network.bane.message.StorageConstants.KEY_UNCLAIMED_REWARDS;
 import static network.bane.message.StorageConstants.KEY_VERSION;
@@ -66,17 +69,23 @@ public class MessageBridgeContract {
     // region events
     // region bridge events
 
-    @DisplayName("BridgePause")
-    static Event onBridgePause;
+    @DisplayName("Pause")
+    static Event onPause;
 
-    @DisplayName("BridgeUnpause")
-    static Event onBridgeUnpause;
+    @DisplayName("Unpause")
+    static Event onUnpause;
 
-    @DisplayName("SendAndExecutePause")
-    static Event onSendAndExecutePause;
+    @DisplayName("SendingPause")
+    static Event onSendingPause;
 
-    @DisplayName("SendAndExecuteUnpause")
-    static Event onSendAndExecuteUnpause;
+    @DisplayName("SendingUnpause")
+    static Event onSendingUnpause;
+
+    @DisplayName("ExecutingPause")
+    static Event onExecutingPause;
+
+    @DisplayName("ExecutingUnpause")
+    static Event onExecutingUnpause;
 
     @DisplayName("N3RootUpdate")
     @EventParameterNames({"Nonce", "N3MessageRoot"})
@@ -138,10 +147,11 @@ public class MessageBridgeContract {
             baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.managementContract);
             // Todo: Add execution manager in baseMap instead of bridge configuration.
             // Pause initially
-            baseMap.put(KEY_BRIDGE_PAUSE, true);
+            baseMap.put(KEY_PAUSE, true);
 
             baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
-            baseMap.put(KEY_SEND_AND_EXECUTE_PAUSE, false);
+            baseMap.put(KEY_SENDING_PAUSE, false);
+            baseMap.put(KEY_EXECUTING_PAUSE, false);
 
             baseMap.put(KEY_ENTERED, false);
             baseMap.put(KEY_VERSION, 4);
@@ -169,15 +179,15 @@ public class MessageBridgeContract {
     public static void pause() {
         onlyWhenNotPaused();
         onlyGovernorOrSecurityGuard();
-        baseMap.put(KEY_BRIDGE_PAUSE, true);
-        onBridgePause.fire();
+        baseMap.put(KEY_PAUSE, true);
+        onPause.fire();
     }
 
     public static void unpause() {
         onlyWhenPaused();
         onlyGovernor();
-        baseMap.put(KEY_BRIDGE_PAUSE, false);
-        onBridgeUnpause.fire();
+        baseMap.put(KEY_PAUSE, false);
+        onUnpause.fire();
     }
 
     /**
@@ -185,29 +195,57 @@ public class MessageBridgeContract {
      */
     @Safe
     public static boolean isPaused() {
-        return baseMap.getBoolean(KEY_BRIDGE_PAUSE);
+        return baseMap.getBoolean(KEY_PAUSE);
     }
 
     /**
-     * Pausing send and execute will reject any incoming messages to be sent as well as stored messages to be executed.
+     * Pauses sending messages. While sending is paused, no messages can be sent.
      */
-    public static void pauseSendAndExecute() {
-        onlyWhenSendAndExecuteNotPaused();
-        onlyGovernor();
-        baseMap.put(KEY_SEND_AND_EXECUTE_PAUSE, true);
-        onSendAndExecutePause.fire();
+    public static void pauseSending() {
+        onlyWhenSendingNotPaused();
+        onlyGovernorOrSecurityGuard();
+        baseMap.put(KEY_SENDING_PAUSE, true);
+        onSendingPause.fire();
     }
 
-    public static void unpauseSendAndExecute() {
-        onlyWhenSendAndExecutePaused();
+    /**
+     * Unpauses sending messages. While sending is unpaused, messages can be sent.
+     */
+    public static void unpauseSending() {
+        onlyWhenSendingPaused();
         onlyGovernor();
-        baseMap.put(KEY_SEND_AND_EXECUTE_PAUSE, false);
-        onSendAndExecuteUnpause.fire();
+        baseMap.put(KEY_SENDING_PAUSE, false);
+        onSendingUnpause.fire();
+    }
+
+    /**
+     * Pauses executing messages. While executing is paused, no messages can be executed.
+     */
+    public static void pauseExecuting() {
+        onlyWhenExecutingNotPaused();
+        onlyGovernorOrSecurityGuard();
+        baseMap.put(KEY_EXECUTING_PAUSE, true);
+        onExecutingPause.fire();
+    }
+
+    /**
+     * Unpauses executing messages. While executing is unpaused, messages can be executed.
+     */
+    public static void unpauseExecuting() {
+        onlyWhenExecutingPaused();
+        onlyGovernor();
+        baseMap.put(KEY_EXECUTING_PAUSE, false);
+        onExecutingUnpause.fire();
     }
 
     @Safe
-    public static boolean sendAndExecuteIsPaused() {
-        return baseMap.getBoolean(KEY_SEND_AND_EXECUTE_PAUSE);
+    public static boolean sendingIsPaused() {
+        return baseMap.getBoolean(KEY_SENDING_PAUSE);
+    }
+
+    @Safe
+    public static boolean executingIsPaused() {
+        return baseMap.getBoolean(KEY_EXECUTING_PAUSE);
     }
 
     // endregion
@@ -252,6 +290,7 @@ public class MessageBridgeContract {
     // region message sending (N3 to EVM)
 
     public static void sendMessage() {
+        onlyWhenSendingNotPaused();
         // Todo: send message
         abort("Not implemented yet");
     }
@@ -313,6 +352,7 @@ public class MessageBridgeContract {
 
     public static void executeMessage(int nonce) {
         onlyWhenNotPaused();
+        onlyWhenExecutingNotPaused();
 
         MessageBridgeImpl.executeMessage(nonce);
     }
