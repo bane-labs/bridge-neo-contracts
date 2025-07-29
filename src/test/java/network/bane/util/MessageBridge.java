@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
+import static io.neow3j.transaction.AccountSigner.global;
 import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.bool;
@@ -36,6 +37,7 @@ import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.map;
 import static io.neow3j.types.ContractParameter.string;
+import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static java.util.Arrays.asList;
 import static network.bane.util.MessageHelper.createN3MessageHash;
 import static network.bane.util.TestHelper.concatAndKeccak256;
@@ -157,6 +159,52 @@ public class MessageBridge extends SmartContractHelper {
 
     // endregion
     // region message bridge
+    // region sending messages
+
+    public Hash256 sendMessage(AccountSigner signer, byte[] rawMessage) throws Throwable {
+        return sendAndAwaitExecution(invokeFunction("sendMessage", byteArray(rawMessage)).signers(signer));
+    }
+
+    public Hash256 sendMessage(byte[] rawMessage) throws Throwable {
+        return sendAndAwaitExecution(invokeFunction("sendMessage", byteArray(rawMessage)).signers(global(alice)));
+    }
+
+    public Hash256 sendMessage(AccountSigner signer, String rawMessageHex) throws Throwable {
+        return sendAndAwaitExecution(
+                invokeFunction("sendMessage", byteArray(hexStringToByteArray(rawMessageHex))).signers(signer));
+    }
+
+    public Hash256 sendMessage(String rawMessageHex) throws Throwable {
+        return sendAndAwaitExecution(
+                invokeFunction("sendMessage", byteArray(hexStringToByteArray(rawMessageHex))).signers(global(alice)));
+    }
+
+    public Hash256 sendExecutableMessage(AccountSigner signer, byte[] rawMessage, boolean storeResult)
+            throws Throwable {
+        return sendAndAwaitExecution(invokeFunction("sendExecutableMessage", byteArray(rawMessage),
+                bool(storeResult)).signers(signer));
+    }
+
+    public Hash256 sendExecutableMessage(byte[] rawMessage, boolean storeResult) throws Throwable {
+        return sendAndAwaitExecution(
+                invokeFunction("sendExecutableMessage", byteArray(rawMessage), bool(storeResult)).signers(
+                        global(alice)));
+    }
+
+    public Hash256 sendExecutableMessage(AccountSigner signer, String rawMessageHex, boolean storeResult)
+            throws Throwable {
+        return sendAndAwaitExecution(
+                invokeFunction("sendExecutableMessage", byteArray(hexStringToByteArray(rawMessageHex)),
+                        bool(storeResult)).signers(signer));
+    }
+
+    public Hash256 sendExecutableMessage(String rawMessageHex, boolean storeResult) throws Throwable {
+        return sendAndAwaitExecution(
+                invokeFunction("sendExecutableMessage", byteArray(hexStringToByteArray(rawMessageHex)),
+                        bool(storeResult)).signers(global(alice)));
+    }
+
+    // endregion
     // region storing/executing messages
 
     public byte[] getSerializedN3MethodCall(Hash160 target, String method, CallFlags callFlags,
