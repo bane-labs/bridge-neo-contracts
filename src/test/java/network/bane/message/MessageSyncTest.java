@@ -297,7 +297,7 @@ public class MessageSyncTest {
 
         IllegalStateException thrown = assertThrows(IllegalStateException.class,
                 () -> messageBridge.getExecutableState(nonce));
-        assertThat(thrown.getMessage(), containsString("Execution state not found"));
+        assertThat(thrown.getMessage(), containsString("Executable state not found"));
     }
 
     @Test
@@ -439,17 +439,18 @@ public class MessageSyncTest {
         assertThat(msgSendEvent.getContract(), is(messageBridge.getScriptHash()));
         assertThat(msgSendEvent.getEventName(), is("MessageSend"));
         List<StackItem> eventItems = msgSendEvent.getState().getList();
-        assertThat(eventItems, hasSize(4));
+        assertThat(eventItems, hasSize(5));
         assertThat(eventItems.get(0).getInteger(), is(nextEvmNonce));
         assertThat(eventItems.get(1).getType(), is(StackItemType.BYTE_STRING));
         assertThat(eventItems.get(2).getType(), is(StackItemType.BYTE_STRING));
-        assertThat(eventItems.get(2).getByteArray().length, is(Hash256.ZERO.getSize()));
         assertThat(eventItems.get(3).getType(), is(StackItemType.BYTE_STRING));
         assertThat(eventItems.get(3).getByteArray().length, is(Hash256.ZERO.getSize()));
+        assertThat(eventItems.get(4).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(eventItems.get(4).getByteArray().length, is(Hash256.ZERO.getSize()));
 
         // Deserialize the serialized metadata bytes from the event to get the individual metadata values.
         List<StackItem> metadataItems = stdLib.callInvokeFunction("deserialize",
-                        asList(byteArray(eventItems.get(1).getByteArray()))).getInvocationResult().getFirstStackItem()
+                        asList(byteArray(eventItems.get(2).getByteArray()))).getInvocationResult().getFirstStackItem()
                 .getList();
         assertThat(metadataItems, hasSize(3));
         BigInteger msgType = metadataItems.get(0).getInteger();
