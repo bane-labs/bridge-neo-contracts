@@ -11,6 +11,7 @@ import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.CallFlags;
 import io.neow3j.devpack.contracts.ContractInterface;
 import io.neow3j.devpack.contracts.ContractManagement;
+import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.lib.BridgeLib;
 import network.bane.lib.MessageBridgeLib;
@@ -20,6 +21,7 @@ import network.bane.structs.message.N3Message;
 import network.bane.structs.message.N3MessageEnvelope;
 
 import static io.neow3j.devpack.Helper.abort;
+import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_EXECUTABLE;
 import static network.bane.message.MessageBridgeContractHelper.managementContract;
 import static network.bane.message.StorageConstants.KEY_MESSAGE_BRIDGE;
@@ -223,25 +225,57 @@ class MessageBridgeImpl {
         new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT).put(nonce, serializedResult);
     }
 
-    public static int sendStoreOnlyMessage(ByteString rawMessage) {
+    public static int sendMessage(ByteString rawMsg, Hash160 feeSponsor, int maxFee) {
         MessageBridge messageBridge = getMessageBridge();
+
+        MessageBridgeImpl.payMessageSendingFee(messageBridge, feeSponsor, maxFee);
+
         int timestamp = Runtime.getTime();
         Hash160 callingScriptHash = Runtime.getCallingScriptHash();
+
         N3Message.N3MetadataStoreOnly metadata = new N3Message.N3MetadataStoreOnly(timestamp, callingScriptHash);
         ByteString serializedMetadata = new StdLib().serialize(metadata);
-        N3Message message = new N3Message(serializedMetadata, rawMessage);
+        N3Message message = new N3Message(serializedMetadata, rawMsg);
         return updateEvmMessageState(messageBridge, message);
     }
 
-    public static int sendExecutableMessage(ByteString rawMessage, boolean storeResult) {
+    public static int sendExecutableMessage(ByteString rawMsg, boolean storeResult, Hash160 feeSponsor, int maxFee) {
         MessageBridge messageBridge = getMessageBridge();
+
+        MessageBridgeImpl.payMessageSendingFee(messageBridge, feeSponsor, maxFee);
+
         int timestamp = Runtime.getTime();
         Hash160 callingScriptHash = Runtime.getCallingScriptHash();
         N3Message.N3MetadataExecutable metadata = new N3Message.N3MetadataExecutable(timestamp, callingScriptHash,
                 storeResult);
         ByteString serializedMetadata = new StdLib().serialize(metadata);
-        N3Message message = new N3Message(serializedMetadata, rawMessage);
+        N3Message message = new N3Message(serializedMetadata, rawMsg);
         return updateEvmMessageState(messageBridge, message);
+    }
+
+    private static void payMessageSendingFee(MessageBridge messageBridge, Hash160 feeSponsor, int maxFee) {
+        // If the deposit fee is higher than the specified max fee, abort.
+        int sendingFee = messageBridge.config.sendingFee;
+        if (sendingFee > maxFee) abort("Max fee exceeded");
+
+        // Fee payment
+        MessageBridgeImpl.payFee(feeSponsor, sendingFee);
+    }
+
+    static void payFee(Hash160 feeSponsor, int fee) {
+        MessageBridgeImpl.addToUnclaimedRewards(fee);
+        if (!Hash160.isValid(feeSponsor) || feeSponsor.isZero()) abort("Invalid 'feeSponsor'");
+        if (getExecutingScriptHash().equals(feeSponsor)) abort("Prohibited 'feeSponsor'");
+
+        // Pay the fee and transfer the token
+        if (!new GasToken().transfer(feeSponsor, getExecutingScriptHash(), fee, null)) {
+            abort("Fee transfer failed");
+        }
+    }
+
+    static void addToUnclaimedRewards(int amount) {
+        int currentRewards = getUnclaimedRewards();
+        MessageBridgeContract.baseMap.put(KEY_UNCLAIMED_REWARDS, currentRewards + amount);
     }
 
     private static int updateEvmMessageState(MessageBridge messageBridge, N3Message message) {

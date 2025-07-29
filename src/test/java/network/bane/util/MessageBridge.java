@@ -161,47 +161,67 @@ public class MessageBridge extends SmartContractHelper {
     // region message bridge
     // region sending messages
 
+    public Hash256 sendMessage(AccountSigner signer, byte[] rawMessage, Hash160 feeSponsor, BigInteger maxFee)
+            throws Throwable {
+        return sendAndAwaitExecution(invokeFunction("sendMessage", byteArray(rawMessage), hash160(feeSponsor),
+                integer(maxFee)).signers(signer));
+    }
+
     public Hash256 sendMessage(AccountSigner signer, byte[] rawMessage) throws Throwable {
-        return sendAndAwaitExecution(invokeFunction("sendMessage", byteArray(rawMessage)).signers(signer));
+        return sendMessage(signer, rawMessage, signer.getAccount(), sendingFee());
+    }
+
+    public Hash256 sendMessage(AccountSigner signer, byte[] rawMessage, Account feeSponsor, BigInteger maxFee)
+            throws Throwable {
+        TransactionBuilder b = invokeFunction("sendMessage", byteArray(rawMessage), hash160(feeSponsor),
+                integer(maxFee));
+        if (signer.getScriptHash().equals(feeSponsor.getScriptHash())) {
+            return sendAndAwaitExecution(b.signers(signer));
+        }
+        return sendAndAwaitExecution(b.signers(signer, global(feeSponsor)));
     }
 
     public Hash256 sendMessage(byte[] rawMessage) throws Throwable {
-        return sendAndAwaitExecution(invokeFunction("sendMessage", byteArray(rawMessage)).signers(global(alice)));
+        return sendMessage(global(alice), rawMessage, alice, sendingFee());
     }
 
-    public Hash256 sendMessage(AccountSigner signer, String rawMessageHex) throws Throwable {
-        return sendAndAwaitExecution(
-                invokeFunction("sendMessage", byteArray(hexStringToByteArray(rawMessageHex))).signers(signer));
+    public Hash256 sendMessage(AccountSigner signer, String rawMessageHex, Hash160 feeSponsor, BigInteger maxFee)
+            throws Throwable {
+        return sendMessage(signer, hexStringToByteArray(rawMessageHex), feeSponsor, maxFee);
     }
 
     public Hash256 sendMessage(String rawMessageHex) throws Throwable {
-        return sendAndAwaitExecution(
-                invokeFunction("sendMessage", byteArray(hexStringToByteArray(rawMessageHex))).signers(global(alice)));
+        return sendMessage(global(alice), hexStringToByteArray(rawMessageHex), alice, sendingFee());
     }
 
-    public Hash256 sendExecutableMessage(AccountSigner signer, byte[] rawMessage, boolean storeResult)
-            throws Throwable {
+    public Hash256 sendExecutableMessage(AccountSigner signer, byte[] rawMessage, boolean storeResult,
+            Hash160 feeSponsor, BigInteger maxFee) throws Throwable {
         return sendAndAwaitExecution(invokeFunction("sendExecutableMessage", byteArray(rawMessage),
-                bool(storeResult)).signers(signer));
+                bool(storeResult), hash160(feeSponsor), integer(maxFee)).signers(signer));
+    }
+
+    public Hash256 sendExecutableMessage(AccountSigner signer, byte[] rawMessage, boolean storeResult,
+            Account feeSponsor, BigInteger maxFee) throws Throwable {
+        TransactionBuilder b = invokeFunction("sendExecutableMessage", byteArray(rawMessage),
+                bool(storeResult), hash160(feeSponsor), integer(maxFee));
+        if (signer.getScriptHash().equals(feeSponsor.getScriptHash())) {
+            return sendAndAwaitExecution(b.signers(signer));
+        }
+        return sendAndAwaitExecution(b.signers(signer, global(feeSponsor)));
     }
 
     public Hash256 sendExecutableMessage(byte[] rawMessage, boolean storeResult) throws Throwable {
-        return sendAndAwaitExecution(
-                invokeFunction("sendExecutableMessage", byteArray(rawMessage), bool(storeResult)).signers(
-                        global(alice)));
+        return sendExecutableMessage(global(alice), rawMessage, storeResult, alice, sendingFee());
     }
 
     public Hash256 sendExecutableMessage(AccountSigner signer, String rawMessageHex, boolean storeResult)
             throws Throwable {
-        return sendAndAwaitExecution(
-                invokeFunction("sendExecutableMessage", byteArray(hexStringToByteArray(rawMessageHex)),
-                        bool(storeResult)).signers(signer));
+        return sendExecutableMessage(signer, hexStringToByteArray(rawMessageHex), storeResult, alice, sendingFee());
     }
 
     public Hash256 sendExecutableMessage(String rawMessageHex, boolean storeResult) throws Throwable {
-        return sendAndAwaitExecution(
-                invokeFunction("sendExecutableMessage", byteArray(hexStringToByteArray(rawMessageHex)),
-                        bool(storeResult)).signers(global(alice)));
+        return sendExecutableMessage(global(alice), hexStringToByteArray(rawMessageHex), storeResult, alice,
+                sendingFee());
     }
 
     // endregion
@@ -307,6 +327,10 @@ public class MessageBridge extends SmartContractHelper {
                 messageConfigList.get(4).getInteger().intValue()
         );
         return new MessageBridgeDto(evmToN3State, n3ToEvmState, messageConfigDto);
+    }
+
+    public BigInteger unclaimedRewards() throws IOException {
+        return callFunctionReturningInt("unclaimedRewards");
     }
 
     public BigInteger sendingFee() throws IOException {

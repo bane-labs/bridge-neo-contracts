@@ -17,6 +17,7 @@ import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
+import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event;
 import io.neow3j.devpack.events.Event1Arg;
@@ -29,6 +30,7 @@ import network.bane.structs.message.N3MethodCall;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.checkWitness;
+import static io.neow3j.devpack.Runtime.getCallingScriptHash;
 import static network.bane.message.MessageBridgeContractHelper.managementContract;
 import static network.bane.message.MessageBridgeContractHelper.onlyGovernor;
 import static network.bane.message.MessageBridgeContractHelper.onlyGovernorOrSecurityGuard;
@@ -258,8 +260,17 @@ public class MessageBridgeContract {
 
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
-        // Todo: handle NEP17 payment
-        abort("Not implemented yet");
+        // This contract accepts only GasToken payments. No data is allowed.
+        Hash160 callingScriptHash = getCallingScriptHash();
+        if (!callingScriptHash.equals(new GasToken().getHash())) {
+            abort("Only GasToken payments are accepted");
+        }
+        if (data != null) {
+            abort("No data accepted");
+        }
+        if (amount <= 0) {
+            abort("Invalid amount");
+        }
     }
 
     // endregion
@@ -294,16 +305,16 @@ public class MessageBridgeContract {
     // region message bridge functionality
     // region message sending (N3 to EVM)
 
-    public static int sendMessage(ByteString rawMessage) {
+    public static int sendMessage(ByteString rawMessage, Hash160 feeSponsor, int maxFee) {
         onlyWhenNotPaused();
         onlyWhenSendingNotPaused();
-        return MessageBridgeImpl.sendStoreOnlyMessage(rawMessage);
+        return MessageBridgeImpl.sendMessage(rawMessage, feeSponsor, maxFee);
     }
 
-    public static int sendExecutableMessage(ByteString rawMessage, boolean storeResult) {
+    public static int sendExecutableMessage(ByteString rawMessage, boolean storeResult, Hash160 feeSponsor, int maxFee) {
         onlyWhenNotPaused();
         onlyWhenSendingNotPaused();
-        return MessageBridgeImpl.sendExecutableMessage(rawMessage, storeResult);
+        return MessageBridgeImpl.sendExecutableMessage(rawMessage, storeResult, feeSponsor, maxFee);
     }
 
     // endregion
