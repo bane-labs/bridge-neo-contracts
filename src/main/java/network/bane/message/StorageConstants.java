@@ -11,7 +11,7 @@ class StorageConstants {
     static final int KEY_BRIDGE_MANAGEMENT = 0x01;
     static final int KEY_PAUSE = 0x02;
 
-    static final int KEY_UNCLAIMED_REWARDS = 0x04;
+    static final int KEY_UNCLAIMED_FEES = 0x04;
     static final int KEY_SENDING_PAUSE = 0x05;
     static final int KEY_EXECUTING_PAUSE = 0x06;
 

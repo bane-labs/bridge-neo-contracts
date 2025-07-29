@@ -25,7 +25,7 @@ import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_EXECUTABLE;
 import static network.bane.message.MessageBridgeContractHelper.managementContract;
 import static network.bane.message.StorageConstants.KEY_MESSAGE_BRIDGE;
-import static network.bane.message.StorageConstants.KEY_UNCLAIMED_REWARDS;
+import static network.bane.message.StorageConstants.KEY_UNCLAIMED_FEES;
 import static network.bane.message.StorageConstants.PREFIX_MSG_EXECUTION_PENDING;
 import static network.bane.message.StorageConstants.PREFIX_MSG_MESSAGES;
 import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT;
@@ -263,7 +263,7 @@ class MessageBridgeImpl {
     }
 
     static void payFee(Hash160 feeSponsor, int fee) {
-        MessageBridgeImpl.addToUnclaimedRewards(fee);
+        MessageBridgeImpl.addToUnclaimedFees(fee);
         if (!Hash160.isValid(feeSponsor) || feeSponsor.isZero()) abort("Invalid 'feeSponsor'");
         if (getExecutingScriptHash().equals(feeSponsor)) abort("Prohibited 'feeSponsor'");
 
@@ -273,9 +273,9 @@ class MessageBridgeImpl {
         }
     }
 
-    static void addToUnclaimedRewards(int amount) {
-        int currentRewards = getUnclaimedRewards();
-        MessageBridgeContract.baseMap.put(KEY_UNCLAIMED_REWARDS, currentRewards + amount);
+    static void addToUnclaimedFees(int amount) {
+        int currentlyUnclaimedFees = getUnclaimedFees();
+        MessageBridgeContract.baseMap.put(KEY_UNCLAIMED_FEES, currentlyUnclaimedFees + amount);
     }
 
     private static int updateEvmMessageState(MessageBridge messageBridge, N3Message message) {
@@ -292,8 +292,8 @@ class MessageBridgeImpl {
         return msgEnvelope.nonce;
     }
 
-    public static int getUnclaimedRewards() {
-        return MessageBridgeContract.baseMap.getInt(KEY_UNCLAIMED_REWARDS);
+    public static int getUnclaimedFees() {
+        return MessageBridgeContract.baseMap.getInt(KEY_UNCLAIMED_FEES);
     }
 
     static class ExecutionManager extends ContractInterface {

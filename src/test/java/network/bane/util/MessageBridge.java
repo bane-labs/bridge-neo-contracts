@@ -329,8 +329,8 @@ public class MessageBridge extends SmartContractHelper {
         return new MessageBridgeDto(evmToN3State, n3ToEvmState, messageConfigDto);
     }
 
-    public BigInteger unclaimedRewards() throws IOException {
-        return callFunctionReturningInt("unclaimedRewards");
+    public BigInteger unclaimedFees() throws IOException {
+        return callFunctionReturningInt("unclaimedFees");
     }
 
     public BigInteger sendingFee() throws IOException {

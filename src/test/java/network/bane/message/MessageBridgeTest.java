@@ -176,7 +176,7 @@ public class MessageBridgeTest {
         BigInteger expectedNextEvmNonce = getNextEvmNonce();
 
         BigInteger initialBalance = gasToken.getBalanceOf(messageBridge.getScriptHash());
-        BigInteger initialUnclaimedRewards = messageBridge.unclaimedRewards();
+        BigInteger initialUnclaimedFees = messageBridge.unclaimedFees();
         BigInteger sendingFee = messageBridge.sendingFee();
 
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
@@ -184,7 +184,7 @@ public class MessageBridgeTest {
 
         BigInteger gasBalanceAfter = gasToken.getBalanceOf(messageBridge.getScriptHash());
         assertThat(gasBalanceAfter, is(initialBalance.add(sendingFee)));
-        assertThat(messageBridge.unclaimedRewards(), is(initialUnclaimedRewards.add(sendingFee)));
+        assertThat(messageBridge.unclaimedFees(), is(initialUnclaimedFees.add(sendingFee)));
 
         NeoApplicationLog.Execution exec = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution();
         assertThat(exec.getFirstStackItem().getType(), is(StackItemType.INTEGER));
@@ -216,7 +216,7 @@ public class MessageBridgeTest {
         BigInteger expectedNextEvmNonce = getNextEvmNonce();
 
         BigInteger initialBalance = gasToken.getBalanceOf(messageBridge.getScriptHash());
-        BigInteger initialUnclaimedRewards = messageBridge.unclaimedRewards();
+        BigInteger initialUnclaimedFees = messageBridge.unclaimedFees();
         BigInteger sendingFee = messageBridge.sendingFee();
 
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
@@ -224,7 +224,7 @@ public class MessageBridgeTest {
 
         BigInteger gasBalanceAfter = gasToken.getBalanceOf(messageBridge.getScriptHash());
         assertThat(gasBalanceAfter, is(initialBalance.add(sendingFee)));
-        assertThat(messageBridge.unclaimedRewards(), is(initialUnclaimedRewards.add(sendingFee)));
+        assertThat(messageBridge.unclaimedFees(), is(initialUnclaimedFees.add(sendingFee)));
 
         NeoApplicationLog.Execution exec = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution();
         assertThat(exec.getFirstStackItem().getType(), is(StackItemType.INTEGER));

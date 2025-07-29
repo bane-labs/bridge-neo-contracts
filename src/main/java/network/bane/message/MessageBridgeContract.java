@@ -47,7 +47,7 @@ import static network.bane.message.StorageConstants.KEY_ENTERED;
 import static network.bane.message.StorageConstants.KEY_EXECUTING_PAUSE;
 import static network.bane.message.StorageConstants.KEY_SENDING_PAUSE;
 import static network.bane.message.StorageConstants.KEY_LINKED_CHAIN_ID;
-import static network.bane.message.StorageConstants.KEY_UNCLAIMED_REWARDS;
+import static network.bane.message.StorageConstants.KEY_UNCLAIMED_FEES;
 import static network.bane.message.StorageConstants.KEY_VERSION;
 import static network.bane.message.StorageConstants.PREFIX_BASE;
 
@@ -156,7 +156,7 @@ public class MessageBridgeContract {
             // Pause initially
             baseMap.put(KEY_PAUSE, true);
 
-            baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
+            baseMap.put(KEY_UNCLAIMED_FEES, 0);
             baseMap.put(KEY_SENDING_PAUSE, false);
             baseMap.put(KEY_EXECUTING_PAUSE, false);
 
@@ -293,12 +293,11 @@ public class MessageBridgeContract {
     // region rewards
 
     /**
-     * @return the amount of unclaimed rewards for the bridge operators. This amount is increased by the deposit fees
-     * of the native and token bridges, as well as by rewards from holding NEO.
+     * @return the amount of unclaimed fees for the bridge operators. This amount is increased by the sending fees.
      */
     @Safe
-    public static int unclaimedRewards() {
-        return MessageBridgeImpl.getUnclaimedRewards();
+    public static int unclaimedFees() {
+        return MessageBridgeImpl.getUnclaimedFees();
     }
 
     // endregion
