@@ -214,7 +214,7 @@ public class MessageBridgeTest {
         assertThat(event2.getContract(), is(messageBridge.getScriptHash()));
         assertThat(event2.getEventName(), is("MessageSend"));
         List<StackItem> eventItems = event2.getState().getList();
-        assertThat(eventItems, hasSize(4));
+        assertThat(eventItems, hasSize(5));
         BigInteger nonce = eventItems.get(0).getInteger();
         assertThat(nonce, is(expectedNextEvmNonce));
     }
@@ -254,7 +254,7 @@ public class MessageBridgeTest {
         assertThat(event2.getContract(), is(messageBridge.getScriptHash()));
         assertThat(event2.getEventName(), is("MessageSend"));
         List<StackItem> eventItems = event2.getState().getList();
-        assertThat(eventItems, hasSize(4));
+        assertThat(eventItems, hasSize(5));
         BigInteger nonce = eventItems.get(0).getInteger();
         assertThat(nonce, is(expectedNextEvmNonce));
     }
@@ -592,10 +592,10 @@ public class MessageBridgeTest {
 
         IllegalStateException thrown2 = assertThrows(IllegalStateException.class,
                 () -> messageBridge.getExecutableState(nonce2));
-        assertThat(thrown2.getMessage(), containsString("Execution state not found"));
+        assertThat(thrown2.getMessage(), containsString("Executable state not found"));
         IllegalStateException thrown3 = assertThrows(IllegalStateException.class,
                 () -> messageBridge.getExecutableState(nonce3));
-        assertThat(thrown3.getMessage(), containsString("Execution state not found"));
+        assertThat(thrown3.getMessage(), containsString("Executable state not found"));
 
         ExecutableStateDto executableState4 = messageBridge.getExecutableState(nonce4);
         assertFalse(executableState4.executed);
