@@ -11,6 +11,7 @@ import io.neow3j.devpack.annotations.DisplayName;
 import io.neow3j.devpack.annotations.ManifestExtra;
 import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.contracts.ContractInterface;
+import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.structs.message.N3Message;
 

@@ -11,11 +11,11 @@ import static io.neow3j.types.ContractParameter.byteArray;
 import static network.bane.util.structs.N3MessageDto.MESSAGE_TYPE_RESULT;
 
 public class N3MessageMetadataResultDto extends N3MessageMetadataDto {
-    public BigInteger initialMessageNonce;
+    public BigInteger relatedMessageNonce;
 
-    public N3MessageMetadataResultDto(BigInteger timestamp, Hash160 sender, BigInteger initialMessageNonce) {
+    public N3MessageMetadataResultDto(BigInteger timestamp, Hash160 sender, BigInteger relatedMessageNonce) {
         super(MESSAGE_TYPE_RESULT, timestamp, sender);
-        this.initialMessageNonce = initialMessageNonce;
+        this.relatedMessageNonce = relatedMessageNonce;
     }
 
     @Override

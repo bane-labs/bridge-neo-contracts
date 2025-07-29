@@ -299,6 +299,15 @@ public class MessageBridge extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("executeMessage", integer(nonce)).signers(signer));
     }
 
+    public byte[] getResult(BigInteger nonce) throws IOException {
+        StackItem item = callInvokeFunction("getResult", asList(integer(nonce))).getInvocationResult()
+                .getFirstStackItem();
+        if (item.getValue() == null) {
+            return new byte[0];
+        }
+        return item.getByteArray();
+    }
+
     // endregion
     // region message bridge configuration/state
     // region message bridge configuration
@@ -434,7 +443,7 @@ public class MessageBridge extends SmartContractHelper {
 
     public byte[] serializeMetadataResult(N3MessageMetadataResultDto meta) throws IOException {
         return callInvokeFunction("serializeMetadataResult",
-                asList(integer(meta.timestamp), hash160(meta.sender), integer(meta.initialMessageNonce))
+                asList(integer(meta.timestamp), hash160(meta.sender), integer(meta.relatedMessageNonce))
         ).getInvocationResult().getFirstStackItem().getByteArray();
     }
 

@@ -52,6 +52,7 @@ import static network.bane.util.helper.TestHelper.setup;
 import static network.bane.util.helper.TestHelper.setupExecutionManager;
 import static network.bane.util.helper.TestHelper.setupMessageBridge;
 import static network.bane.util.helper.TestHelper.messageTestStorer;
+import static network.bane.util.helper.TestHelper.setupMessageTestStorer;
 import static network.bane.util.helper.TestHelper.setupTestContract;
 import static network.bane.util.structs.N3MessageDto.MESSAGE_TYPE_EXECUTABLE;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -81,6 +82,7 @@ public class MessageExecutionManagerTest {
         setup(ext);
         setupMessageBridge(ext);
         setupExecutionManager(ext);
+        setupMessageTestStorer(ext);
         setupTestContract(ext);
 
         // This test requires the constant MESSAGE_BRIDGE_CONTRACT_HASH to be set correctly. The execution manager

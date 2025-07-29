@@ -87,7 +87,7 @@ public class MessageHelper {
 
     private static byte[] concatenateMetadata(N3MessageMetadataResultDto metadata) {
         byte[] metadataBase = concatenateMetadataBase(metadata);
-        byte[] relatedMsgNonce = toLittleEndianByteArrayZeroPadded(metadata.initialMessageNonce, UINT256_SIZE);
+        byte[] relatedMsgNonce = toLittleEndianByteArrayZeroPadded(metadata.relatedMessageNonce, UINT256_SIZE);
         return concatenate(relatedMsgNonce, metadataBase);
     }
 

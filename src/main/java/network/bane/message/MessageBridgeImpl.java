@@ -320,8 +320,8 @@ class MessageBridgeImpl {
         messageBridge.n3ToEvmMessageState.root = newRoot;
         assert messageBridge.n3ToEvmMessageState.root == newRoot : "Root not set correctly";
         storeMessageBridge(messageBridge);
-        MessageBridgeContract.onMessageSend.fire(msgEnvelope.nonce, msgEnvelope.message.metadataBytes, messageHash,
-                newRoot);
+        MessageBridgeContract.onMessageSend.fire(msgEnvelope.nonce, msgEnvelope.message.rawMessage,
+                msgEnvelope.message.metadataBytes, messageHash, newRoot);
         return msgEnvelope.nonce;
     }
 
