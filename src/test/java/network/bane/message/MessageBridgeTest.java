@@ -18,9 +18,12 @@ import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
 import network.bane.util.MessageHelper;
+import network.bane.util.structs.ExecutionStateDto;
 import network.bane.util.structs.N3MessageDto;
 import network.bane.util.structs.N3MessageMetadataDto;
 import network.bane.util.structs.N3MessageMetadataExecDto;
+import network.bane.util.structs.N3MessageMetadataResultDto;
+import network.bane.util.structs.N3MessageMetadataStoreOnlyDto;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -68,6 +71,7 @@ import static network.bane.util.helper.TestHelper.setupTestContract;
 import static network.bane.util.helper.TestHelper.testContract;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -110,6 +114,11 @@ public class MessageBridgeTest {
     @DeployConfig(MessageBridgeContract.class)
     public static DeployConfiguration deployConfigMessageBridge() {
         return createMessageBridgeDeployConfig();
+    }
+
+    private static BigInteger getBestBlockTime() throws IOException {
+        return BigInteger.valueOf(
+                neow3j.getBlockHeader(neow3j.getBestBlockHash().send().getBlockHash()).send().getBlock().getTime());
     }
 
     // region pause
@@ -511,7 +520,86 @@ public class MessageBridgeTest {
         N3MessageDto message = messageBridge.getMessage(nonce);
         assertThat(message, is(n3MessageDto));
 
-        assertTrue(messageBridge.isPending(nonce));
+        ExecutionStateDto execState = messageBridge.getExecutionState(nonce);
+        assertFalse(execState.executed);
+        assertThat(execState.expirationTimestamp, greaterThan(getBestBlockTime()));
+    }
+
+    @Test
+    @Order(2)
+    public void test_storeMessage_checkExecutionState() throws Throwable {
+        BigInteger timestamp = new BigInteger("1753000000");
+        Hash160 sender = alice.getScriptHash();
+        String msgBytes = "0x1234567890abcdef";
+
+        N3MessageMetadataExecDto metadata1 = new N3MessageMetadataExecDto(timestamp, sender, true);
+        N3MessageMetadataStoreOnlyDto metadata2 = new N3MessageMetadataStoreOnlyDto(timestamp, sender);
+        N3MessageMetadataResultDto metadata3 = new N3MessageMetadataResultDto(timestamp, sender, BigInteger.ONE);
+        N3MessageMetadataExecDto metadata4 = metadata1;
+        BigInteger nonce1 = getNextN3Nonce();
+        BigInteger nonce2 = nonce1.add(BigInteger.ONE);
+        BigInteger nonce3 = nonce2.add(BigInteger.ONE);
+        BigInteger nonce4 = nonce3.add(BigInteger.ONE);
+
+        N3MessageDto n3MessageDto1 = new N3MessageDto(metadata1, msgBytes);
+        N3MessageDto n3MessageDto2 = new N3MessageDto(metadata2, msgBytes);
+        N3MessageDto n3MessageDto3 = new N3MessageDto(metadata3, msgBytes);
+        N3MessageDto n3MessageDto4 = new N3MessageDto(metadata1, msgBytes);
+        String msgHash1 = createN3MessageHash(nonce1, metadata1, msgBytes);
+        String msgHash2 = createN3MessageHash(nonce2, metadata2, msgBytes);
+        String msgHash3 = createN3MessageHash(nonce3, metadata3, msgBytes);
+        String msgHash4 = createN3MessageHash(nonce4, metadata4, msgBytes);
+
+        Hash256 currentRoot = messageBridge.getMessageBridge().evmToN3MessageState.root;
+
+        String root1 = concatAndKeccak256(currentRoot.toString(), msgHash1);
+        String root2 = concatAndKeccak256(root1, msgHash2);
+        String root3 = concatAndKeccak256(root2, msgHash3);
+        String root4 = concatAndKeccak256(root3, msgHash4);
+
+        List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
+        ContractParameter messageEnvelope1 = array(integer(nonce1), n3MessageDto1.toContractParameter(messageBridge));
+        ContractParameter messageEnvelope2 = array(integer(nonce2), n3MessageDto2.toContractParameter(messageBridge));
+        ContractParameter messageEnvelope3 = array(integer(nonce3), n3MessageDto3.toContractParameter(messageBridge));
+        ContractParameter messageEnvelope4 = array(integer(nonce4), n3MessageDto4.toContractParameter(messageBridge));
+        Hash256 txHash = messageBridge.storeMessages(root4, signMsg(validators, root4), array(messageEnvelope1,
+                messageEnvelope2, messageEnvelope3, messageEnvelope4));
+        printTransactionFee(neow3j, "tx with 3 messages", txHash);
+        List<MessageHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
+                messageBridge.getScriptHash());
+        assertThat(n3MessageStoreEvents, hasSize(4));
+        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent1 = n3MessageStoreEvents.get(0);
+        assertThat(n3MessageStoreEvent1.nonce, is(nonce1));
+        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent2 = n3MessageStoreEvents.get(1);
+        assertThat(n3MessageStoreEvent2.nonce, is(nonce2));
+        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent3 = n3MessageStoreEvents.get(2);
+        assertThat(n3MessageStoreEvent3.nonce, is(nonce3));
+        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent4 = n3MessageStoreEvents.get(3);
+        assertThat(n3MessageStoreEvent4.nonce, is(nonce4));
+
+        N3MessageDto message1 = messageBridge.getMessage(nonce1);
+        assertThat(message1, is(n3MessageDto1));
+        N3MessageDto message2 = messageBridge.getMessage(nonce2);
+        assertThat(message2, is(n3MessageDto2));
+        N3MessageDto message3 = messageBridge.getMessage(nonce3);
+        assertThat(message3, is(n3MessageDto3));
+        N3MessageDto message4 = messageBridge.getMessage(nonce4);
+        assertThat(message4, is(n3MessageDto4));
+
+        ExecutionStateDto executionState1 = messageBridge.getExecutionState(nonce1);
+        assertFalse(executionState1.executed);
+        assertThat(executionState1.expirationTimestamp, greaterThan(getBestBlockTime()));
+
+        IllegalStateException thrown2 = assertThrows(IllegalStateException.class,
+                () -> messageBridge.getExecutionState(nonce2));
+        assertThat(thrown2.getMessage(), containsString("Execution state not found"));
+        IllegalStateException thrown3 = assertThrows(IllegalStateException.class,
+                () -> messageBridge.getExecutionState(nonce3));
+        assertThat(thrown3.getMessage(), containsString("Execution state not found"));
+
+        ExecutionStateDto executionState4 = messageBridge.getExecutionState(nonce4);
+        assertFalse(executionState4.executed);
+        assertThat(executionState4.expirationTimestamp, greaterThan(getBestBlockTime()));
     }
 
     // endregion
@@ -682,40 +770,40 @@ public class MessageBridgeTest {
 
     @Test
     @Order(0)
-    public void test_setExecutionWindowSeconds() throws Throwable {
-        BigInteger execWindowSecondsBefore = messageBridge.executionWindowSeconds();
-        BigInteger newExecWindowSeconds = new BigInteger("3600");
-        assertThat(newExecWindowSeconds, is(not(execWindowSecondsBefore)));
+    public void test_setExecutionWindowMilliseconds() throws Throwable {
+        BigInteger execWindowMillisBefore = messageBridge.executionWindowMilliseconds();
+        BigInteger newExecWindowMillis = new BigInteger("3600").multiply(BigInteger.valueOf(1000)); // 1 hour in ms
+        assertThat(newExecWindowMillis, is(not(execWindowMillisBefore)));
 
-        Hash256 tx = messageBridge.setExecutionWindowSeconds(newExecWindowSeconds);
-        assertThat(messageBridge.executionWindowSeconds(), is(newExecWindowSeconds));
+        Hash256 tx = messageBridge.setExecutionWindowMilliseconds(newExecWindowMillis);
+        assertThat(messageBridge.executionWindowMilliseconds(), is(newExecWindowMillis));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
                 .getFirstNotification();
         assertThat(notification.getContract(), is(messageBridge.getScriptHash()));
-        assertThat(notification.getEventName(), is("ExecutionWindowSecondsChange"));
+        assertThat(notification.getEventName(), is("ExecutionWindowChange"));
         assertThat(notification.getState().getList(), hasSize(1));
-        assertThat(notification.getState().getList().get(0).getInteger(), is(newExecWindowSeconds));
+        assertThat(notification.getState().getList().get(0).getInteger(), is(newExecWindowMillis));
 
         // revert the state for further tests
-        messageBridge.setExecutionWindowSeconds(execWindowSecondsBefore);
+        messageBridge.setExecutionWindowMilliseconds(execWindowMillisBefore);
     }
 
     @Test
     @Order(0)
-    public void test_setExecutionWindowSeconds_invalidValue() {
+    public void test_setExecutionWindowMilliseconds_invalidValue() {
         BigInteger invalidExecWindowSeconds = BigInteger.ZERO;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setExecutionWindowSeconds(invalidExecWindowSeconds));
-        assertThat(thrown.getMessage(), containsString("Execution window seconds must be positive"));
+                () -> messageBridge.setExecutionWindowMilliseconds(invalidExecWindowSeconds));
+        assertThat(thrown.getMessage(), containsString("Execution window must be positive"));
     }
 
     @Test
     @Order(0)
-    public void test_setExecutionWindowSeconds_notGovernor() {
+    public void test_setExecutionWindowMilliseconds_notGovernor() {
         BigInteger newExecWindowSeconds = new BigInteger("3600");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setExecutionWindowSeconds(alice, newExecWindowSeconds));
+                () -> messageBridge.setExecutionWindowMilliseconds(alice, newExecWindowSeconds));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 

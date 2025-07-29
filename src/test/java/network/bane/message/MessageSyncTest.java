@@ -18,6 +18,7 @@ import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
 import network.bane.testhelper.TestMessageSenderContract;
 import network.bane.util.MessageHelper;
+import network.bane.util.structs.ExecutionStateDto;
 import network.bane.util.structs.N3MessageDto;
 import network.bane.util.structs.N3MessageMetadataDto;
 import network.bane.util.structs.N3MessageMetadataExecDto;
@@ -68,11 +69,12 @@ import static network.bane.util.helper.TestHelper.setupTestMessageSender;
 import static network.bane.util.helper.TestHelper.testContract;
 import static network.bane.util.helper.TestHelper.testMessageSender;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ContractTest(
@@ -187,7 +189,7 @@ public class MessageSyncTest {
         N3MessageDto message = messageBridge.getMessage(nonce);
         assertThat(message, is(n3MessageDto));
 
-        assertTrue(messageBridge.isPending(nonce));
+        ExecutionStateDto execState = messageBridge.getExecutionState(nonce);
     }
 
     @Test
@@ -252,7 +254,9 @@ public class MessageSyncTest {
         N3MessageDto message = messageBridge.getMessage(nonce);
         assertThat(message, is(n3MessageDto));
 
-        assertFalse(messageBridge.isPending(nonce));
+        IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                () -> messageBridge.getExecutionState(nonce));
+        assertThat(thrown.getMessage(), containsString("Execution state not found"));
     }
 
     @Test

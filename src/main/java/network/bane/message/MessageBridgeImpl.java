@@ -16,6 +16,7 @@ import io.neow3j.devpack.contracts.StdLib;
 import network.bane.lib.BridgeLib;
 import network.bane.lib.MessageBridgeLib;
 import network.bane.structs.State;
+import network.bane.structs.message.ExecutionState;
 import network.bane.structs.message.MessageBridge;
 import network.bane.structs.message.N3Message;
 import network.bane.structs.message.N3MessageEnvelope;
@@ -26,7 +27,7 @@ import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_EXECUTABLE;
 import static network.bane.message.MessageBridgeContractHelper.managementContract;
 import static network.bane.message.StorageConstants.KEY_MESSAGE_BRIDGE;
 import static network.bane.message.StorageConstants.KEY_UNCLAIMED_FEES;
-import static network.bane.message.StorageConstants.PREFIX_MSG_EXECUTION_PENDING;
+import static network.bane.message.StorageConstants.PREFIX_MSG_EXECUTION_STATE;
 import static network.bane.message.StorageConstants.PREFIX_MSG_MESSAGES;
 import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT;
 
@@ -43,14 +44,14 @@ class MessageBridgeImpl {
     private static final int DEFAULT_SENDING_FEE = 10000000; // 0.1 GAS
     private static final int DEFAULT_MAX_BYTES_FOR_SENDING = 10000;
     private static final int DEFAULT_MAX_NR_MESSAGES_FOR_STORING = 10;
-    private static final int DEFAULT_EXECUTION_WINDOW_SECONDS = 60 * 60 * 24 * 7 * 2; // 2 weeks
+    private static final int DEFAULT_EXECUTION_WINDOW_MILLIS = 60 * 60 * 24 * 7 * 2 * 1000; // 2 weeks
 
     static void setDefaultMessageBridge(Hash160 executionManager) {
         // Todo: Consider checking that the execution manager is a contract.
         ByteString zeroHash = Hash256.zero().toByteString();
         MessageBridge messageBridge = new MessageBridge(new State(0, zeroHash), new State(0, zeroHash),
                 new MessageBridge.MessageBridgeConfig(DEFAULT_SENDING_FEE, DEFAULT_MAX_BYTES_FOR_SENDING,
-                        DEFAULT_MAX_NR_MESSAGES_FOR_STORING, executionManager, DEFAULT_EXECUTION_WINDOW_SECONDS)
+                        DEFAULT_MAX_NR_MESSAGES_FOR_STORING, executionManager, DEFAULT_EXECUTION_WINDOW_MILLIS)
         );
         if (!MessageBridge.isValid(messageBridge)) abort("Invalid message bridge configuration");
         storeMessageBridge(messageBridge);
@@ -91,10 +92,10 @@ class MessageBridgeImpl {
         storeMessageBridge(messageBridge);
     }
 
-    static void setExecutionWindowSeconds(int newExecutionWindowSeconds) {
+    static void setExecutionWindowMillis(int newExecutionWindowMillis) {
         MessageBridge messageBridge = getMessageBridge();
-        if (newExecutionWindowSeconds <= 0) abort("Execution window seconds must be positive");
-        messageBridge.config.executionWindowSeconds = newExecutionWindowSeconds;
+        if (newExecutionWindowMillis <= 0) abort("Execution window must be positive");
+        messageBridge.config.executionWindowMilliseconds = newExecutionWindowMillis;
         storeMessageBridge(messageBridge);
     }
 
@@ -133,20 +134,26 @@ class MessageBridgeImpl {
                 messageBridge.evmToN3MessageState.root);
 
         // Store the messages in the contract storage
-        storeMessagesToContractStorage(messages);
+
+        int time = Runtime.getTime();
+        int expirationTime = time + messageBridge.config.executionWindowMilliseconds;
+        storeMessagesToContractStorage(messages, expirationTime);
     }
 
-    private static void storeMessagesToContractStorage(List<N3MessageEnvelope> messages) {
+    private static void storeMessagesToContractStorage(List<N3MessageEnvelope> messages, int expirationTime) {
         StorageMap messageMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_MESSAGES);
+        StorageMap msgExecStateMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTION_STATE);
         int nrMessages = messages.size();
+        ByteString execState = new StdLib().serialize(new ExecutionState(false, expirationTime));
+
         for (int i = 0; i < nrMessages; i++) {
             N3MessageEnvelope n3Message = messages.get(i);
             // Store the message in storage.
             messageMap.put(n3Message.nonce, new StdLib().serialize(n3Message.message));
             int type = ((N3Message.N3Metadata) new StdLib().deserialize(n3Message.message.metadataBytes)).type;
             if (type == MESSAGE_TYPE_EXECUTABLE) {
-                // Mark the message as pending for execution.
-                new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTION_PENDING).put(n3Message.nonce, true);
+                // Set the execution state for executable messages.
+                msgExecStateMap.put(n3Message.nonce, execState);
             }
             // Fire event including the nonce and the message's metadata.
             MessageBridgeContract.onStore.fire(n3Message.nonce, n3Message.message.metadataBytes);
@@ -178,37 +185,26 @@ class MessageBridgeImpl {
         return (N3Message.N3Metadata) new StdLib().deserialize(message.metadataBytes);
     }
 
-    static boolean isPending(int nonce) {
-        return new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTION_PENDING).get(nonce) != null;
+    static ExecutionState getExecutionState(int nonce) throws Exception {
+        ByteString state = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTION_STATE).get(nonce);
+        if (state == null) {
+            throw new Exception("Execution state not found");
+        }
+        return (ExecutionState) new StdLib().deserialize(state);
     }
 
     static void executeMessage(int nonce) {
         // Validate that the message is executable.
         N3Message message = getMessage(nonce);
         N3Message.N3Metadata abstractMetadata = getMetadata(message);
+        assert abstractMetadata.type == 0 : "Message metadata type is not executable";
         if (abstractMetadata.type != MESSAGE_TYPE_EXECUTABLE) {
             abort("Message is not executable");
         }
         N3Message.N3MetadataExecutable metadata = (N3Message.N3MetadataExecutable) abstractMetadata;
 
-        // Validate that the message is pending and has not been executed already.
-        if (!isPending(nonce)) {
-            abort("Message is not pending");
-        }
-
-        // Check that the message's execution window has not expired yet.
-        // Todo: Consider overwriting the message metadata's timestamp with the expiration time or setting the
-        //  expiration time when initially storing it.
-        int currentTime = Runtime.getTime();
-
-        int maxTimeForExecution = metadata.timestamp +
-                (getMessageBridge().config.executionWindowSeconds * 1000); // Convert to milliseconds
-        if (currentTime > maxTimeForExecution) {
-            abort("Message execution window expired");
-        }
-
-        // Mark the message as executed.
-        new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTION_PENDING).delete(nonce);
+        // Validate that the message has an execution state, has not been executed yet and has not expired.
+        checkExecutionStateAndMarkExecuted(nonce);
 
         MessageBridgeContract.onExecution.fire(nonce, metadata);
         Object result = new ExecutionManager(getMessageBridge().config.executionManager).executeMessage(nonce,
@@ -218,6 +214,23 @@ class MessageBridgeImpl {
         if (metadata.storeResult) {
             storeResult(nonce, result);
         }
+    }
+
+    private static void checkExecutionStateAndMarkExecuted(int nonce) {
+        StorageMap executionStateMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTION_STATE);
+        ByteString state = executionStateMap.get(nonce);
+        if (state == null) {
+            abort("Execution state not found");
+        }
+        ExecutionState executionState = (ExecutionState) new StdLib().deserialize(state);
+        if (executionState.executed) {
+            abort("Message has already been executed");
+        }
+        if (Runtime.getTime() > executionState.expirationTime) {
+            abort("Message execution window expired");
+        }
+        executionState.executed = true;
+        executionStateMap.put(nonce, new StdLib().serialize(executionState));
     }
 
     private static void storeResult(int nonce, Object result) {

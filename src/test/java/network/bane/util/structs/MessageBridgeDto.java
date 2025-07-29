@@ -40,15 +40,15 @@ public class MessageBridgeDto {
         public int maxBytesForSending;
         public int maxNrMessagesForStoring;
         public Hash160 executionManager;
-        public int executionWindowSeconds;
+        public int executionWindowMilliseconds;
 
         public MessageConfigDto(BigInteger sendingFee, int maxBytesForSending, int maxNrMessagesForStoring,
-                Hash160 executionManager, int executionWindowSeconds) {
+                Hash160 executionManager, int executionWindowMilliseconds) {
             this.sendingFee = sendingFee;
             this.maxBytesForSending = maxBytesForSending;
             this.maxNrMessagesForStoring = maxNrMessagesForStoring;
             this.executionManager = executionManager;
-            this.executionWindowSeconds = executionWindowSeconds;
+            this.executionWindowMilliseconds = executionWindowMilliseconds;
         }
 
         @Override
@@ -64,13 +64,13 @@ public class MessageBridgeDto {
                     this.maxBytesForSending == that.maxBytesForSending &&
                     this.maxNrMessagesForStoring == that.maxNrMessagesForStoring &&
                     this.executionManager.equals(that.executionManager) &&
-                    this.executionWindowSeconds == that.executionWindowSeconds;
+                    this.executionWindowMilliseconds == that.executionWindowMilliseconds;
         }
 
         @Override
         public int hashCode() {
             return Objects.hash(sendingFee, maxBytesForSending, maxNrMessagesForStoring, executionManager,
-                    executionWindowSeconds);
+                    executionWindowMilliseconds);
         }
 
     }

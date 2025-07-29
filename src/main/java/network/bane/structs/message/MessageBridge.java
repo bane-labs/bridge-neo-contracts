@@ -49,15 +49,15 @@ public class MessageBridge {
         /**
          * The time window (in seconds) during which a message can be executed after it has been stored on-chain.
          */
-        public int executionWindowSeconds;
+        public int executionWindowMilliseconds;
 
         public MessageBridgeConfig(int sendingFee, int maxBytesForSending, int maxNrMessagesForStoring,
-                Hash160 executionManager, int executionWindowSeconds) {
+                Hash160 executionManager, int executionWindowMilliseconds) {
             this.sendingFee = sendingFee;
             this.maxBytesForSending = maxBytesForSending;
             this.maxNrMessagesForStoring = maxNrMessagesForStoring;
             this.executionManager = executionManager;
-            this.executionWindowSeconds = executionWindowSeconds;
+            this.executionWindowMilliseconds = executionWindowMilliseconds;
         }
 
         public static boolean isValid(MessageBridgeConfig config) {
@@ -67,7 +67,7 @@ public class MessageBridge {
                     config.maxNrMessagesForStoring > 0 &&
                     config.executionManager != null && !config.executionManager.isZero() &&
                     Hash160.isValid(config.executionManager) &&
-                    config.executionWindowSeconds > 0;
+                    config.executionWindowMilliseconds > 0;
         }
 
     }

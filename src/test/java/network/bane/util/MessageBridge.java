@@ -4,6 +4,7 @@ import io.neow3j.contract.NefFile;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
+import io.neow3j.protocol.core.response.InvocationResult;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Signer;
@@ -15,6 +16,7 @@ import io.neow3j.types.Hash256;
 import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 import network.bane.util.helper.SmartContractHelper;
+import network.bane.util.structs.ExecutionStateDto;
 import network.bane.util.structs.MessageBridgeDto;
 import network.bane.util.structs.N3MessageDto;
 import network.bane.util.structs.N3MessageMetadataExecDto;
@@ -293,8 +295,15 @@ public class MessageBridge extends SmartContractHelper {
     // endregion
     // region execution
 
-    public boolean isPending(BigInteger nonce) throws IOException {
-        return callFunctionReturningBool("isPending", integer(nonce));
+    public ExecutionStateDto getExecutionState(BigInteger nonce) throws IOException {
+        InvocationResult result = callInvokeFunction("getExecutionState", asList(integer(nonce))).getInvocationResult();
+        if (result.hasStateFault()) {
+            throw new IllegalStateException("Failed to get execution state: " + result.getException());
+        }
+        List<StackItem> items = result.getFirstStackItem().getList();
+        boolean executed = items.get(0).getBoolean();
+        BigInteger expirationTime = items.get(1).getInteger();
+        return new ExecutionStateDto(executed, expirationTime);
     }
 
     public Hash256 executeMessage(AccountSigner signer, BigInteger nonce) throws Throwable {
@@ -388,18 +397,19 @@ public class MessageBridge extends SmartContractHelper {
                 .signers(signer));
     }
 
-    public BigInteger executionWindowSeconds() throws IOException {
-        return callFunctionReturningInt("executionWindowSeconds");
+    public BigInteger executionWindowMilliseconds() throws IOException {
+        return callFunctionReturningInt("executionWindowMilliseconds");
     }
 
-    public Hash256 setExecutionWindowSeconds(BigInteger newExecutionWindowSeconds) throws Throwable {
-        return setExecutionWindowSeconds(governor, newExecutionWindowSeconds);
+    public Hash256 setExecutionWindowMilliseconds(BigInteger newExecutionWindowMillis) throws Throwable {
+        return setExecutionWindowMilliseconds(governor, newExecutionWindowMillis);
     }
 
-    public Hash256 setExecutionWindowSeconds(Account sender, BigInteger newExecutionWindowSeconds) throws Throwable {
+    public Hash256 setExecutionWindowMilliseconds(Account sender, BigInteger newExecutionWindowMillis)
+            throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
         return sendAndAwaitExecution(
-                invokeFunction("setExecutionWindowSeconds", integer(newExecutionWindowSeconds)).signers(signer));
+                invokeFunction("setExecutionWindowMilliseconds", integer(newExecutionWindowMillis)).signers(signer));
     }
 
     // endregion

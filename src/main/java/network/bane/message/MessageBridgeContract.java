@@ -23,6 +23,7 @@ import io.neow3j.devpack.events.Event;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
 import io.neow3j.devpack.events.Event4Args;
+import network.bane.structs.message.ExecutionState;
 import network.bane.structs.message.MessageBridge;
 import network.bane.structs.message.N3Message;
 import network.bane.structs.message.N3MessageEnvelope;
@@ -126,9 +127,9 @@ public class MessageBridgeContract {
     @EventParameterNames({"NewExecutionManager"})
     static Event1Arg<Hash160> onExecutionManagerChange;
 
-    @DisplayName("ExecutionWindowSecondsChange")
-    @EventParameterNames({"NewExecutionWindowSeconds"})
-    static Event1Arg<Integer> onExecutionWindowSecondsChange;
+    @DisplayName("ExecutionWindowChange")
+    @EventParameterNames({"NewExecutionWindowMilliseconds"})
+    static Event1Arg<Integer> onExecutionWindowChange;
 
     // endregion
     // endregion
@@ -368,8 +369,8 @@ public class MessageBridgeContract {
     }
 
     @Safe
-    public static boolean isPending(int nonce) {
-        return MessageBridgeImpl.isPending(nonce);
+    public static ExecutionState getExecutionState(int nonce) throws Exception {
+        return MessageBridgeImpl.getExecutionState(nonce);
     }
 
     public static void executeMessage(int nonce) {
@@ -438,14 +439,14 @@ public class MessageBridgeContract {
     }
 
     @Safe
-    public static int executionWindowSeconds() {
-        return MessageBridgeImpl.getMessageBridge().config.executionWindowSeconds;
+    public static int executionWindowMilliseconds() {
+        return MessageBridgeImpl.getMessageBridge().config.executionWindowMilliseconds;
     }
 
-    public static void setExecutionWindowSeconds(int newExecutionWindowSeconds) {
+    public static void setExecutionWindowMilliseconds(int newExecutionWindowMilliseconds) {
         onlyGovernor();
-        MessageBridgeImpl.setExecutionWindowSeconds(newExecutionWindowSeconds);
-        onExecutionWindowSecondsChange.fire(newExecutionWindowSeconds);
+        MessageBridgeImpl.setExecutionWindowMillis(newExecutionWindowMilliseconds);
+        onExecutionWindowChange.fire(newExecutionWindowMilliseconds);
     }
 
     // endregion
