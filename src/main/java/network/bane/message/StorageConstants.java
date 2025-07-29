@@ -5,7 +5,7 @@ class StorageConstants {
     // map prefixes
     static final byte PREFIX_BASE = 0x0a;
     static final byte PREFIX_MSG_MESSAGES = 0x2a;
-    static final byte PREFIX_MSG_EXECUTION_PENDING = 0x2b;
+    static final byte PREFIX_MSG_EXECUTABLE_STATE = 0x2b;
     static final byte PREFIX_MSG_RESULT = 0x2c;
 
     static final int KEY_BRIDGE_MANAGEMENT = 0x01;
