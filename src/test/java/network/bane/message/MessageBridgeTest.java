@@ -18,7 +18,7 @@ import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
 import network.bane.util.MessageHelper;
-import network.bane.util.structs.ExecutionStateDto;
+import network.bane.util.structs.ExecutableStateDto;
 import network.bane.util.structs.N3MessageDto;
 import network.bane.util.structs.N3MessageMetadataDto;
 import network.bane.util.structs.N3MessageMetadataExecDto;
@@ -520,14 +520,14 @@ public class MessageBridgeTest {
         N3MessageDto message = messageBridge.getMessage(nonce);
         assertThat(message, is(n3MessageDto));
 
-        ExecutionStateDto execState = messageBridge.getExecutionState(nonce);
+        ExecutableStateDto execState = messageBridge.getExecutableState(nonce);
         assertFalse(execState.executed);
         assertThat(execState.expirationTimestamp, greaterThan(getBestBlockTime()));
     }
 
     @Test
     @Order(2)
-    public void test_storeMessage_checkExecutionState() throws Throwable {
+    public void test_storeMessage_checkExecutableState() throws Throwable {
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
@@ -586,20 +586,20 @@ public class MessageBridgeTest {
         N3MessageDto message4 = messageBridge.getMessage(nonce4);
         assertThat(message4, is(n3MessageDto4));
 
-        ExecutionStateDto executionState1 = messageBridge.getExecutionState(nonce1);
-        assertFalse(executionState1.executed);
-        assertThat(executionState1.expirationTimestamp, greaterThan(getBestBlockTime()));
+        ExecutableStateDto executableState1 = messageBridge.getExecutableState(nonce1);
+        assertFalse(executableState1.executed);
+        assertThat(executableState1.expirationTimestamp, greaterThan(getBestBlockTime()));
 
         IllegalStateException thrown2 = assertThrows(IllegalStateException.class,
-                () -> messageBridge.getExecutionState(nonce2));
+                () -> messageBridge.getExecutableState(nonce2));
         assertThat(thrown2.getMessage(), containsString("Execution state not found"));
         IllegalStateException thrown3 = assertThrows(IllegalStateException.class,
-                () -> messageBridge.getExecutionState(nonce3));
+                () -> messageBridge.getExecutableState(nonce3));
         assertThat(thrown3.getMessage(), containsString("Execution state not found"));
 
-        ExecutionStateDto executionState4 = messageBridge.getExecutionState(nonce4);
-        assertFalse(executionState4.executed);
-        assertThat(executionState4.expirationTimestamp, greaterThan(getBestBlockTime()));
+        ExecutableStateDto executableState4 = messageBridge.getExecutableState(nonce4);
+        assertFalse(executableState4.executed);
+        assertThat(executableState4.expirationTimestamp, greaterThan(getBestBlockTime()));
     }
 
     // endregion

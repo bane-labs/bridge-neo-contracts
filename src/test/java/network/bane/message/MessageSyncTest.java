@@ -18,7 +18,7 @@ import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
 import network.bane.testhelper.TestMessageSenderContract;
 import network.bane.util.MessageHelper;
-import network.bane.util.structs.ExecutionStateDto;
+import network.bane.util.structs.ExecutableStateDto;
 import network.bane.util.structs.N3MessageDto;
 import network.bane.util.structs.N3MessageMetadataDto;
 import network.bane.util.structs.N3MessageMetadataExecDto;
@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.List;
 
@@ -71,9 +72,11 @@ import static network.bane.util.helper.TestHelper.testMessageSender;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -119,6 +122,11 @@ public class MessageSyncTest {
     @DeployConfig(MessageBridgeContract.class)
     public static DeployConfiguration deployConfigMessageBridge() {
         return createMessageBridgeDeployConfig();
+    }
+
+    private static BigInteger getBestBlockTime() throws IOException {
+        return BigInteger.valueOf(
+                neow3j.getBlockHeader(neow3j.getBestBlockHash().send().getBlockHash()).send().getBlock().getTime());
     }
 
     // region store
@@ -189,7 +197,9 @@ public class MessageSyncTest {
         N3MessageDto message = messageBridge.getMessage(nonce);
         assertThat(message, is(n3MessageDto));
 
-        ExecutionStateDto execState = messageBridge.getExecutionState(nonce);
+        ExecutableStateDto execState = messageBridge.getExecutableState(nonce);
+        assertFalse(execState.executed);
+        assertThat(execState.expirationTimestamp, greaterThan(getBestBlockTime()));
     }
 
     @Test
@@ -255,7 +265,7 @@ public class MessageSyncTest {
         assertThat(message, is(n3MessageDto));
 
         IllegalStateException thrown = assertThrows(IllegalStateException.class,
-                () -> messageBridge.getExecutionState(nonce));
+                () -> messageBridge.getExecutableState(nonce));
         assertThat(thrown.getMessage(), containsString("Execution state not found"));
     }
 

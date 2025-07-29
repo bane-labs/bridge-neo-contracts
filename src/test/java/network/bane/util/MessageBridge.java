@@ -16,7 +16,7 @@ import io.neow3j.types.Hash256;
 import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 import network.bane.util.helper.SmartContractHelper;
-import network.bane.util.structs.ExecutionStateDto;
+import network.bane.util.structs.ExecutableStateDto;
 import network.bane.util.structs.MessageBridgeDto;
 import network.bane.util.structs.N3MessageDto;
 import network.bane.util.structs.N3MessageMetadataExecDto;
@@ -295,15 +295,15 @@ public class MessageBridge extends SmartContractHelper {
     // endregion
     // region execution
 
-    public ExecutionStateDto getExecutionState(BigInteger nonce) throws IOException {
-        InvocationResult result = callInvokeFunction("getExecutionState", asList(integer(nonce))).getInvocationResult();
+    public ExecutableStateDto getExecutableState(BigInteger nonce) throws IOException {
+        InvocationResult result = callInvokeFunction("getExecutableState", asList(integer(nonce))).getInvocationResult();
         if (result.hasStateFault()) {
             throw new IllegalStateException("Failed to get execution state: " + result.getException());
         }
         List<StackItem> items = result.getFirstStackItem().getList();
         boolean executed = items.get(0).getBoolean();
         BigInteger expirationTime = items.get(1).getInteger();
-        return new ExecutionStateDto(executed, expirationTime);
+        return new ExecutableStateDto(executed, expirationTime);
     }
 
     public Hash256 executeMessage(AccountSigner signer, BigInteger nonce) throws Throwable {

@@ -16,7 +16,7 @@ import io.neow3j.devpack.contracts.StdLib;
 import network.bane.lib.BridgeLib;
 import network.bane.lib.MessageBridgeLib;
 import network.bane.structs.State;
-import network.bane.structs.message.ExecutionState;
+import network.bane.structs.message.ExecutableState;
 import network.bane.structs.message.MessageBridge;
 import network.bane.structs.message.N3Message;
 import network.bane.structs.message.N3MessageEnvelope;
@@ -27,7 +27,7 @@ import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_EXECUTABLE;
 import static network.bane.message.MessageBridgeContractHelper.managementContract;
 import static network.bane.message.StorageConstants.KEY_MESSAGE_BRIDGE;
 import static network.bane.message.StorageConstants.KEY_UNCLAIMED_FEES;
-import static network.bane.message.StorageConstants.PREFIX_MSG_EXECUTION_STATE;
+import static network.bane.message.StorageConstants.PREFIX_MSG_EXECUTABLE_STATE;
 import static network.bane.message.StorageConstants.PREFIX_MSG_MESSAGES;
 import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT;
 
@@ -142,9 +142,9 @@ class MessageBridgeImpl {
 
     private static void storeMessagesToContractStorage(List<N3MessageEnvelope> messages, int expirationTime) {
         StorageMap messageMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_MESSAGES);
-        StorageMap msgExecStateMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTION_STATE);
+        StorageMap msgExecStateMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTABLE_STATE);
         int nrMessages = messages.size();
-        ByteString execState = new StdLib().serialize(new ExecutionState(false, expirationTime));
+        ByteString execState = new StdLib().serialize(new ExecutableState(false, expirationTime));
 
         for (int i = 0; i < nrMessages; i++) {
             N3MessageEnvelope n3Message = messages.get(i);
@@ -185,12 +185,12 @@ class MessageBridgeImpl {
         return (N3Message.N3Metadata) new StdLib().deserialize(message.metadataBytes);
     }
 
-    static ExecutionState getExecutionState(int nonce) throws Exception {
-        ByteString state = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTION_STATE).get(nonce);
+    static ExecutableState getExecutableState(int nonce) throws Exception {
+        ByteString state = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTABLE_STATE).get(nonce);
         if (state == null) {
-            throw new Exception("Execution state not found");
+            throw new Exception("Executable state not found");
         }
-        return (ExecutionState) new StdLib().deserialize(state);
+        return (ExecutableState) new StdLib().deserialize(state);
     }
 
     static void executeMessage(int nonce) {
@@ -203,8 +203,8 @@ class MessageBridgeImpl {
         }
         N3Message.N3MetadataExecutable metadata = (N3Message.N3MetadataExecutable) abstractMetadata;
 
-        // Validate that the message has an execution state, has not been executed yet and has not expired.
-        checkExecutionStateAndMarkExecuted(nonce);
+        // Validate that the message has not been executed yet and has not expired.
+        checkExecutableStateAndMarkExecuted(nonce);
 
         MessageBridgeContract.onExecution.fire(nonce, metadata);
         Object result = new ExecutionManager(getMessageBridge().config.executionManager).executeMessage(nonce,
@@ -216,21 +216,21 @@ class MessageBridgeImpl {
         }
     }
 
-    private static void checkExecutionStateAndMarkExecuted(int nonce) {
-        StorageMap executionStateMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTION_STATE);
-        ByteString state = executionStateMap.get(nonce);
+    private static void checkExecutableStateAndMarkExecuted(int nonce) {
+        StorageMap executableStateMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTABLE_STATE);
+        ByteString state = executableStateMap.get(nonce);
         if (state == null) {
             abort("Execution state not found");
         }
-        ExecutionState executionState = (ExecutionState) new StdLib().deserialize(state);
-        if (executionState.executed) {
+        ExecutableState executableState = (ExecutableState) new StdLib().deserialize(state);
+        if (executableState.executed) {
             abort("Message has already been executed");
         }
-        if (Runtime.getTime() > executionState.expirationTime) {
+        if (Runtime.getTime() > executableState.expirationTime) {
             abort("Message execution window expired");
         }
-        executionState.executed = true;
-        executionStateMap.put(nonce, new StdLib().serialize(executionState));
+        executableState.executed = true;
+        executableStateMap.put(nonce, new StdLib().serialize(executableState));
     }
 
     private static void storeResult(int nonce, Object result) {

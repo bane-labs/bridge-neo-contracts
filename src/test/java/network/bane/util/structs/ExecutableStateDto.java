@@ -3,11 +3,11 @@ package network.bane.util.structs;
 import java.math.BigInteger;
 import java.util.Objects;
 
-public class ExecutionStateDto {
+public class ExecutableStateDto {
     public Boolean executed;
     public BigInteger expirationTimestamp;
 
-    public ExecutionStateDto(boolean executed, BigInteger expirationTimestamp) {
+    public ExecutableStateDto(boolean executed, BigInteger expirationTimestamp) {
         this.executed = executed;
         this.expirationTimestamp = expirationTimestamp;
     }
@@ -17,10 +17,10 @@ public class ExecutionStateDto {
         if (other == null) {
             return false;
         }
-        if (!(other instanceof ExecutionStateDto)) {
+        if (!(other instanceof ExecutableStateDto)) {
             return false;
         }
-        ExecutionStateDto that = (ExecutionStateDto) other;
+        ExecutableStateDto that = (ExecutableStateDto) other;
         return Objects.equals(this.executed, that.executed) &&
                 Objects.equals(this.expirationTimestamp, that.expirationTimestamp);
     }

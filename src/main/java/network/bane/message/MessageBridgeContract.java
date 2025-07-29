@@ -23,7 +23,7 @@ import io.neow3j.devpack.events.Event;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
 import io.neow3j.devpack.events.Event4Args;
-import network.bane.structs.message.ExecutionState;
+import network.bane.structs.message.ExecutableState;
 import network.bane.structs.message.MessageBridge;
 import network.bane.structs.message.N3Message;
 import network.bane.structs.message.N3MessageEnvelope;
@@ -369,8 +369,8 @@ public class MessageBridgeContract {
     }
 
     @Safe
-    public static ExecutionState getExecutionState(int nonce) throws Exception {
-        return MessageBridgeImpl.getExecutionState(nonce);
+    public static ExecutableState getExecutableState(int nonce) throws Exception {
+        return MessageBridgeImpl.getExecutableState(nonce);
     }
 
     public static void executeMessage(int nonce) {
