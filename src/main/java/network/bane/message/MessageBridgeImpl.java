@@ -12,6 +12,7 @@ import io.neow3j.devpack.annotations.CallFlags;
 import io.neow3j.devpack.contracts.ContractInterface;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.StdLib;
+import network.bane.lib.BridgeLib;
 import network.bane.lib.MessageBridgeLib;
 import network.bane.structs.State;
 import network.bane.structs.message.MessageBridge;
@@ -100,7 +101,7 @@ class MessageBridgeImpl {
 
     static ByteString concatenateOperation(N3MessageEnvelope n3MessageEnvelope) {
         return MessageBridgeLib.concatMessageBridgeOpData(n3MessageEnvelope.nonce,
-                n3MessageEnvelope.message.metadataBytes, n3MessageEnvelope.message.messageBytes);
+                n3MessageEnvelope.message.metadataBytes, n3MessageEnvelope.message.rawMessage);
     }
 
     static void storeMessages(ByteString newN3MessageRoot, Map<ECPoint, ByteString> signatures,
@@ -209,7 +210,7 @@ class MessageBridgeImpl {
 
         MessageBridgeContract.onExecution.fire(nonce, metadata);
         Object result = new ExecutionManager(getMessageBridge().config.executionManager).executeMessage(nonce,
-                message.messageBytes);
+                message.rawMessage);
         MessageBridgeContract.onExecutionResult.fire(nonce, result);
 
         if (metadata.storeResult) {
@@ -220,6 +221,41 @@ class MessageBridgeImpl {
     private static void storeResult(int nonce, Object result) {
         ByteString serializedResult = new StdLib().serialize(result);
         new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT).put(nonce, serializedResult);
+    }
+
+    public static int sendStoreOnlyMessage(ByteString rawMessage) {
+        MessageBridge messageBridge = getMessageBridge();
+        int timestamp = Runtime.getTime();
+        Hash160 callingScriptHash = Runtime.getCallingScriptHash();
+        N3Message.N3MetadataStoreOnly metadata = new N3Message.N3MetadataStoreOnly(timestamp, callingScriptHash);
+        ByteString serializedMetadata = new StdLib().serialize(metadata);
+        N3Message message = new N3Message(serializedMetadata, rawMessage);
+        return updateEvmMessageState(messageBridge, message);
+    }
+
+    public static int sendExecutableMessage(ByteString rawMessage, boolean storeResult) {
+        MessageBridge messageBridge = getMessageBridge();
+        int timestamp = Runtime.getTime();
+        Hash160 callingScriptHash = Runtime.getCallingScriptHash();
+        N3Message.N3MetadataExecutable metadata = new N3Message.N3MetadataExecutable(timestamp, callingScriptHash,
+                storeResult);
+        ByteString serializedMetadata = new StdLib().serialize(metadata);
+        N3Message message = new N3Message(serializedMetadata, rawMessage);
+        return updateEvmMessageState(messageBridge, message);
+    }
+
+    private static int updateEvmMessageState(MessageBridge messageBridge, N3Message message) {
+        messageBridge.n3ToEvmMessageState.nonce++;
+        N3MessageEnvelope msgEnvelope = new N3MessageEnvelope(messageBridge.n3ToEvmMessageState.nonce, message);
+        ByteString messageHash = MessageBridgeLib.hashMessageBridgeOp(MessageBridgeContract.cryptoLib, msgEnvelope);
+        ByteString newRoot = BridgeLib.computeNewRoot(MessageBridgeContract.cryptoLib,
+                messageBridge.n3ToEvmMessageState.root, messageHash);
+        messageBridge.n3ToEvmMessageState.root = newRoot;
+        assert messageBridge.n3ToEvmMessageState.root == newRoot : "Root not set correctly";
+        storeMessageBridge(messageBridge);
+        MessageBridgeContract.onMessageSend.fire(msgEnvelope.nonce, msgEnvelope.message.metadataBytes, messageHash,
+                newRoot);
+        return msgEnvelope.nonce;
     }
 
     public static int getUnclaimedRewards() {

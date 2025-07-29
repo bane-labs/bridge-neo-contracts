@@ -21,6 +21,7 @@ import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
+import io.neow3j.devpack.events.Event4Args;
 import network.bane.structs.message.MessageBridge;
 import network.bane.structs.message.N3Message;
 import network.bane.structs.message.N3MessageEnvelope;
@@ -86,6 +87,10 @@ public class MessageBridgeContract {
 
     @DisplayName("ExecutingUnpause")
     static Event onExecutingUnpause;
+
+    @DisplayName("MessageSend")
+    @EventParameterNames({"Nonce", "Metadata", "MessageHash", "NewEvmRoot"})
+    static Event4Args<Integer, ByteString, ByteString, ByteString> onMessageSend;
 
     @DisplayName("N3RootUpdate")
     @EventParameterNames({"Nonce", "N3MessageRoot"})
@@ -289,12 +294,19 @@ public class MessageBridgeContract {
     // region message bridge functionality
     // region message sending (N3 to EVM)
 
-    public static void sendMessage() {
+    public static int sendMessage(ByteString rawMessage) {
+        onlyWhenNotPaused();
         onlyWhenSendingNotPaused();
-        // Todo: send message
-        abort("Not implemented yet");
+        return MessageBridgeImpl.sendStoreOnlyMessage(rawMessage);
     }
 
+    public static int sendExecutableMessage(ByteString rawMessage, boolean storeResult) {
+        onlyWhenNotPaused();
+        onlyWhenSendingNotPaused();
+        return MessageBridgeImpl.sendExecutableMessage(rawMessage, storeResult);
+    }
+
+    // endregion
     // region storing and executing messages (EVM to N3)
 
     @Safe
