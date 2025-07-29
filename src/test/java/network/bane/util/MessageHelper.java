@@ -29,45 +29,46 @@ public class MessageHelper {
 
     // region message hash chain
 
-    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataExecDto metadata, String msgBytesHex) {
-        return createN3MessageHash(nonce, metadata, hexStringToByteArray(msgBytesHex));
+    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataExecDto metadata, String rawMsgHex) {
+        return createN3MessageHash(nonce, metadata, hexStringToByteArray(rawMsgHex));
     }
 
-    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataExecDto metadata, byte[] msgBytes) {
-        return keccak256Hex(concatenateOp(nonce, metadata, msgBytes));
+    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataExecDto metadata, byte[] rawMsgBytes) {
+        return keccak256Hex(concatenateOp(nonce, metadata, rawMsgBytes));
     }
 
-    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataStoreOnlyDto metadata, String msgBytesHex) {
-        return createN3MessageHash(nonce, metadata, hexStringToByteArray(msgBytesHex));
+    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataStoreOnlyDto metadata,
+            String rawMsgHex) {
+        return createN3MessageHash(nonce, metadata, hexStringToByteArray(rawMsgHex));
     }
 
-    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataStoreOnlyDto metadata, byte[] msgBytes) {
-        return keccak256Hex(concatenateOp(nonce, metadata, msgBytes));
+    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataStoreOnlyDto metadata, byte[] rawMsgBytes) {
+        return keccak256Hex(concatenateOp(nonce, metadata, rawMsgBytes));
     }
 
-    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataResultDto metadata, String msgBytesHex) {
-        return createN3MessageHash(nonce, metadata, hexStringToByteArray(msgBytesHex));
+    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataResultDto metadata, String rawMsgHex) {
+        return createN3MessageHash(nonce, metadata, hexStringToByteArray(rawMsgHex));
     }
 
-    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataResultDto metadata, byte[] msgBytes) {
-        return keccak256Hex(concatenateOp(nonce, metadata, msgBytes));
+    public static String createN3MessageHash(BigInteger nonce, N3MessageMetadataResultDto metadata, byte[] rawMsgBytes) {
+        return keccak256Hex(concatenateOp(nonce, metadata, rawMsgBytes));
     }
 
-    public static byte[] concatenateOp(BigInteger nonce, N3MessageMetadataExecDto metadata, byte[] msgBytes) {
-        return concatenateOp(nonce, concatenateMetadata(metadata), msgBytes);
+    public static byte[] concatenateOp(BigInteger nonce, N3MessageMetadataExecDto metadata, byte[] rawMsgBytes) {
+        return concatenateOp(nonce, concatenateMetadata(metadata), rawMsgBytes);
     }
 
-    public static byte[] concatenateOp(BigInteger nonce, N3MessageMetadataStoreOnlyDto metadata, byte[] msgBytes) {
-        return concatenateOp(nonce, concatenateMetadata(metadata), msgBytes);
+    public static byte[] concatenateOp(BigInteger nonce, N3MessageMetadataStoreOnlyDto metadata, byte[] rawMsgBytes) {
+        return concatenateOp(nonce, concatenateMetadata(metadata), rawMsgBytes);
     }
 
-    public static byte[] concatenateOp(BigInteger nonce, N3MessageMetadataResultDto metadata, byte[] msgBytes) {
-        return concatenateOp(nonce, concatenateMetadata(metadata), msgBytes);
+    public static byte[] concatenateOp(BigInteger nonce, N3MessageMetadataResultDto metadata, byte[] rawMsgBytes) {
+        return concatenateOp(nonce, concatenateMetadata(metadata), rawMsgBytes);
     }
 
-    private static byte[] concatenateOp(BigInteger nonce, byte[] metadataConcat, byte[] msgBytes) {
+    private static byte[] concatenateOp(BigInteger nonce, byte[] metadataConcat, byte[] rawMsgBytes) {
         byte[] noncePadded = toLittleEndianByteArrayZeroPadded(nonce, UINT256_SIZE);
-        return reverseArray(concatenate(concatenate(reverseArray(msgBytes), metadataConcat), noncePadded));
+        return reverseArray(concatenate(concatenate(reverseArray(rawMsgBytes), metadataConcat), noncePadded));
     }
 
     private static byte[] concatenateMetadata(N3MessageMetadataExecDto metadata) {
