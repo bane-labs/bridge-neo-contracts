@@ -368,6 +368,12 @@ public class MessageBridgeContract {
         return new StdLib().serialize(new N3Message.N3MetadataResult(timestamp, sender, initialMessageNonce));
     }
 
+    /**
+     * Gets the executable state of a message by its nonce.
+     * @param nonce the nonce of the message.
+     * @return the state of the executable message.
+     * @throws Exception if the message does not exist or is not of type EXECUTABLE.
+     */
     @Safe
     public static ExecutableState getExecutableState(int nonce) throws Exception {
         return MessageBridgeImpl.getExecutableState(nonce);
