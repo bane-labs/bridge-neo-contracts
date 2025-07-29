@@ -1,7 +1,9 @@
 package network.bane.message;
 
 import io.neow3j.contract.GasToken;
+import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.Notification;
+import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
@@ -11,6 +13,7 @@ import io.neow3j.types.CallFlags;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
+import io.neow3j.types.StackItemType;
 import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
@@ -33,6 +36,7 @@ import java.util.Map;
 import static io.neow3j.transaction.AccountSigner.global;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.integer;
+import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -52,6 +56,8 @@ import static network.bane.util.helper.PrintHelper.printTransactionFee;
 import static network.bane.util.helper.TestHelper.alice;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
 import static network.bane.util.helper.TestHelper.createMessageBridgeDeployConfig;
+import static network.bane.util.helper.TestHelper.gasToken;
+import static network.bane.util.helper.TestHelper.getNextEvmNonce;
 import static network.bane.util.helper.TestHelper.getNextN3Nonce;
 import static network.bane.util.helper.TestHelper.management;
 import static network.bane.util.helper.TestHelper.messageBridge;
@@ -159,6 +165,131 @@ public class MessageBridgeTest {
 
         // revert the state for further tests
         messageBridge.unpause();
+    }
+
+    // endregion
+    // region sending
+
+    @Test
+    @Order(1)
+    public void testSending_storeOnly() throws Throwable {
+        BigInteger expectedNextEvmNonce = getNextEvmNonce();
+
+        BigInteger initialBalance = gasToken.getBalanceOf(messageBridge.getScriptHash());
+        BigInteger initialUnclaimedFees = messageBridge.unclaimedFees();
+        BigInteger sendingFee = messageBridge.sendingFee();
+
+        byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
+        Hash256 tx = messageBridge.sendMessage(global(alice), rawMessage);
+
+        BigInteger gasBalanceAfter = gasToken.getBalanceOf(messageBridge.getScriptHash());
+        assertThat(gasBalanceAfter, is(initialBalance.add(sendingFee)));
+        assertThat(messageBridge.unclaimedFees(), is(initialUnclaimedFees.add(sendingFee)));
+
+        NeoApplicationLog.Execution exec = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution();
+        assertThat(exec.getFirstStackItem().getType(), is(StackItemType.INTEGER));
+        assertThat(exec.getFirstStackItem().getInteger(), is(expectedNextEvmNonce));
+
+        assertThat(exec.getNotifications(), hasSize(2));
+        List<Notification> events = exec.getNotifications();
+        assertThat(events, hasSize(2));
+        Notification event1 = events.get(0);
+        assertThat(event1.getContract(), is(GasToken.SCRIPT_HASH));
+        assertThat(event1.getEventName(), is("Transfer"));
+        List<StackItem> transferEventState = event1.getState().getList();
+        assertThat(Hash160.fromAddress(transferEventState.get(0).getAddress()), is(alice.getScriptHash()));
+        assertThat(Hash160.fromAddress(transferEventState.get(1).getAddress()), is(messageBridge.getScriptHash()));
+        assertThat(transferEventState.get(2).getInteger(), is(sendingFee));
+
+        Notification event2 = events.get(1);
+        assertThat(event2.getContract(), is(messageBridge.getScriptHash()));
+        assertThat(event2.getEventName(), is("MessageSend"));
+        List<StackItem> eventItems = event2.getState().getList();
+        assertThat(eventItems, hasSize(4));
+        BigInteger nonce = eventItems.get(0).getInteger();
+        assertThat(nonce, is(expectedNextEvmNonce));
+    }
+
+    @Test
+    @Order(2)
+    public void testSending_executable() throws Throwable {
+        BigInteger expectedNextEvmNonce = getNextEvmNonce();
+
+        BigInteger initialBalance = gasToken.getBalanceOf(messageBridge.getScriptHash());
+        BigInteger initialUnclaimedFees = messageBridge.unclaimedFees();
+        BigInteger sendingFee = messageBridge.sendingFee();
+
+        byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
+        Hash256 tx = messageBridge.sendExecutableMessage(rawMessage, false);
+
+        BigInteger gasBalanceAfter = gasToken.getBalanceOf(messageBridge.getScriptHash());
+        assertThat(gasBalanceAfter, is(initialBalance.add(sendingFee)));
+        assertThat(messageBridge.unclaimedFees(), is(initialUnclaimedFees.add(sendingFee)));
+
+        NeoApplicationLog.Execution exec = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution();
+        assertThat(exec.getFirstStackItem().getType(), is(StackItemType.INTEGER));
+        assertThat(exec.getFirstStackItem().getInteger(), is(expectedNextEvmNonce));
+
+        assertThat(exec.getNotifications(), hasSize(2));
+        List<Notification> events = exec.getNotifications();
+        assertThat(events, hasSize(2));
+        Notification event1 = events.get(0);
+        assertThat(event1.getContract(), is(GasToken.SCRIPT_HASH));
+        assertThat(event1.getEventName(), is("Transfer"));
+        List<StackItem> transferEventState = event1.getState().getList();
+        assertThat(Hash160.fromAddress(transferEventState.get(0).getAddress()), is(alice.getScriptHash()));
+        assertThat(Hash160.fromAddress(transferEventState.get(1).getAddress()), is(messageBridge.getScriptHash()));
+        assertThat(transferEventState.get(2).getInteger(), is(sendingFee));
+
+        Notification event2 = events.get(1);
+        assertThat(event2.getContract(), is(messageBridge.getScriptHash()));
+        assertThat(event2.getEventName(), is("MessageSend"));
+        List<StackItem> eventItems = event2.getState().getList();
+        assertThat(eventItems, hasSize(4));
+        BigInteger nonce = eventItems.get(0).getInteger();
+        assertThat(nonce, is(expectedNextEvmNonce));
+    }
+
+    @Test
+    @Order(0)
+    public void testSending_storeOnly_fail_exceedMaxFee() throws Throwable {
+        byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
+        BigInteger sendingFee = messageBridge.sendingFee();
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.sendMessage(global(alice), rawMessage, alice, sendingFee.subtract(BigInteger.ONE)));
+        assertThat(thrown.getMessage(), containsString("Max fee exceeded"));
+    }
+
+    @Test
+    @Order(0)
+    public void testSending_executable_fail_exceedMaxFee() throws Throwable {
+        byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
+        BigInteger sendingFee = messageBridge.sendingFee();
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.sendExecutableMessage(global(alice), rawMessage, false, alice,
+                        sendingFee.subtract(BigInteger.ONE)));
+        assertThat(thrown.getMessage(), containsString("Max fee exceeded"));
+    }
+
+    @Test
+    @Order(0)
+    public void testSending_storeOnly_fail_prohibitedFeeSponsor() throws Throwable {
+        byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
+        BigInteger sendingFee = messageBridge.sendingFee();
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.sendMessage(global(alice), rawMessage, messageBridge.getScriptHash(), sendingFee));
+        assertThat(thrown.getMessage(), containsString("Prohibited 'feeSponsor'"));
+    }
+
+    @Test
+    @Order(0)
+    public void testSending_executable_fail_prohibitedFeeSponsor() throws Throwable {
+        byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
+        BigInteger sendingFee = messageBridge.sendingFee();
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.sendExecutableMessage(global(alice), rawMessage, false,
+                        messageBridge.getScriptHash(), sendingFee));
+        assertThat(thrown.getMessage(), containsString("Prohibited 'feeSponsor'"));
     }
 
     // endregion
@@ -422,7 +553,8 @@ public class MessageBridgeTest {
         assertThat(thrown.getMessage(), containsString("Executing paused"));
 
         tx = messageBridge.unpauseExecuting();
-        Notification firstEventInUnpausingTx = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
+        Notification firstEventInUnpausingTx = neow3j.getApplicationLog(tx).send().getApplicationLog()
+                .getFirstExecution()
                 .getFirstNotification();
         assertThat(firstEventInUnpausingTx.getContract(), is(messageBridge.getScriptHash()));
         assertThat(firstEventInUnpausingTx.getEventName(), is("ExecutingUnpause"));

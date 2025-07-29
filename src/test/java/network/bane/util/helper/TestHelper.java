@@ -22,11 +22,13 @@ import network.bane.message.MessageBridgeContract;
 import network.bane.messageexecution.ExecutionManagerContract;
 import network.bane.testhelper.MessageTestStoreContract;
 import network.bane.testhelper.TestContract;
+import network.bane.testhelper.TestMessageSenderContract;
 import network.bane.util.Bridge;
 import network.bane.util.ExecutionManager;
 import network.bane.util.Management;
 import network.bane.util.MessageBridge;
 import network.bane.util.MessageTestStorer;
+import network.bane.util.TestMessageSender;
 import network.bane.util.structs.TokenBridge;
 
 import java.io.IOException;
@@ -69,6 +71,7 @@ public class TestHelper {
     public static MessageBridge messageBridge;
     public static ExecutionManager executionManager;
     public static MessageTestStorer messageTestStorer;
+    public static TestMessageSender testMessageSender;
 
     public static Hash160 testContract;
     public static final Hash160 neoXNeoTokenHash = new Hash160("0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f");
@@ -129,6 +132,15 @@ public class TestHelper {
 
     public static void setupTestContract(ContractTestExtension ext) {
         testContract = ext.getDeployedContract(TestContract.class).getScriptHash();
+    }
+
+    public static void setupTestMessageSender(ContractTestExtension ext) throws Throwable {
+        if (messageBridge == null) {
+            throw new IllegalStateException("MessageBridge must be set up before TestMessageSender.");
+        }
+        testMessageSender =
+                new TestMessageSender(ext.getDeployedContract(TestMessageSenderContract.class).getScriptHash(), neow3j);
+        testMessageSender.setMessageBridge(messageBridge.getScriptHash());
     }
 
     public static void setupMessageBridge(ContractTestExtension ext) {
@@ -248,6 +260,10 @@ public class TestHelper {
     public static BigInteger incrementAndGetDepositNonce() {
         depositNonce = depositNonce.add(BigInteger.ONE);
         return depositNonce;
+    }
+
+    public static BigInteger getNextEvmNonce() throws IOException {
+        return messageBridge.getMessageBridge().n3ToEvmMessageState.nonce.add(BigInteger.ONE);
     }
 
     public static BigInteger getNextN3Nonce() throws IOException {

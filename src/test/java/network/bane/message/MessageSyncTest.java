@@ -1,5 +1,9 @@
 package network.bane.message;
 
+import io.neow3j.contract.SmartContract;
+import io.neow3j.protocol.core.response.NeoApplicationLog;
+import io.neow3j.protocol.core.response.Notification;
+import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
@@ -8,9 +12,11 @@ import io.neow3j.types.CallFlags;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
+import io.neow3j.types.StackItemType;
 import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
+import network.bane.testhelper.TestMessageSenderContract;
 import network.bane.util.MessageHelper;
 import network.bane.util.structs.N3MessageDto;
 import network.bane.util.structs.N3MessageMetadataDto;
@@ -28,7 +34,10 @@ import java.math.BigInteger;
 import java.util.List;
 
 import static io.neow3j.types.ContractParameter.array;
+import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.integer;
+import static io.neow3j.utils.Numeric.hexStringToByteArray;
+import static io.neow3j.utils.Numeric.toBytesPadded;
 import static io.neow3j.utils.Numeric.toHexString;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
@@ -48,26 +57,35 @@ import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HAS
 import static network.bane.util.helper.PrintHelper.printTransactionFee;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
 import static network.bane.util.helper.TestHelper.createMessageBridgeDeployConfig;
+import static network.bane.util.helper.TestHelper.getNextEvmNonce;
 import static network.bane.util.helper.TestHelper.management;
 import static network.bane.util.helper.TestHelper.messageBridge;
 import static network.bane.util.helper.TestHelper.neow3j;
 import static network.bane.util.helper.TestHelper.setup;
 import static network.bane.util.helper.TestHelper.setupMessageBridge;
 import static network.bane.util.helper.TestHelper.setupTestContract;
+import static network.bane.util.helper.TestHelper.setupTestMessageSender;
 import static network.bane.util.helper.TestHelper.testContract;
+import static network.bane.util.helper.TestHelper.testMessageSender;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ContractTest(
         blockTime = 1,
-        contracts = {BridgeManagementContract.class, MessageBridgeContract.class, TestContract.class},
+        contracts = {BridgeManagementContract.class, MessageBridgeContract.class, TestContract.class,
+                TestMessageSenderContract.class},
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MessageSyncTest {
+
+    // Neow3j is missing a wrapper for the native StdLib in their SDK.
+    private static SmartContract stdLib;
 
     @RegisterExtension
     public static final ContractTestExtension ext = new ContractTestExtension();
@@ -77,6 +95,9 @@ public class MessageSyncTest {
         setup(ext);
         setupMessageBridge(ext);
         setupTestContract(ext);
+        setupTestMessageSender(ext);
+
+        stdLib = new SmartContract(new Hash160("0xacce6fd80d44e1796aa0c2c625e9e4e0ce39efc0"), neow3j);
 
         // This test requires the constant MANAGEMENT_CONTRACT_HASH to be set correctly. The execution manager
         // requires the contract address at deployment time, so we cannot change it later.
@@ -272,6 +293,155 @@ public class MessageSyncTest {
         ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
         String onChainConcat = messageBridge.concatenateOperation(messageEnvelope);
         assertThat(onChainConcat, is(offChainConcatenatedHex));
+    }
+
+    // endregion
+    // region sending
+
+    @Test
+    @Order(1)
+    public void test_sendMessage_1_executable() throws Throwable {
+        BigInteger nextEvmNonce = getNextEvmNonce();
+        // a raw valid encoded evm call:
+        byte[] rawMessage = hexStringToByteArray(
+                "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff2110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000044cadc7a78000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000c800000000000000000000000000000000000000000000000000000000");
+
+        Hash256 tx = testMessageSender.sendExecutableMessage(rawMessage, true);
+
+        NeoApplicationLog.Execution firstExec = neow3j.getApplicationLog(tx).send().getApplicationLog()
+                .getFirstExecution();
+        assertThat(firstExec.getFirstStackItem().getInteger(), is(nextEvmNonce));
+        assertThat(firstExec.getNotifications(), hasSize(2));
+        Notification msgSendEvent = firstExec.getNotification(1);
+        assertThat(msgSendEvent.getContract(), is(messageBridge.getScriptHash()));
+        assertThat(msgSendEvent.getEventName(), is("MessageSend"));
+        List<StackItem> eventItems = msgSendEvent.getState().getList();
+        assertThat(eventItems, hasSize(4));
+        assertThat(eventItems.get(0).getInteger(), is(nextEvmNonce));
+        assertThat(eventItems.get(1).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(eventItems.get(2).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(eventItems.get(2).getByteArray().length, is(Hash256.ZERO.getSize()));
+        assertThat(eventItems.get(3).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(eventItems.get(3).getByteArray().length, is(Hash256.ZERO.getSize()));
+
+        // Deserialize the serialized metadata bytes from the event to get the individual metadata values.
+        List<StackItem> metadataItems = stdLib.callInvokeFunction("deserialize",
+                        asList(byteArray(eventItems.get(1).getByteArray()))).getInvocationResult().getFirstStackItem()
+                .getList();
+        assertThat(metadataItems, hasSize(4));
+        BigInteger msgType = metadataItems.get(0).getInteger();
+        assertThat(msgType.intValue(), is(0)); // 0: EXECUTABLE
+        BigInteger timestamp = metadataItems.get(1).getInteger();
+        Hash160 sender = Hash160.fromAddress(metadataItems.get(2).getAddress());
+        boolean storeResult = metadataItems.get(3).getBoolean();
+        N3MessageMetadataExecDto metadataDto = new N3MessageMetadataExecDto(timestamp, sender, storeResult);
+        byte[] concatBytes = concatenateOp(nextEvmNonce, metadataDto, rawMessage);
+
+        assertThat(sender, is(testMessageSender.getScriptHash()));
+        assertTrue(storeResult);
+
+        // The pieces of the cocatenated message bytes should include the following in that order:
+        // 0000000000000000000000000000000000000000000000000000000000000001 // nonce
+        // 00                                                               // msg type
+        // 00000000000000000000000000000000000000000000000000000198528a9ce8 // timestamp (based on current N3 timestamp)
+        // 639ab3eec9bfc00d00e0e608ec2df87c7d98d79a                         // sender
+        // 01                                                               // store result boolean
+        // 00000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff2110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000044cadc7a78000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000c800000000000000000000000000000000000000000000000000000000
+
+        String concatenationHex = toHexStringNoPrefix(concatBytes);
+        // nonce (uint256) + msgType (uint8) + timestamp (uint256) + sender (address) + storeResult (bool) +
+        // rawMessage (arbitrary bytes)
+        assertThat(concatBytes.length, is(32 + 1 + 32 + 20 + 1 + rawMessage.length));
+        // The end of the concatenation should be the raw message.
+        assertThat(concatenationHex, endsWith(toHexStringNoPrefix(rawMessage)));
+        // The beginning of the concatenation should be the nonce padded to 32 bytes and the message type (1 byte).
+        assertThat(concatenationHex, startsWith(
+                toHexStringNoPrefix(toBytesPadded(nextEvmNonce, 32)) + toHexStringNoPrefix(msgType.toByteArray())
+        ));
+        assertThat(new Hash160(concatenationHex.substring(130, 130 + 40)), is(testMessageSender.getScriptHash()));
+        assertThat(concatenationHex.substring(170, 172), is("01"));
+
+        // msg hash: c5e8122e5466b9c10e150d08df380a10771467d5f6e21c5234a167f690b8934f
+        // with nonce: 1
+        // with msg type: 0
+        // with timestamp: 1753776888950
+        // with sender: 639ab3eec9bfc00d00e0e608ec2df87c7d98d79a
+        // with store result: true
+        // with raw message:
+        // 00000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff2110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000044cadc7a78000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000c800000000000000000000000000000000000000000000000000000000
+
+        // complete concatenated bytes:
+        // 00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000198553f9c76639ab3eec9bfc00d00e0e608ec2df87c7d98d79a0100000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff2110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000044cadc7a78000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000c800000000000000000000000000000000000000000000000000000000
+    }
+
+    @Test
+    @Order(2)
+    public void test_sendMessage_2_storeOnly() throws Throwable {
+        BigInteger nextEvmNonce = getNextEvmNonce();
+        // a raw message:
+        String msg = "There's nowhere I can't go. There's nowhere I won't find you.";
+        byte[] rawMessage = msg.getBytes();
+
+        Hash256 tx = testMessageSender.sendMessage(rawMessage);
+
+        NeoApplicationLog.Execution firstExec = neow3j.getApplicationLog(tx).send().getApplicationLog()
+                .getFirstExecution();
+        assertThat(firstExec.getFirstStackItem().getInteger(), is(nextEvmNonce));
+        assertThat(firstExec.getNotifications(), hasSize(2));
+        Notification msgSendEvent = firstExec.getNotification(1);
+        assertThat(msgSendEvent.getContract(), is(messageBridge.getScriptHash()));
+        assertThat(msgSendEvent.getEventName(), is("MessageSend"));
+        List<StackItem> eventItems = msgSendEvent.getState().getList();
+        assertThat(eventItems, hasSize(4));
+        assertThat(eventItems.get(0).getInteger(), is(nextEvmNonce));
+        assertThat(eventItems.get(1).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(eventItems.get(2).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(eventItems.get(2).getByteArray().length, is(Hash256.ZERO.getSize()));
+        assertThat(eventItems.get(3).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(eventItems.get(3).getByteArray().length, is(Hash256.ZERO.getSize()));
+
+        // Deserialize the serialized metadata bytes from the event to get the individual metadata values.
+        List<StackItem> metadataItems = stdLib.callInvokeFunction("deserialize",
+                        asList(byteArray(eventItems.get(1).getByteArray()))).getInvocationResult().getFirstStackItem()
+                .getList();
+        assertThat(metadataItems, hasSize(3));
+        BigInteger msgType = metadataItems.get(0).getInteger();
+        assertThat(msgType.intValue(), is(1)); // 1: STORE_ONLY
+        BigInteger timestamp = metadataItems.get(1).getInteger();
+        Hash160 sender = Hash160.fromAddress(metadataItems.get(2).getAddress());
+        N3MessageMetadataStoreOnlyDto metadataDto = new N3MessageMetadataStoreOnlyDto(timestamp, sender);
+        byte[] concatBytes = concatenateOp(nextEvmNonce, metadataDto, rawMessage);
+
+        assertThat(sender, is(testMessageSender.getScriptHash()));
+
+        // The pieces of the cocatenated message bytes should include the following in that order:
+        // 0000000000000000000000000000000000000000000000000000000000000002 // nonce
+        // 01                                                               // msg type
+        // 00000000000000000000000000000000000000000000000000000198528a9ce8 // timestamp (based on current N3 timestamp)
+        // 639ab3eec9bfc00d00e0e608ec2df87c7d98d79a                         // sender
+        // 54686572652773206e6f776865726520492063616e277420676f2e2054686572652773206e6f7768657265204920776f6e27742066696e6420796f752e
+
+        // nonce (uint256) + msgType (uint8) + timestamp (uint256) + sender (address) + rawMessage (arbitrary bytes)
+        assertThat(concatBytes.length, is(32 + 1 + 32 + 20 + rawMessage.length));
+        String concatenationHex = toHexStringNoPrefix(concatBytes);
+        // The end of the concatenation should be the raw message.
+        assertThat(concatenationHex, endsWith(toHexStringNoPrefix(rawMessage)));
+        // The beginning of the concatenation should be the nonce padded to 32 bytes and the message type (1 byte).
+        assertThat(concatenationHex, startsWith(
+                toHexStringNoPrefix(toBytesPadded(nextEvmNonce, 32)) + toHexStringNoPrefix(msgType.toByteArray())
+        ));
+        // The sender should be part of the concatenation.;
+        assertThat(new Hash160(concatenationHex.substring(130, 130 + 40)), is(testMessageSender.getScriptHash()));
+
+        // msg hash: 8537f0ee02066de1943c2205cd4621209dd1ec1a61ae887c5d394d130b63709a
+        // with nonce: 2
+        // with timestamp: 1753777092836
+        // with sender: 639ab3eec9bfc00d00e0e608ec2df87c7d98d79a
+        // with raw message:
+        // 54686572652773206e6f776865726520492063616e277420676f2e2054686572652773206e6f7768657265204920776f6e27742066696e6420796f752e
+
+        // complete concatenated bytes:
+        // 000000000000000000000000000000000000000000000000000000000000000201000000000000000000000000000000000000000000000000000001985542b8e4639ab3eec9bfc00d00e0e608ec2df87c7d98d79a54686572652773206e6f776865726520492063616e277420676f2e2054686572652773206e6f7768657265204920776f6e27742066696e6420796f752e
     }
 
     // endregion

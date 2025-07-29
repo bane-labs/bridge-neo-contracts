@@ -17,10 +17,12 @@ import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
+import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
+import io.neow3j.devpack.events.Event4Args;
 import network.bane.structs.message.MessageBridge;
 import network.bane.structs.message.N3Message;
 import network.bane.structs.message.N3MessageEnvelope;
@@ -28,6 +30,7 @@ import network.bane.structs.message.N3MethodCall;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.checkWitness;
+import static io.neow3j.devpack.Runtime.getCallingScriptHash;
 import static network.bane.message.MessageBridgeContractHelper.managementContract;
 import static network.bane.message.MessageBridgeContractHelper.onlyGovernor;
 import static network.bane.message.MessageBridgeContractHelper.onlyGovernorOrSecurityGuard;
@@ -44,7 +47,7 @@ import static network.bane.message.StorageConstants.KEY_ENTERED;
 import static network.bane.message.StorageConstants.KEY_EXECUTING_PAUSE;
 import static network.bane.message.StorageConstants.KEY_SENDING_PAUSE;
 import static network.bane.message.StorageConstants.KEY_LINKED_CHAIN_ID;
-import static network.bane.message.StorageConstants.KEY_UNCLAIMED_REWARDS;
+import static network.bane.message.StorageConstants.KEY_UNCLAIMED_FEES;
 import static network.bane.message.StorageConstants.KEY_VERSION;
 import static network.bane.message.StorageConstants.PREFIX_BASE;
 
@@ -86,6 +89,10 @@ public class MessageBridgeContract {
 
     @DisplayName("ExecutingUnpause")
     static Event onExecutingUnpause;
+
+    @DisplayName("MessageSend")
+    @EventParameterNames({"Nonce", "Metadata", "MessageHash", "NewEvmRoot"})
+    static Event4Args<Integer, ByteString, ByteString, ByteString> onMessageSend;
 
     @DisplayName("N3RootUpdate")
     @EventParameterNames({"Nonce", "N3MessageRoot"})
@@ -149,7 +156,7 @@ public class MessageBridgeContract {
             // Pause initially
             baseMap.put(KEY_PAUSE, true);
 
-            baseMap.put(KEY_UNCLAIMED_REWARDS, 0);
+            baseMap.put(KEY_UNCLAIMED_FEES, 0);
             baseMap.put(KEY_SENDING_PAUSE, false);
             baseMap.put(KEY_EXECUTING_PAUSE, false);
 
@@ -253,8 +260,17 @@ public class MessageBridgeContract {
 
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
-        // Todo: handle NEP17 payment
-        abort("Not implemented yet");
+        // This contract accepts only GasToken payments. No data is allowed.
+        Hash160 callingScriptHash = getCallingScriptHash();
+        if (!callingScriptHash.equals(new GasToken().getHash())) {
+            abort("Only GasToken payments are accepted");
+        }
+        if (data != null) {
+            abort("No data accepted");
+        }
+        if (amount <= 0) {
+            abort("Invalid amount");
+        }
     }
 
     // endregion
@@ -277,24 +293,30 @@ public class MessageBridgeContract {
     // region rewards
 
     /**
-     * @return the amount of unclaimed rewards for the bridge operators. This amount is increased by the deposit fees
-     * of the native and token bridges, as well as by rewards from holding NEO.
+     * @return the amount of unclaimed fees for the bridge operators. This amount is increased by the sending fees.
      */
     @Safe
-    public static int unclaimedRewards() {
-        return MessageBridgeImpl.getUnclaimedRewards();
+    public static int unclaimedFees() {
+        return MessageBridgeImpl.getUnclaimedFees();
     }
 
     // endregion
     // region message bridge functionality
     // region message sending (N3 to EVM)
 
-    public static void sendMessage() {
+    public static int sendMessage(ByteString rawMessage, Hash160 feeSponsor, int maxFee) {
+        onlyWhenNotPaused();
         onlyWhenSendingNotPaused();
-        // Todo: send message
-        abort("Not implemented yet");
+        return MessageBridgeImpl.sendMessage(rawMessage, feeSponsor, maxFee);
     }
 
+    public static int sendExecutableMessage(ByteString rawMessage, boolean storeResult, Hash160 feeSponsor, int maxFee) {
+        onlyWhenNotPaused();
+        onlyWhenSendingNotPaused();
+        return MessageBridgeImpl.sendExecutableMessage(rawMessage, storeResult, feeSponsor, maxFee);
+    }
+
+    // endregion
     // region storing and executing messages (EVM to N3)
 
     @Safe

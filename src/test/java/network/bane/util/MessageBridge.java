@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
+import static io.neow3j.transaction.AccountSigner.global;
 import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.bool;
@@ -36,6 +37,7 @@ import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.map;
 import static io.neow3j.types.ContractParameter.string;
+import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static java.util.Arrays.asList;
 import static network.bane.util.MessageHelper.createN3MessageHash;
 import static network.bane.util.TestHelper.concatAndKeccak256;
@@ -157,6 +159,72 @@ public class MessageBridge extends SmartContractHelper {
 
     // endregion
     // region message bridge
+    // region sending messages
+
+    public Hash256 sendMessage(AccountSigner signer, byte[] rawMessage, Hash160 feeSponsor, BigInteger maxFee)
+            throws Throwable {
+        return sendAndAwaitExecution(invokeFunction("sendMessage", byteArray(rawMessage), hash160(feeSponsor),
+                integer(maxFee)).signers(signer));
+    }
+
+    public Hash256 sendMessage(AccountSigner signer, byte[] rawMessage) throws Throwable {
+        return sendMessage(signer, rawMessage, signer.getAccount(), sendingFee());
+    }
+
+    public Hash256 sendMessage(AccountSigner signer, byte[] rawMessage, Account feeSponsor, BigInteger maxFee)
+            throws Throwable {
+        TransactionBuilder b = invokeFunction("sendMessage", byteArray(rawMessage), hash160(feeSponsor),
+                integer(maxFee));
+        if (signer.getScriptHash().equals(feeSponsor.getScriptHash())) {
+            return sendAndAwaitExecution(b.signers(signer));
+        }
+        return sendAndAwaitExecution(b.signers(signer, global(feeSponsor)));
+    }
+
+    public Hash256 sendMessage(byte[] rawMessage) throws Throwable {
+        return sendMessage(global(alice), rawMessage, alice, sendingFee());
+    }
+
+    public Hash256 sendMessage(AccountSigner signer, String rawMessageHex, Hash160 feeSponsor, BigInteger maxFee)
+            throws Throwable {
+        return sendMessage(signer, hexStringToByteArray(rawMessageHex), feeSponsor, maxFee);
+    }
+
+    public Hash256 sendMessage(String rawMessageHex) throws Throwable {
+        return sendMessage(global(alice), hexStringToByteArray(rawMessageHex), alice, sendingFee());
+    }
+
+    public Hash256 sendExecutableMessage(AccountSigner signer, byte[] rawMessage, boolean storeResult,
+            Hash160 feeSponsor, BigInteger maxFee) throws Throwable {
+        return sendAndAwaitExecution(invokeFunction("sendExecutableMessage", byteArray(rawMessage),
+                bool(storeResult), hash160(feeSponsor), integer(maxFee)).signers(signer));
+    }
+
+    public Hash256 sendExecutableMessage(AccountSigner signer, byte[] rawMessage, boolean storeResult,
+            Account feeSponsor, BigInteger maxFee) throws Throwable {
+        TransactionBuilder b = invokeFunction("sendExecutableMessage", byteArray(rawMessage),
+                bool(storeResult), hash160(feeSponsor), integer(maxFee));
+        if (signer.getScriptHash().equals(feeSponsor.getScriptHash())) {
+            return sendAndAwaitExecution(b.signers(signer));
+        }
+        return sendAndAwaitExecution(b.signers(signer, global(feeSponsor)));
+    }
+
+    public Hash256 sendExecutableMessage(byte[] rawMessage, boolean storeResult) throws Throwable {
+        return sendExecutableMessage(global(alice), rawMessage, storeResult, alice, sendingFee());
+    }
+
+    public Hash256 sendExecutableMessage(AccountSigner signer, String rawMessageHex, boolean storeResult)
+            throws Throwable {
+        return sendExecutableMessage(signer, hexStringToByteArray(rawMessageHex), storeResult, alice, sendingFee());
+    }
+
+    public Hash256 sendExecutableMessage(String rawMessageHex, boolean storeResult) throws Throwable {
+        return sendExecutableMessage(global(alice), hexStringToByteArray(rawMessageHex), storeResult, alice,
+                sendingFee());
+    }
+
+    // endregion
     // region storing/executing messages
 
     public byte[] getSerializedN3MethodCall(Hash160 target, String method, CallFlags callFlags,
@@ -259,6 +327,10 @@ public class MessageBridge extends SmartContractHelper {
                 messageConfigList.get(4).getInteger().intValue()
         );
         return new MessageBridgeDto(evmToN3State, n3ToEvmState, messageConfigDto);
+    }
+
+    public BigInteger unclaimedFees() throws IOException {
+        return callFunctionReturningInt("unclaimedFees");
     }
 
     public BigInteger sendingFee() throws IOException {

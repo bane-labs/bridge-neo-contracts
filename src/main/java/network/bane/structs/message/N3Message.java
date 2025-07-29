@@ -16,17 +16,17 @@ public class N3Message {
      */
     public ByteString metadataBytes;
     /**
-     * The actual executable message bytes.
+     * The actual raw message bytes.
      */
-    public ByteString messageBytes;
+    public ByteString rawMessage;
 
-    public N3Message(ByteString metadataBytes, ByteString messageBytes) {
+    public N3Message(ByteString metadataBytes, ByteString rawMessage) {
         this.metadataBytes = metadataBytes;
-        this.messageBytes = messageBytes;
+        this.rawMessage = rawMessage;
     }
 
     public static boolean isValid(N3Message message) {
-        return message.metadataBytes != null && message.messageBytes != null && message.messageBytes.length() > 0;
+        return message.metadataBytes != null && message.rawMessage != null && message.rawMessage.length() > 0;
     }
 
     @Struct

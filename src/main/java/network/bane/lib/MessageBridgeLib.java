@@ -75,10 +75,10 @@ public class MessageBridgeLib {
         return concat(concat(sender.toByteArray(), timestampP), msgType);
     }
 
-    private static ByteString hashMessageBridgeOp(CryptoLib cryptoLib, N3MessageEnvelope n3MessageEnvelope) {
+    public static ByteString hashMessageBridgeOp(CryptoLib cryptoLib, N3MessageEnvelope n3MessageEnvelope) {
         return cryptoLib.keccak256(
                 concatMessageBridgeOpData(n3MessageEnvelope.nonce, n3MessageEnvelope.message.metadataBytes,
-                        n3MessageEnvelope.message.messageBytes
+                        n3MessageEnvelope.message.rawMessage
                 )
         );
     }

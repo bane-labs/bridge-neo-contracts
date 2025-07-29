@@ -11,7 +11,9 @@ import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.CallFlags;
 import io.neow3j.devpack.contracts.ContractInterface;
 import io.neow3j.devpack.contracts.ContractManagement;
+import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.contracts.StdLib;
+import network.bane.lib.BridgeLib;
 import network.bane.lib.MessageBridgeLib;
 import network.bane.structs.State;
 import network.bane.structs.message.MessageBridge;
@@ -19,10 +21,11 @@ import network.bane.structs.message.N3Message;
 import network.bane.structs.message.N3MessageEnvelope;
 
 import static io.neow3j.devpack.Helper.abort;
+import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_EXECUTABLE;
 import static network.bane.message.MessageBridgeContractHelper.managementContract;
 import static network.bane.message.StorageConstants.KEY_MESSAGE_BRIDGE;
-import static network.bane.message.StorageConstants.KEY_UNCLAIMED_REWARDS;
+import static network.bane.message.StorageConstants.KEY_UNCLAIMED_FEES;
 import static network.bane.message.StorageConstants.PREFIX_MSG_EXECUTION_PENDING;
 import static network.bane.message.StorageConstants.PREFIX_MSG_MESSAGES;
 import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT;
@@ -100,7 +103,7 @@ class MessageBridgeImpl {
 
     static ByteString concatenateOperation(N3MessageEnvelope n3MessageEnvelope) {
         return MessageBridgeLib.concatMessageBridgeOpData(n3MessageEnvelope.nonce,
-                n3MessageEnvelope.message.metadataBytes, n3MessageEnvelope.message.messageBytes);
+                n3MessageEnvelope.message.metadataBytes, n3MessageEnvelope.message.rawMessage);
     }
 
     static void storeMessages(ByteString newN3MessageRoot, Map<ECPoint, ByteString> signatures,
@@ -209,7 +212,7 @@ class MessageBridgeImpl {
 
         MessageBridgeContract.onExecution.fire(nonce, metadata);
         Object result = new ExecutionManager(getMessageBridge().config.executionManager).executeMessage(nonce,
-                message.messageBytes);
+                message.rawMessage);
         MessageBridgeContract.onExecutionResult.fire(nonce, result);
 
         if (metadata.storeResult) {
@@ -222,8 +225,75 @@ class MessageBridgeImpl {
         new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT).put(nonce, serializedResult);
     }
 
-    public static int getUnclaimedRewards() {
-        return MessageBridgeContract.baseMap.getInt(KEY_UNCLAIMED_REWARDS);
+    public static int sendMessage(ByteString rawMsg, Hash160 feeSponsor, int maxFee) {
+        MessageBridge messageBridge = getMessageBridge();
+
+        MessageBridgeImpl.payMessageSendingFee(messageBridge, feeSponsor, maxFee);
+
+        int timestamp = Runtime.getTime();
+        Hash160 callingScriptHash = Runtime.getCallingScriptHash();
+
+        N3Message.N3MetadataStoreOnly metadata = new N3Message.N3MetadataStoreOnly(timestamp, callingScriptHash);
+        ByteString serializedMetadata = new StdLib().serialize(metadata);
+        N3Message message = new N3Message(serializedMetadata, rawMsg);
+        return updateEvmMessageState(messageBridge, message);
+    }
+
+    public static int sendExecutableMessage(ByteString rawMsg, boolean storeResult, Hash160 feeSponsor, int maxFee) {
+        MessageBridge messageBridge = getMessageBridge();
+
+        MessageBridgeImpl.payMessageSendingFee(messageBridge, feeSponsor, maxFee);
+
+        int timestamp = Runtime.getTime();
+        Hash160 callingScriptHash = Runtime.getCallingScriptHash();
+        N3Message.N3MetadataExecutable metadata = new N3Message.N3MetadataExecutable(timestamp, callingScriptHash,
+                storeResult);
+        ByteString serializedMetadata = new StdLib().serialize(metadata);
+        N3Message message = new N3Message(serializedMetadata, rawMsg);
+        return updateEvmMessageState(messageBridge, message);
+    }
+
+    private static void payMessageSendingFee(MessageBridge messageBridge, Hash160 feeSponsor, int maxFee) {
+        // If the deposit fee is higher than the specified max fee, abort.
+        int sendingFee = messageBridge.config.sendingFee;
+        if (sendingFee > maxFee) abort("Max fee exceeded");
+
+        // Fee payment
+        MessageBridgeImpl.payFee(feeSponsor, sendingFee);
+    }
+
+    static void payFee(Hash160 feeSponsor, int fee) {
+        MessageBridgeImpl.addToUnclaimedFees(fee);
+        if (!Hash160.isValid(feeSponsor) || feeSponsor.isZero()) abort("Invalid 'feeSponsor'");
+        if (getExecutingScriptHash().equals(feeSponsor)) abort("Prohibited 'feeSponsor'");
+
+        // Pay the fee and transfer the token
+        if (!new GasToken().transfer(feeSponsor, getExecutingScriptHash(), fee, null)) {
+            abort("Fee transfer failed");
+        }
+    }
+
+    static void addToUnclaimedFees(int amount) {
+        int currentlyUnclaimedFees = getUnclaimedFees();
+        MessageBridgeContract.baseMap.put(KEY_UNCLAIMED_FEES, currentlyUnclaimedFees + amount);
+    }
+
+    private static int updateEvmMessageState(MessageBridge messageBridge, N3Message message) {
+        messageBridge.n3ToEvmMessageState.nonce++;
+        N3MessageEnvelope msgEnvelope = new N3MessageEnvelope(messageBridge.n3ToEvmMessageState.nonce, message);
+        ByteString messageHash = MessageBridgeLib.hashMessageBridgeOp(MessageBridgeContract.cryptoLib, msgEnvelope);
+        ByteString newRoot = BridgeLib.computeNewRoot(MessageBridgeContract.cryptoLib,
+                messageBridge.n3ToEvmMessageState.root, messageHash);
+        messageBridge.n3ToEvmMessageState.root = newRoot;
+        assert messageBridge.n3ToEvmMessageState.root == newRoot : "Root not set correctly";
+        storeMessageBridge(messageBridge);
+        MessageBridgeContract.onMessageSend.fire(msgEnvelope.nonce, msgEnvelope.message.metadataBytes, messageHash,
+                newRoot);
+        return msgEnvelope.nonce;
+    }
+
+    public static int getUnclaimedFees() {
+        return MessageBridgeContract.baseMap.getInt(KEY_UNCLAIMED_FEES);
     }
 
     static class ExecutionManager extends ContractInterface {
