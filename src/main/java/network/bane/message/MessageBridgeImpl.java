@@ -239,34 +239,54 @@ class MessageBridgeImpl {
     }
 
     public static int sendMessage(ByteString rawMsg, Hash160 feeSponsor, int maxFee) {
-        MessageBridge messageBridge = getMessageBridge();
-
-        MessageBridgeImpl.payMessageSendingFee(messageBridge, feeSponsor, maxFee);
+        MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 
         int timestamp = Runtime.getTime();
         Hash160 callingScriptHash = Runtime.getCallingScriptHash();
 
         N3Message.N3MetadataStoreOnly metadata = new N3Message.N3MetadataStoreOnly(timestamp, callingScriptHash);
-        ByteString serializedMetadata = new StdLib().serialize(metadata);
-        N3Message message = new N3Message(serializedMetadata, rawMsg);
-        return updateEvmMessageState(messageBridge, message);
+        return serializeAndUpdateEvmMessageState(metadata, rawMsg);
     }
 
     public static int sendExecutableMessage(ByteString rawMsg, boolean storeResult, Hash160 feeSponsor, int maxFee) {
-        MessageBridge messageBridge = getMessageBridge();
-
-        MessageBridgeImpl.payMessageSendingFee(messageBridge, feeSponsor, maxFee);
+        MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 
         int timestamp = Runtime.getTime();
         Hash160 callingScriptHash = Runtime.getCallingScriptHash();
         N3Message.N3MetadataExecutable metadata = new N3Message.N3MetadataExecutable(timestamp, callingScriptHash,
                 storeResult);
+        return serializeAndUpdateEvmMessageState(metadata, rawMsg);
+    }
+
+    public static int sendResultMessage(int relatedMessageNonce, Hash160 feeSponsor, int maxFee) {
+        ByteString result = getResult(relatedMessageNonce);
+        if (result == null) {
+            abort("Result not found");
+        }
+
+        MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
+
+        int timestamp = Runtime.getTime();
+        Hash160 callingScriptHash = Runtime.getCallingScriptHash();
+
+        N3Message.N3MetadataResult metadata = new N3Message.N3MetadataResult(timestamp, callingScriptHash,
+                relatedMessageNonce);
+        return serializeAndUpdateEvmMessageState(metadata, result);
+    }
+
+    private static int serializeAndUpdateEvmMessageState(Object metadata, ByteString rawMessage) {
+        MessageBridge messageBridge = getMessageBridge();
         ByteString serializedMetadata = new StdLib().serialize(metadata);
-        N3Message message = new N3Message(serializedMetadata, rawMsg);
+        N3Message message = new N3Message(serializedMetadata, rawMessage);
         return updateEvmMessageState(messageBridge, message);
     }
 
-    private static void payMessageSendingFee(MessageBridge messageBridge, Hash160 feeSponsor, int maxFee) {
+    static ByteString getResult(int relatedMessageNonce) {
+        return new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT).get(relatedMessageNonce);
+    }
+
+    private static void payMessageSendingFee(Hash160 feeSponsor, int maxFee) {
+        MessageBridge messageBridge = getMessageBridge();
         // If the deposit fee is higher than the specified max fee, abort.
         int sendingFee = messageBridge.config.sendingFee;
         if (sendingFee > maxFee) abort("Max fee exceeded");

@@ -317,6 +317,13 @@ public class MessageBridgeContract {
         return MessageBridgeImpl.sendExecutableMessage(rawMessage, storeResult, feeSponsor, maxFee);
     }
 
+    public static int sendResultMessage(int relatedMessageNonce, Hash160 feeSponsor, int maxFee) {
+        onlyWhenNotPaused();
+        onlyWhenSendingNotPaused();
+
+        return MessageBridgeImpl.sendResultMessage(relatedMessageNonce, feeSponsor, maxFee);
+    }
+
     // endregion
     // region storing and executing messages (EVM to N3)
 
@@ -386,10 +393,10 @@ public class MessageBridgeContract {
         MessageBridgeImpl.executeMessage(nonce);
     }
 
-    // endregion
-    // region message execution results from EVM
-
-    // todo: handle message execution results from EVM.
+    @Safe
+    public static ByteString getResult(int relatedMessageNonce) {
+        return MessageBridgeImpl.getResult(relatedMessageNonce);
+    }
 
     // endregion
     // region message bridge configuration/state
