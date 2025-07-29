@@ -23,6 +23,7 @@ import io.neow3j.devpack.events.Event;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
 import io.neow3j.devpack.events.Event4Args;
+import io.neow3j.devpack.events.Event5Args;
 import network.bane.structs.message.ExecutableState;
 import network.bane.structs.message.MessageBridge;
 import network.bane.structs.message.N3Message;
@@ -92,8 +93,8 @@ public class MessageBridgeContract {
     static Event onExecutingUnpause;
 
     @DisplayName("MessageSend")
-    @EventParameterNames({"Nonce", "Metadata", "MessageHash", "NewEvmRoot"})
-    static Event4Args<Integer, ByteString, ByteString, ByteString> onMessageSend;
+    @EventParameterNames({"Nonce", "Message", "Metadata", "MessageHash", "NewEvmRoot"})
+    static Event5Args<Integer, ByteString, ByteString, ByteString, ByteString> onMessageSend;
 
     @DisplayName("N3RootUpdate")
     @EventParameterNames({"Nonce", "N3MessageRoot"})
@@ -317,6 +318,13 @@ public class MessageBridgeContract {
         return MessageBridgeImpl.sendExecutableMessage(rawMessage, storeResult, feeSponsor, maxFee);
     }
 
+    public static int sendResultMessage(int relatedMessageNonce, Hash160 feeSponsor, int maxFee) {
+        onlyWhenNotPaused();
+        onlyWhenSendingNotPaused();
+
+        return MessageBridgeImpl.sendResultMessage(relatedMessageNonce, feeSponsor, maxFee);
+    }
+
     // endregion
     // region storing and executing messages (EVM to N3)
 
@@ -386,10 +394,10 @@ public class MessageBridgeContract {
         MessageBridgeImpl.executeMessage(nonce);
     }
 
-    // endregion
-    // region message execution results from EVM
-
-    // todo: handle message execution results from EVM.
+    @Safe
+    public static ByteString getResult(int relatedMessageNonce) {
+        return MessageBridgeImpl.getResult(relatedMessageNonce);
+    }
 
     // endregion
     // region message bridge configuration/state

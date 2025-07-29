@@ -10,7 +10,7 @@ public class DefaultTestValues {
 
     public static final Hash160 MANAGEMENT_CONTRACT_HASH = new Hash160("0x74eace325d73d7fa70c6b8772fabaac20a632706");
     public static final Hash160 MESSAGE_BRIDGE_CONTRACT_HASH = new Hash160(
-            "0xb698011a9630b71d2933cbffe4bcb5c0f3b8af2f");
+            "0x4f350e94f140750239faea9556e3099a98fffb9d");
     public static final Hash160 EXECUTION_MANAGER_CONTRACT_HASH =
             new Hash160("0x3d05286c1834c3077d6547d2a3a173dec1cb588f");
     public static final Hash160 DUMMY_EXEC_MANAGER = new Hash160("0x5cd87a79046523454325a77827006ebfae27e05f");

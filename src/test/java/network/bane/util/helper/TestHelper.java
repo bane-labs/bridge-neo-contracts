@@ -151,6 +151,9 @@ public class TestHelper {
     public static void setupExecutionManager(ContractTestExtension ext) {
         executionManager = new ExecutionManager(ext.getDeployedContract(ExecutionManagerContract.class).getScriptHash(),
                 neow3j);
+    }
+
+    public static void setupMessageTestStorer(ContractTestExtension ext) {
         messageTestStorer = new MessageTestStorer(
                 ext.getDeployedContract(MessageTestStoreContract.class).getScriptHash(), neow3j);
     }

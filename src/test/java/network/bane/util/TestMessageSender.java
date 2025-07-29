@@ -6,12 +6,13 @@ import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import network.bane.util.helper.SmartContractHelper;
 
+import java.math.BigInteger;
+
 import static io.neow3j.transaction.AccountSigner.global;
 import static io.neow3j.types.ContractParameter.bool;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
-import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static network.bane.util.helper.TestHelper.alice;
 import static network.bane.util.helper.TestHelper.messageBridge;
 
@@ -34,15 +35,6 @@ public class TestMessageSender extends SmartContractHelper {
         );
     }
 
-    public Hash256 sendExecutableMessage(String rawMessageHex, boolean storeResult) throws Throwable {
-        return sendExecutableMessage(hexStringToByteArray(rawMessageHex), storeResult);
-    }
-
-    public Hash256 sendExecutableMessage(AccountSigner signer, String rawMessageHex, boolean storeResult)
-            throws Throwable {
-        return sendExecutableMessage(signer, hexStringToByteArray(rawMessageHex), storeResult);
-    }
-
     public Hash256 sendMessage(byte[] rawMessage) throws Throwable {
         return sendMessage(global(alice), rawMessage);
     }
@@ -55,12 +47,16 @@ public class TestMessageSender extends SmartContractHelper {
         );
     }
 
-    public Hash256 sendMessage(String rawMessageHex) throws Throwable {
-        return sendMessage(hexStringToByteArray(rawMessageHex));
+    public Hash256 sendResultMessage(BigInteger relatedMessageNonce) throws Throwable {
+        return sendResultMessage(global(alice), relatedMessageNonce);
     }
 
-    public Hash256 sendMessage(AccountSigner signer, String rawMessageHex) throws Throwable {
-        return sendMessage(signer, hexStringToByteArray(rawMessageHex));
+    public Hash256 sendResultMessage(AccountSigner signer, BigInteger relatedMessageNonce) throws Throwable {
+        return sendAndAwaitExecution(
+                invokeFunction("sendResultMessage", integer(relatedMessageNonce),
+                        hash160(signer.getAccount()), integer(messageBridge.sendingFee())
+                ).signers(signer)
+        );
     }
 
     public void setMessageBridge(Hash160 messageBridge) throws Throwable {

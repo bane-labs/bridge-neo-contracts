@@ -183,17 +183,9 @@ public class MessageBridge extends SmartContractHelper {
         return sendAndAwaitExecution(b.signers(signer, global(feeSponsor)));
     }
 
-    public Hash256 sendMessage(byte[] rawMessage) throws Throwable {
-        return sendMessage(global(alice), rawMessage, alice, sendingFee());
-    }
-
     public Hash256 sendMessage(AccountSigner signer, String rawMessageHex, Hash160 feeSponsor, BigInteger maxFee)
             throws Throwable {
         return sendMessage(signer, hexStringToByteArray(rawMessageHex), feeSponsor, maxFee);
-    }
-
-    public Hash256 sendMessage(String rawMessageHex) throws Throwable {
-        return sendMessage(global(alice), hexStringToByteArray(rawMessageHex), alice, sendingFee());
     }
 
     public Hash256 sendExecutableMessage(AccountSigner signer, byte[] rawMessage, boolean storeResult,
@@ -216,14 +208,10 @@ public class MessageBridge extends SmartContractHelper {
         return sendExecutableMessage(global(alice), rawMessage, storeResult, alice, sendingFee());
     }
 
-    public Hash256 sendExecutableMessage(AccountSigner signer, String rawMessageHex, boolean storeResult)
-            throws Throwable {
-        return sendExecutableMessage(signer, hexStringToByteArray(rawMessageHex), storeResult, alice, sendingFee());
-    }
-
-    public Hash256 sendExecutableMessage(String rawMessageHex, boolean storeResult) throws Throwable {
-        return sendExecutableMessage(global(alice), hexStringToByteArray(rawMessageHex), storeResult, alice,
-                sendingFee());
+    public Hash256 sendResultMessage(AccountSigner signer, BigInteger relatedMessageNonce, Hash160 feeSponsor,
+            BigInteger maxFee) throws Throwable {
+        return sendAndAwaitExecution(invokeFunction("sendResultMessage", integer(relatedMessageNonce),
+                hash160(feeSponsor), integer(maxFee)).signers(signer));
     }
 
     // endregion
@@ -296,7 +284,8 @@ public class MessageBridge extends SmartContractHelper {
     // region execution
 
     public ExecutableStateDto getExecutableState(BigInteger nonce) throws IOException {
-        InvocationResult result = callInvokeFunction("getExecutableState", asList(integer(nonce))).getInvocationResult();
+        InvocationResult result = callInvokeFunction("getExecutableState",
+                asList(integer(nonce))).getInvocationResult();
         if (result.hasStateFault()) {
             throw new IllegalStateException("Failed to get execution state: " + result.getException());
         }
@@ -308,6 +297,15 @@ public class MessageBridge extends SmartContractHelper {
 
     public Hash256 executeMessage(AccountSigner signer, BigInteger nonce) throws Throwable {
         return sendAndAwaitExecution(invokeFunction("executeMessage", integer(nonce)).signers(signer));
+    }
+
+    public byte[] getResult(BigInteger nonce) throws IOException {
+        StackItem item = callInvokeFunction("getResult", asList(integer(nonce))).getInvocationResult()
+                .getFirstStackItem();
+        if (item.getValue() == null) {
+            return new byte[0];
+        }
+        return item.getByteArray();
     }
 
     // endregion
@@ -445,7 +443,7 @@ public class MessageBridge extends SmartContractHelper {
 
     public byte[] serializeMetadataResult(N3MessageMetadataResultDto meta) throws IOException {
         return callInvokeFunction("serializeMetadataResult",
-                asList(integer(meta.timestamp), hash160(meta.sender), integer(meta.initialMessageNonce))
+                asList(integer(meta.timestamp), hash160(meta.sender), integer(meta.relatedMessageNonce))
         ).getInvocationResult().getFirstStackItem().getByteArray();
     }
 

@@ -29,6 +29,10 @@ public class TestMessageSenderContract {
         return getMessageBridge().sendExecutableMessage(rawMessage, storeResult, feeSponsor, maxFee);
     }
 
+    public static int sendResultMessage(int relatedMessageNonce, Hash160 feeSponsor, int maxFee) {
+        return getMessageBridge().sendResultMessage(relatedMessageNonce, feeSponsor, maxFee);
+    }
+
     private static class IMessageBridge extends ContractInterface {
         public IMessageBridge(Hash160 contractHash) {
             super(contractHash);
@@ -40,6 +44,9 @@ public class TestMessageSenderContract {
         @CallFlags(io.neow3j.devpack.constants.CallFlags.All)
         public native int sendExecutableMessage(ByteString rawMessage, boolean storeResult, Hash160 feeSponsor,
                 int maxFee);
+
+        @CallFlags(io.neow3j.devpack.constants.CallFlags.All)
+        public native int sendResultMessage(int relatedMessageNonce, Hash160 feeSponsor, int maxFee);
     }
 
 }
