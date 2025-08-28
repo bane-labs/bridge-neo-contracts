@@ -239,7 +239,7 @@ public class MessageExecutionManagerTest {
     @Test
     @Order(0)
     public void test_notAllowingCallToContractManagement_update() throws Throwable {
-        String contractName = "ExecutionManager";
+        String contractName = "DummyExecutionManager";
         ContractParameter nefFileParam = getNefParamFromTestResources(contractName);
         ContractParameter manifestParam = getManifestParamFromTestResources(contractName);
 
