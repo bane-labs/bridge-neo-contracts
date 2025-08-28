@@ -1,12 +1,19 @@
 package network.bane.message;
 
+import io.neow3j.contract.ContractManagement;
+import io.neow3j.contract.NefFile;
+import io.neow3j.protocol.ObjectMapperFactory;
+import io.neow3j.protocol.core.response.ContractManifest;
+import io.neow3j.protocol.core.response.ContractState;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.StackItem;
+import io.neow3j.serialization.exceptions.DeserializationException;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
+import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.CallFlags;
 import io.neow3j.types.ContractParameter;
@@ -26,16 +33,21 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Paths;
 import java.util.List;
 
 import static io.neow3j.transaction.AccountSigner.none;
+import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.string;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.securityGuard;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
 import static network.bane.util.helper.DefaultTestValues.MESSAGE_BRIDGE_CONTRACT_HASH;
@@ -57,6 +69,7 @@ import static network.bane.util.helper.TestHelper.setupTestContract;
 import static network.bane.util.structs.N3MessageDto.MESSAGE_TYPE_EXECUTABLE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
@@ -97,6 +110,8 @@ public class MessageExecutionManagerTest {
             throw new RuntimeException(format("The management contract hash is not set correctly. Update the script " +
                     "hash to 0x%s.", management.getScriptHash()));
         }
+
+        messageBridge.setExecutionManager(executionManager.getScriptHash());
 
         messageBridge.unpause();
         messageTestStorer.setMessageBridge();
@@ -187,6 +202,34 @@ public class MessageExecutionManagerTest {
 
     // endregion
     // region execution failing
+
+    @Test
+    @Order(0)
+    public void test_notAllowingCallToContractManagement_destroy() throws Throwable {
+        byte[] maliciousUpdateCall = messageBridge.getSerializedN3MethodCall(ContractManagement.SCRIPT_HASH, "destroy",
+                CallFlags.ALL, asList());
+
+        BigInteger maliciousUpdateMsgNonce = messageBridge.storeMessage(maliciousUpdateCall);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.executeMessage(AccountSigner.global(alice), maliciousUpdateMsgNonce));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Prohibited target"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_notAllowingCallToContractManagement_update() throws Throwable {
+        String contractName = "DummyExecutionManager";
+        ContractParameter nefFileParam = getNefParamFromTestResources(contractName);
+        ContractParameter manifestParam = getManifestParamFromTestResources(contractName);
+
+        byte[] maliciousUpdateCall = messageBridge.getSerializedN3MethodCall(ContractManagement.SCRIPT_HASH, "update",
+                CallFlags.ALL, asList(nefFileParam, manifestParam));
+
+        BigInteger maliciousUpdateMsgNonce = messageBridge.storeMessage(maliciousUpdateCall);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.executeMessage(AccountSigner.global(alice), maliciousUpdateMsgNonce));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Prohibited target"));
+    }
 
     /**
      * Tests that the invocation of the execution manager's `executeMessage` method with a calling script hash other
@@ -346,6 +389,56 @@ public class MessageExecutionManagerTest {
     }
 
     // endregion
+    // region update
+
+    @Test
+    @Order(99)
+    public void test_update_notPaused() throws Throwable {
+        String contractFileName = "DummyExecutionManager";
+        NefFile nefFile = getNefFromTestResources(contractFileName);
+        ContractManifest manifest = getManifestFromTestResources(contractFileName);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> executionManager.update(nefFile, manifest, any(null)));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract not paused"));
+    }
+
+    @Test
+    @Order(99)
+    public void test_update_notOwner() throws Throwable {
+        executionManager.pause();
+        String contractFileName = "DummyExecutionManager";
+        NefFile nefFile = getNefFromTestResources(contractFileName);
+        ContractManifest manifest = getManifestFromTestResources(contractFileName);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> executionManager.update(bob, nefFile, manifest, any(null)));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
+        // Revert the state for further tests
+        executionManager.unpause();
+    }
+
+    @Test
+    @Order(100)
+    public void test_update_successful() throws Throwable {
+        executionManager.pause();
+        String contractFileName = "DummyExecutionManager";
+        NefFile nefFile = getNefFromTestResources(contractFileName);
+        ContractManifest manifest = getManifestFromTestResources(contractFileName);
+
+        Hash160 execManagerHash = executionManager.getScriptHash();
+        ContractState contractStateBefore = neow3j.getContractState(execManagerHash).send().getContractState();
+        assertThat(contractStateBefore.getUpdateCounter(), is(0));
+        assertThat(contractStateBefore.getManifest().getAbi().getMethods(), hasSize(greaterThan(1)));
+
+        executionManager.update(owner, nefFile, manifest, any(null));
+
+        ContractState contractStateAfter = neow3j.getContractState(execManagerHash).send().getContractState();
+        assertThat(contractStateAfter.getUpdateCounter(), is(1));
+        assertThat(contractStateAfter.getManifest().getAbi().getMethods(), hasSize(1));
+
+        // This should be the last test. Thus, there's no need to revert the state for further tests.
+    }
+
+    // endregion
     // region private helpers
 
     private BigInteger bestBlockTime() throws IOException {
@@ -363,6 +456,31 @@ public class MessageExecutionManagerTest {
     private byte[] getSerializedN3MethodForTestStoring(String key, ContractParameter value) throws IOException {
         return messageBridge.getSerializedN3MethodCall(messageTestStorer.getScriptHash(), "storeValue", CallFlags.ALL,
                 asList(string(key), value));
+    }
+
+    private NefFile getNefFromTestResources(String contractName) throws IOException, DeserializationException {
+        File contractNefFile = Paths.get("src", "test", "resources", contractName + ".nef").toFile();
+        return NefFile.readFromFile(contractNefFile);
+    }
+
+    private ContractParameter getNefParamFromTestResources(String contractName) throws IOException,
+            DeserializationException {
+        return byteArray(getNefFromTestResources(contractName).toArray());
+    }
+
+    private ContractManifest getManifestFromTestResources(String contractName) throws IOException {
+        File contractManifestFile = Paths.get("src", "test", "resources", contractName + ".manifest.json").toFile();
+        ContractManifest manifest;
+        try (FileInputStream s = new FileInputStream(contractManifestFile)) {
+            manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
+        }
+        return manifest;
+    }
+
+    private ContractParameter getManifestParamFromTestResources(String contractName) throws IOException {
+        ContractManifest manifest = getManifestFromTestResources(contractName);
+        byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
+        return byteArray(manifestBytes);
     }
 
     // endregion

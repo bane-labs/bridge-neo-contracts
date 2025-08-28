@@ -92,7 +92,7 @@ public class ExecutionManagerContract {
 
         N3MethodCall call = (N3MethodCall) new StdLib().deserialize(executableCode);
         if (!N3MethodCall.isValid(call)) abort("Method call has invalid values");
-        if (getExecutingScriptHash().equals(call.target)) abort("Prohibited target");
+        if (isProhibitedForMessageExecution(call.target)) abort("Prohibited target");
 
         // Todo: Consider returning the result. This way the bridge could decide what to do with it.
         Object result = Contract.call(call.target, call.method, call.callFlags, call.args);
@@ -100,6 +100,12 @@ public class ExecutionManagerContract {
         unsetExecutingNonce();
         exitingNonReentrant();
         return result;
+    }
+
+    private static boolean isProhibitedForMessageExecution(Hash160 target) {
+        Hash160 executingScriptHash = getExecutingScriptHash();
+        // Disallow calling itself or the native contract management in a message execution call.
+        return executingScriptHash.equals(target) || new ContractManagement().getHash().equals(target);
     }
 
     // endregion
