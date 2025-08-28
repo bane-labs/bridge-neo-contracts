@@ -199,31 +199,6 @@ public class MessageExecutionManagerTest {
     // endregion
     // region execution failing
 
-    private NefFile getNefFromTestResources(String contractName) throws IOException, DeserializationException {
-        File contractNefFile = Paths.get("src", "test", "resources", contractName + ".nef").toFile();
-        return NefFile.readFromFile(contractNefFile);
-    }
-
-    private ContractParameter getNefParamFromTestResources(String contractName) throws IOException,
-            DeserializationException {
-        return byteArray(getNefFromTestResources(contractName).toArray());
-    }
-
-    private ContractManifest getManifestFromTestResources(String contractName) throws IOException {
-        File contractManifestFile = Paths.get("src", "test", "resources", contractName + ".manifest.json").toFile();
-        ContractManifest manifest;
-        try (FileInputStream s = new FileInputStream(contractManifestFile)) {
-            manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
-        }
-        return manifest;
-    }
-
-    private ContractParameter getManifestParamFromTestResources(String contractName) throws IOException {
-        ContractManifest manifest = getManifestFromTestResources(contractName);
-        byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
-        return byteArray(manifestBytes);
-    }
-
     @Test
     @Order(0)
     public void test_notAllowingCallToContractManagement_destroy() throws Throwable {
@@ -427,6 +402,31 @@ public class MessageExecutionManagerTest {
     private byte[] getSerializedN3MethodForTestStoring(String key, ContractParameter value) throws IOException {
         return messageBridge.getSerializedN3MethodCall(messageTestStorer.getScriptHash(), "storeValue", CallFlags.ALL,
                 asList(string(key), value));
+    }
+
+    private NefFile getNefFromTestResources(String contractName) throws IOException, DeserializationException {
+        File contractNefFile = Paths.get("src", "test", "resources", contractName + ".nef").toFile();
+        return NefFile.readFromFile(contractNefFile);
+    }
+
+    private ContractParameter getNefParamFromTestResources(String contractName) throws IOException,
+            DeserializationException {
+        return byteArray(getNefFromTestResources(contractName).toArray());
+    }
+
+    private ContractManifest getManifestFromTestResources(String contractName) throws IOException {
+        File contractManifestFile = Paths.get("src", "test", "resources", contractName + ".manifest.json").toFile();
+        ContractManifest manifest;
+        try (FileInputStream s = new FileInputStream(contractManifestFile)) {
+            manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
+        }
+        return manifest;
+    }
+
+    private ContractParameter getManifestParamFromTestResources(String contractName) throws IOException {
+        ContractManifest manifest = getManifestFromTestResources(contractName);
+        byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
+        return byteArray(manifestBytes);
     }
 
     // endregion
