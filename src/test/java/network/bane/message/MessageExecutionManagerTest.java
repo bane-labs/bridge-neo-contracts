@@ -4,6 +4,7 @@ import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.NefFile;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
+import io.neow3j.protocol.core.response.ContractState;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.StackItem;
@@ -40,11 +41,13 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import static io.neow3j.transaction.AccountSigner.none;
+import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.string;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.securityGuard;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
 import static network.bane.util.helper.DefaultTestValues.MESSAGE_BRIDGE_CONTRACT_HASH;
@@ -66,6 +69,7 @@ import static network.bane.util.helper.TestHelper.setupTestContract;
 import static network.bane.util.structs.N3MessageDto.MESSAGE_TYPE_EXECUTABLE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
@@ -382,6 +386,56 @@ public class MessageExecutionManagerTest {
         assertThat(storedMetadata.sender, is(sender));
 
         assertThat(executionManager.getExecutingNonce(), is(BigInteger.ZERO));
+    }
+
+    // endregion
+    // region update
+
+    @Test
+    @Order(99)
+    public void test_update_notPaused() throws Throwable {
+        String contractFileName = "DummyExecutionManager";
+        NefFile nefFile = getNefFromTestResources(contractFileName);
+        ContractManifest manifest = getManifestFromTestResources(contractFileName);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> executionManager.update(nefFile, manifest, any(null)));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract not paused"));
+    }
+
+    @Test
+    @Order(99)
+    public void test_update_notOwner() throws Throwable {
+        executionManager.pause();
+        String contractFileName = "DummyExecutionManager";
+        NefFile nefFile = getNefFromTestResources(contractFileName);
+        ContractManifest manifest = getManifestFromTestResources(contractFileName);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> executionManager.update(bob, nefFile, manifest, any(null)));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
+        // Revert the state for further tests
+        executionManager.unpause();
+    }
+
+    @Test
+    @Order(100)
+    public void test_update_successful() throws Throwable {
+        executionManager.pause();
+        String contractFileName = "DummyExecutionManager";
+        NefFile nefFile = getNefFromTestResources(contractFileName);
+        ContractManifest manifest = getManifestFromTestResources(contractFileName);
+
+        Hash160 execManagerHash = executionManager.getScriptHash();
+        ContractState contractStateBefore = neow3j.getContractState(execManagerHash).send().getContractState();
+        assertThat(contractStateBefore.getUpdateCounter(), is(0));
+        assertThat(contractStateBefore.getManifest().getAbi().getMethods(), hasSize(greaterThan(1)));
+
+        executionManager.update(owner, nefFile, manifest, any(null));
+
+        ContractState contractStateAfter = neow3j.getContractState(execManagerHash).send().getContractState();
+        assertThat(contractStateAfter.getUpdateCounter(), is(1));
+        assertThat(contractStateAfter.getManifest().getAbi().getMethods(), hasSize(1));
+
+        // This should be the last test. Thus, there's no need to revert the state for further tests.
     }
 
     // endregion
