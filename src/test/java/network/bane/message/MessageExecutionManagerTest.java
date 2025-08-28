@@ -1,12 +1,18 @@
 package network.bane.message;
 
+import io.neow3j.contract.ContractManagement;
+import io.neow3j.contract.NefFile;
+import io.neow3j.protocol.ObjectMapperFactory;
+import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.StackItem;
+import io.neow3j.serialization.exceptions.DeserializationException;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
+import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.CallFlags;
 import io.neow3j.types.ContractParameter;
@@ -26,8 +32,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Paths;
 import java.util.List;
 
 import static io.neow3j.transaction.AccountSigner.none;
@@ -97,6 +106,8 @@ public class MessageExecutionManagerTest {
             throw new RuntimeException(format("The management contract hash is not set correctly. Update the script " +
                     "hash to 0x%s.", management.getScriptHash()));
         }
+
+        messageBridge.setExecutionManager(executionManager.getScriptHash());
 
         messageBridge.unpause();
         messageTestStorer.setMessageBridge();
@@ -187,6 +198,59 @@ public class MessageExecutionManagerTest {
 
     // endregion
     // region execution failing
+
+    private NefFile getNefFromTestResources(String contractName) throws IOException, DeserializationException {
+        File contractNefFile = Paths.get("src", "test", "resources", contractName + ".nef").toFile();
+        return NefFile.readFromFile(contractNefFile);
+    }
+
+    private ContractParameter getNefParamFromTestResources(String contractName) throws IOException,
+            DeserializationException {
+        return byteArray(getNefFromTestResources(contractName).toArray());
+    }
+
+    private ContractManifest getManifestFromTestResources(String contractName) throws IOException {
+        File contractManifestFile = Paths.get("src", "test", "resources", contractName + ".manifest.json").toFile();
+        ContractManifest manifest;
+        try (FileInputStream s = new FileInputStream(contractManifestFile)) {
+            manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
+        }
+        return manifest;
+    }
+
+    private ContractParameter getManifestParamFromTestResources(String contractName) throws IOException {
+        ContractManifest manifest = getManifestFromTestResources(contractName);
+        byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
+        return byteArray(manifestBytes);
+    }
+
+    @Test
+    @Order(0)
+    public void test_notAllowingCallToContractManagement_destroy() throws Throwable {
+        byte[] maliciousUpdateCall = messageBridge.getSerializedN3MethodCall(ContractManagement.SCRIPT_HASH, "destroy",
+                CallFlags.ALL, asList());
+
+        BigInteger maliciousUpdateMsgNonce = messageBridge.storeMessage(maliciousUpdateCall);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.executeMessage(AccountSigner.global(alice), maliciousUpdateMsgNonce));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Prohibited target"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_notAllowingCallToContractManagement_update() throws Throwable {
+        String contractName = "ExecutionManager";
+        ContractParameter nefFileParam = getNefParamFromTestResources(contractName);
+        ContractParameter manifestParam = getManifestParamFromTestResources(contractName);
+
+        byte[] maliciousUpdateCall = messageBridge.getSerializedN3MethodCall(ContractManagement.SCRIPT_HASH, "update",
+                CallFlags.ALL, asList(nefFileParam, manifestParam));
+
+        BigInteger maliciousUpdateMsgNonce = messageBridge.storeMessage(maliciousUpdateCall);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.executeMessage(AccountSigner.global(alice), maliciousUpdateMsgNonce));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Prohibited target"));
+    }
 
     /**
      * Tests that the invocation of the execution manager's `executeMessage` method with a calling script hash other

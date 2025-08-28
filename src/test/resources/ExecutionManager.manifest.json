@@ -1,0 +1,25 @@
+{
+  "name" : "ExecutionManager",
+  "groups" : [ ],
+  "features" : { },
+  "supportedstandards" : [ ],
+  "abi" : {
+    "methods" : [ {
+      "name" : "executeMessage",
+      "parameters" : [ {
+        "name" : "nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "executableCode",
+        "type" : "ByteArray"
+      } ],
+      "offset" : 0,
+      "returntype" : "Void",
+      "safe" : false
+    } ],
+    "events" : [ ]
+  },
+  "permissions" : [ ],
+  "trusts" : [ ],
+  "extra" : { }
+}
