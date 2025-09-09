@@ -65,36 +65,36 @@ class MessageBridgeImpl {
     // region config
 
     static void setSendingFee(int newFee) {
-        MessageBridge messageBridge = getMessageBridge();
         if (newFee < 0) abort("Sending fee must be nonnegative");
+        MessageBridge messageBridge = getMessageBridge();
         messageBridge.config.sendingFee = newFee;
         storeMessageBridge(messageBridge);
     }
 
     static void setMaxBytesForSending(int newMaxBytes) {
-        MessageBridge messageBridge = getMessageBridge();
         if (newMaxBytes <= 0) abort("Max bytes for sending must be positive");
+        MessageBridge messageBridge = getMessageBridge();
         messageBridge.config.maxBytesForSending = newMaxBytes;
         storeMessageBridge(messageBridge);
     }
 
     static void setMaxNrMessagesForStoring(int newMaxNrMessages) {
-        MessageBridge messageBridge = getMessageBridge();
         if (newMaxNrMessages <= 0) abort("Max number of messages for storing must be positive");
+        MessageBridge messageBridge = getMessageBridge();
         messageBridge.config.maxNrMessagesForStoring = newMaxNrMessages;
         storeMessageBridge(messageBridge);
     }
 
     static void setExecutionManager(Hash160 newExecutionManager) {
-        MessageBridge messageBridge = getMessageBridge();
         if (!new ContractManagement().isContract(newExecutionManager)) abort("Execution manager must be a contract");
+        MessageBridge messageBridge = getMessageBridge();
         messageBridge.config.executionManager = newExecutionManager;
         storeMessageBridge(messageBridge);
     }
 
     static void setExecutionWindowMillis(int newExecutionWindowMillis) {
-        MessageBridge messageBridge = getMessageBridge();
         if (newExecutionWindowMillis <= 0) abort("Execution window must be positive");
+        MessageBridge messageBridge = getMessageBridge();
         messageBridge.config.executionWindowMilliseconds = newExecutionWindowMillis;
         storeMessageBridge(messageBridge);
     }
