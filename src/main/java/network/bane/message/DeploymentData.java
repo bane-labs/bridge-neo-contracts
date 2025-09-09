@@ -10,7 +10,8 @@ class DeploymentData {
     public Hash160 executionManager;
 
     public static boolean isValid(DeploymentData deployData) {
-        return deployData.linkedChainId != null && deployData.linkedChainId > 0 &&
+        return deployData != null &&
+                deployData.linkedChainId != null && deployData.linkedChainId > 0 &&
                 deployData.managementContract != null && Hash160.isValid(deployData.managementContract) &&
                 deployData.executionManager != null && Hash160.isValid(deployData.executionManager);
     }

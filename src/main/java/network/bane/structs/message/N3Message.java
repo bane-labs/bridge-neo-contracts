@@ -26,12 +26,15 @@ public class N3Message {
     }
 
     public static boolean isValid(N3Message message) {
-        return message.metadataBytes != null && message.rawMessage != null && message.rawMessage.length() > 0;
+        return message != null &&
+                message.metadataBytes != null &&
+                message.rawMessage != null && message.rawMessage.length() > 0;
     }
 
     @Struct
     public static class N3MetadataExecutable extends N3Metadata {
         public boolean storeResult;
+
         public N3MetadataExecutable(int timestamp, Hash160 sender, boolean storeResult) {
             super(MESSAGE_TYPE_EXECUTABLE, timestamp, sender);
             this.storeResult = storeResult;
@@ -48,6 +51,7 @@ public class N3Message {
     @Struct
     public static class N3MetadataResult extends N3Metadata {
         public int initialMessageNonce;
+
         public N3MetadataResult(int timestamp, Hash160 sender, int initialMessageNonce) {
             super(MESSAGE_TYPE_RESULT, timestamp, sender);
             this.initialMessageNonce = initialMessageNonce;
@@ -76,7 +80,8 @@ public class N3Message {
         }
 
         public static boolean isValid(N3Metadata metadata) {
-            return metadata.timestamp > 0 &&
+            return metadata != null &&
+                    metadata.timestamp > 0 &&
                     metadata.sender != null && Hash160.isValid(metadata.sender) && !metadata.sender.isZero();
         }
     }
