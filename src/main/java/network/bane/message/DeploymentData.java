@@ -13,7 +13,9 @@ class DeploymentData {
         return deployData != null &&
                 deployData.linkedChainId != null && deployData.linkedChainId > 0 &&
                 deployData.managementContract != null && Hash160.isValid(deployData.managementContract) &&
-                deployData.executionManager != null && Hash160.isValid(deployData.executionManager);
+                !deployData.managementContract.isZero() &&
+                deployData.executionManager != null && Hash160.isValid(deployData.executionManager) &&
+                !deployData.executionManager.isZero();
     }
 
 }
