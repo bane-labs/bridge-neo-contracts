@@ -34,6 +34,7 @@ import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT;
 
 class MessageBridgeImpl {
 
+    private static final int UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING = 1000;
     // Value is too large for int, using a string instead and convert when needed.
     private static final String UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS = "31536000000"; // 1 year in milliseconds
 
@@ -84,6 +85,8 @@ class MessageBridgeImpl {
 
     static void setMaxNrMessagesForStoring(int newMaxNrMessages) {
         if (newMaxNrMessages <= 0) abort("Max number of messages for storing must be positive");
+        if (newMaxNrMessages > UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING)
+            abort("Max number of messages for storing too large");
         MessageBridge messageBridge = getMessageBridge();
         messageBridge.config.maxNrMessagesForStoring = newMaxNrMessages;
         storeMessageBridge(messageBridge);

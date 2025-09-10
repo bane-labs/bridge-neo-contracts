@@ -90,6 +90,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MessageBridgeTest {
 
+    private static final BigInteger UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING = new BigInteger("1000");
     private static final BigInteger UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS = new BigInteger("31536000000");
 
     @RegisterExtension
@@ -753,6 +754,26 @@ public class MessageBridgeTest {
 
         // revert the state for further tests
         messageBridge.setMaxNrMessagesForStoring(maxNrMessagesBefore);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setMaxNrMessageForStoring_maxValue() throws Throwable {
+        BigInteger previousMaxNrMessagesForStoring = messageBridge.maxNrMessagesForStoring();
+
+        messageBridge.setMaxNrMessagesForStoring(UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING);
+        assertThat(messageBridge.maxNrMessagesForStoring(), is(UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING));
+
+        messageBridge.setMaxNrMessagesForStoring(previousMaxNrMessagesForStoring);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setMaxNrMessageForStoring_valueTooLarge() {
+        BigInteger invalidMaxNrMessagesForStoring = UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING.add(BigInteger.ONE);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.setMaxNrMessagesForStoring(invalidMaxNrMessagesForStoring));
+        assertThat(thrown.getMessage(), containsString("Max number of messages for storing too large"));
     }
 
     @Test
