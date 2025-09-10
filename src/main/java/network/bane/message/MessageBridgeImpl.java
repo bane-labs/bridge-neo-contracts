@@ -86,6 +86,8 @@ class MessageBridgeImpl {
     }
 
     static void setExecutionManager(Hash160 newExecutionManager) {
+        if (newExecutionManager == null || !Hash160.isValid(newExecutionManager) || newExecutionManager.isZero())
+            abort("Invalid execution manager");
         if (!new ContractManagement().isContract(newExecutionManager)) abort("Execution manager must be a contract");
         MessageBridge messageBridge = getMessageBridge();
         messageBridge.config.executionManager = newExecutionManager;

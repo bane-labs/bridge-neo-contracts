@@ -36,8 +36,11 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 
+import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.global;
+import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
+import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
@@ -832,6 +835,34 @@ public class MessageBridgeTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.setExecutionManager(newExecutionManager));
         assertThat(thrown.getMessage(), containsString("Execution manager must be a contract"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_setExecutionManager_null() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.invokeFunction("setExecutionManager", any(null))
+                        .signers(calledByEntry(governor)).sign());
+        assertThat(thrown.getMessage(), containsString("Invalid execution manager"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_setExecutionManager_invalid() {
+        byte[] newExecutionManager = hexStringToByteArray("0x1253");
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.invokeFunction("setExecutionManager", byteArray(newExecutionManager))
+                        .signers(calledByEntry(governor)).sign());
+        assertThat(thrown.getMessage(), containsString("Invalid execution manager"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_setExecutionManager_zero() {
+        Hash160 newExecutionManager = Hash160.ZERO;
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.setExecutionManager(newExecutionManager));
+        assertThat(thrown.getMessage(), containsString("Invalid execution manager"));
     }
 
     @Test
