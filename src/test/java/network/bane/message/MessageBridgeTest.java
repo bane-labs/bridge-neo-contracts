@@ -36,8 +36,11 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 
+import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.global;
+import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
+import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
@@ -86,6 +89,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MessageBridgeTest {
+
+    private static final BigInteger UPPER_LIMIT_MAX_BYTES_FOR_SENDING = new BigInteger("10240");
+    private static final BigInteger UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING = new BigInteger("1000");
+    private static final BigInteger UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS = new BigInteger("31536000000");
 
     @RegisterExtension
     public static final ContractTestExtension ext = new ContractTestExtension();
@@ -713,6 +720,26 @@ public class MessageBridgeTest {
 
     @Test
     @Order(0)
+    public void test_setMaxBytesForSending_maxValue() throws Throwable {
+        BigInteger previousMaxBytesForSending = messageBridge.maxBytesForSending();
+
+        messageBridge.setMaxBytesForSending(UPPER_LIMIT_MAX_BYTES_FOR_SENDING);
+        assertThat(messageBridge.maxBytesForSending(), is(UPPER_LIMIT_MAX_BYTES_FOR_SENDING));
+
+        messageBridge.setMaxBytesForSending(previousMaxBytesForSending);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setMaxBytesForSending_valueTooLarge() {
+        BigInteger invalidMaxBytesForSending = UPPER_LIMIT_MAX_BYTES_FOR_SENDING.add(BigInteger.ONE);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.setMaxBytesForSending(invalidMaxBytesForSending));
+        assertThat(thrown.getMessage(), containsString("Max bytes for sending too large"));
+    }
+
+    @Test
+    @Order(0)
     public void test_setMaxBytesForSending_invalidValue() {
         BigInteger invalidMaxBytes = BigInteger.ZERO;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
@@ -752,6 +779,26 @@ public class MessageBridgeTest {
 
     @Test
     @Order(0)
+    public void test_setMaxNrMessageForStoring_maxValue() throws Throwable {
+        BigInteger previousMaxNrMessagesForStoring = messageBridge.maxNrMessagesForStoring();
+
+        messageBridge.setMaxNrMessagesForStoring(UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING);
+        assertThat(messageBridge.maxNrMessagesForStoring(), is(UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING));
+
+        messageBridge.setMaxNrMessagesForStoring(previousMaxNrMessagesForStoring);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setMaxNrMessageForStoring_valueTooLarge() {
+        BigInteger invalidMaxNrMessagesForStoring = UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING.add(BigInteger.ONE);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.setMaxNrMessagesForStoring(invalidMaxNrMessagesForStoring));
+        assertThat(thrown.getMessage(), containsString("Max number of messages for storing too large"));
+    }
+
+    @Test
+    @Order(0)
     public void test_setMaxNrMessageForStoring_invalidValue() {
         BigInteger invalidMaxNrMessages = BigInteger.ZERO;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
@@ -787,6 +834,26 @@ public class MessageBridgeTest {
 
         // revert the state for further tests
         messageBridge.setExecutionWindowMilliseconds(execWindowMillisBefore);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setExecutionWindowMilliseconds_maxValue() throws Throwable {
+        BigInteger previousExecWindowMillis = messageBridge.executionWindowMilliseconds();
+
+        messageBridge.setExecutionWindowMilliseconds(UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS);
+        assertThat(messageBridge.executionWindowMilliseconds(), is(UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS));
+
+        messageBridge.setExecutionWindowMilliseconds(previousExecWindowMillis);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setExecutionWindowMilliseconds_valueTooLarge() {
+        BigInteger invalidExecWindowSeconds = UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS.add(BigInteger.ONE); // 1ms too large
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.setExecutionWindowMilliseconds(invalidExecWindowSeconds));
+        assertThat(thrown.getMessage(), containsString("Execution window too large"));
     }
 
     @Test
@@ -832,6 +899,34 @@ public class MessageBridgeTest {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.setExecutionManager(newExecutionManager));
         assertThat(thrown.getMessage(), containsString("Execution manager must be a contract"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_setExecutionManager_null() {
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.invokeFunction("setExecutionManager", any(null))
+                        .signers(calledByEntry(governor)).sign());
+        assertThat(thrown.getMessage(), containsString("Invalid execution manager"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_setExecutionManager_invalid() {
+        byte[] newExecutionManager = hexStringToByteArray("0x1253");
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.invokeFunction("setExecutionManager", byteArray(newExecutionManager))
+                        .signers(calledByEntry(governor)).sign());
+        assertThat(thrown.getMessage(), containsString("Invalid execution manager"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_setExecutionManager_zero() {
+        Hash160 newExecutionManager = Hash160.ZERO;
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.setExecutionManager(newExecutionManager));
+        assertThat(thrown.getMessage(), containsString("Invalid execution manager"));
     }
 
     @Test
