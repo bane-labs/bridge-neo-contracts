@@ -90,6 +90,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MessageBridgeTest {
 
+    private static final BigInteger UPPER_LIMIT_MAX_BYTES_FOR_SENDING = new BigInteger("10240");
     private static final BigInteger UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING = new BigInteger("1000");
     private static final BigInteger UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS = new BigInteger("31536000000");
 
@@ -715,6 +716,26 @@ public class MessageBridgeTest {
 
         // revert the state for further tests
         messageBridge.setMaxBytesForSending(maxBytesBefore);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setMaxBytesForSending_maxValue() throws Throwable {
+        BigInteger previousMaxBytesForSending = messageBridge.maxBytesForSending();
+
+        messageBridge.setMaxBytesForSending(UPPER_LIMIT_MAX_BYTES_FOR_SENDING);
+        assertThat(messageBridge.maxBytesForSending(), is(UPPER_LIMIT_MAX_BYTES_FOR_SENDING));
+
+        messageBridge.setMaxBytesForSending(previousMaxBytesForSending);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setMaxBytesForSending_valueTooLarge() {
+        BigInteger invalidMaxBytesForSending = UPPER_LIMIT_MAX_BYTES_FOR_SENDING.add(BigInteger.ONE);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.setMaxBytesForSending(invalidMaxBytesForSending));
+        assertThat(thrown.getMessage(), containsString("Max bytes for sending too large"));
     }
 
     @Test

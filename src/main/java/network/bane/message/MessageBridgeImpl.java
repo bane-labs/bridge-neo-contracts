@@ -34,6 +34,9 @@ import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT;
 
 class MessageBridgeImpl {
 
+    // These values are absolute upper bounds and serve as protective constraints to avoid setting too large values. If
+    // needed, they can be adjusted with a contract update.
+    private static final int UPPER_LIMIT_MAX_BYTES_FOR_SENDING = 10240; // 10 KB
     private static final int UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING = 1000;
     // Value is too large for int, using a string instead and convert when needed.
     private static final String UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS = "31536000000"; // 1 year in milliseconds
@@ -78,6 +81,7 @@ class MessageBridgeImpl {
 
     static void setMaxBytesForSending(int newMaxBytes) {
         if (newMaxBytes <= 0) abort("Max bytes for sending must be positive");
+        if (newMaxBytes > UPPER_LIMIT_MAX_BYTES_FOR_SENDING) abort("Max bytes for sending too large");
         MessageBridge messageBridge = getMessageBridge();
         messageBridge.config.maxBytesForSending = newMaxBytes;
         storeMessageBridge(messageBridge);
