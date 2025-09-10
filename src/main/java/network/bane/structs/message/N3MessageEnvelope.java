@@ -13,7 +13,8 @@ public class N3MessageEnvelope {
     }
 
     public static boolean isValid(N3MessageEnvelope message) {
-        return message.nonce != null &&
+        return message != null &&
+                message.nonce != null &&
                 message.message != null && N3Message.isValid(message.message);
     }
 

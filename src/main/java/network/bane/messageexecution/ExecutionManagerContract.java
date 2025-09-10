@@ -134,7 +134,8 @@ public class ExecutionManagerContract {
         Hash160 messageBridge;
 
         public static boolean isValid(MessageExecutorDeploymentData data) {
-            return data.management != null && Hash160.isValid(data.management) && !data.management.isZero() &&
+            return data != null &&
+                    data.management != null && Hash160.isValid(data.management) && !data.management.isZero() &&
                     data.messageBridge != null && Hash160.isValid(data.messageBridge) && !data.messageBridge.isZero();
         }
     }
