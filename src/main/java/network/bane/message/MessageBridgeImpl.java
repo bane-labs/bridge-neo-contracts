@@ -23,6 +23,7 @@ import network.bane.structs.message.N3MessageEnvelope;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
+import static io.neow3j.devpack.StringLiteralHelper.stringToInt;
 import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_EXECUTABLE;
 import static network.bane.message.MessageBridgeContractHelper.managementContract;
 import static network.bane.message.StorageConstants.KEY_MESSAGE_BRIDGE;
@@ -32,6 +33,9 @@ import static network.bane.message.StorageConstants.PREFIX_MSG_MESSAGES;
 import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT;
 
 class MessageBridgeImpl {
+
+    // Value is too large for int, using a string instead and convert when needed.
+    private static final String UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS = "31536000000"; // 1 year in milliseconds
 
     // region message bridge
 
@@ -96,6 +100,8 @@ class MessageBridgeImpl {
 
     static void setExecutionWindowMillis(int newExecutionWindowMillis) {
         if (newExecutionWindowMillis <= 0) abort("Execution window must be positive");
+        if (newExecutionWindowMillis > stringToInt(UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS))
+            abort("Execution window too large");
         MessageBridge messageBridge = getMessageBridge();
         messageBridge.config.executionWindowMilliseconds = newExecutionWindowMillis;
         storeMessageBridge(messageBridge);

@@ -90,6 +90,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MessageBridgeTest {
 
+    private static final BigInteger UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS = new BigInteger("31536000000");
+
     @RegisterExtension
     public static final ContractTestExtension ext = new ContractTestExtension();
 
@@ -790,6 +792,26 @@ public class MessageBridgeTest {
 
         // revert the state for further tests
         messageBridge.setExecutionWindowMilliseconds(execWindowMillisBefore);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setExecutionWindowMilliseconds_maxValue() throws Throwable {
+        BigInteger previousExecWindowMillis = messageBridge.executionWindowMilliseconds();
+
+        messageBridge.setExecutionWindowMilliseconds(UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS);
+        assertThat(messageBridge.executionWindowMilliseconds(), is(UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS));
+
+        messageBridge.setExecutionWindowMilliseconds(previousExecWindowMillis);
+    }
+
+    @Test
+    @Order(0)
+    public void test_setExecutionWindowMilliseconds_valueTooLarge() {
+        BigInteger invalidExecWindowSeconds = UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS.add(BigInteger.ONE); // 1ms too large
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.setExecutionWindowMilliseconds(invalidExecWindowSeconds));
+        assertThat(thrown.getMessage(), containsString("Execution window too large"));
     }
 
     @Test
