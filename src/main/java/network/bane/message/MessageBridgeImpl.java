@@ -351,6 +351,15 @@ class MessageBridgeImpl {
 
         @CallFlags(io.neow3j.devpack.constants.CallFlags.All)
         public native Object executeMessage(int nonce, ByteString executableCode);
+
+        @CallFlags(io.neow3j.devpack.constants.CallFlags.ReadOnly)
+        public native ByteString serializeCall(Hash160 target, String method, byte callFlags, Object[] args);
+
+        @CallFlags(io.neow3j.devpack.constants.CallFlags.ReadOnly)
+        public native boolean isValidCall(ByteString serializedCall);
+
+        @CallFlags(io.neow3j.devpack.constants.CallFlags.ReadOnly)
+        public native boolean isAllowedCall(ByteString serializedCall);
     }
 
     // endregion

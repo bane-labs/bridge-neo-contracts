@@ -22,13 +22,11 @@ import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
-import io.neow3j.devpack.events.Event4Args;
 import io.neow3j.devpack.events.Event5Args;
 import network.bane.structs.message.ExecutableState;
 import network.bane.structs.message.MessageBridge;
 import network.bane.structs.message.N3Message;
 import network.bane.structs.message.N3MessageEnvelope;
-import network.bane.structs.message.N3MethodCall;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.checkWitness;
@@ -329,8 +327,19 @@ public class MessageBridgeContract {
     // region storing and executing messages (EVM to N3)
 
     @Safe
-    public static ByteString getSerializedN3MethodCall(Hash160 target, String method, byte callFlags, Object[] args) {
-        return new StdLib().serialize(new N3MethodCall(target, method, callFlags, args));
+    public static ByteString serializeCall(Hash160 target, String method, byte callFlags, Object[] args) {
+        return new MessageBridgeImpl.ExecutionManager(executionManager())
+                .serializeCall(target, method, callFlags, args);
+    }
+
+    @Safe
+    public static boolean isValidCall(ByteString serializedCall) {
+        return new MessageBridgeImpl.ExecutionManager(executionManager()).isValidCall(serializedCall);
+    }
+
+    @Safe
+    public static boolean isAllowedCall(ByteString serializedCall) {
+        return new MessageBridgeImpl.ExecutionManager(executionManager()).isAllowedCall(serializedCall);
     }
 
     @Safe
