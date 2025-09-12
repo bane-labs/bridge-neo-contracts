@@ -10,17 +10,14 @@ import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
-import io.neow3j.transaction.AccountSigner;
 import io.neow3j.types.CallFlags;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.types.StackItemType;
-import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.messageexecution.ExecutionManagerContract;
-import network.bane.testhelper.MessageTestStoreContract;
 import network.bane.testhelper.TestContract;
 import network.bane.testhelper.TestMessageSenderContract;
 import network.bane.util.MessageHelper;
@@ -65,7 +62,6 @@ import static network.bane.util.TestHelper.validator3;
 import static network.bane.util.TestHelper.validator4;
 import static network.bane.util.TestHelper.validator5;
 import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
-import static network.bane.util.helper.DefaultTestValues.EXECUTION_MANAGER_CONTRACT_HASH;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
 import static network.bane.util.helper.DefaultTestValues.MESSAGE_BRIDGE_CONTRACT_HASH;
 import static network.bane.util.helper.PrintHelper.printTransactionFee;
@@ -170,7 +166,7 @@ public class MessageSyncTest {
         BigInteger nonce = BigInteger.ONE;
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = new Hash160("0x69ecca587293047be4c59159bf8bc399985c160d");
-        byte[] msgBytes = messageBridge.getSerializedN3MethodCall(testContract, "store", CallFlags.WRITE_STATES,
+        byte[] msgBytes = messageBridge.serializeCall(testContract, "store", CallFlags.WRITE_STATES,
                 asList(integer(nonce), integer(timestamp)));
         assertThat(toHexStringNoPrefix(msgBytes),
                 is("400428141418e358c565207768eae8d237241e85d3e9f1cb280573746f72652101024002210101210440a87c68"));
@@ -497,7 +493,7 @@ public class MessageSyncTest {
     }
 
     private byte[] getSerializedN3MethodForTestStoring(String key, ContractParameter value) throws IOException {
-        return messageBridge.getSerializedN3MethodCall(messageTestStorer.getScriptHash(), "storeValue", CallFlags.ALL,
+        return messageBridge.serializeCall(messageTestStorer.getScriptHash(), "storeValue", CallFlags.ALL,
                 asList(string(key), value));
     }
 
@@ -511,7 +507,7 @@ public class MessageSyncTest {
 
         BigInteger messageBridgeGasBalance = gasToken.getBalanceOf(messageBridge.getScriptHash());
         // Create a function to fetch the current balance of the message bridge contract. Then, return it.
-        byte[] getMessageBridgeGasBalance = messageBridge.getSerializedN3MethodCall(gasToken.getScriptHash(),
+        byte[] getMessageBridgeGasBalance = messageBridge.serializeCall(gasToken.getScriptHash(),
                 "balanceOf", CallFlags.ALL, asList(hash160(messageBridge.getScriptHash())));
         BigInteger executableMessageNonce = messageBridge.storeMessage(getMessageBridgeGasBalance);
 

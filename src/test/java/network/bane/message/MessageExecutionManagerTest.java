@@ -206,7 +206,7 @@ public class MessageExecutionManagerTest {
     @Test
     @Order(0)
     public void test_notAllowingCallToContractManagement_destroy() throws Throwable {
-        byte[] maliciousUpdateCall = messageBridge.getSerializedN3MethodCall(ContractManagement.SCRIPT_HASH, "destroy",
+        byte[] maliciousUpdateCall = messageBridge.serializeCall(ContractManagement.SCRIPT_HASH, "destroy",
                 CallFlags.ALL, asList());
 
         BigInteger maliciousUpdateMsgNonce = messageBridge.storeMessage(maliciousUpdateCall);
@@ -222,7 +222,7 @@ public class MessageExecutionManagerTest {
         ContractParameter nefFileParam = getNefParamFromTestResources(contractName);
         ContractParameter manifestParam = getManifestParamFromTestResources(contractName);
 
-        byte[] maliciousUpdateCall = messageBridge.getSerializedN3MethodCall(ContractManagement.SCRIPT_HASH, "update",
+        byte[] maliciousUpdateCall = messageBridge.serializeCall(ContractManagement.SCRIPT_HASH, "update",
                 CallFlags.ALL, asList(nefFileParam, manifestParam));
 
         BigInteger maliciousUpdateMsgNonce = messageBridge.storeMessage(maliciousUpdateCall);
@@ -264,7 +264,7 @@ public class MessageExecutionManagerTest {
     @Test
     @Order(1)
     public void test_executeMessage_fail_n3MethodCallBytes_invalidTarget() throws Throwable {
-        byte[] n3MethodCallBytes = messageBridge.getSerializedN3MethodCall(Hash160.ZERO, "store", CallFlags.ALL,
+        byte[] n3MethodCallBytes = messageBridge.serializeCall(Hash160.ZERO, "store", CallFlags.ALL,
                 asList());
         BigInteger nonce = messageBridge.storeMessage(n3MethodCallBytes);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
@@ -279,7 +279,7 @@ public class MessageExecutionManagerTest {
     @Test
     @Order(1)
     public void test_executeMessage_fail_n3MethodCallBytes_invalidMethodName() throws Throwable {
-        byte[] n3MethodCallBytes = messageBridge.getSerializedN3MethodCall(messageTestStorer.getScriptHash(), "",
+        byte[] n3MethodCallBytes = messageBridge.serializeCall(messageTestStorer.getScriptHash(), "",
                 CallFlags.ALL, asList());
         BigInteger nonce = messageBridge.storeMessage(n3MethodCallBytes);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
@@ -294,7 +294,7 @@ public class MessageExecutionManagerTest {
     @Order(0)
     public void test_executeMessage_fail_reenteringExecutionManager() throws Throwable {
         BigInteger nextNonce = messageBridge.getMessageBridge().evmToN3MessageState.nonce.add(BigInteger.ONE);
-        byte[] n3FuncCall = messageBridge.getSerializedN3MethodCall(
+        byte[] n3FuncCall = messageBridge.serializeCall(
                 executionManager.getScriptHash(), "executeMessage", CallFlags.ALL,
                 asList(
                         integer(nextNonce),
@@ -369,7 +369,7 @@ public class MessageExecutionManagerTest {
     public void test_executeMessage_retrieveExecutingMessageMetadata() throws Throwable {
         assertThat(executionManager.getExecutingNonce(), is(BigInteger.ZERO));
 
-        byte[] serializedN3MethodCall = messageBridge.getSerializedN3MethodCall(messageTestStorer.getScriptHash(),
+        byte[] serializedN3MethodCall = messageBridge.serializeCall(messageTestStorer.getScriptHash(),
                 "storeMetadataOfExecutingMessage", CallFlags.ALL, asList());
         BigInteger timestamp = bestBlockTime();
         Hash160 sender = bob.getScriptHash();
@@ -454,7 +454,7 @@ public class MessageExecutionManagerTest {
     }
 
     private byte[] getSerializedN3MethodForTestStoring(String key, ContractParameter value) throws IOException {
-        return messageBridge.getSerializedN3MethodCall(messageTestStorer.getScriptHash(), "storeValue", CallFlags.ALL,
+        return messageBridge.serializeCall(messageTestStorer.getScriptHash(), "storeValue", CallFlags.ALL,
                 asList(string(key), value));
     }
 

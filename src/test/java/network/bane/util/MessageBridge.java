@@ -215,22 +215,34 @@ public class MessageBridge extends SmartContractHelper {
     }
 
     // endregion
-    // region storing/executing messages
+    // region call serialization/validation
 
-    public byte[] getSerializedN3MethodCall(Hash160 target, String method, CallFlags callFlags,
+    public byte[] serializeCall(Hash160 target, String method, CallFlags callFlags,
             List<ContractParameter> args) throws IOException {
-        return callInvokeFunction("getSerializedN3MethodCall", asList(
+        InvocationResult result = callInvokeFunction("serializeCall", asList(
                 hash160(target),
                 string(method),
                 integer(callFlags.getValue()),
                 array(args)
-        )).getInvocationResult().getFirstStackItem().getByteArray();
+        )).getInvocationResult();
+        return result.getFirstStackItem().getByteArray();
+    }
+
+    public boolean isValidCall(byte[] serializedCall) throws IOException {
+        return callFunctionReturningBool("isValidCall", byteArray(serializedCall));
+    }
+
+    public boolean isAllowedCall(byte[] serializedCall) throws IOException {
+        return callFunctionReturningBool("isAllowedCall", byteArray(serializedCall));
     }
 
     public String concatenateOperation(ContractParameter messageEnvelopeParam) throws IOException {
         return callInvokeFunction("concatenateOperation", asList(messageEnvelopeParam))
                 .getInvocationResult().getFirstStackItem().getHexString();
     }
+
+    // endregion
+    // region storing/executing messages
 
     public Hash256 storeMessages(String n3MessageRoot, Map<ContractParameter, ContractParameter> signatures,
             ContractParameter messages) throws Throwable {
