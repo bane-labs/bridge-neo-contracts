@@ -45,6 +45,7 @@ import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.string;
+import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.owner;
@@ -264,9 +265,10 @@ public class MessageExecutionManagerTest {
     @Test
     @Order(1)
     public void test_executeMessage_fail_n3MethodCallBytes_invalidTarget() throws Throwable {
-        byte[] n3MethodCallBytes = messageBridge.serializeCall(Hash160.ZERO, "store", CallFlags.ALL,
-                asList());
-        BigInteger nonce = messageBridge.storeMessage(n3MethodCallBytes);
+        byte[] callWithZeroTarget =
+                hexStringToByteArray("400428140000000000000000000000000000000000000000280573746f726521010f4000");
+
+        BigInteger nonce = messageBridge.storeMessage(callWithZeroTarget);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.executeMessage(none(alice), nonce));
         assertThat(thrown.getMessage(), containsString("Method call has invalid values"));
@@ -279,9 +281,9 @@ public class MessageExecutionManagerTest {
     @Test
     @Order(1)
     public void test_executeMessage_fail_n3MethodCallBytes_invalidMethodName() throws Throwable {
-        byte[] n3MethodCallBytes = messageBridge.serializeCall(messageTestStorer.getScriptHash(), "",
-                CallFlags.ALL, asList());
-        BigInteger nonce = messageBridge.storeMessage(n3MethodCallBytes);
+        byte[] callWithEmptyMethod =
+                hexStringToByteArray("0x400428143c4cac7301ea80416d69b9a09cd60a9ee3dce1c2280021010f4000");
+        BigInteger nonce = messageBridge.storeMessage(callWithEmptyMethod);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.executeMessage(none(alice), nonce));
         assertThat(thrown.getMessage(), containsString("Method call has invalid values"));
