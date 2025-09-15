@@ -95,12 +95,12 @@ public class MessageTestStorer extends SmartContractHelper {
     // endregion
     // region metadata
 
-    public Hash256 storeValue(String key, ContractParameter value) throws Throwable {
-        return storeValue(none(alice), key, value);
+    public Hash256 storeValueAndReturnIt(String key, ContractParameter value) throws Throwable {
+        return storeValueAndReturnIt(none(alice), key, value);
     }
 
-    public Hash256 storeValue(AccountSigner signer, String key, ContractParameter value) throws Throwable {
-        return sendAndAwaitExecution(invokeFunction("storeValue", string(key), value).signers(signer));
+    public Hash256 storeValueAndReturnIt(AccountSigner signer, String key, ContractParameter value) throws Throwable {
+        return sendAndAwaitExecution(invokeFunction("storeValueAndReturnIt", string(key), value).signers(signer));
     }
 
     public StackItem getStoredValue(String key) throws IOException {
