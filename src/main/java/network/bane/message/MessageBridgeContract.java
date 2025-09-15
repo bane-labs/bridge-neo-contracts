@@ -403,9 +403,40 @@ public class MessageBridgeContract {
         MessageBridgeImpl.executeMessage(nonce);
     }
 
+    /**
+     * Gets the nonce of the result message that corresponds to the execution of an N3 executable message.
+     *
+     * @param relatedMessageNonce the nonce of the N3 executable message.
+     * @return the result of the execution of the N3 executable message.
+     */
     @Safe
     public static ByteString getResult(int relatedMessageNonce) {
         return MessageBridgeImpl.getResult(relatedMessageNonce);
+    }
+
+    /**
+     * Gets the nonce of the EVM result message that corresponds to the execution of an executable message that was
+     * sent and executed on EVM. If the result of this execution was sent back to N3 as a result message, the nonce
+     * of this result message is returned.
+     *
+     * @param relatedMessageNonce the nonce of the executable message that was sent to EVM for execution.
+     * @return the nonce of the result message that corresponds to the execution of the executable EVM message.
+     */
+    @Safe
+    public static int getEvmResultNonce(int relatedMessageNonce) {
+        return MessageBridgeImpl.getEvmResultNonce(relatedMessageNonce);
+    }
+
+    /**
+     * Gets the result of the execution of an executable message that was sent and executed on EVM. If the result was
+     * not returned AND stored as a result message to N3, the result is null.
+     *
+     * @param relatedMessageNonce the nonce of the executable message that was sent to EVM for execution.
+     * @return the result of the execution of the executable EVM message.
+     */
+    @Safe
+    public static ByteString getEvmResult(int relatedMessageNonce) {
+        return MessageBridgeImpl.getEvmResult(relatedMessageNonce);
     }
 
     // endregion

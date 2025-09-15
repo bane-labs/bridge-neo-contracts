@@ -46,6 +46,7 @@ import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.string;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
+import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.owner;
@@ -74,8 +75,8 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -330,7 +331,7 @@ public class MessageExecutionManagerTest {
     public void test_executeMessage() throws Throwable {
         String key = "test_executeMessage";
         ContractParameter value = integer(42);
-        assertNull(messageTestStorer.getStoredValue(key).getValue());
+        assertThat(messageTestStorer.getStoredValue(key).getValue(), is(not(42)));
 
         BigInteger nonce = storeDefaultMessageForTestStoring(key, value);
 
@@ -354,10 +355,48 @@ public class MessageExecutionManagerTest {
         assertThat(event2.getContract(), is(messageBridge.getScriptHash()));
         assertThat(event2.getEventName(), is("ExecutionResult"));
         assertThat(event2.getState().getList().get(0).getInteger(), is(nonce));
-        assertNull(event2.getState().getList().get(1).getValue());
+        String expectedResultHex = "21012a"; // serialized form of int 42 (i.e., type: 0x21, size: 0x01, value: 0x2a)
+        assertThat(event2.getState().getList().get(1).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(event2.getState().getList().get(1).getHexString(), is(expectedResultHex));
 
         assertThat(messageTestStorer.getStoredValue(key).getType(), is(StackItemType.INTEGER));
         assertThat(messageTestStorer.getStoredValue(key).getValue(), is(value.getValue()));
+
+        byte[] result = messageBridge.getResult(nonce);
+        // The result object gets serialized when stored to allow arbitrary return types.
+        // In this case, even though the result type is already a byte string, it gets serialized again ending up
+        // with the actual result byte string being prepended with a byte string type prefix (0x28) and its size (0x03).
+        assertThat(toHexStringNoPrefix(result), is("2803" + expectedResultHex));
+    }
+
+    @Test
+    @Order(2)
+    public void test_executeMessage_withIntegerResult() throws Throwable {
+        String key = "test_executeMessage";
+        ContractParameter value = string("hello");
+        assertThat(messageTestStorer.getStoredValue(key).getValue(), is(not("hello")));
+
+        BigInteger nonce = messageBridge.storeMessage(
+                getSerializedN3MethodForTestStoring("storeValueAndReturnItsLength", key, value)
+        );
+
+        Hash256 txHash = messageBridge.executeMessage(none(alice), nonce);
+        NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution();
+
+        Notification event2 = exec.getNotifications().get(1);
+        assertThat(event2.getState().getList().get(1).getType(), is(StackItemType.INTEGER));
+        // length of "hello" serialized is 7 - type (1 byte), size (1 byte), value (5 bytes)
+        assertThat(event2.getState().getList().get(1).getInteger().intValue(), is(7));
+
+        assertThat(messageTestStorer.getStoredValue(key).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(messageTestStorer.getStoredValue(key).getString(), is(value.getValue()));
+
+        byte[] result = messageBridge.getResult(nonce);
+        // The result object gets serialized when stored to allow arbitrary return types.
+        // In this case, the return was a single integer. Thus, the serialization of it ends up being its type (0x21),
+        // its size (0x01) followed by the actual integer value (0x07).
+        assertThat(toHexStringNoPrefix(result), is("210107"));
     }
 
     /**
@@ -456,7 +495,12 @@ public class MessageExecutionManagerTest {
     }
 
     private byte[] getSerializedN3MethodForTestStoring(String key, ContractParameter value) throws IOException {
-        return messageBridge.serializeCall(messageTestStorer.getScriptHash(), "storeValue", CallFlags.ALL,
+        return getSerializedN3MethodForTestStoring("storeValueAndReturnIt", key, value);
+    }
+
+    private byte[] getSerializedN3MethodForTestStoring(String method, String key, ContractParameter value)
+            throws IOException {
+        return messageBridge.serializeCall(messageTestStorer.getScriptHash(), method, CallFlags.ALL,
                 asList(string(key), value));
     }
 

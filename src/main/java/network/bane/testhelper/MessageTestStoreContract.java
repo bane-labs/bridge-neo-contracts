@@ -41,9 +41,16 @@ public class MessageTestStoreContract {
         return new MessageBridge(baseMap.getHash160(KEY_MESSAGE_BRIDGE));
     }
 
-    public static void storeValue(String key, Object value) {
+    public static ByteString storeValueAndReturnIt(String key, Object value) {
         ByteString serialize = new StdLib().serialize(value);
         storeMap.put(key, serialize);
+        return serialize;
+    }
+
+    public static int storeValueAndReturnItsLength(String key, Object value) {
+        ByteString serialize = new StdLib().serialize(value);
+        storeMap.put(key, serialize);
+        return serialize.length();
     }
 
     @Safe

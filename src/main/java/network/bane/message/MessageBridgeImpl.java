@@ -30,7 +30,8 @@ import static network.bane.message.StorageConstants.KEY_MESSAGE_BRIDGE;
 import static network.bane.message.StorageConstants.KEY_UNCLAIMED_FEES;
 import static network.bane.message.StorageConstants.PREFIX_MSG_EXECUTABLE_STATE;
 import static network.bane.message.StorageConstants.PREFIX_MSG_MESSAGES;
-import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT;
+import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT_EVM_EXEC;
+import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT_N3_EXEC;
 
 class MessageBridgeImpl {
 
@@ -226,10 +227,12 @@ class MessageBridgeImpl {
         MessageBridgeContract.onExecution.fire(nonce, metadata);
         Object result = new ExecutionManager(getMessageBridge().config.executionManager).executeMessage(nonce,
                 message.rawMessage);
+        // Todo: Manage results that are too large to be included in a single event. The limit of a single event is
+        //  1024 bytes which includes every byte of the event.
         MessageBridgeContract.onExecutionResult.fire(nonce, result);
 
         if (metadata.storeResult) {
-            storeResult(nonce, result);
+            storeN3ExecutionResult(nonce, result);
         }
     }
 
@@ -250,9 +253,9 @@ class MessageBridgeImpl {
         executableStateMap.put(nonce, new StdLib().serialize(executableState));
     }
 
-    private static void storeResult(int nonce, Object result) {
+    private static void storeN3ExecutionResult(int nonce, Object result) {
         ByteString serializedResult = new StdLib().serialize(result);
-        new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT).put(nonce, serializedResult);
+        new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT_N3_EXEC).put(nonce, serializedResult);
     }
 
     public static int sendMessage(ByteString rawMsg, Hash160 feeSponsor, int maxFee) {
@@ -308,7 +311,21 @@ class MessageBridgeImpl {
     }
 
     static ByteString getResult(int relatedMessageNonce) {
-        return new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_RESULT).get(relatedMessageNonce);
+        return new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_RESULT_N3_EXEC)
+                .get(relatedMessageNonce);
+    }
+
+    static int getEvmResultNonce(int relatedMessageNonce) {
+        return new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_RESULT_EVM_EXEC)
+                .getIntOrZero(relatedMessageNonce);
+    }
+
+    static ByteString getEvmResult(int relatedMessageNonce) {
+        int resultMessageNonce = getEvmResultNonce(relatedMessageNonce);
+        if (resultMessageNonce == 0) {
+            return null;
+        }
+        return getMessage(resultMessageNonce).rawMessage;
     }
 
     private static void payMessageSendingFee(Hash160 feeSponsor, int maxFee) {
