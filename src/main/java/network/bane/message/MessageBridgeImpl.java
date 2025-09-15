@@ -25,6 +25,7 @@ import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 import static io.neow3j.devpack.StringLiteralHelper.stringToInt;
 import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_EXECUTABLE;
+import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_RESULT;
 import static network.bane.message.MessageBridgeContractHelper.managementContract;
 import static network.bane.message.StorageConstants.KEY_MESSAGE_BRIDGE;
 import static network.bane.message.StorageConstants.KEY_UNCLAIMED_FEES;
@@ -160,17 +161,23 @@ class MessageBridgeImpl {
     private static void storeMessagesToContractStorage(List<N3MessageEnvelope> messages, int expirationTime) {
         StorageMap messageMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_MESSAGES);
         StorageMap msgExecStateMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTABLE_STATE);
+        StorageMap resultEvmExecMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT_EVM_EXEC);
         int nrMessages = messages.size();
-        ByteString execState = new StdLib().serialize(new ExecutableState(false, expirationTime));
+        StdLib stdLib = new StdLib();
+        ByteString execState = stdLib.serialize(new ExecutableState(false, expirationTime));
 
         for (int i = 0; i < nrMessages; i++) {
             N3MessageEnvelope n3Message = messages.get(i);
             // Store the message in storage.
-            messageMap.put(n3Message.nonce, new StdLib().serialize(n3Message.message));
-            int type = ((N3Message.N3Metadata) new StdLib().deserialize(n3Message.message.metadataBytes)).type;
-            if (type == MESSAGE_TYPE_EXECUTABLE) {
+            messageMap.put(n3Message.nonce, stdLib.serialize(n3Message.message));
+            N3Message.N3Metadata metadata = (N3Message.N3Metadata) stdLib.deserialize(n3Message.message.metadataBytes);
+            if (metadata.type == MESSAGE_TYPE_EXECUTABLE) {
                 // Set the execution state for executable messages.
                 msgExecStateMap.put(n3Message.nonce, execState);
+            }
+            if (metadata.type == MESSAGE_TYPE_RESULT) {
+                // Link the result to the related executable message for direct lookup.
+                resultEvmExecMap.put(((N3Message.N3MetadataResult) metadata).initialMessageNonce, n3Message.nonce);
             }
             // Fire event including the nonce and the message's metadata.
             MessageBridgeContract.onStore.fire(n3Message.nonce, n3Message.message.metadataBytes);

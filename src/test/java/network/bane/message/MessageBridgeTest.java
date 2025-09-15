@@ -46,6 +46,7 @@ import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
+import static io.neow3j.utils.Numeric.cleanHexPrefix;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
@@ -568,7 +569,8 @@ public class MessageBridgeTest {
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
         N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
 
-        String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
+        String currentN3Root = messageBridge.messageEvmToN3Root();
+        String root = concatAndKeccak256(currentN3Root, msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
         Hash256 txHash = messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope));
@@ -667,6 +669,51 @@ public class MessageBridgeTest {
         assertThat(executableState4.expirationTimestamp, greaterThan(getBestBlockTime()));
     }
 
+    @Test
+    @Order(1)
+    public void test_storeMessage_checkEvmResult() throws Throwable {
+        // Send dummy message to EVM to use as related nonce for checking its dummy result.
+        Hash256 tx = messageBridge.sendExecutableMessage(hexStringToByteArray("0x0a"), true);
+        BigInteger nonceOfMsgSentToEvm = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
+                .getFirstStackItem().getInteger();
+
+        // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
+        // the nonce, to and amount.
+        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
+        BigInteger timestamp = new BigInteger("1753000000");
+        Hash160 sender = alice.getScriptHash();
+        String msgBytes = "0x12123434";
+
+        N3MessageMetadataResultDto metadata = new N3MessageMetadataResultDto(timestamp, sender, nonceOfMsgSentToEvm);
+
+        String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
+        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+
+        String currentN3Root = messageBridge.messageEvmToN3Root();
+        String root = concatAndKeccak256(currentN3Root, msgHash1);
+        List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
+        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
+        Hash256 txHash = messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope));
+        List<MessageHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
+                messageBridge.getScriptHash());
+        assertThat(n3MessageStoreEvents, hasSize(1));
+        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent = n3MessageStoreEvents.get(0);
+        assertThat(n3MessageStoreEvent.nonce, is(nonce));
+        N3MessageMetadataDto expectedMetadata = metadata;
+        assertThat(n3MessageStoreEvent.metadataSerializedHex,
+                is(toHexStringNoPrefix(expectedMetadata.serialize(messageBridge))));
+
+        N3MessageDto message = messageBridge.getMessage(nonce);
+        assertThat(message, is(n3MessageDto));
+
+        IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                () -> messageBridge.getExecutableState(nonce));
+        assertThat(thrown.getMessage(), containsString("Executable state not found"));
+
+        assertThat(messageBridge.getEvmResultNonce(nonceOfMsgSentToEvm), is(nonce));
+        assertThat(toHexStringNoPrefix(messageBridge.getEvmResult(nonceOfMsgSentToEvm)), is(cleanHexPrefix(msgBytes)));
+    }
+
     // endregion
     // region execution
 
@@ -681,10 +728,12 @@ public class MessageBridgeTest {
     @Test
     @Order(0)
     public void test_isValidCall() throws IOException {
-        byte[] serializedCall = hexStringToByteArray("40042814cf76e28bd0062c4a478ee35561011319f3cfa4d2280673796d626f6c2101014000");
+        byte[] serializedCall = hexStringToByteArray(
+                "40042814cf76e28bd0062c4a478ee35561011319f3cfa4d2280673796d626f6c2101014000");
         assertTrue(messageBridge.isValidCall(serializedCall));
 
-        byte[] n3CallWithZeroTarget = hexStringToByteArray("400428140000000000000000000000000000000000000000280673796d626f6c2101014000");
+        byte[] n3CallWithZeroTarget = hexStringToByteArray(
+                "400428140000000000000000000000000000000000000000280673796d626f6c2101014000");
         assertFalse(messageBridge.isValidCall(n3CallWithZeroTarget));
 
         byte[] malformedCall = hexStringToByteArray("0xab100c");

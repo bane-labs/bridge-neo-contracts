@@ -418,6 +418,9 @@ public class MessageBridgeContract {
      * Gets the nonce of the EVM result message that corresponds to the execution of an executable message that was
      * sent and executed on EVM. If the result of this execution was sent back to N3 as a result message, the nonce
      * of this result message is returned.
+     * <p>
+     * If the result is non-existent, it hasn't been sent back, or it has been sent back but not stored, then 0 is
+     * returned.
      *
      * @param relatedMessageNonce the nonce of the executable message that was sent to EVM for execution.
      * @return the nonce of the result message that corresponds to the execution of the executable EVM message.
