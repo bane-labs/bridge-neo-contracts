@@ -50,7 +50,8 @@ class MessageBridgeImpl {
     }
 
     private static final int DEFAULT_SENDING_FEE = 10000000; // 0.1 GAS
-    private static final int DEFAULT_MAX_BYTES_FOR_SENDING = 10000;
+    // This value has been chosen to fit with the capped max size of notifications which is currently 1024 bytes.
+    private static final int DEFAULT_MAX_BYTES_FOR_SENDING = 800; // 800 bytes
     private static final int DEFAULT_MAX_NR_MESSAGES_FOR_STORING = 10;
     private static final int DEFAULT_EXECUTION_WINDOW_MILLIS = 60 * 60 * 24 * 7 * 2 * 1000; // 2 weeks
 
@@ -254,6 +255,7 @@ class MessageBridgeImpl {
     }
 
     public static int sendMessage(ByteString rawMsg, Hash160 feeSponsor, int maxFee) {
+        MessageBridgeImpl.checkMsgSizeForSending(rawMsg.length());
         MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 
         int timestamp = Runtime.getTime();
@@ -264,6 +266,7 @@ class MessageBridgeImpl {
     }
 
     public static int sendExecutableMessage(ByteString rawMsg, boolean storeResult, Hash160 feeSponsor, int maxFee) {
+        MessageBridgeImpl.checkMsgSizeForSending(rawMsg.length());
         MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 
         int timestamp = Runtime.getTime();
@@ -279,6 +282,7 @@ class MessageBridgeImpl {
             abort("Result not found");
         }
 
+        MessageBridgeImpl.checkMsgSizeForSending(result.length());
         MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 
         int timestamp = Runtime.getTime();
@@ -287,6 +291,12 @@ class MessageBridgeImpl {
         N3Message.N3MetadataResult metadata = new N3Message.N3MetadataResult(timestamp, callingScriptHash,
                 relatedMessageNonce);
         return serializeAndUpdateEvmMessageState(metadata, result);
+    }
+
+    private static void checkMsgSizeForSending(int msgSize) {
+        if (msgSize > getMessageBridge().config.maxBytesForSending) {
+            abort("Message too large");
+        }
     }
 
     private static int serializeAndUpdateEvmMessageState(Object metadata, ByteString rawMessage) {

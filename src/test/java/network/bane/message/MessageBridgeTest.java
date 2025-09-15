@@ -268,6 +268,42 @@ public class MessageBridgeTest {
 
     @Test
     @Order(0)
+    public void testSending_storeOnly_fail_exceedMaxSize() throws Throwable {
+        BigInteger previousMaxBytesForSending = messageBridge.maxBytesForSending();
+        messageBridge.setMaxBytesForSending(BigInteger.TEN);
+
+        byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef010203");
+        assertThat(rawMessage.length, greaterThan(messageBridge.maxBytesForSending().intValue()));
+        System.out.println(rawMessage.length);
+        BigInteger sendingFee = messageBridge.sendingFee();
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.sendMessage(global(alice), rawMessage, alice, sendingFee));
+        assertThat(thrown.getMessage(), containsString("Message too large"));
+
+        // Revert the state for further tests
+        messageBridge.setMaxBytesForSending(previousMaxBytesForSending);
+    }
+
+    @Test
+    @Order(0)
+    public void testSending_executable_fail_exceedMaxSize() throws Throwable {
+        BigInteger previousMaxBytesForSending = messageBridge.maxBytesForSending();
+        messageBridge.setMaxBytesForSending(BigInteger.TEN);
+
+        byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef010203");
+        assertThat(rawMessage.length, greaterThan(messageBridge.maxBytesForSending().intValue()));
+        System.out.println(rawMessage.length);
+        BigInteger sendingFee = messageBridge.sendingFee();
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> messageBridge.sendExecutableMessage(global(alice), rawMessage, false, alice, sendingFee));
+        assertThat(thrown.getMessage(), containsString("Message too large"));
+
+        // Revert the state for further tests
+        messageBridge.setMaxBytesForSending(previousMaxBytesForSending);
+    }
+
+    @Test
+    @Order(0)
     public void testSending_storeOnly_fail_exceedMaxFee() throws Throwable {
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
         BigInteger sendingFee = messageBridge.sendingFee();
