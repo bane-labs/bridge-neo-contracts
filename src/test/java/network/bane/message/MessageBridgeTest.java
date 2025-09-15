@@ -1,9 +1,11 @@
 package network.bane.message;
 
+import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.GasToken;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.StackItem;
+import io.neow3j.protocol.exceptions.InvocationFaultStateException;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
@@ -16,6 +18,7 @@ import io.neow3j.types.Hash256;
 import io.neow3j.types.StackItemType;
 import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
+import network.bane.messageexecution.ExecutionManagerContract;
 import network.bane.testhelper.TestContract;
 import network.bane.util.MessageHelper;
 import network.bane.util.structs.ExecutableStateDto;
@@ -41,6 +44,7 @@ import static io.neow3j.transaction.AccountSigner.global;
 import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
+import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
@@ -58,10 +62,13 @@ import static network.bane.util.TestHelper.validator3;
 import static network.bane.util.TestHelper.validator4;
 import static network.bane.util.TestHelper.validator5;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
+import static network.bane.util.helper.DefaultTestValues.MESSAGE_BRIDGE_CONTRACT_HASH;
 import static network.bane.util.helper.PrintHelper.printTransactionFee;
 import static network.bane.util.helper.TestHelper.alice;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
+import static network.bane.util.helper.TestHelper.createExecutionManagerDeployConfig;
 import static network.bane.util.helper.TestHelper.createMessageBridgeDeployConfig;
+import static network.bane.util.helper.TestHelper.executionManager;
 import static network.bane.util.helper.TestHelper.gasToken;
 import static network.bane.util.helper.TestHelper.getNextEvmNonce;
 import static network.bane.util.helper.TestHelper.getNextN3Nonce;
@@ -69,6 +76,7 @@ import static network.bane.util.helper.TestHelper.management;
 import static network.bane.util.helper.TestHelper.messageBridge;
 import static network.bane.util.helper.TestHelper.neow3j;
 import static network.bane.util.helper.TestHelper.setup;
+import static network.bane.util.helper.TestHelper.setupExecutionManager;
 import static network.bane.util.helper.TestHelper.setupMessageBridge;
 import static network.bane.util.helper.TestHelper.setupTestContract;
 import static network.bane.util.helper.TestHelper.testContract;
@@ -84,7 +92,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ContractTest(
         blockTime = 1,
-        contracts = {BridgeManagementContract.class, MessageBridgeContract.class, TestContract.class},
+        contracts = {BridgeManagementContract.class, MessageBridgeContract.class, ExecutionManagerContract.class,
+                TestContract.class},
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -101,7 +110,15 @@ public class MessageBridgeTest {
     public static void setUp() throws Throwable {
         setup(ext);
         setupMessageBridge(ext);
+        setupExecutionManager(ext);
         setupTestContract(ext);
+
+        // This test requires the constant MESSAGE_BRIDGE_CONTRACT_HASH to be set correctly. The execution manager
+        // requires the contract address at deployment time, so we cannot change it later.
+        if (!messageBridge.getScriptHash().equals(MESSAGE_BRIDGE_CONTRACT_HASH)) {
+            throw new RuntimeException(format("The message bridge contract hash is not set correctly. Update the " +
+                    "script hash to 0x%s.", messageBridge.getScriptHash()));
+        }
 
         // This test requires the constant MANAGEMENT_CONTRACT_HASH to be set correctly. The execution manager
         // requires the contract address at deployment time, so we cannot change it later.
@@ -109,6 +126,8 @@ public class MessageBridgeTest {
             throw new RuntimeException(format("The management contract hash is not set correctly. Update the script " +
                     "hash to 0x%s.", management.getScriptHash()));
         }
+
+        messageBridge.setExecutionManager(executionManager.getScriptHash());
 
         messageBridge.unpause();
     }
@@ -121,6 +140,11 @@ public class MessageBridgeTest {
     @DeployConfig(MessageBridgeContract.class)
     public static DeployConfiguration deployConfigMessageBridge() {
         return createMessageBridgeDeployConfig();
+    }
+
+    @DeployConfig(ExecutionManagerContract.class)
+    public static DeployConfiguration deployConfigExecutionManager() {
+        return createExecutionManagerDeployConfig();
     }
 
     private static BigInteger getBestBlockTime() throws IOException {
@@ -274,7 +298,6 @@ public class MessageBridgeTest {
 
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef010203");
         assertThat(rawMessage.length, greaterThan(messageBridge.maxBytesForSending().intValue()));
-        System.out.println(rawMessage.length);
         BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.sendMessage(global(alice), rawMessage, alice, sendingFee));
@@ -292,7 +315,6 @@ public class MessageBridgeTest {
 
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef010203");
         assertThat(rawMessage.length, greaterThan(messageBridge.maxBytesForSending().intValue()));
-        System.out.println(rawMessage.length);
         BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.sendExecutableMessage(global(alice), rawMessage, false, alice, sendingFee));
@@ -649,9 +671,44 @@ public class MessageBridgeTest {
     // region execution
 
     @Test
+    @Order(0)
+    public void test_serializeCall() throws IOException {
+        byte[] n3Call = messageBridge.serializeCall(GasToken.SCRIPT_HASH, "symbol", CallFlags.READ_STATES, asList());
+        assertThat(toHexStringNoPrefix(n3Call),
+                is("40042814cf76e28bd0062c4a478ee35561011319f3cfa4d2280673796d626f6c2101014000"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_isValidCall() throws IOException {
+        byte[] serializedCall = hexStringToByteArray("40042814cf76e28bd0062c4a478ee35561011319f3cfa4d2280673796d626f6c2101014000");
+        assertTrue(messageBridge.isValidCall(serializedCall));
+
+        byte[] n3CallWithZeroTarget = hexStringToByteArray("400428140000000000000000000000000000000000000000280673796d626f6c2101014000");
+        assertFalse(messageBridge.isValidCall(n3CallWithZeroTarget));
+
+        byte[] malformedCall = hexStringToByteArray("0xab100c");
+        InvocationFaultStateException thrown = assertThrows(InvocationFaultStateException.class,
+                () -> messageBridge.isValidCall(malformedCall));
+        assertThat(thrown.getMessage(), containsString("invalid format"));
+    }
+
+    @Test
+    @Order(0)
+    public void test_isAllowedCall() throws IOException {
+        byte[] allowedN3Call =
+                hexStringToByteArray("40042814cf76e28bd0062c4a478ee35561011319f3cfa4d2280673796d626f6c2101014000");
+        assertTrue(messageBridge.isAllowedCall(allowedN3Call));
+
+        byte[] disallowedN3Call = messageBridge.serializeCall(ContractManagement.SCRIPT_HASH, "isContract",
+                CallFlags.READ_ONLY, asList(hash160(GasToken.SCRIPT_HASH)));
+        assertFalse(messageBridge.isAllowedCall(disallowedN3Call));
+    }
+
+    @Test
     @Order(2)
     public void test_execute_failWhenContractPaused() throws Throwable {
-        byte[] n3FuncCall = messageBridge.getSerializedN3MethodCall(GasToken.SCRIPT_HASH, "symbol", CallFlags.ALL,
+        byte[] n3FuncCall = messageBridge.serializeCall(GasToken.SCRIPT_HASH, "symbol", CallFlags.ALL,
                 asList());
         BigInteger nonce = messageBridge.storeMessage(n3FuncCall);
 
@@ -668,7 +725,7 @@ public class MessageBridgeTest {
     @Test
     @Order(2)
     public void test_execute_failWhenExecutingPaused() throws Throwable {
-        byte[] n3FuncCall = messageBridge.getSerializedN3MethodCall(GasToken.SCRIPT_HASH, "symbol", CallFlags.ALL,
+        byte[] n3FuncCall = messageBridge.serializeCall(GasToken.SCRIPT_HASH, "symbol", CallFlags.ALL,
                 asList());
         BigInteger nonce = messageBridge.storeMessage(n3FuncCall);
 
@@ -926,6 +983,9 @@ public class MessageBridgeTest {
         assertThat(notification.getEventName(), is("ExecutionManagerChange"));
         assertThat(notification.getState().getList(), hasSize(1));
         assertThat(Hash160.fromAddress(notification.getState().getList().get(0).getAddress()), is(newExecutionManager));
+
+        // revert the state for further tests
+        messageBridge.setExecutionManager(executionManagerBefore);
     }
 
     @Test

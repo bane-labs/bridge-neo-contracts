@@ -102,6 +102,49 @@ public class ExecutionManagerContract {
         return result;
     }
 
+    /**
+     * Creates a serialized method call that can be passed to the {@link #executeMessage(int, ByteString)} method.
+     *
+     * @param target the target contract.
+     * @param method the method to call.
+     * @param callFlags the call flags to use.
+     * @param args the arguments to pass to the method.
+     * @return the serialized method call.
+     */
+    @Safe
+    public static ByteString serializeCall(Hash160 target, String method, byte callFlags, Object[] args)
+            throws Exception {
+        N3MethodCall call = new N3MethodCall(target, method, callFlags, args);
+        if (!N3MethodCall.isValid(call)) throw new Exception("Method call is invalid");
+        return new StdLib().serialize(call);
+    }
+
+    /**
+     * Checks whether the given bytes represent a valid serialized {@link N3MethodCall}.
+     *
+     * @param serializedCall the serialized call.
+     * @return true if the call is valid, false otherwise.
+     */
+    @Safe
+    public static boolean isValidCall(ByteString serializedCall) {
+        N3MethodCall call = (N3MethodCall) new StdLib().deserialize(serializedCall);
+        return N3MethodCall.isValid(call);
+    }
+
+    /**
+     * Checks whether the given serialized call is allowed to be executed in a message execution context.
+     *
+     * @param serializedCall the serialized call.
+     * @return true if the call is allowed, false otherwise.
+     * @throws Exception if the call is invalid.
+     */
+    @Safe
+    public static boolean isAllowedCall(ByteString serializedCall) throws Exception {
+        N3MethodCall call = (N3MethodCall) new StdLib().deserialize(serializedCall);
+        if (!N3MethodCall.isValid(call)) throw new Exception("Invalid call");
+        return !isProhibitedForMessageExecution(call.target);
+    }
+
     private static boolean isProhibitedForMessageExecution(Hash160 target) {
         Hash160 executingScriptHash = getExecutingScriptHash();
         // Disallow calling itself or the native contract management in a message execution call.
