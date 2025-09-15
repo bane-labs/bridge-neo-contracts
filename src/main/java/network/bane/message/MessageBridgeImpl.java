@@ -189,7 +189,7 @@ class MessageBridgeImpl {
 
     static N3Message getMessage(int nonce) {
         return (N3Message) new StdLib().deserialize(
-                new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_MESSAGES).get(nonce)
+                new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_MESSAGES).get(nonce)
         );
     }
 
@@ -202,7 +202,8 @@ class MessageBridgeImpl {
     }
 
     static ExecutableState getExecutableState(int nonce) throws Exception {
-        ByteString state = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTABLE_STATE).get(nonce);
+        ByteString state = new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_EXECUTABLE_STATE)
+                .get(nonce);
         if (state == null) {
             throw new Exception("Executable state not found");
         }
@@ -307,7 +308,7 @@ class MessageBridgeImpl {
     }
 
     static ByteString getResult(int relatedMessageNonce) {
-        return new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT).get(relatedMessageNonce);
+        return new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_RESULT).get(relatedMessageNonce);
     }
 
     private static void payMessageSendingFee(Hash160 feeSponsor, int maxFee) {
