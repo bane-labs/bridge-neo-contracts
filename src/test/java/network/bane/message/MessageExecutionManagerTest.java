@@ -356,8 +356,10 @@ public class MessageExecutionManagerTest {
         assertThat(event2.getEventName(), is("ExecutionResult"));
         assertThat(event2.getState().getList().get(0).getInteger(), is(nonce));
         String expectedResultHex = "21012a"; // serialized form of int 42 (i.e., type: 0x21, size: 0x01, value: 0x2a)
-        assertThat(event2.getState().getList().get(1).getType(), is(StackItemType.BYTE_STRING));
-        assertThat(event2.getState().getList().get(1).getHexString(), is(expectedResultHex));
+        assertThat(event2.getState().getList().get(1).getInteger(), is(BigInteger.ONE));
+        assertThat(event2.getState().getList().get(2).getInteger(), is(BigInteger.ZERO));
+        assertThat(event2.getState().getList().get(3).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(event2.getState().getList().get(3).getHexString(), is(expectedResultHex));
 
         assertThat(messageTestStorer.getStoredValue(key).getType(), is(StackItemType.INTEGER));
         assertThat(messageTestStorer.getStoredValue(key).getValue(), is(value.getValue()));
@@ -385,9 +387,11 @@ public class MessageExecutionManagerTest {
                 .getFirstExecution();
 
         Notification event2 = exec.getNotifications().get(1);
-        assertThat(event2.getState().getList().get(1).getType(), is(StackItemType.INTEGER));
+        assertThat(event2.getState().getList().get(1).getInteger(), is(BigInteger.ONE));
+        assertThat(event2.getState().getList().get(2).getInteger(), is(BigInteger.ZERO));
+        assertThat(event2.getState().getList().get(3).getType(), is(StackItemType.INTEGER));
         // length of "hello" serialized is 7 - type (1 byte), size (1 byte), value (5 bytes)
-        assertThat(event2.getState().getList().get(1).getInteger().intValue(), is(7));
+        assertThat(event2.getState().getList().get(3).getInteger().intValue(), is(7));
 
         assertThat(messageTestStorer.getStoredValue(key).getType(), is(StackItemType.BYTE_STRING));
         assertThat(messageTestStorer.getStoredValue(key).getString(), is(value.getValue()));
