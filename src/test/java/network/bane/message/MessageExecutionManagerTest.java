@@ -356,8 +356,10 @@ public class MessageExecutionManagerTest {
         assertThat(event2.getEventName(), is("ExecutionResult"));
         assertThat(event2.getState().getList().get(0).getInteger(), is(nonce));
         String expectedResultHex = "21012a"; // serialized form of int 42 (i.e., type: 0x21, size: 0x01, value: 0x2a)
-        assertThat(event2.getState().getList().get(1).getType(), is(StackItemType.BYTE_STRING));
-        assertThat(event2.getState().getList().get(1).getHexString(), is(expectedResultHex));
+        assertThat(event2.getState().getList().get(1).getInteger(), is(BigInteger.ONE));
+        assertThat(event2.getState().getList().get(2).getInteger(), is(BigInteger.ZERO));
+        assertThat(event2.getState().getList().get(3).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(event2.getState().getList().get(3).getHexString(), is(expectedResultHex));
 
         assertThat(messageTestStorer.getStoredValue(key).getType(), is(StackItemType.INTEGER));
         assertThat(messageTestStorer.getStoredValue(key).getValue(), is(value.getValue()));
@@ -385,9 +387,11 @@ public class MessageExecutionManagerTest {
                 .getFirstExecution();
 
         Notification event2 = exec.getNotifications().get(1);
-        assertThat(event2.getState().getList().get(1).getType(), is(StackItemType.INTEGER));
+        assertThat(event2.getState().getList().get(1).getInteger(), is(BigInteger.ONE));
+        assertThat(event2.getState().getList().get(2).getInteger(), is(BigInteger.ZERO));
+        assertThat(event2.getState().getList().get(3).getType(), is(StackItemType.INTEGER));
         // length of "hello" serialized is 7 - type (1 byte), size (1 byte), value (5 bytes)
-        assertThat(event2.getState().getList().get(1).getInteger().intValue(), is(7));
+        assertThat(event2.getState().getList().get(3).getInteger().intValue(), is(7));
 
         assertThat(messageTestStorer.getStoredValue(key).getType(), is(StackItemType.BYTE_STRING));
         assertThat(messageTestStorer.getStoredValue(key).getString(), is(value.getValue()));
@@ -397,6 +401,120 @@ public class MessageExecutionManagerTest {
         // In this case, the return was a single integer. Thus, the serialization of it ends up being its type (0x21),
         // its size (0x01) followed by the actual integer value (0x07).
         assertThat(toHexStringNoPrefix(result), is("210107"));
+    }
+
+    @Test
+    @Order(2)
+    public void test_executeMessage_largeResult() throws Throwable {
+        int resultSize = 2561;
+        // Create byte array of size resultSize filled with random values
+        byte[] resultArray = new byte[resultSize];
+        for (int i = 0; i < resultSize; i++) {
+            // Random byte
+            resultArray[i] = (byte) (Math.random() * 256 - 128);
+        }
+        BigInteger nonce = messageBridge.storeMessage(
+                serializeMethodCall(messageTestStorer.getScriptHash(), "returnValue", asList(byteArray(resultArray)))
+        );
+
+        Hash256 txHash = messageBridge.executeMessage(none(alice), nonce);
+        NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution();
+
+        BigInteger maxBytesPerResultEvent = messageBridge.maxBytesForSending();
+        // The result will be serialized, adding 4 bytes as the raw byte array will be prefixed with the type (byte
+        // string) and its size (3 bytes as it is > 252 bytes).
+        BigInteger resultBytesSize = BigInteger.valueOf(resultSize + 4);
+
+        BigInteger[] nrChunksAndRemainder = resultBytesSize.divideAndRemainder(maxBytesPerResultEvent);
+        int nrChunks = nrChunksAndRemainder[0].intValue();
+        if (nrChunksAndRemainder[1].compareTo(BigInteger.ZERO) > 0) {
+            nrChunks++;
+        }
+        List<Notification> notifications = exec.getNotifications();
+        assertThat(notifications, hasSize(1 + nrChunks));
+
+        // Iterate over the notifications and append the byt3 arrays from them to reconstruct the full result array.
+        // Then, assert that the reconstructed array is identical to the original array.
+        StringBuilder b = new StringBuilder();
+        for (int i = 1; i < notifications.size(); i++) {
+            Notification chunkEvent = notifications.get(i);
+            assertThat(chunkEvent.getContract(), is(messageBridge.getScriptHash()));
+            assertThat(chunkEvent.getEventName(), is("ExecutionResult"));
+            List<StackItem> stateList = chunkEvent.getState().getList();
+            assertThat(stateList.get(0).getInteger(), is(nonce));
+            assertThat(stateList.get(1).getInteger().intValue(), is(notifications.size() - 1)); // total chunks
+            assertThat(stateList.get(2).getInteger().intValue(), is(i - 1)); // current chunk index
+            assertThat(stateList.get(3).getType(), is(StackItemType.BYTE_STRING));
+            b.append(stateList.get(3).getHexString());
+        }
+        String reconstructedHex = b.toString();
+        String expectedHexResult = toHexStringNoPrefix(resultArray);
+        String expectedPrefix = "28" + "fd" + "010a"; // 28:type, fd:size requires 2 bytes, 0a01 = 2561
+        assertThat(reconstructedHex, is(expectedPrefix + expectedHexResult));
+
+        byte[] result = messageBridge.getResult(nonce);
+        // The result object gets serialized when stored to allow arbitrary return types.
+        // In this case, the return was a single byte string. Thus, the serialization of it ends up being its type
+        // (0x28), its size (0x01) followed by the actual integer value (0x07).
+        assertThat(toHexStringNoPrefix(result), is(expectedPrefix + expectedHexResult));
+    }
+
+    @Test
+    @Order(2)
+    public void test_executeMessage_largeResult_noRemainder() throws Throwable {
+        // 5 full chunks, no remainder. 4 bytes are included for type and size of the serialized byte array.
+        int resultSize = messageBridge.maxBytesForSending().intValue() * 5 - 4; // = 3996
+        // Create byte array of size resultSize filled with random values
+        byte[] resultArray = new byte[resultSize];
+        for (int i = 0; i < resultSize; i++) {
+            // Random byte
+            resultArray[i] = (byte) (Math.random() * 256 - 128);
+        }
+        BigInteger nonce = messageBridge.storeMessage(
+                serializeMethodCall(messageTestStorer.getScriptHash(), "returnValue", asList(byteArray(resultArray)))
+        );
+
+        Hash256 txHash = messageBridge.executeMessage(none(alice), nonce);
+        NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution();
+
+        BigInteger maxBytesPerResultEvent = messageBridge.maxBytesForSending();
+        // The result will be serialized, adding 4 bytes as the raw byte array will be prefixed with the type (byte
+        // string) and its size (3 bytes as it is > 252 bytes).
+        BigInteger resultBytesSize = BigInteger.valueOf(resultSize + 4);
+
+        BigInteger[] nrChunksAndRemainder = resultBytesSize.divideAndRemainder(maxBytesPerResultEvent);
+        int nrChunks = nrChunksAndRemainder[0].intValue();
+        assertThat(nrChunksAndRemainder[1], is(BigInteger.ZERO));
+
+        List<Notification> notifications = exec.getNotifications();
+        assertThat(notifications, hasSize(1 + nrChunks));
+
+        // Iterate over the notifications and append the byt3 arrays from them to reconstruct the full result array.
+        // Then, assert that the reconstructed array is identical to the original array.
+        StringBuilder b = new StringBuilder();
+        for (int i = 1; i < notifications.size(); i++) {
+            Notification chunkEvent = notifications.get(i);
+            assertThat(chunkEvent.getContract(), is(messageBridge.getScriptHash()));
+            assertThat(chunkEvent.getEventName(), is("ExecutionResult"));
+            List<StackItem> stateList = chunkEvent.getState().getList();
+            assertThat(stateList.get(0).getInteger(), is(nonce));
+            assertThat(stateList.get(1).getInteger().intValue(), is(notifications.size() - 1)); // total chunks
+            assertThat(stateList.get(2).getInteger().intValue(), is(i - 1)); // current chunk index
+            assertThat(stateList.get(3).getType(), is(StackItemType.BYTE_STRING));
+            b.append(stateList.get(3).getHexString());
+        }
+        String reconstructedHex = b.toString();
+        String expectedHexResult = toHexStringNoPrefix(resultArray);
+        String expectedPrefix = "28" + "fd" + "9c0f"; // 28:type, fd:size requires 2 bytes, 0f9c = 3996
+        assertThat(reconstructedHex, is(expectedPrefix + expectedHexResult));
+
+        byte[] result = messageBridge.getResult(nonce);
+        // The result object gets serialized when stored to allow arbitrary return types.
+        // In this case, the return was a single byte string. Thus, the serialization of it ends up being its type
+        // (0x28), its size (0x01) followed by the actual integer value (0x07).
+        assertThat(toHexStringNoPrefix(result), is(expectedPrefix + expectedHexResult));
     }
 
     /**
@@ -492,6 +610,11 @@ public class MessageExecutionManagerTest {
 
     private BigInteger storeDefaultMessageForTestStoring(String key, ContractParameter value) throws Throwable {
         return messageBridge.storeMessage(getSerializedN3MethodForTestStoring(key, value));
+    }
+
+    private byte[] serializeMethodCall(Hash160 target, String method, List<ContractParameter> params)
+            throws IOException {
+        return messageBridge.serializeCall(target, method, CallFlags.ALL, params);
     }
 
     private byte[] getSerializedN3MethodForTestStoring(String key, ContractParameter value) throws IOException {

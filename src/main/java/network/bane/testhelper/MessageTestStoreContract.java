@@ -54,6 +54,11 @@ public class MessageTestStoreContract {
     }
 
     @Safe
+    public static ByteString returnValue(ByteString value) {
+        return value;
+    }
+
+    @Safe
     public static Object getStoredValue(String key) {
         ByteString storedByteString = storeMap.get(key);
         if (storedByteString == null) {

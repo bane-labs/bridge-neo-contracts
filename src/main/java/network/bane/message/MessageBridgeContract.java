@@ -22,6 +22,7 @@ import io.neow3j.devpack.contracts.StdLib;
 import io.neow3j.devpack.events.Event;
 import io.neow3j.devpack.events.Event1Arg;
 import io.neow3j.devpack.events.Event2Args;
+import io.neow3j.devpack.events.Event4Args;
 import io.neow3j.devpack.events.Event5Args;
 import network.bane.structs.message.ExecutableState;
 import network.bane.structs.message.MessageBridge;
@@ -107,8 +108,8 @@ public class MessageBridgeContract {
     static Event2Args<Integer, N3Message.N3MetadataExecutable> onExecution;
 
     @DisplayName("ExecutionResult")
-    @EventParameterNames({"Nonce", "Result"})
-    static Event2Args<Integer, Object> onExecutionResult;
+    @EventParameterNames({"Nonce", "NumberOfChunks", "Index", "Result"})
+    static Event4Args<Integer, Integer, Integer, Object> onExecutionResult;
 
     @DisplayName("SendingFeeChange")
     @EventParameterNames({"NewFee"})
@@ -310,7 +311,8 @@ public class MessageBridgeContract {
         return MessageBridgeImpl.sendMessage(rawMessage, feeSponsor, maxFee);
     }
 
-    public static int sendExecutableMessage(ByteString rawMessage, boolean storeResult, Hash160 feeSponsor, int maxFee) {
+    public static int sendExecutableMessage(ByteString rawMessage, boolean storeResult, Hash160 feeSponsor,
+            int maxFee) {
         onlyWhenNotPaused();
         onlyWhenSendingNotPaused();
         return MessageBridgeImpl.sendExecutableMessage(rawMessage, storeResult, feeSponsor, maxFee);
@@ -387,6 +389,7 @@ public class MessageBridgeContract {
 
     /**
      * Gets the executable state of a message by its nonce.
+     *
      * @param nonce the nonce of the message.
      * @return the state of the executable message.
      * @throws Exception if the message does not exist or is not of type EXECUTABLE.

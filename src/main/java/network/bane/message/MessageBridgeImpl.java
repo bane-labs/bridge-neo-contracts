@@ -232,14 +232,54 @@ class MessageBridgeImpl {
         checkExecutableStateAndMarkExecuted(nonce);
 
         MessageBridgeContract.onExecution.fire(nonce, metadata);
-        Object result = new ExecutionManager(getMessageBridge().config.executionManager).executeMessage(nonce,
-                message.rawMessage);
-        // Todo: Manage results that are too large to be included in a single event. The limit of a single event is
-        //  1024 bytes which includes every byte of the event.
-        MessageBridgeContract.onExecutionResult.fire(nonce, result);
+        MessageBridge.MessageBridgeConfig config = getMessageBridge().config;
+        Object result = new ExecutionManager(config.executionManager).executeMessage(nonce, message.rawMessage);
+
+        ByteString serializedResult = new StdLib().serialize(result);
 
         if (metadata.storeResult) {
-            storeN3ExecutionResult(nonce, result);
+            new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT_N3_EXEC).put(nonce, serializedResult);
+        }
+
+        // The max bytes for sending is used as the max byte size for results in a single event.
+        // While this configuration value is used in this different context, it allows to easily identify which
+        // results are fit to be sent back to EVM given the current configuration and support.
+        int maxResultBytesPerEvent = config.maxBytesForSending;
+
+        // If the size of the serialized result is in the allowed range to send it back to EVM, it is emitted in a
+        // single event. Otherwise, it is split and emitted in chunks, i.e., in multiple events.
+        int resultBytesLen = serializedResult.length();
+        if (resultBytesLen <= maxResultBytesPerEvent) {
+            MessageBridgeContract.onExecutionResult.fire(nonce, 1, 0, result);
+        } else {
+            fireChunkedExecutionResultEvents(nonce, serializedResult, maxResultBytesPerEvent);
+        }
+    }
+
+    private static void fireChunkedExecutionResultEvents(int nonce, ByteString serializedResult, int maxBytesPerEvent) {
+        int totalSize = serializedResult.length();
+        // Potential decimal places are cut off in the division. If there is a remainder it is handled directly after
+        // the for loop. nrFullChunks denotes how many chunks there are that are fully filled with
+        // maxResultBytesPerEvent bytes.
+        int nrFullChunks = totalSize / maxBytesPerEvent;
+        int remainder = totalSize % maxBytesPerEvent;
+        boolean hasRemainder = remainder > 0;
+        // If there is a remainder, we need one additional chunk to hold those remaining bytes.
+        int nrTotalChunks = nrFullChunks;
+        if (hasRemainder) {
+            nrTotalChunks++;
+        }
+        for (int i = 0; i < nrFullChunks; i++) {
+            // Take the i-th chunk of the result. Each chunk should have maxResultBytesPerEvent bytes, except
+            // possibly the last one.
+            int startIndex = i * maxBytesPerEvent;
+            ByteString serializedResultChunk = serializedResult.range(startIndex, maxBytesPerEvent);
+            MessageBridgeContract.onExecutionResult.fire(nonce, nrTotalChunks, i, serializedResultChunk);
+        }
+        if (hasRemainder) {
+            // Take the last chunk of the result.
+            MessageBridgeContract.onExecutionResult.fire(nonce, nrTotalChunks, nrFullChunks,
+                    serializedResult.last(remainder));
         }
     }
 
@@ -258,11 +298,6 @@ class MessageBridgeImpl {
         }
         executableState.executed = true;
         executableStateMap.put(nonce, new StdLib().serialize(executableState));
-    }
-
-    private static void storeN3ExecutionResult(int nonce, Object result) {
-        ByteString serializedResult = new StdLib().serialize(result);
-        new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT_N3_EXEC).put(nonce, serializedResult);
     }
 
     public static int sendMessage(ByteString rawMsg, Hash160 feeSponsor, int maxFee) {

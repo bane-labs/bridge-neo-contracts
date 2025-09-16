@@ -529,7 +529,9 @@ public class MessageSyncTest {
         assertThat(firstExec.getNotifications().get(1).getEventName(), is("ExecutionResult"));
         StackItem event2State = firstExec.getNotifications().get(1).getState();
         assertThat(event2State.getList().get(0).getInteger(), is(executableMessageNonce));
-        assertThat(event2State.getList().get(1).getInteger(), is(messageBridgeGasBalance));
+        assertThat(event2State.getList().get(1).getInteger(), is(BigInteger.ONE));
+        assertThat(event2State.getList().get(2).getInteger(), is(BigInteger.ZERO));
+        assertThat(event2State.getList().get(3).getInteger(), is(messageBridgeGasBalance));
 
         ExecutableStateDto execStateAfterExec = messageBridge.getExecutableState(executableMessageNonce);
         assertTrue(execStateAfterExec.executed);
