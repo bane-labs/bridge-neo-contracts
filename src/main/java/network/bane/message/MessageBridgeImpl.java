@@ -39,7 +39,7 @@ class MessageBridgeImpl {
     // These values are absolute upper bounds and serve as protective constraints to avoid setting too large values. If
     // needed, they can be adjusted with a contract update.
     private static final int UPPER_LIMIT_MAX_BYTES_FOR_SENDING = 10240; // 10 KB
-    private static final int UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING = 1000;
+    private static final int UPPER_LIMIT_MAX_NR_MESSAGES = 1000;
     // Value is too large for int, using a string instead and convert when needed.
     private static final String UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS = "31536000000"; // 1 year in milliseconds
 
@@ -82,20 +82,20 @@ class MessageBridgeImpl {
         storeMessageBridge(messageBridge);
     }
 
-    static void setMaxBytesForSending(int newMaxBytes) {
-        if (newMaxBytes <= 0) abort("Max bytes for sending must be positive");
-        if (newMaxBytes > UPPER_LIMIT_MAX_BYTES_FOR_SENDING) abort("Max bytes for sending too large");
+    static void setMaxMessageSize(int newMaxBytes) {
+        if (newMaxBytes <= 0) abort("Max message size must be positive");
+        if (newMaxBytes > UPPER_LIMIT_MAX_BYTES_FOR_SENDING) abort("Max message size too large");
         MessageBridge messageBridge = getMessageBridge();
-        messageBridge.config.maxBytesForSending = newMaxBytes;
+        messageBridge.config.maxMessageSize = newMaxBytes;
         storeMessageBridge(messageBridge);
     }
 
-    static void setMaxNrMessagesForStoring(int newMaxNrMessages) {
-        if (newMaxNrMessages <= 0) abort("Max number of messages for storing must be positive");
-        if (newMaxNrMessages > UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING)
-            abort("Max number of messages for storing too large");
+    static void setMaxNrMessages(int newMaxNrMessages) {
+        if (newMaxNrMessages <= 0) abort("Max number of messages must be positive");
+        if (newMaxNrMessages > UPPER_LIMIT_MAX_NR_MESSAGES)
+            abort("Max number of messages too large");
         MessageBridge messageBridge = getMessageBridge();
-        messageBridge.config.maxNrMessagesForStoring = newMaxNrMessages;
+        messageBridge.config.maxNrMessages = newMaxNrMessages;
         storeMessageBridge(messageBridge);
     }
 
@@ -241,10 +241,10 @@ class MessageBridgeImpl {
             new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT_N3_EXEC).put(nonce, serializedResult);
         }
 
-        // The max bytes for sending is used as the max byte size for results in a single event.
+        // The max message size is used as the max byte size for results in a single event.
         // While this configuration value is used in this different context, it allows to easily identify which
         // results are fit to be sent back to EVM given the current configuration and support.
-        int maxResultBytesPerEvent = config.maxBytesForSending;
+        int maxResultBytesPerEvent = config.maxMessageSize;
 
         // If the size of the serialized result is in the allowed range to send it back to EVM, it is emitted in a
         // single event. Otherwise, it is split and emitted in chunks, i.e., in multiple events.
@@ -301,7 +301,7 @@ class MessageBridgeImpl {
     }
 
     public static int sendMessage(ByteString rawMsg, Hash160 feeSponsor, int maxFee) {
-        MessageBridgeImpl.checkMsgSizeForSending(rawMsg.length());
+        MessageBridgeImpl.checkMsgSize(rawMsg.length());
         MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 
         int timestamp = Runtime.getTime();
@@ -312,7 +312,7 @@ class MessageBridgeImpl {
     }
 
     public static int sendExecutableMessage(ByteString rawMsg, boolean storeResult, Hash160 feeSponsor, int maxFee) {
-        MessageBridgeImpl.checkMsgSizeForSending(rawMsg.length());
+        MessageBridgeImpl.checkMsgSize(rawMsg.length());
         MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 
         int timestamp = Runtime.getTime();
@@ -328,7 +328,7 @@ class MessageBridgeImpl {
             abort("Result not found");
         }
 
-        MessageBridgeImpl.checkMsgSizeForSending(result.length());
+        MessageBridgeImpl.checkMsgSize(result.length());
         MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 
         int timestamp = Runtime.getTime();
@@ -339,8 +339,8 @@ class MessageBridgeImpl {
         return serializeAndUpdateEvmMessageState(metadata, result);
     }
 
-    private static void checkMsgSizeForSending(int msgSize) {
-        if (msgSize > getMessageBridge().config.maxBytesForSending) {
+    private static void checkMsgSize(int msgSize) {
+        if (msgSize > getMessageBridge().config.maxMessageSize) {
             abort("Message too large");
         }
     }

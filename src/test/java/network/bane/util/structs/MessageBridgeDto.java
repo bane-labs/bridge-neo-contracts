@@ -37,16 +37,16 @@ public class MessageBridgeDto {
 
     public static class MessageConfigDto {
         public BigInteger sendingFee;
-        public int maxBytesForSending;
-        public int maxNrMessagesForStoring;
+        public int maxMessageSize;
+        public int maxNrMessages;
         public Hash160 executionManager;
         public int executionWindowMilliseconds;
 
-        public MessageConfigDto(BigInteger sendingFee, int maxBytesForSending, int maxNrMessagesForStoring,
+        public MessageConfigDto(BigInteger sendingFee, int maxMessageSize, int maxNrMessages,
                 Hash160 executionManager, int executionWindowMilliseconds) {
             this.sendingFee = sendingFee;
-            this.maxBytesForSending = maxBytesForSending;
-            this.maxNrMessagesForStoring = maxNrMessagesForStoring;
+            this.maxMessageSize = maxMessageSize;
+            this.maxNrMessages = maxNrMessages;
             this.executionManager = executionManager;
             this.executionWindowMilliseconds = executionWindowMilliseconds;
         }
@@ -61,15 +61,15 @@ public class MessageBridgeDto {
             }
             MessageConfigDto that = (MessageConfigDto) other;
             return this.sendingFee.equals(that.sendingFee) &&
-                    this.maxBytesForSending == that.maxBytesForSending &&
-                    this.maxNrMessagesForStoring == that.maxNrMessagesForStoring &&
+                    this.maxMessageSize == that.maxMessageSize &&
+                    this.maxNrMessages == that.maxNrMessages &&
                     this.executionManager.equals(that.executionManager) &&
                     this.executionWindowMilliseconds == that.executionWindowMilliseconds;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(sendingFee, maxBytesForSending, maxNrMessagesForStoring, executionManager,
+            return Objects.hash(sendingFee, maxMessageSize, maxNrMessages, executionManager,
                     executionWindowMilliseconds);
         }
 

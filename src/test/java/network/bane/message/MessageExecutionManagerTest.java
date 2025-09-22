@@ -421,7 +421,7 @@ public class MessageExecutionManagerTest {
         NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution();
 
-        BigInteger maxBytesPerResultEvent = messageBridge.maxBytesForSending();
+        BigInteger maxBytesPerResultEvent = messageBridge.maxMessageSize();
         // The result will be serialized, adding 4 bytes as the raw byte array will be prefixed with the type (byte
         // string) and its size (3 bytes as it is > 252 bytes).
         BigInteger resultBytesSize = BigInteger.valueOf(resultSize + 4);
@@ -464,7 +464,7 @@ public class MessageExecutionManagerTest {
     @Order(2)
     public void test_executeMessage_largeResult_noRemainder() throws Throwable {
         // 5 full chunks, no remainder. 4 bytes are included for type and size of the serialized byte array.
-        int resultSize = messageBridge.maxBytesForSending().intValue() * 5 - 4; // = 3996
+        int resultSize = messageBridge.maxMessageSize().intValue() * 5 - 4; // = 3996
         // Create byte array of size resultSize filled with random values
         byte[] resultArray = new byte[resultSize];
         for (int i = 0; i < resultSize; i++) {
@@ -479,7 +479,7 @@ public class MessageExecutionManagerTest {
         NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution();
 
-        BigInteger maxBytesPerResultEvent = messageBridge.maxBytesForSending();
+        BigInteger maxBytesPerResultEvent = messageBridge.maxMessageSize();
         // The result will be serialized, adding 4 bytes as the raw byte array will be prefixed with the type (byte
         // string) and its size (3 bytes as it is > 252 bytes).
         BigInteger resultBytesSize = BigInteger.valueOf(resultSize + 4);

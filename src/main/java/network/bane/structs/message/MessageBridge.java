@@ -33,13 +33,13 @@ public class MessageBridge {
         /**
          * The maximum size (in bytes) of a message that can be sent from N3 to EVM.
          */
-        public int maxBytesForSending;
+        public int maxMessageSize;
 
         /**
          * The maximum number of messages that can be batched together by the relayer in a single invocation of
          * {@code BridgeContract#storeMessages()}.
          */
-        public int maxNrMessagesForStoring;
+        public int maxNrMessages;
 
         /**
          * The address of the contract that manages the execution of messages.
@@ -51,11 +51,11 @@ public class MessageBridge {
          */
         public int executionWindowMilliseconds;
 
-        public MessageBridgeConfig(int sendingFee, int maxBytesForSending, int maxNrMessagesForStoring,
+        public MessageBridgeConfig(int sendingFee, int maxMessageSize, int maxNrMessages,
                 Hash160 executionManager, int executionWindowMilliseconds) {
             this.sendingFee = sendingFee;
-            this.maxBytesForSending = maxBytesForSending;
-            this.maxNrMessagesForStoring = maxNrMessagesForStoring;
+            this.maxMessageSize = maxMessageSize;
+            this.maxNrMessages = maxNrMessages;
             this.executionManager = executionManager;
             this.executionWindowMilliseconds = executionWindowMilliseconds;
         }
@@ -63,8 +63,8 @@ public class MessageBridge {
         public static boolean isValid(MessageBridgeConfig config) {
             return config != null &&
                     config.sendingFee >= 0 &&
-                    config.maxBytesForSending > 0 &&
-                    config.maxNrMessagesForStoring > 0 &&
+                    config.maxMessageSize > 0 &&
+                    config.maxNrMessages > 0 &&
                     config.executionManager != null && !config.executionManager.isZero() &&
                     Hash160.isValid(config.executionManager) &&
                     config.executionWindowMilliseconds > 0;

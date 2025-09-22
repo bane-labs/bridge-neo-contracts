@@ -100,8 +100,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MessageBridgeTest {
 
-    private static final BigInteger UPPER_LIMIT_MAX_BYTES_FOR_SENDING = new BigInteger("10240");
-    private static final BigInteger UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING = new BigInteger("1000");
+    private static final BigInteger UPPER_LIMIT_MAX_MESSAGE_SIZE = new BigInteger("10240");
+    private static final BigInteger UPPER_LIMIT_MAX_NR_MESSAGES = new BigInteger("1000");
     private static final BigInteger UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS = new BigInteger("31536000000");
 
     @RegisterExtension
@@ -294,35 +294,35 @@ public class MessageBridgeTest {
     @Test
     @Order(0)
     public void testSending_storeOnly_fail_exceedMaxSize() throws Throwable {
-        BigInteger previousMaxBytesForSending = messageBridge.maxBytesForSending();
-        messageBridge.setMaxBytesForSending(BigInteger.TEN);
+        BigInteger previousMaxMsgSize = messageBridge.maxMessageSize();
+        messageBridge.setMaxMessageSize(BigInteger.TEN);
 
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef010203");
-        assertThat(rawMessage.length, greaterThan(messageBridge.maxBytesForSending().intValue()));
+        assertThat(rawMessage.length, greaterThan(messageBridge.maxMessageSize().intValue()));
         BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.sendMessage(global(alice), rawMessage, alice, sendingFee));
         assertThat(thrown.getMessage(), containsString("Message too large"));
 
         // Revert the state for further tests
-        messageBridge.setMaxBytesForSending(previousMaxBytesForSending);
+        messageBridge.setMaxMessageSize(previousMaxMsgSize);
     }
 
     @Test
     @Order(0)
     public void testSending_executable_fail_exceedMaxSize() throws Throwable {
-        BigInteger previousMaxBytesForSending = messageBridge.maxBytesForSending();
-        messageBridge.setMaxBytesForSending(BigInteger.TEN);
+        BigInteger previousMaxMsgSize = messageBridge.maxMessageSize();
+        messageBridge.setMaxMessageSize(BigInteger.TEN);
 
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef010203");
-        assertThat(rawMessage.length, greaterThan(messageBridge.maxBytesForSending().intValue()));
+        assertThat(rawMessage.length, greaterThan(messageBridge.maxMessageSize().intValue()));
         BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.sendExecutableMessage(global(alice), rawMessage, false, alice, sendingFee));
         assertThat(thrown.getMessage(), containsString("Message too large"));
 
         // Revert the state for further tests
-        messageBridge.setMaxBytesForSending(previousMaxBytesForSending);
+        messageBridge.setMaxMessageSize(previousMaxMsgSize);
     }
 
     @Test
@@ -841,119 +841,119 @@ public class MessageBridgeTest {
 
     @Test
     @Order(0)
-    public void test_setMaxBytesForSending() throws Throwable {
-        BigInteger maxBytesBefore = messageBridge.maxBytesForSending();
+    public void test_setMaxMessageSize() throws Throwable {
+        BigInteger maxBytesBefore = messageBridge.maxMessageSize();
         BigInteger newMaxBytes = new BigInteger("200");
         assertThat(newMaxBytes, is(not(maxBytesBefore)));
 
-        Hash256 tx = messageBridge.setMaxBytesForSending(newMaxBytes);
-        assertThat(messageBridge.maxBytesForSending(), is(newMaxBytes));
+        Hash256 tx = messageBridge.setMaxMessageSize(newMaxBytes);
+        assertThat(messageBridge.maxMessageSize(), is(newMaxBytes));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
                 .getFirstNotification();
         assertThat(notification.getContract(), is(messageBridge.getScriptHash()));
-        assertThat(notification.getEventName(), is("MaxBytesForSendingChange"));
+        assertThat(notification.getEventName(), is("MaxMessageSizeChange"));
         assertThat(notification.getState().getList(), hasSize(1));
         assertThat(notification.getState().getList().get(0).getInteger(), is(newMaxBytes));
 
         // revert the state for further tests
-        messageBridge.setMaxBytesForSending(maxBytesBefore);
+        messageBridge.setMaxMessageSize(maxBytesBefore);
     }
 
     @Test
     @Order(0)
-    public void test_setMaxBytesForSending_maxValue() throws Throwable {
-        BigInteger previousMaxBytesForSending = messageBridge.maxBytesForSending();
+    public void test_setMaxMessageSize_maxValue() throws Throwable {
+        BigInteger previousMaxMsgSize = messageBridge.maxMessageSize();
 
-        messageBridge.setMaxBytesForSending(UPPER_LIMIT_MAX_BYTES_FOR_SENDING);
-        assertThat(messageBridge.maxBytesForSending(), is(UPPER_LIMIT_MAX_BYTES_FOR_SENDING));
+        messageBridge.setMaxMessageSize(UPPER_LIMIT_MAX_MESSAGE_SIZE);
+        assertThat(messageBridge.maxMessageSize(), is(UPPER_LIMIT_MAX_MESSAGE_SIZE));
 
-        messageBridge.setMaxBytesForSending(previousMaxBytesForSending);
+        messageBridge.setMaxMessageSize(previousMaxMsgSize);
     }
 
     @Test
     @Order(0)
-    public void test_setMaxBytesForSending_valueTooLarge() {
-        BigInteger invalidMaxBytesForSending = UPPER_LIMIT_MAX_BYTES_FOR_SENDING.add(BigInteger.ONE);
+    public void test_setMaxMessageSize_valueTooLarge() {
+        BigInteger invalidMaxMsgSize = UPPER_LIMIT_MAX_MESSAGE_SIZE.add(BigInteger.ONE);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setMaxBytesForSending(invalidMaxBytesForSending));
-        assertThat(thrown.getMessage(), containsString("Max bytes for sending too large"));
+                () -> messageBridge.setMaxMessageSize(invalidMaxMsgSize));
+        assertThat(thrown.getMessage(), containsString("Max message size too large"));
     }
 
     @Test
     @Order(0)
-    public void test_setMaxBytesForSending_invalidValue() {
-        BigInteger invalidMaxBytes = BigInteger.ZERO;
+    public void test_setMaxMessageSize_invalidValue() {
+        BigInteger invalidMaxMsgSize = BigInteger.ZERO;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setMaxBytesForSending(invalidMaxBytes));
-        assertThat(thrown.getMessage(), containsString("Max bytes for sending must be positive"));
+                () -> messageBridge.setMaxMessageSize(invalidMaxMsgSize));
+        assertThat(thrown.getMessage(), containsString("Max message size must be positive"));
     }
 
     @Test
     @Order(0)
-    public void test_setMaxBytesForSending_notGovernor() {
+    public void test_setMaxMessageSize_notGovernor() {
         BigInteger newMaxBytes = new BigInteger("200");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setMaxBytesForSending(alice, newMaxBytes));
+                () -> messageBridge.setMaxMessageSize(alice, newMaxBytes));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
     @Test
     @Order(0)
-    public void test_setMaxNrMessagesForStoring() throws Throwable {
-        BigInteger maxNrMessagesBefore = messageBridge.maxNrMessagesForStoring();
+    public void test_setMaxNrMessages() throws Throwable {
+        BigInteger maxNrMessagesBefore = messageBridge.maxNrMessages();
         BigInteger newMaxNrMessages = new BigInteger("20");
         assertThat(newMaxNrMessages, is(not(maxNrMessagesBefore)));
 
-        Hash256 tx = messageBridge.setMaxNrMessagesForStoring(newMaxNrMessages);
-        assertThat(messageBridge.maxNrMessagesForStoring(), is(newMaxNrMessages));
+        Hash256 tx = messageBridge.setMaxNrMessages(newMaxNrMessages);
+        assertThat(messageBridge.maxNrMessages(), is(newMaxNrMessages));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
                 .getFirstNotification();
         assertThat(notification.getContract(), is(messageBridge.getScriptHash()));
-        assertThat(notification.getEventName(), is("MaxNrMessagesForStoringChange"));
+        assertThat(notification.getEventName(), is("MaxNrMessagesChange"));
         assertThat(notification.getState().getList(), hasSize(1));
         assertThat(notification.getState().getList().get(0).getInteger(), is(newMaxNrMessages));
 
         // revert the state for further tests
-        messageBridge.setMaxNrMessagesForStoring(maxNrMessagesBefore);
+        messageBridge.setMaxNrMessages(maxNrMessagesBefore);
     }
 
     @Test
     @Order(0)
-    public void test_setMaxNrMessageForStoring_maxValue() throws Throwable {
-        BigInteger previousMaxNrMessagesForStoring = messageBridge.maxNrMessagesForStoring();
+    public void test_setMaxNrMessages_maxValue() throws Throwable {
+        BigInteger previousMaxNrMessages = messageBridge.maxNrMessages();
 
-        messageBridge.setMaxNrMessagesForStoring(UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING);
-        assertThat(messageBridge.maxNrMessagesForStoring(), is(UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING));
+        messageBridge.setMaxNrMessages(UPPER_LIMIT_MAX_NR_MESSAGES);
+        assertThat(messageBridge.maxNrMessages(), is(UPPER_LIMIT_MAX_NR_MESSAGES));
 
-        messageBridge.setMaxNrMessagesForStoring(previousMaxNrMessagesForStoring);
+        messageBridge.setMaxNrMessages(previousMaxNrMessages);
     }
 
     @Test
     @Order(0)
-    public void test_setMaxNrMessageForStoring_valueTooLarge() {
-        BigInteger invalidMaxNrMessagesForStoring = UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING.add(BigInteger.ONE);
+    public void test_setMaxNrMessages_valueTooLarge() {
+        BigInteger invalidMaxNrMessages = UPPER_LIMIT_MAX_NR_MESSAGES.add(BigInteger.ONE);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setMaxNrMessagesForStoring(invalidMaxNrMessagesForStoring));
-        assertThat(thrown.getMessage(), containsString("Max number of messages for storing too large"));
+                () -> messageBridge.setMaxNrMessages(invalidMaxNrMessages));
+        assertThat(thrown.getMessage(), containsString("Max number of messages too large"));
     }
 
     @Test
     @Order(0)
-    public void test_setMaxNrMessageForStoring_invalidValue() {
+    public void test_setMaxNrMessages_invalidValue() {
         BigInteger invalidMaxNrMessages = BigInteger.ZERO;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setMaxNrMessagesForStoring(invalidMaxNrMessages));
-        assertThat(thrown.getMessage(), containsString("Max number of messages for storing must be positive"));
+                () -> messageBridge.setMaxNrMessages(invalidMaxNrMessages));
+        assertThat(thrown.getMessage(), containsString("Max number of messages must be positive"));
     }
 
     @Test
     @Order(0)
-    public void test_setMaxNrMessagesForStoring_notGovernor() {
+    public void test_setMaxNrMessagess_notGovernor() {
         BigInteger newMaxNrMessages = new BigInteger("20");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setMaxNrMessagesForStoring(alice, newMaxNrMessages));
+                () -> messageBridge.setMaxNrMessages(alice, newMaxNrMessages));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 

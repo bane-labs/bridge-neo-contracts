@@ -115,13 +115,13 @@ public class MessageBridgeContract {
     @EventParameterNames({"NewFee"})
     static Event1Arg<Integer> onSendingFeeChange;
 
-    @DisplayName("MaxBytesForSendingChange")
+    @DisplayName("MaxMessageSizeChange")
     @EventParameterNames({"NewMaxBytes"})
-    static Event1Arg<Integer> onMaxBytesForSendingChange;
+    static Event1Arg<Integer> onMaxMessageSizeChange;
 
-    @DisplayName("MaxNrMessagesForStoringChange")
+    @DisplayName("MaxNrMessagesChange")
     @EventParameterNames({"NewMaxNrMessages"})
-    static Event1Arg<Integer> onMaxNrMessagesForStoringChange;
+    static Event1Arg<Integer> onMaxNrMessagesChange;
 
     @DisplayName("ExecutionManagerChange")
     @EventParameterNames({"NewExecutionManager"})
@@ -466,25 +466,25 @@ public class MessageBridgeContract {
     }
 
     @Safe
-    public static int maxBytesForSending() {
-        return MessageBridgeImpl.getMessageBridge().config.maxBytesForSending;
+    public static int maxMessageSize() {
+        return MessageBridgeImpl.getMessageBridge().config.maxMessageSize;
     }
 
-    public static void setMaxBytesForSending(int newMaxBytes) {
+    public static void setMaxMessageSize(int newMaxBytes) {
         onlyGovernor();
-        MessageBridgeImpl.setMaxBytesForSending(newMaxBytes);
-        onMaxBytesForSendingChange.fire(newMaxBytes);
+        MessageBridgeImpl.setMaxMessageSize(newMaxBytes);
+        onMaxMessageSizeChange.fire(newMaxBytes);
     }
 
     @Safe
-    public static int maxNrMessagesForStoring() {
-        return MessageBridgeImpl.getMessageBridge().config.maxNrMessagesForStoring;
+    public static int maxNrMessages() {
+        return MessageBridgeImpl.getMessageBridge().config.maxNrMessages;
     }
 
-    public static void setMaxNrMessagesForStoring(int newMaxNrMessages) {
+    public static void setMaxNrMessages(int newMaxNrMessages) {
         onlyGovernor();
-        MessageBridgeImpl.setMaxNrMessagesForStoring(newMaxNrMessages);
-        onMaxNrMessagesForStoringChange.fire(newMaxNrMessages);
+        MessageBridgeImpl.setMaxNrMessages(newMaxNrMessages);
+        onMaxNrMessagesChange.fire(newMaxNrMessages);
     }
 
     @Safe
