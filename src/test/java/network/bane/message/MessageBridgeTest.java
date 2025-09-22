@@ -950,7 +950,7 @@ public class MessageBridgeTest {
 
     @Test
     @Order(0)
-    public void test_setMaxNrMessagess_notGovernor() {
+    public void test_setMaxNrMessages_notGovernor() {
         BigInteger newMaxNrMessages = new BigInteger("20");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.setMaxNrMessages(alice, newMaxNrMessages));
