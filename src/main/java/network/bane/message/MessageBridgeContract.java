@@ -103,13 +103,9 @@ public class MessageBridgeContract {
     @EventParameterNames({"Nonce", "MetadataBytes"})
     static Event2Args<Integer, ByteString> onStore;
 
-    @DisplayName("Execute")
-    @EventParameterNames({"Nonce", "Metadata"})
-    static Event2Args<Integer, N3Message.N3MetadataExecutable> onExecution;
-
-    @DisplayName("ExecutionResult")
+    @DisplayName("Execution")
     @EventParameterNames({"Nonce", "NumberOfChunks", "Index", "Result"})
-    static Event4Args<Integer, Integer, Integer, Object> onExecutionResult;
+    static Event4Args<Integer, Integer, Integer, Object> onExecution;
 
     @DisplayName("SendingFeeChange")
     @EventParameterNames({"NewFee"})

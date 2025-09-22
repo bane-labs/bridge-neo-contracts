@@ -231,7 +231,6 @@ class MessageBridgeImpl {
         // Validate that the message has not been executed yet and has not expired.
         checkExecutableStateAndMarkExecuted(nonce);
 
-        MessageBridgeContract.onExecution.fire(nonce, metadata);
         MessageBridge.MessageBridgeConfig config = getMessageBridge().config;
         Object result = new ExecutionManager(config.executionManager).executeMessage(nonce, message.rawMessage);
 
@@ -250,13 +249,13 @@ class MessageBridgeImpl {
         // single event. Otherwise, it is split and emitted in chunks, i.e., in multiple events.
         int resultBytesLen = serializedResult.length();
         if (resultBytesLen <= maxResultBytesPerEvent) {
-            MessageBridgeContract.onExecutionResult.fire(nonce, 1, 0, result);
+            MessageBridgeContract.onExecution.fire(nonce, 1, 0, result);
         } else {
-            fireChunkedExecutionResultEvents(nonce, serializedResult, maxResultBytesPerEvent);
+            fireChunkedExecutionEvents(nonce, serializedResult, maxResultBytesPerEvent);
         }
     }
 
-    private static void fireChunkedExecutionResultEvents(int nonce, ByteString serializedResult, int maxBytesPerEvent) {
+    private static void fireChunkedExecutionEvents(int nonce, ByteString serializedResult, int maxBytesPerEvent) {
         int totalSize = serializedResult.length();
         // Potential decimal places are cut off in the division. If there is a remainder it is handled directly after
         // the for loop. nrFullChunks denotes how many chunks there are that are fully filled with
@@ -274,11 +273,11 @@ class MessageBridgeImpl {
             // possibly the last one.
             int startIndex = i * maxBytesPerEvent;
             ByteString serializedResultChunk = serializedResult.range(startIndex, maxBytesPerEvent);
-            MessageBridgeContract.onExecutionResult.fire(nonce, nrTotalChunks, i, serializedResultChunk);
+            MessageBridgeContract.onExecution.fire(nonce, nrTotalChunks, i, serializedResultChunk);
         }
         if (hasRemainder) {
             // Take the last chunk of the result.
-            MessageBridgeContract.onExecutionResult.fire(nonce, nrTotalChunks, nrFullChunks,
+            MessageBridgeContract.onExecution.fire(nonce, nrTotalChunks, nrFullChunks,
                     serializedResult.last(remainder));
         }
     }

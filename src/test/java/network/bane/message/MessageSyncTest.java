@@ -522,12 +522,10 @@ public class MessageSyncTest {
         NeoApplicationLog.Execution firstExec = neow3j.getApplicationLog(tx).send().getApplicationLog()
                 .getFirstExecution();
 
-        assertThat(firstExec.getNotifications(), hasSize(2));
+        assertThat(firstExec.getNotifications(), hasSize(1));
         assertThat(firstExec.getNotifications().get(0).getContract(), is(messageBridge.getScriptHash()));
-        assertThat(firstExec.getNotifications().get(0).getEventName(), is("Execute"));
-        assertThat(firstExec.getNotifications().get(1).getContract(), is(messageBridge.getScriptHash()));
-        assertThat(firstExec.getNotifications().get(1).getEventName(), is("ExecutionResult"));
-        StackItem event2State = firstExec.getNotifications().get(1).getState();
+        assertThat(firstExec.getNotifications().get(0).getEventName(), is("Execution"));
+        StackItem event2State = firstExec.getFirstNotification().getState();
         assertThat(event2State.getList().get(0).getInteger(), is(executableMessageNonce));
         assertThat(event2State.getList().get(1).getInteger(), is(BigInteger.ONE));
         assertThat(event2State.getList().get(2).getInteger(), is(BigInteger.ZERO));
