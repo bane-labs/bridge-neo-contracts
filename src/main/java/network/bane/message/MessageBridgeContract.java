@@ -92,7 +92,7 @@ public class MessageBridgeContract {
     static Event onExecutingUnpause;
 
     @DisplayName("MessageSend")
-    @EventParameterNames({"Nonce", "Message", "Metadata", "MessageHash", "NewEvmRoot"})
+    @EventParameterNames({"Nonce", "Metadata", "Message", "MessageHash", "NewEvmRoot"})
     static Event5Args<Integer, ByteString, ByteString, ByteString, ByteString> onMessageSend;
 
     @DisplayName("N3RootUpdate")
