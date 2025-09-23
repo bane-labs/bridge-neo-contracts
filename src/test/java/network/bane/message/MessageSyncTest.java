@@ -359,9 +359,9 @@ public class MessageSyncTest {
         List<StackItem> eventItems = msgSendEvent.getState().getList();
         assertThat(eventItems, hasSize(5));
         assertThat(eventItems.get(0).getInteger(), is(nextEvmNonce));
-        assertThat(eventItems.get(1).getType(), is(StackItemType.BYTE_STRING)); // raw message
-        assertThat(eventItems.get(1).getByteArray().length, is(rawMessage.length));
-        assertThat(eventItems.get(2).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(eventItems.get(1).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(eventItems.get(2).getType(), is(StackItemType.BYTE_STRING));  // raw message
+        assertThat(eventItems.get(2).getByteArray().length, is(rawMessage.length));
         assertThat(eventItems.get(3).getType(), is(StackItemType.BYTE_STRING));
         assertThat(eventItems.get(3).getByteArray().length, is(Hash256.ZERO.getSize()));
         assertThat(eventItems.get(4).getType(), is(StackItemType.BYTE_STRING));
@@ -369,7 +369,7 @@ public class MessageSyncTest {
 
         // Deserialize the serialized metadata bytes from the event to get the individual metadata values.
         List<StackItem> metadataItems = stdLib.callInvokeFunction("deserialize",
-                        asList(byteArray(eventItems.get(2).getByteArray()))).getInvocationResult().getFirstStackItem()
+                        asList(byteArray(eventItems.get(1).getByteArray()))).getInvocationResult().getFirstStackItem()
                 .getList();
         assertThat(metadataItems, hasSize(4));
         BigInteger msgType = metadataItems.get(0).getInteger();
@@ -446,7 +446,7 @@ public class MessageSyncTest {
 
         // Deserialize the serialized metadata bytes from the event to get the individual metadata values.
         List<StackItem> metadataItems = stdLib.callInvokeFunction("deserialize",
-                        asList(byteArray(eventItems.get(2).getByteArray()))).getInvocationResult().getFirstStackItem()
+                        asList(byteArray(eventItems.get(1).getByteArray()))).getInvocationResult().getFirstStackItem()
                 .getList();
         assertThat(metadataItems, hasSize(3));
         BigInteger msgType = metadataItems.get(0).getInteger();
@@ -522,12 +522,10 @@ public class MessageSyncTest {
         NeoApplicationLog.Execution firstExec = neow3j.getApplicationLog(tx).send().getApplicationLog()
                 .getFirstExecution();
 
-        assertThat(firstExec.getNotifications(), hasSize(2));
+        assertThat(firstExec.getNotifications(), hasSize(1));
         assertThat(firstExec.getNotifications().get(0).getContract(), is(messageBridge.getScriptHash()));
-        assertThat(firstExec.getNotifications().get(0).getEventName(), is("Execute"));
-        assertThat(firstExec.getNotifications().get(1).getContract(), is(messageBridge.getScriptHash()));
-        assertThat(firstExec.getNotifications().get(1).getEventName(), is("ExecutionResult"));
-        StackItem event2State = firstExec.getNotifications().get(1).getState();
+        assertThat(firstExec.getNotifications().get(0).getEventName(), is("Execution"));
+        StackItem event2State = firstExec.getFirstNotification().getState();
         assertThat(event2State.getList().get(0).getInteger(), is(executableMessageNonce));
         assertThat(event2State.getList().get(1).getInteger(), is(BigInteger.ONE));
         assertThat(event2State.getList().get(2).getInteger(), is(BigInteger.ZERO));
@@ -561,7 +559,7 @@ public class MessageSyncTest {
 
         // Deserialize the serialized metadata bytes from the event to get the individual metadata values.
         List<StackItem> metadataItems = stdLib.callInvokeFunction("deserialize",
-                        asList(byteArray(eventItems.get(2).getByteArray()))).getInvocationResult().getFirstStackItem()
+                        asList(byteArray(eventItems.get(1).getByteArray()))).getInvocationResult().getFirstStackItem()
                 .getList();
         assertThat(metadataItems, hasSize(4));
         BigInteger msgType = metadataItems.get(0).getInteger();

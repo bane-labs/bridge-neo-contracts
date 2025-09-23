@@ -338,28 +338,17 @@ public class MessageExecutionManagerTest {
         Hash256 txHash = messageBridge.executeMessage(none(alice), nonce);
         NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution();
-        assertThat(exec.getNotifications(), hasSize(2));
-        Notification event1 = exec.getNotifications().get(0);
-        assertThat(event1.getContract(), is(messageBridge.getScriptHash()));
-        assertThat(event1.getEventName(), is("Execute"));
-        assertThat(event1.getState().getList(), hasSize(2));
-        StackItem eventNonce = event1.getState().getList().get(0);
-        assertThat(eventNonce.getInteger(), is(nonce));
-        List<StackItem> eventMetadata = event1.getState().getList().get(1).getList();
-        assertThat(eventMetadata.get(0).getInteger().intValue(), is(MESSAGE_TYPE_EXECUTABLE));
-        assertThat(eventMetadata.get(1).getInteger(), lessThan(bestBlockTime()));
-        assertThat(eventMetadata.get(2).getAddress(), is(alice.getAddress()));
-        assertTrue(eventMetadata.get(3).getBoolean());
+        assertThat(exec.getNotifications(), hasSize(1));
 
-        Notification event2 = exec.getNotifications().get(1);
-        assertThat(event2.getContract(), is(messageBridge.getScriptHash()));
-        assertThat(event2.getEventName(), is("ExecutionResult"));
-        assertThat(event2.getState().getList().get(0).getInteger(), is(nonce));
+        Notification execEvent = exec.getFirstNotification();
+        assertThat(execEvent.getContract(), is(messageBridge.getScriptHash()));
+        assertThat(execEvent.getEventName(), is("Execution"));
+        assertThat(execEvent.getState().getList().get(0).getInteger(), is(nonce));
         String expectedResultHex = "21012a"; // serialized form of int 42 (i.e., type: 0x21, size: 0x01, value: 0x2a)
-        assertThat(event2.getState().getList().get(1).getInteger(), is(BigInteger.ONE));
-        assertThat(event2.getState().getList().get(2).getInteger(), is(BigInteger.ZERO));
-        assertThat(event2.getState().getList().get(3).getType(), is(StackItemType.BYTE_STRING));
-        assertThat(event2.getState().getList().get(3).getHexString(), is(expectedResultHex));
+        assertThat(execEvent.getState().getList().get(1).getInteger(), is(BigInteger.ONE));
+        assertThat(execEvent.getState().getList().get(2).getInteger(), is(BigInteger.ZERO));
+        assertThat(execEvent.getState().getList().get(3).getType(), is(StackItemType.BYTE_STRING));
+        assertThat(execEvent.getState().getList().get(3).getHexString(), is(expectedResultHex));
 
         assertThat(messageTestStorer.getStoredValue(key).getType(), is(StackItemType.INTEGER));
         assertThat(messageTestStorer.getStoredValue(key).getValue(), is(value.getValue()));
@@ -386,7 +375,7 @@ public class MessageExecutionManagerTest {
         NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution();
 
-        Notification event2 = exec.getNotifications().get(1);
+        Notification event2 = exec.getFirstNotification();
         assertThat(event2.getState().getList().get(1).getInteger(), is(BigInteger.ONE));
         assertThat(event2.getState().getList().get(2).getInteger(), is(BigInteger.ZERO));
         assertThat(event2.getState().getList().get(3).getType(), is(StackItemType.INTEGER));
@@ -421,7 +410,7 @@ public class MessageExecutionManagerTest {
         NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution();
 
-        BigInteger maxBytesPerResultEvent = messageBridge.maxBytesForSending();
+        BigInteger maxBytesPerResultEvent = messageBridge.maxMessageSize();
         // The result will be serialized, adding 4 bytes as the raw byte array will be prefixed with the type (byte
         // string) and its size (3 bytes as it is > 252 bytes).
         BigInteger resultBytesSize = BigInteger.valueOf(resultSize + 4);
@@ -432,19 +421,19 @@ public class MessageExecutionManagerTest {
             nrChunks++;
         }
         List<Notification> notifications = exec.getNotifications();
-        assertThat(notifications, hasSize(1 + nrChunks));
+        assertThat(notifications, hasSize(nrChunks));
 
         // Iterate over the notifications and append the byt3 arrays from them to reconstruct the full result array.
         // Then, assert that the reconstructed array is identical to the original array.
         StringBuilder b = new StringBuilder();
-        for (int i = 1; i < notifications.size(); i++) {
+        for (int i = 0; i < notifications.size(); i++) {
             Notification chunkEvent = notifications.get(i);
             assertThat(chunkEvent.getContract(), is(messageBridge.getScriptHash()));
-            assertThat(chunkEvent.getEventName(), is("ExecutionResult"));
+            assertThat(chunkEvent.getEventName(), is("Execution"));
             List<StackItem> stateList = chunkEvent.getState().getList();
             assertThat(stateList.get(0).getInteger(), is(nonce));
-            assertThat(stateList.get(1).getInteger().intValue(), is(notifications.size() - 1)); // total chunks
-            assertThat(stateList.get(2).getInteger().intValue(), is(i - 1)); // current chunk index
+            assertThat(stateList.get(1).getInteger().intValue(), is(nrChunks)); // total chunks
+            assertThat(stateList.get(2).getInteger().intValue(), is(i)); // current chunk index
             assertThat(stateList.get(3).getType(), is(StackItemType.BYTE_STRING));
             b.append(stateList.get(3).getHexString());
         }
@@ -464,7 +453,7 @@ public class MessageExecutionManagerTest {
     @Order(2)
     public void test_executeMessage_largeResult_noRemainder() throws Throwable {
         // 5 full chunks, no remainder. 4 bytes are included for type and size of the serialized byte array.
-        int resultSize = messageBridge.maxBytesForSending().intValue() * 5 - 4; // = 3996
+        int resultSize = messageBridge.maxMessageSize().intValue() * 5 - 4; // = 3996
         // Create byte array of size resultSize filled with random values
         byte[] resultArray = new byte[resultSize];
         for (int i = 0; i < resultSize; i++) {
@@ -479,7 +468,7 @@ public class MessageExecutionManagerTest {
         NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution();
 
-        BigInteger maxBytesPerResultEvent = messageBridge.maxBytesForSending();
+        BigInteger maxBytesPerResultEvent = messageBridge.maxMessageSize();
         // The result will be serialized, adding 4 bytes as the raw byte array will be prefixed with the type (byte
         // string) and its size (3 bytes as it is > 252 bytes).
         BigInteger resultBytesSize = BigInteger.valueOf(resultSize + 4);
@@ -489,19 +478,19 @@ public class MessageExecutionManagerTest {
         assertThat(nrChunksAndRemainder[1], is(BigInteger.ZERO));
 
         List<Notification> notifications = exec.getNotifications();
-        assertThat(notifications, hasSize(1 + nrChunks));
+        assertThat(notifications, hasSize(nrChunks));
 
         // Iterate over the notifications and append the byt3 arrays from them to reconstruct the full result array.
         // Then, assert that the reconstructed array is identical to the original array.
         StringBuilder b = new StringBuilder();
-        for (int i = 1; i < notifications.size(); i++) {
+        for (int i = 0; i < notifications.size(); i++) {
             Notification chunkEvent = notifications.get(i);
             assertThat(chunkEvent.getContract(), is(messageBridge.getScriptHash()));
-            assertThat(chunkEvent.getEventName(), is("ExecutionResult"));
+            assertThat(chunkEvent.getEventName(), is("Execution"));
             List<StackItem> stateList = chunkEvent.getState().getList();
             assertThat(stateList.get(0).getInteger(), is(nonce));
-            assertThat(stateList.get(1).getInteger().intValue(), is(notifications.size() - 1)); // total chunks
-            assertThat(stateList.get(2).getInteger().intValue(), is(i - 1)); // current chunk index
+            assertThat(stateList.get(1).getInteger().intValue(), is(nrChunks)); // total chunks
+            assertThat(stateList.get(2).getInteger().intValue(), is(i)); // current chunk index
             assertThat(stateList.get(3).getType(), is(StackItemType.BYTE_STRING));
             b.append(stateList.get(3).getHexString());
         }

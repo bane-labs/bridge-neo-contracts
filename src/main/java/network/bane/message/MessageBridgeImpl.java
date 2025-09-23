@@ -39,7 +39,7 @@ class MessageBridgeImpl {
     // These values are absolute upper bounds and serve as protective constraints to avoid setting too large values. If
     // needed, they can be adjusted with a contract update.
     private static final int UPPER_LIMIT_MAX_BYTES_FOR_SENDING = 10240; // 10 KB
-    private static final int UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING = 1000;
+    private static final int UPPER_LIMIT_MAX_NR_MESSAGES = 1000;
     // Value is too large for int, using a string instead and convert when needed.
     private static final String UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS = "31536000000"; // 1 year in milliseconds
 
@@ -82,20 +82,20 @@ class MessageBridgeImpl {
         storeMessageBridge(messageBridge);
     }
 
-    static void setMaxBytesForSending(int newMaxBytes) {
-        if (newMaxBytes <= 0) abort("Max bytes for sending must be positive");
-        if (newMaxBytes > UPPER_LIMIT_MAX_BYTES_FOR_SENDING) abort("Max bytes for sending too large");
+    static void setMaxMessageSize(int newMaxBytes) {
+        if (newMaxBytes <= 0) abort("Max message size must be positive");
+        if (newMaxBytes > UPPER_LIMIT_MAX_BYTES_FOR_SENDING) abort("Max message size too large");
         MessageBridge messageBridge = getMessageBridge();
-        messageBridge.config.maxBytesForSending = newMaxBytes;
+        messageBridge.config.maxMessageSize = newMaxBytes;
         storeMessageBridge(messageBridge);
     }
 
-    static void setMaxNrMessagesForStoring(int newMaxNrMessages) {
-        if (newMaxNrMessages <= 0) abort("Max number of messages for storing must be positive");
-        if (newMaxNrMessages > UPPER_LIMIT_MAX_NR_MESSAGES_FOR_STORING)
-            abort("Max number of messages for storing too large");
+    static void setMaxNrMessages(int newMaxNrMessages) {
+        if (newMaxNrMessages <= 0) abort("Max number of messages must be positive");
+        if (newMaxNrMessages > UPPER_LIMIT_MAX_NR_MESSAGES)
+            abort("Max number of messages too large");
         MessageBridge messageBridge = getMessageBridge();
-        messageBridge.config.maxNrMessagesForStoring = newMaxNrMessages;
+        messageBridge.config.maxNrMessages = newMaxNrMessages;
         storeMessageBridge(messageBridge);
     }
 
@@ -231,7 +231,6 @@ class MessageBridgeImpl {
         // Validate that the message has not been executed yet and has not expired.
         checkExecutableStateAndMarkExecuted(nonce);
 
-        MessageBridgeContract.onExecution.fire(nonce, metadata);
         MessageBridge.MessageBridgeConfig config = getMessageBridge().config;
         Object result = new ExecutionManager(config.executionManager).executeMessage(nonce, message.rawMessage);
 
@@ -241,22 +240,22 @@ class MessageBridgeImpl {
             new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT_N3_EXEC).put(nonce, serializedResult);
         }
 
-        // The max bytes for sending is used as the max byte size for results in a single event.
+        // The max message size is used as the max byte size for results in a single event.
         // While this configuration value is used in this different context, it allows to easily identify which
         // results are fit to be sent back to EVM given the current configuration and support.
-        int maxResultBytesPerEvent = config.maxBytesForSending;
+        int maxResultBytesPerEvent = config.maxMessageSize;
 
         // If the size of the serialized result is in the allowed range to send it back to EVM, it is emitted in a
         // single event. Otherwise, it is split and emitted in chunks, i.e., in multiple events.
         int resultBytesLen = serializedResult.length();
         if (resultBytesLen <= maxResultBytesPerEvent) {
-            MessageBridgeContract.onExecutionResult.fire(nonce, 1, 0, result);
+            MessageBridgeContract.onExecution.fire(nonce, 1, 0, result);
         } else {
-            fireChunkedExecutionResultEvents(nonce, serializedResult, maxResultBytesPerEvent);
+            fireChunkedExecutionEvents(nonce, serializedResult, maxResultBytesPerEvent);
         }
     }
 
-    private static void fireChunkedExecutionResultEvents(int nonce, ByteString serializedResult, int maxBytesPerEvent) {
+    private static void fireChunkedExecutionEvents(int nonce, ByteString serializedResult, int maxBytesPerEvent) {
         int totalSize = serializedResult.length();
         // Potential decimal places are cut off in the division. If there is a remainder it is handled directly after
         // the for loop. nrFullChunks denotes how many chunks there are that are fully filled with
@@ -274,11 +273,11 @@ class MessageBridgeImpl {
             // possibly the last one.
             int startIndex = i * maxBytesPerEvent;
             ByteString serializedResultChunk = serializedResult.range(startIndex, maxBytesPerEvent);
-            MessageBridgeContract.onExecutionResult.fire(nonce, nrTotalChunks, i, serializedResultChunk);
+            MessageBridgeContract.onExecution.fire(nonce, nrTotalChunks, i, serializedResultChunk);
         }
         if (hasRemainder) {
             // Take the last chunk of the result.
-            MessageBridgeContract.onExecutionResult.fire(nonce, nrTotalChunks, nrFullChunks,
+            MessageBridgeContract.onExecution.fire(nonce, nrTotalChunks, nrFullChunks,
                     serializedResult.last(remainder));
         }
     }
@@ -301,7 +300,7 @@ class MessageBridgeImpl {
     }
 
     public static int sendMessage(ByteString rawMsg, Hash160 feeSponsor, int maxFee) {
-        MessageBridgeImpl.checkMsgSizeForSending(rawMsg.length());
+        MessageBridgeImpl.checkMsgSize(rawMsg.length());
         MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 
         int timestamp = Runtime.getTime();
@@ -312,7 +311,7 @@ class MessageBridgeImpl {
     }
 
     public static int sendExecutableMessage(ByteString rawMsg, boolean storeResult, Hash160 feeSponsor, int maxFee) {
-        MessageBridgeImpl.checkMsgSizeForSending(rawMsg.length());
+        MessageBridgeImpl.checkMsgSize(rawMsg.length());
         MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 
         int timestamp = Runtime.getTime();
@@ -328,7 +327,7 @@ class MessageBridgeImpl {
             abort("Result not found");
         }
 
-        MessageBridgeImpl.checkMsgSizeForSending(result.length());
+        MessageBridgeImpl.checkMsgSize(result.length());
         MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 
         int timestamp = Runtime.getTime();
@@ -339,8 +338,8 @@ class MessageBridgeImpl {
         return serializeAndUpdateEvmMessageState(metadata, result);
     }
 
-    private static void checkMsgSizeForSending(int msgSize) {
-        if (msgSize > getMessageBridge().config.maxBytesForSending) {
+    private static void checkMsgSize(int msgSize) {
+        if (msgSize > getMessageBridge().config.maxMessageSize) {
             abort("Message too large");
         }
     }
@@ -405,8 +404,8 @@ class MessageBridgeImpl {
         messageBridge.n3ToEvmMessageState.root = newRoot;
         assert messageBridge.n3ToEvmMessageState.root == newRoot : "Root not set correctly";
         storeMessageBridge(messageBridge);
-        MessageBridgeContract.onMessageSend.fire(msgEnvelope.nonce, msgEnvelope.message.rawMessage,
-                msgEnvelope.message.metadataBytes, messageHash, newRoot);
+        MessageBridgeContract.onMessageSend.fire(msgEnvelope.nonce, msgEnvelope.message.metadataBytes,
+                msgEnvelope.message.rawMessage, messageHash, newRoot);
         return msgEnvelope.nonce;
     }
 

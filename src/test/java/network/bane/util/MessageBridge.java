@@ -378,32 +378,32 @@ public class MessageBridge extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("setSendingFee", integer(newFee)).signers(signer));
     }
 
-    public BigInteger maxBytesForSending() throws IOException {
-        return callFunctionReturningInt("maxBytesForSending");
+    public BigInteger maxMessageSize() throws IOException {
+        return callFunctionReturningInt("maxMessageSize");
     }
 
-    public Hash256 setMaxBytesForSending(BigInteger newMaxSize) throws Throwable {
-        return setMaxBytesForSending(governor, newMaxSize);
+    public Hash256 setMaxMessageSize(BigInteger newMaxSize) throws Throwable {
+        return setMaxMessageSize(governor, newMaxSize);
     }
 
-    public Hash256 setMaxBytesForSending(Account sender, BigInteger newMaxSize) throws Throwable {
+    public Hash256 setMaxMessageSize(Account sender, BigInteger newMaxSize) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
         return sendAndAwaitExecution(
-                invokeFunction("setMaxBytesForSending", integer(newMaxSize)).signers(signer));
+                invokeFunction("setMaxMessageSize", integer(newMaxSize)).signers(signer));
     }
 
-    public BigInteger maxNrMessagesForStoring() throws IOException {
-        return callFunctionReturningInt("maxNrMessagesForStoring");
+    public BigInteger maxNrMessages() throws IOException {
+        return callFunctionReturningInt("maxNrMessages");
     }
 
-    public Hash256 setMaxNrMessagesForStoring(BigInteger newMaxNrMessages) throws Throwable {
-        return setMaxNrMessagesForStoring(governor, newMaxNrMessages);
+    public Hash256 setMaxNrMessages(BigInteger newMaxNrMessages) throws Throwable {
+        return setMaxNrMessages(governor, newMaxNrMessages);
     }
 
-    public Hash256 setMaxNrMessagesForStoring(Account sender, BigInteger newMaxNrMessages) throws Throwable {
+    public Hash256 setMaxNrMessages(Account sender, BigInteger newMaxNrMessages) throws Throwable {
         Signer signer = AccountSigner.calledByEntry(sender);
         return sendAndAwaitExecution(
-                invokeFunction("setMaxNrMessagesForStoring", integer(newMaxNrMessages)).signers(signer));
+                invokeFunction("setMaxNrMessages", integer(newMaxNrMessages)).signers(signer));
     }
 
     public Hash160 executionManager() throws IOException {
