@@ -79,4 +79,7 @@ public class EnvVariables {
     public static final BigInteger maxTotalDeposited =
             new BigInteger(getEnvVariableOrDefault("NEON3_MAX_TOTAL_DEPOSITED", "100000000000000"));
 
+    public static final BigInteger linkedChainId =
+            new BigInteger(getEnvVariableOrDefault("NEON3_LINKED_CHAIN_ID", "1"));
+
 }
