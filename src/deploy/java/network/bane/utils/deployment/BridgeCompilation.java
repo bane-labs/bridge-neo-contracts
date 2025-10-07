@@ -18,8 +18,8 @@ import io.neow3j.types.NeoVMStateType;
 import io.neow3j.utils.Await;
 import network.bane.bridge.BridgeContract;
 import network.bane.management.BridgeManagementContract;
+import network.bane.message.MessageBridgeContract;
 import network.bane.messageexecution.ExecutionManagerContract;
-import network.bane.structs.message.MessageBridge;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -27,7 +27,10 @@ import java.util.List;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static network.bane.utils.deployment.BridgeDeploymentParameters.*;
+import static network.bane.utils.deployment.BridgeDeploymentParameters.prepareBridgeDeployParameter;
+import static network.bane.utils.deployment.BridgeDeploymentParameters.prepareExecutionManagerDeployParameter;
+import static network.bane.utils.deployment.BridgeDeploymentParameters.prepareManagementDeployParameter;
+import static network.bane.utils.deployment.BridgeDeploymentParameters.prepareMessageBridgeDeployParameter;
 import static network.bane.utils.env.EnvVariables.*;
 
 public class BridgeCompilation {
@@ -66,7 +69,7 @@ public class BridgeCompilation {
                 managementCompUnit.getManifest().getName()
         );
 
-        NeoSendRawTransaction managementDeploymentTxResponse = getNeoSendRawTransaction(
+        NeoSendRawTransaction managementDeploymentTxResponse = deployContractFromCompilationUnit(
                 neow3j, managementCompUnit, managementDeployParameter, managementContractHash
         );
         Hash256 managementDeploymentTxHash = getHashIfExecutionSuccessful(neow3j, managementDeploymentTxResponse);
@@ -92,7 +95,7 @@ public class BridgeCompilation {
                 bridgeCompUnit.getManifest().getName()
         );
 
-        NeoSendRawTransaction bridgeDeploymentTxResponse = getNeoSendRawTransaction(
+        NeoSendRawTransaction bridgeDeploymentTxResponse = deployContractFromCompilationUnit(
                 neow3j, bridgeCompUnit, bridgeDeploymentParameter, bridgeContractHash
         );
         Hash256 bridgeDeploymentTxHash = getHashIfExecutionSuccessful(neow3j, bridgeDeploymentTxResponse);
@@ -104,7 +107,7 @@ public class BridgeCompilation {
             Neow3j neow3j,
             Hash160 managementContractHash
     ) throws Throwable {
-        CompilationUnit msgBridgeCompUnit = new Compiler().compile(MessageBridge.class.getCanonicalName());
+        CompilationUnit msgBridgeCompUnit = new Compiler().compile(MessageBridgeContract.class.getCanonicalName());
 
         Hash160 msgBridgeContractHash = SmartContract.calcContractHash(
                 deployerAcc.getScriptHash(),
@@ -120,7 +123,7 @@ public class BridgeCompilation {
                 linkedChainId, managementContractHash, executionManagerContractHash
         );
 
-        NeoSendRawTransaction msgBridgeDeploymentTxResponse = getNeoSendRawTransaction(
+        NeoSendRawTransaction msgBridgeDeploymentTxResponse = deployContractFromCompilationUnit(
                 neow3j, msgBridgeCompUnit, bridgeDeploymentParameter, msgBridgeContractHash
         );
 
@@ -148,7 +151,7 @@ public class BridgeCompilation {
                 managementContractHash, messageBridgeContractHash
         );
 
-        NeoSendRawTransaction managementDeploymentTxResponse = getNeoSendRawTransaction(
+        NeoSendRawTransaction managementDeploymentTxResponse = deployContractFromCompilationUnit(
                 neow3j, execManagerCompUnit, execManagerDeployParameter, execManagerContractHash
         );
 
@@ -159,7 +162,7 @@ public class BridgeCompilation {
     }
 
     @NotNull
-    private static NeoSendRawTransaction getNeoSendRawTransaction(
+    private static NeoSendRawTransaction deployContractFromCompilationUnit(
             Neow3j neow3j,
             CompilationUnit compilationUnit,
             ContractParameter deployParameter,

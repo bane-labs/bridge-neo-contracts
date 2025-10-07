@@ -7,7 +7,9 @@ import io.neow3j.types.Hash160;
 import java.math.BigInteger;
 import java.util.List;
 
-import static io.neow3j.types.ContractParameter.*;
+import static io.neow3j.types.ContractParameter.array;
+import static io.neow3j.types.ContractParameter.hash160;
+import static io.neow3j.types.ContractParameter.integer;
 
 public class BridgeDeploymentParameters {
 
@@ -29,7 +31,7 @@ public class BridgeDeploymentParameters {
             Hash160 executionManagerContractHash
     ) {
         return array(
-                integer(linkedChainId), hash160(managementContractHash), array(hash160(executionManagerContractHash))
+                integer(linkedChainId), hash160(managementContractHash), hash160(executionManagerContractHash)
         );
     }
 
