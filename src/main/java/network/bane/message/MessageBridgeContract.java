@@ -134,10 +134,10 @@ public class MessageBridgeContract {
     @OnDeployment
     public static void deploy(Object data, boolean isUpdate) {
         if (isUpdate) {
-            // Make sure that this version of the contract is only used to update a deployed contract in version 3.
-            if (baseMap.getInt(KEY_VERSION) != 3) abort("Invalid version");
+            // Make sure that this version of the contract is only used to update a deployed contract in version 1.
+            // if (baseMap.getInt(KEY_VERSION) != 1) abort("Invalid version");
             // Update internal versioning.
-            baseMap.put(KEY_VERSION, 4);
+            // baseMap.put(KEY_VERSION, 2);
             // Migrate storage here if required.
         } else {
             DeploymentData deploymentData = (DeploymentData) data;
@@ -157,7 +157,7 @@ public class MessageBridgeContract {
             baseMap.put(KEY_EXECUTING_PAUSE, false);
 
             baseMap.put(KEY_ENTERED, false);
-            baseMap.put(KEY_VERSION, 4);
+            baseMap.put(KEY_VERSION, 1);
 
             // Set message bridge configuration upon deployment
             MessageBridgeImpl.setDefaultMessageBridge(deploymentData.executionManager);

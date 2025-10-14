@@ -189,7 +189,7 @@ public class ExecutionManagerContract {
             if (!MessageExecutorDeploymentData.isValid(deploymentData)) {
                 abort("Invalid deployment data for MessageExecutor.");
             }
-            baseMap.put(KEY_VERSION, 4); // Using the release version of the bridge-neo-contracts repository.
+            baseMap.put(KEY_VERSION, 1);
             baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.management);
             baseMap.put(KEY_MESSAGE_BRIDGE, deploymentData.messageBridge);
             baseMap.put(KEY_PAUSE, false);
