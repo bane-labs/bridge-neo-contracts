@@ -20,6 +20,7 @@ import network.bane.message.MessageBridgeContract;
 import network.bane.messageexecution.ExecutionManagerContract;
 import org.jetbrains.annotations.NotNull;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,11 +33,8 @@ import static network.bane.utils.deployment.BridgeDeploymentParameters.prepareMa
 import static network.bane.utils.deployment.DeploymentHelper.ensureConsistentState;
 import static network.bane.utils.env.EnvVariables.MAX_NR_VALIDATORS;
 import static network.bane.utils.env.EnvVariables.deployerAcc;
-import static network.bane.utils.env.EnvVariables.depositFee;
 import static network.bane.utils.env.EnvVariables.governor;
-import static network.bane.utils.env.EnvVariables.maxDepositAmount;
-import static network.bane.utils.env.EnvVariables.maxTotalDeposited;
-import static network.bane.utils.env.EnvVariables.minDepositAmount;
+import static network.bane.utils.env.EnvVariables.linkedChainId;
 import static network.bane.utils.env.EnvVariables.nrValidators;
 import static network.bane.utils.env.EnvVariables.ownerAcc;
 import static network.bane.utils.env.EnvVariables.relayer;
@@ -92,14 +90,14 @@ public class BridgeCompilation {
         return managementContractHash;
     }
 
-    public static void compileAndPrintBridgeDeploymentTxData(Neow3j neow3j, Hash160 managementContractHash)
+    public static Hash160 compileAndPrintBridgeDeploymentTxData(Neow3j neow3j, Hash160 managementContractHash)
             throws Throwable {
         HashMap<String, String> substitutions = new HashMap<>();
         substitutions.put("BridgeName", "BridgeContract");
         CompilationUnit bridgeCompUnit = new Compiler().compile(BridgeContract.class.getCanonicalName(), substitutions);
 
-        ContractParameter bridgeDeploymentParameter = prepareBridgeDeployParameter(managementContractHash, depositFee,
-                minDepositAmount, maxDepositAmount, maxTotalDeposited);
+        ContractParameter bridgeDeploymentParameter = prepareBridgeDeployParameter(linkedChainId,
+                managementContractHash);
 
         Hash160 bridgeContractHash = SmartContract.calcContractHash(deployerAcc.getScriptHash(),
                 bridgeCompUnit.getNefFile().getCheckSumAsInteger(), bridgeCompUnit.getManifest().getName());
@@ -109,6 +107,7 @@ public class BridgeCompilation {
         Hash256 bridgeDeploymentTxHash = getHashIfExecutionSuccessful(neow3j, bridgeDeploymentTxResponse);
 
         ensureConsistentState(neow3j, bridgeContractHash, bridgeCompUnit, bridgeDeploymentTxHash);
+        return bridgeContractHash;
     }
 
     @NotNull
@@ -119,6 +118,9 @@ public class BridgeCompilation {
         Transaction deploymentTx = new ContractManagement(neow3j).deploy(compilationUnit.getNefFile(),
                 compilationUnit.getManifest(), deployParameter).signers(AccountSigner.none(deployerAcc),
                 AccountSigner.none(ownerAcc).setAllowedContracts(allowedContractHash)).sign();
+        BigDecimal totalFee = new BigDecimal(deploymentTx.getNetworkFee() + deploymentTx.getSystemFee());
+        System.out.printf("💰 Fee of $GAS %s for deployment transaction of %s contract%n",
+                totalFee.divide(BigDecimal.valueOf(100_000_000)), compilationUnit.getManifest().getName());
         NeoSendRawTransaction deploymentTxResponse = deploymentTx.send();
         if (deploymentTxResponse.hasError()) {
             throw new Exception(

@@ -10,11 +10,13 @@ import io.neow3j.protocol.core.response.ContractState;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.transaction.AccountSigner;
+import io.neow3j.transaction.Transaction;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
@@ -32,15 +34,18 @@ public class DeploymentHelper {
             ContractParameter deployParam) throws Throwable {
         NefFile nefFile = compUnit.getNefFile();
         ContractManifest manifest = compUnit.getManifest();
-        System.out.println("\n📝 Deploying contract: " + manifest.getName());
-        NeoSendRawTransaction response = new ContractManagement(neow3j).deploy(nefFile, manifest, deployParam)
+        System.out.printf("\n📝 Deploying contract: %s%n", manifest.getName());
+        Transaction tx = new ContractManagement(neow3j).deploy(nefFile, manifest, deployParam)
                 .signers(AccountSigner.none(deploymentAccount))
-                .sign()
-                .send();
+                .sign();
+        BigDecimal totalFee = new BigDecimal(tx.getNetworkFee() + tx.getSystemFee());
+        System.out.printf("💰 Fee of $GAS %s for deployment transaction of %s contract%n",
+                totalFee.divide(BigDecimal.valueOf(100_000_000)), manifest.getName());
+        NeoSendRawTransaction response = tx.send();
         if (response.hasError()) {
             throw new Exception("Sent transaction resulted in an error: " + response.getError().getMessage());
         }
-        System.out.println("⏳ Deployment transaction sent. Waiting for confirmation...");
+        System.out.println("⏳ Deployment transaction sent - waiting for confirmation...");
         Hash256 txHash = response.getSendRawTransaction().getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
         System.out.println("☑️ Transaction " + txHash + " executed");
@@ -61,7 +66,8 @@ public class DeploymentHelper {
         if (!deployEvent.isPresent()) {
             throw new Exception("️‼️ No Deploy event found in the deployment transaction logs");
         }
-        Hash160 actualDeployedContractHash = Hash160.fromAddress(deployEvent.get().getState().getList().get(0).getAddress());
+        Hash160 actualDeployedContractHash = Hash160.fromAddress(
+                deployEvent.get().getState().getList().get(0).getAddress());
         if (!expectedHash.equals(actualDeployedContractHash)) {
             throw new Exception(format("‼️ Deployed contract hash %s does not match expected hash %s",
                     actualDeployedContractHash, expectedHash));
