@@ -149,7 +149,6 @@ public class MessageBridgeContract {
 
             baseMap.put(KEY_LINKED_CHAIN_ID, deploymentData.linkedChainId);
             baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.managementContract);
-            // Todo: Add execution manager in baseMap instead of bridge configuration.
             // Pause initially
             baseMap.put(KEY_PAUSE, true);
 

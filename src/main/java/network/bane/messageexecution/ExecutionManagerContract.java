@@ -94,7 +94,6 @@ public class ExecutionManagerContract {
         if (!N3MethodCall.isValid(call)) abort("Method call has invalid values");
         if (isProhibitedForMessageExecution(call.target)) abort("Prohibited target");
 
-        // Todo: Consider returning the result. This way the bridge could decide what to do with it.
         Object result = Contract.call(call.target, call.method, call.callFlags, call.args);
 
         unsetExecutingNonce();

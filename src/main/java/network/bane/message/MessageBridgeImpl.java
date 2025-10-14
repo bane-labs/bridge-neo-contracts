@@ -58,7 +58,6 @@ class MessageBridgeImpl {
     private static final int DEFAULT_EXECUTION_WINDOW_MILLIS = 60 * 60 * 24 * 7 * 2 * 1000; // 2 weeks
 
     static void setDefaultMessageBridge(Hash160 executionManager) {
-        // Todo: Consider checking that the execution manager is a contract.
         ByteString zeroHash = Hash256.zero().toByteString();
         MessageBridge messageBridge = new MessageBridge(new State(0, zeroHash), new State(0, zeroHash),
                 new MessageBridge.MessageBridgeConfig(DEFAULT_SENDING_FEE, DEFAULT_MAX_BYTES_FOR_SENDING,
