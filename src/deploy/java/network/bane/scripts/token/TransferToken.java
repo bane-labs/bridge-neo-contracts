@@ -1,4 +1,4 @@
-package network.bane.scripts;
+package network.bane.scripts.token;
 
 import io.neow3j.contract.FungibleToken;
 import io.neow3j.protocol.Neow3j;

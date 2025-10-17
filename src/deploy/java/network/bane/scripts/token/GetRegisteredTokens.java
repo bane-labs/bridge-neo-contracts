@@ -1,4 +1,4 @@
-package network.bane.scripts;
+package network.bane.scripts.token;
 
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
@@ -6,13 +6,14 @@ import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.protocol.http.HttpService;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
+import network.bane.utils.structs.State;
+import network.bane.utils.structs.TokenBridge;
 
 import java.io.IOException;
 import java.util.List;
 
 import static io.neow3j.types.ContractParameter.hash160;
-import static network.bane.scripts.TokenBridge.TokenConfig;
-import static network.bane.scripts.TokenBridge.State;
+import static network.bane.utils.structs.TokenBridge.TokenConfig;
 import static java.util.Arrays.asList;
 import static network.bane.utils.env.EnvVariables.NODE;
 import static network.bane.utils.env.GetEnv.getEnvVariable;

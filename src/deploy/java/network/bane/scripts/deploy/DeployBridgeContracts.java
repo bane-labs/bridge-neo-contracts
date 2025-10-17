@@ -1,4 +1,4 @@
-package network.bane.scripts;
+package network.bane.scripts.deploy;
 
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.http.HttpService;

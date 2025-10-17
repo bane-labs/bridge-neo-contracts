@@ -1,4 +1,4 @@
-package network.bane.scripts;
+package network.bane.scripts.compile;
 
 import io.neow3j.compiler.CompilationUnit;
 import io.neow3j.compiler.Compiler;

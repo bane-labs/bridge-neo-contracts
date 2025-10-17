@@ -1,4 +1,4 @@
-package network.bane.scripts;
+package network.bane.scripts.token;
 
 import io.neow3j.contract.FungibleToken;
 import io.neow3j.contract.SmartContract;
@@ -21,26 +21,21 @@ import static network.bane.utils.env.EnvVariables.NODE;
 import static network.bane.utils.env.GetEnv.getEnvVariable;
 import static network.bane.utils.wallet.LoadWallet.getOwnerAccountFromWallet;
 
-public class DepositToken {
+public class DepositNative {
 
     public static final BigInteger DEFAULT_NATIVE_FEE = FungibleToken.toFractions(new BigDecimal("0.1"), 8);
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = Neow3j.build(new HttpService(NODE));
 
-        Hash160 tokenHash = new Hash160(getEnvVariable("TOKEN_HASH"));
         Hash160 bridgeAddress = new Hash160(getEnvVariable("BRIDGE_HASH"));
         Account from = getOwnerAccountFromWallet();
         Hash160 to = new Hash160(getEnvVariable("DEFAULT_RECIPIENT_ON_NEOX"));
+        BigInteger amount = FungibleToken.toFractions(new BigDecimal("6"), 8);
         BigInteger maxFee = DEFAULT_NATIVE_FEE;
 
-        FungibleToken tokenContract = new FungibleToken(tokenHash, neow3j);
-        BigDecimal decimalAmount = new BigDecimal("22");
-        BigInteger amount = tokenContract.toFractions(decimalAmount);
-
         SmartContract bridge = new SmartContract(bridgeAddress, neow3j);
-        Transaction tx = bridge.invokeFunction("depositToken",
-                        hash160(tokenHash),
+        Transaction tx = bridge.invokeFunction("depositNative",
                         hash160(from),
                         hash160(to),
                         integer(amount),
