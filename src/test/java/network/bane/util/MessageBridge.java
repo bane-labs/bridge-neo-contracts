@@ -320,12 +320,12 @@ public class MessageBridge extends SmartContractHelper {
         return item.getByteArray();
     }
 
-    public BigInteger getEvmResultNonce(BigInteger relatedNonce) throws IOException {
-        return callFunctionReturningInt("getEvmResultNonce", integer(relatedNonce));
+    public BigInteger getEvmExecutionResultNonce(BigInteger relatedNonce) throws IOException {
+        return callFunctionReturningInt("getEvmExecutionResultNonce", integer(relatedNonce));
     }
 
-    public byte[] getEvmResult(BigInteger relatedNonce) throws IOException {
-        StackItem item = callInvokeFunction("getEvmResult", asList(integer(relatedNonce))).getInvocationResult()
+    public byte[] getEvmExecutionResult(BigInteger relatedNonce) throws IOException {
+        StackItem item = callInvokeFunction("getEvmExecutionResult", asList(integer(relatedNonce))).getInvocationResult()
                 .getFirstStackItem();
         if (item.getValue() == null) {
             return new byte[0];

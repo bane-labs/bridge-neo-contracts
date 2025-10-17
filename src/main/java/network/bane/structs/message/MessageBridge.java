@@ -6,20 +6,20 @@ import network.bane.structs.State;
 
 @Struct
 public class MessageBridge {
-    public State evmToN3MessageState;
-    public State n3ToEvmMessageState;
+    public State evmToNeoState;
+    public State neoToEvmState;
     public MessageBridgeConfig config;
 
-    public MessageBridge(State evmToN3MessageState, State n3ToEvmMessageState, MessageBridgeConfig config) {
-        this.evmToN3MessageState = evmToN3MessageState;
-        this.n3ToEvmMessageState = n3ToEvmMessageState;
+    public MessageBridge(State evmToNeoState, State neoToEvmState, MessageBridgeConfig config) {
+        this.evmToNeoState = evmToNeoState;
+        this.neoToEvmState = neoToEvmState;
         this.config = config;
     }
 
     public static boolean isValid(MessageBridge messageBridge) {
         return messageBridge != null &&
-                State.isValid(messageBridge.evmToN3MessageState) &&
-                State.isValid(messageBridge.n3ToEvmMessageState) &&
+                State.isValid(messageBridge.evmToNeoState) &&
+                State.isValid(messageBridge.neoToEvmState) &&
                 MessageBridgeConfig.isValid(messageBridge.config);
     }
 

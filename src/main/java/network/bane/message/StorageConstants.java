@@ -6,8 +6,8 @@ class StorageConstants {
     static final byte PREFIX_BASE = 0x0a;
     static final byte PREFIX_MSG_MESSAGES = 0x2a;
     static final byte PREFIX_MSG_EXECUTABLE_STATE = 0x2b;
-    // The corresponding map with this prefix will hold the results of the executions of N3 calls.
-    static final byte PREFIX_MSG_RESULT_N3_EXEC = 0x2c;
+    // The corresponding map with this prefix will hold the results of the executions of Neo N3 calls.
+    static final byte PREFIX_MSG_RESULT_NEO_EXEC = 0x2c;
     // The corresponding map with this prefix will link which message from EVM is the result message to an
     // executable EVM message (a message that was sent to EVM for execution).
     static final byte PREFIX_MSG_RESULT_EVM_EXEC = 0x2d;

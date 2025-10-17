@@ -4,20 +4,20 @@ import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.annotations.Struct;
 
 @Struct
-public class N3MethodCall {
+public class NeoMethodCall {
     public Hash160 target;
     public String method;
     public byte callFlags;
     public Object[] args;
 
-    public N3MethodCall(Hash160 target, String method, byte callFlags, Object[] args) {
+    public NeoMethodCall(Hash160 target, String method, byte callFlags, Object[] args) {
         this.target = target;
         this.method = method;
         this.callFlags = callFlags;
         this.args = args;
     }
 
-    public static boolean isValid(N3MethodCall call) {
+    public static boolean isValid(NeoMethodCall call) {
         if (call == null) {
             return false;
         }

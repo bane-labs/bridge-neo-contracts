@@ -26,8 +26,8 @@ import io.neow3j.devpack.events.Event4Args;
 import io.neow3j.devpack.events.Event5Args;
 import network.bane.structs.message.ExecutableState;
 import network.bane.structs.message.MessageBridge;
-import network.bane.structs.message.N3Message;
-import network.bane.structs.message.N3MessageEnvelope;
+import network.bane.structs.message.NeoMessage;
+import network.bane.structs.message.NeoMessageEnvelope;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.checkWitness;
@@ -56,8 +56,9 @@ import static network.bane.message.StorageConstants.PREFIX_BASE;
 @Permission(contract = "*")
 @ManifestExtra.ManifestExtras({@ManifestExtra(key = "Author", value = "BaneLabs"),
         @ManifestExtra(key = "Description",
-                       value = "Contract for bridging arbitrary messages between Neo N3 and a linked chain."),
-        @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")})
+                       value = "Contract for bridging arbitrary messages between Neo N3 and a linked EVM chain."),
+        @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")}
+)
 public class MessageBridgeContract {
 
     // region static contract values
@@ -92,12 +93,12 @@ public class MessageBridgeContract {
     static Event onExecutingUnpause;
 
     @DisplayName("MessageSend")
-    @EventParameterNames({"Nonce", "Metadata", "Message", "MessageHash", "NewEvmRoot"})
+    @EventParameterNames({"Nonce", "Metadata", "Message", "MessageHash", "NeoToEvmRoot"})
     static Event5Args<Integer, ByteString, ByteString, ByteString, ByteString> onMessageSend;
 
-    @DisplayName("N3RootUpdate")
-    @EventParameterNames({"Nonce", "N3MessageRoot"})
-    static Event2Args<Integer, ByteString> onN3RootUpdate;
+    @DisplayName("EvmToNeoRootUpdate")
+    @EventParameterNames({"Nonce", "EvmToNeoRoot"})
+    static Event2Args<Integer, ByteString> onEvmToNeoRootUpdate;
 
     @DisplayName("Store")
     @EventParameterNames({"Nonce", "MetadataBytes"})
@@ -340,20 +341,20 @@ public class MessageBridgeContract {
     }
 
     @Safe
-    public static ByteString concatenateOperation(N3MessageEnvelope message) {
+    public static ByteString concatenateOperation(NeoMessageEnvelope message) {
         return MessageBridgeImpl.concatenateOperation(message);
     }
 
-    public static void storeMessages(ByteString n3MessageRoot, Map<ECPoint, ByteString> signatures,
-            List<N3MessageEnvelope> messages) {
+    public static void storeMessages(ByteString evmToNeoRoot, Map<ECPoint, ByteString> signatures,
+            List<NeoMessageEnvelope> messages) {
         onlyRelayer();
         onlyWhenNotPaused();
 
-        MessageBridgeImpl.storeMessages(n3MessageRoot, signatures, messages);
+        MessageBridgeImpl.storeMessages(evmToNeoRoot, signatures, messages);
     }
 
     @Safe
-    public static N3Message getMessage(int nonce) {
+    public static NeoMessage getMessage(int nonce) {
         return MessageBridgeImpl.getMessage(nonce);
     }
 
@@ -369,17 +370,17 @@ public class MessageBridgeContract {
 
     @Safe
     public static Object serializeMetadataExecutable(int timestamp, Hash160 sender, boolean storeResult) {
-        return new StdLib().serialize(new N3Message.N3MetadataExecutable(timestamp, sender, storeResult));
+        return new StdLib().serialize(new NeoMessage.NeoMetadataExecutable(timestamp, sender, storeResult));
     }
 
     @Safe
     public static Object serializeMetadataStoreOnly(int timestamp, Hash160 sender) {
-        return new StdLib().serialize(new N3Message.N3MetadataStoreOnly(timestamp, sender));
+        return new StdLib().serialize(new NeoMessage.NeoMetadataStoreOnly(timestamp, sender));
     }
 
     @Safe
     public static Object serializeMetadataResult(int timestamp, Hash160 sender, int initialMessageNonce) {
-        return new StdLib().serialize(new N3Message.N3MetadataResult(timestamp, sender, initialMessageNonce));
+        return new StdLib().serialize(new NeoMessage.NeoMetadataResult(timestamp, sender, initialMessageNonce));
     }
 
     /**
@@ -404,12 +405,12 @@ public class MessageBridgeContract {
     /**
      * Gets the nonce of the result message that corresponds to the execution of an N3 executable message.
      *
-     * @param relatedMessageNonce the nonce of the N3 executable message.
+     * @param relatedEvmToNeoMessageNonce the nonce of the N3 executable message.
      * @return the result of the execution of the N3 executable message.
      */
     @Safe
-    public static ByteString getResult(int relatedMessageNonce) {
-        return MessageBridgeImpl.getResult(relatedMessageNonce);
+    public static ByteString getResult(int relatedEvmToNeoMessageNonce) {
+        return MessageBridgeImpl.getResult(relatedEvmToNeoMessageNonce);
     }
 
     /**
@@ -420,24 +421,24 @@ public class MessageBridgeContract {
      * If the result is non-existent, it hasn't been sent back, or it has been sent back but not stored, then 0 is
      * returned.
      *
-     * @param relatedMessageNonce the nonce of the executable message that was sent to EVM for execution.
+     * @param relatedNeoToEvmMessageNonce the nonce of the executable message that was sent to EVM for execution.
      * @return the nonce of the result message that corresponds to the execution of the executable EVM message.
      */
     @Safe
-    public static int getEvmResultNonce(int relatedMessageNonce) {
-        return MessageBridgeImpl.getEvmResultNonce(relatedMessageNonce);
+    public static int getEvmExecutionResultNonce(int relatedNeoToEvmMessageNonce) {
+        return MessageBridgeImpl.getEvmResultNonce(relatedNeoToEvmMessageNonce);
     }
 
     /**
      * Gets the result of the execution of an executable message that was sent and executed on EVM. If the result was
      * not returned AND stored as a result message to N3, the result is null.
      *
-     * @param relatedMessageNonce the nonce of the executable message that was sent to EVM for execution.
+     * @param relatedNeoToEvmMessageNonce the nonce of the executable message that was sent to EVM for execution.
      * @return the result of the execution of the executable EVM message.
      */
     @Safe
-    public static ByteString getEvmResult(int relatedMessageNonce) {
-        return MessageBridgeImpl.getEvmResult(relatedMessageNonce);
+    public static ByteString getEvmExecutionResult(int relatedNeoToEvmMessageNonce) {
+        return MessageBridgeImpl.getEvmExecutionResult(relatedNeoToEvmMessageNonce);
     }
 
     // endregion
@@ -508,23 +509,23 @@ public class MessageBridgeContract {
     // region message bridge state
 
     @Safe
-    public static int evmMessageNonce() {
-        return MessageBridgeImpl.getMessageBridge().n3ToEvmMessageState.nonce;
+    public static int neoToEvmNonce() {
+        return MessageBridgeImpl.getMessageBridge().neoToEvmState.nonce;
     }
 
     @Safe
-    public static ByteString evmMessageRoot() {
-        return MessageBridgeImpl.getMessageBridge().n3ToEvmMessageState.root;
+    public static ByteString neoToEvmRoot() {
+        return MessageBridgeImpl.getMessageBridge().neoToEvmState.root;
     }
 
     @Safe
-    public static int n3MessageNonce() {
-        return MessageBridgeImpl.getMessageBridge().evmToN3MessageState.nonce;
+    public static int evmToNeoNonce() {
+        return MessageBridgeImpl.getMessageBridge().evmToNeoState.nonce;
     }
 
     @Safe
-    public static ByteString n3MessageRoot() {
-        return MessageBridgeImpl.getMessageBridge().evmToN3MessageState.root;
+    public static ByteString evmToNeoRoot() {
+        return MessageBridgeImpl.getMessageBridge().evmToNeoState.root;
     }
 
     // endregion
