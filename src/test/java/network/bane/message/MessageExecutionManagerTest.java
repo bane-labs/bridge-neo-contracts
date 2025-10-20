@@ -351,7 +351,7 @@ public class MessageExecutionManagerTest {
         assertThat(messageTestStorer.getStoredValue(key).getType(), is(StackItemType.INTEGER));
         assertThat(messageTestStorer.getStoredValue(key).getValue(), is(value.getValue()));
 
-        byte[] result = messageBridge.getResult(nonce);
+        byte[] result = messageBridge.getNeoExecutionResult(nonce);
         // The result object gets serialized when stored to allow arbitrary return types.
         // In this case, even though the result type is already a byte string, it gets serialized again ending up
         // with the actual result byte string being prepended with a byte string type prefix (0x28) and its size (0x03).
@@ -383,7 +383,7 @@ public class MessageExecutionManagerTest {
         assertThat(messageTestStorer.getStoredValue(key).getType(), is(StackItemType.BYTE_STRING));
         assertThat(messageTestStorer.getStoredValue(key).getString(), is(value.getValue()));
 
-        byte[] result = messageBridge.getResult(nonce);
+        byte[] result = messageBridge.getNeoExecutionResult(nonce);
         // The result object gets serialized when stored to allow arbitrary return types.
         // In this case, the return was a single integer. Thus, the serialization of it ends up being its type (0x21),
         // its size (0x01) followed by the actual integer value (0x07).
@@ -440,7 +440,7 @@ public class MessageExecutionManagerTest {
         String expectedPrefix = "28" + "fd" + "010a"; // 28:type, fd:size requires 2 bytes, 0a01 = 2561
         assertThat(reconstructedHex, is(expectedPrefix + expectedHexResult));
 
-        byte[] result = messageBridge.getResult(nonce);
+        byte[] result = messageBridge.getNeoExecutionResult(nonce);
         // The result object gets serialized when stored to allow arbitrary return types.
         // In this case, the return was a single byte string. Thus, the serialization of it ends up being its type
         // (0x28), its size (0x01) followed by the actual integer value (0x07).
@@ -497,7 +497,7 @@ public class MessageExecutionManagerTest {
         String expectedPrefix = "28" + "fd" + "9c0f"; // 28:type, fd:size requires 2 bytes, 0f9c = 3996
         assertThat(reconstructedHex, is(expectedPrefix + expectedHexResult));
 
-        byte[] result = messageBridge.getResult(nonce);
+        byte[] result = messageBridge.getNeoExecutionResult(nonce);
         // The result object gets serialized when stored to allow arbitrary return types.
         // In this case, the return was a single byte string. Thus, the serialization of it ends up being its type
         // (0x28), its size (0x01) followed by the actual integer value (0x07).

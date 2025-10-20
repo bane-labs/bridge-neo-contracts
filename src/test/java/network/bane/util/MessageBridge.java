@@ -311,8 +311,8 @@ public class MessageBridge extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("executeMessage", integer(nonce)).signers(signer));
     }
 
-    public byte[] getResult(BigInteger nonce) throws IOException {
-        StackItem item = callInvokeFunction("getResult", asList(integer(nonce))).getInvocationResult()
+    public byte[] getNeoExecutionResult(BigInteger nonce) throws IOException {
+        StackItem item = callInvokeFunction("getNeoExecutionResult", asList(integer(nonce))).getInvocationResult()
                 .getFirstStackItem();
         if (item.getValue() == null) {
             return new byte[0];

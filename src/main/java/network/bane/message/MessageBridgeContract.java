@@ -409,8 +409,8 @@ public class MessageBridgeContract {
      * @return the result of the execution of the N3 executable message.
      */
     @Safe
-    public static ByteString getResult(int relatedEvmToNeoMessageNonce) {
-        return MessageBridgeImpl.getResult(relatedEvmToNeoMessageNonce);
+    public static ByteString getNeoExecutionResult(int relatedEvmToNeoMessageNonce) {
+        return MessageBridgeImpl.getNeoExecutionResult(relatedEvmToNeoMessageNonce);
     }
 
     /**
@@ -426,7 +426,7 @@ public class MessageBridgeContract {
      */
     @Safe
     public static int getEvmExecutionResultNonce(int relatedNeoToEvmMessageNonce) {
-        return MessageBridgeImpl.getEvmResultNonce(relatedNeoToEvmMessageNonce);
+        return MessageBridgeImpl.getEvmExecutionResultNonce(relatedNeoToEvmMessageNonce);
     }
 
     /**
