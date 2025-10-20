@@ -15,7 +15,7 @@ public class NeoMessageEnvelope {
     public static boolean isValid(NeoMessageEnvelope message) {
         return message != null &&
                 message.nonce != null &&
-                message.message != null && NeoMessage.isValid(message.message);
+                NeoMessage.isValid(message.message);
     }
 
 }
