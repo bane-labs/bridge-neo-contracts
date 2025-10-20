@@ -710,8 +710,8 @@ public class MessageBridgeTest {
                 () -> messageBridge.getExecutableState(nonce));
         assertThat(thrown.getMessage(), containsString("Executable state not found"));
 
-        assertThat(messageBridge.getEvmResultNonce(nonceOfMsgSentToEvm), is(nonce));
-        assertThat(toHexStringNoPrefix(messageBridge.getEvmResult(nonceOfMsgSentToEvm)), is(cleanHexPrefix(msgBytes)));
+        assertThat(messageBridge.getEvmExecutionResultNonce(nonceOfMsgSentToEvm), is(nonce));
+        assertThat(toHexStringNoPrefix(messageBridge.getEvmExecutionResult(nonceOfMsgSentToEvm)), is(cleanHexPrefix(msgBytes)));
     }
 
     // endregion

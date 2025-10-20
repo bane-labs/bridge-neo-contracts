@@ -15,7 +15,7 @@ import io.neow3j.devpack.annotations.Struct;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.StdLib;
 import network.bane.interfaces.BridgeManagement;
-import network.bane.structs.message.N3MethodCall;
+import network.bane.structs.message.NeoMethodCall;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.checkWitness;
@@ -90,8 +90,8 @@ public class ExecutionManagerContract {
         enteringNonReentrant();
         setExecutingNonce(nonce);
 
-        N3MethodCall call = (N3MethodCall) new StdLib().deserialize(executableCode);
-        if (!N3MethodCall.isValid(call)) abort("Method call has invalid values");
+        NeoMethodCall call = (NeoMethodCall) new StdLib().deserialize(executableCode);
+        if (!NeoMethodCall.isValid(call)) abort("Method call has invalid values");
         if (isProhibitedForMessageExecution(call.target)) abort("Prohibited target");
 
         Object result = Contract.call(call.target, call.method, call.callFlags, call.args);
@@ -113,21 +113,21 @@ public class ExecutionManagerContract {
     @Safe
     public static ByteString serializeCall(Hash160 target, String method, byte callFlags, Object[] args)
             throws Exception {
-        N3MethodCall call = new N3MethodCall(target, method, callFlags, args);
-        if (!N3MethodCall.isValid(call)) throw new Exception("Method call is invalid");
+        NeoMethodCall call = new NeoMethodCall(target, method, callFlags, args);
+        if (!NeoMethodCall.isValid(call)) throw new Exception("Method call is invalid");
         return new StdLib().serialize(call);
     }
 
     /**
-     * Checks whether the given bytes represent a valid serialized {@link N3MethodCall}.
+     * Checks whether the given bytes represent a valid serialized {@link NeoMethodCall}.
      *
      * @param serializedCall the serialized call.
      * @return true if the call is valid, false otherwise.
      */
     @Safe
     public static boolean isValidCall(ByteString serializedCall) {
-        N3MethodCall call = (N3MethodCall) new StdLib().deserialize(serializedCall);
-        return N3MethodCall.isValid(call);
+        NeoMethodCall call = (NeoMethodCall) new StdLib().deserialize(serializedCall);
+        return NeoMethodCall.isValid(call);
     }
 
     /**
@@ -139,8 +139,8 @@ public class ExecutionManagerContract {
      */
     @Safe
     public static boolean isAllowedCall(ByteString serializedCall) throws Exception {
-        N3MethodCall call = (N3MethodCall) new StdLib().deserialize(serializedCall);
-        if (!N3MethodCall.isValid(call)) throw new Exception("Invalid call");
+        NeoMethodCall call = (NeoMethodCall) new StdLib().deserialize(serializedCall);
+        if (!NeoMethodCall.isValid(call)) throw new Exception("Invalid call");
         return !isProhibitedForMessageExecution(call.target);
     }
 

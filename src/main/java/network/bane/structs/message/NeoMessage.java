@@ -9,7 +9,7 @@ import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_RESULT;
 import static network.bane.lib.MessageBridgeLib.MESSAGE_TYPE_STORE_ONLY;
 
 @Struct
-public class N3Message {
+public class NeoMessage {
     /**
      * Metadata for the message, which can be of different types. It includes context about how the message bytes
      * should be processed.
@@ -20,46 +20,46 @@ public class N3Message {
      */
     public ByteString rawMessage;
 
-    public N3Message(ByteString metadataBytes, ByteString rawMessage) {
+    public NeoMessage(ByteString metadataBytes, ByteString rawMessage) {
         this.metadataBytes = metadataBytes;
         this.rawMessage = rawMessage;
     }
 
-    public static boolean isValid(N3Message message) {
+    public static boolean isValid(NeoMessage message) {
         return message != null &&
                 message.metadataBytes != null &&
                 message.rawMessage != null && message.rawMessage.length() > 0;
     }
 
     @Struct
-    public static class N3MetadataExecutable extends N3Metadata {
+    public static class NeoMetadataExecutable extends NeoMetadata {
         public boolean storeResult;
 
-        public N3MetadataExecutable(int timestamp, Hash160 sender, boolean storeResult) {
+        public NeoMetadataExecutable(int timestamp, Hash160 sender, boolean storeResult) {
             super(MESSAGE_TYPE_EXECUTABLE, timestamp, sender);
             this.storeResult = storeResult;
         }
     }
 
     @Struct
-    public static class N3MetadataStoreOnly extends N3Metadata {
-        public N3MetadataStoreOnly(int timestamp, Hash160 sender) {
+    public static class NeoMetadataStoreOnly extends NeoMetadata {
+        public NeoMetadataStoreOnly(int timestamp, Hash160 sender) {
             super(MESSAGE_TYPE_STORE_ONLY, timestamp, sender);
         }
     }
 
     @Struct
-    public static class N3MetadataResult extends N3Metadata {
+    public static class NeoMetadataResult extends NeoMetadata {
         public int initialMessageNonce;
 
-        public N3MetadataResult(int timestamp, Hash160 sender, int initialMessageNonce) {
+        public NeoMetadataResult(int timestamp, Hash160 sender, int initialMessageNonce) {
             super(MESSAGE_TYPE_RESULT, timestamp, sender);
             this.initialMessageNonce = initialMessageNonce;
         }
     }
 
     @Struct
-    public abstract static class N3Metadata {
+    public abstract static class NeoMetadata {
         /**
          * Type of the metadata, indicating how the message should be processed.
          */
@@ -73,13 +73,13 @@ public class N3Message {
          */
         public Hash160 sender;
 
-        public N3Metadata(int type, int timestamp, Hash160 sender) {
+        public NeoMetadata(int type, int timestamp, Hash160 sender) {
             this.type = type;
             this.timestamp = timestamp;
             this.sender = sender;
         }
 
-        public static boolean isValid(N3Metadata metadata) {
+        public static boolean isValid(NeoMetadata metadata) {
             return metadata != null &&
                     metadata.timestamp > 0 &&
                     metadata.sender != null && Hash160.isValid(metadata.sender) && !metadata.sender.isZero();

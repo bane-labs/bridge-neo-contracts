@@ -511,7 +511,7 @@ public class MessageSyncTest {
                 "balanceOf", CallFlags.ALL, asList(hash160(messageBridge.getScriptHash())));
         BigInteger executableMessageNonce = messageBridge.storeMessage(getMessageBridgeGasBalance);
 
-        byte[] resultBytesBefore = messageBridge.getResult(executableMessageNonce);
+        byte[] resultBytesBefore = messageBridge.getNeoExecutionResult(executableMessageNonce);
         assertThat(resultBytesBefore, is(new byte[0]));
 
         ExecutableStateDto execStateBeforeExec = messageBridge.getExecutableState(executableMessageNonce);
@@ -568,7 +568,7 @@ public class MessageSyncTest {
         Hash160 sender = Hash160.fromAddress(metadataItems.get(2).getAddress());
         BigInteger relatedMessageNonce = metadataItems.get(3).getInteger();
         N3MessageMetadataResultDto metadataDto = new N3MessageMetadataResultDto(timestamp, sender, relatedMessageNonce);
-        byte[] resultBytes = messageBridge.getResult(executableMessageNonce);
+        byte[] resultBytes = messageBridge.getNeoExecutionResult(executableMessageNonce);
         byte[] concatBytes = concatenateOp(nextEvmNonce, metadataDto, resultBytes);
 
         // The pieces of the cocatenated message bytes should include the following in that order:

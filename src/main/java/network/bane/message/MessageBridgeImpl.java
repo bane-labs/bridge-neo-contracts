@@ -18,8 +18,8 @@ import network.bane.lib.MessageBridgeLib;
 import network.bane.structs.State;
 import network.bane.structs.message.ExecutableState;
 import network.bane.structs.message.MessageBridge;
-import network.bane.structs.message.N3Message;
-import network.bane.structs.message.N3MessageEnvelope;
+import network.bane.structs.message.NeoMessage;
+import network.bane.structs.message.NeoMessageEnvelope;
 
 import static io.neow3j.devpack.Helper.abort;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
@@ -32,7 +32,7 @@ import static network.bane.message.StorageConstants.KEY_UNCLAIMED_FEES;
 import static network.bane.message.StorageConstants.PREFIX_MSG_EXECUTABLE_STATE;
 import static network.bane.message.StorageConstants.PREFIX_MSG_MESSAGES;
 import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT_EVM_EXEC;
-import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT_N3_EXEC;
+import static network.bane.message.StorageConstants.PREFIX_MSG_RESULT_NEO_EXEC;
 
 class MessageBridgeImpl {
 
@@ -119,36 +119,36 @@ class MessageBridgeImpl {
     // endregion
     // region storing
 
-    static ByteString concatenateOperation(N3MessageEnvelope n3MessageEnvelope) {
-        return MessageBridgeLib.concatMessageBridgeOpData(n3MessageEnvelope.nonce,
-                n3MessageEnvelope.message.metadataBytes, n3MessageEnvelope.message.rawMessage);
+    static ByteString concatenateOperation(NeoMessageEnvelope neoMessageEnvelope) {
+        return MessageBridgeLib.concatMessageBridgeOpData(neoMessageEnvelope.nonce,
+                neoMessageEnvelope.message.metadataBytes, neoMessageEnvelope.message.rawMessage);
     }
 
-    static void storeMessages(ByteString newN3MessageRoot, Map<ECPoint, ByteString> signatures,
-            List<N3MessageEnvelope> messages) {
+    static void storeMessages(ByteString newEvmToNeoRoot, Map<ECPoint, ByteString> signatures,
+            List<NeoMessageEnvelope> messages) {
         int nrMessages = messages.size();
         MessageBridge messageBridge = getMessageBridge();
 
         if (nrMessages <= 0) abort("At least one message required");
-        if (!subsequentNonces(messages, messageBridge.evmToN3MessageState.nonce)) {
+        if (!subsequentNonces(messages, messageBridge.evmToNeoState.nonce)) {
             abort("Provided messages are not subsequent");
         }
-        if (!MessageBridgeLib.computeNewTopRoot(MessageBridgeContract.cryptoLib, messageBridge.evmToN3MessageState.root,
-                messages).equals(newN3MessageRoot)) {
+        if (!MessageBridgeLib.computeNewTopRoot(MessageBridgeContract.cryptoLib, messageBridge.evmToNeoState.root,
+                messages).equals(newEvmToNeoRoot)) {
             abort("Invalid root");
         }
         if (!managementContract().verifyValidatorSignatures(MessageBridgeContract.linkedChainId(),
-                newN3MessageRoot, signatures)) {
+                newEvmToNeoRoot, signatures)) {
             abort("Invalid validator signatures");
         }
 
-        // Update evmToN3 messsage state
-        messageBridge.evmToN3MessageState.nonce = messages.get(nrMessages - 1).nonce;
-        messageBridge.evmToN3MessageState.root = newN3MessageRoot;
-        assert messageBridge.evmToN3MessageState.root == newN3MessageRoot : "Root not set correctly";
+        // Update evmToNeo messsage state
+        messageBridge.evmToNeoState.nonce = messages.get(nrMessages - 1).nonce;
+        messageBridge.evmToNeoState.root = newEvmToNeoRoot;
+        assert messageBridge.evmToNeoState.root == newEvmToNeoRoot : "Root not set correctly";
         storeMessageBridge(messageBridge);
-        MessageBridgeContract.onN3RootUpdate.fire(messageBridge.evmToN3MessageState.nonce,
-                messageBridge.evmToN3MessageState.root);
+        MessageBridgeContract.onEvmToNeoRootUpdate.fire(messageBridge.evmToNeoState.nonce,
+                messageBridge.evmToNeoState.root);
 
         // Store the messages in the contract storage
 
@@ -157,7 +157,7 @@ class MessageBridgeImpl {
         storeMessagesToContractStorage(messages, expirationTime);
     }
 
-    private static void storeMessagesToContractStorage(List<N3MessageEnvelope> messages, int expirationTime) {
+    private static void storeMessagesToContractStorage(List<NeoMessageEnvelope> messages, int expirationTime) {
         StorageMap messageMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_MESSAGES);
         StorageMap msgExecStateMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTABLE_STATE);
         StorageMap resultEvmExecMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT_EVM_EXEC);
@@ -166,46 +166,47 @@ class MessageBridgeImpl {
         ByteString execState = stdLib.serialize(new ExecutableState(false, expirationTime));
 
         for (int i = 0; i < nrMessages; i++) {
-            N3MessageEnvelope n3Message = messages.get(i);
+            NeoMessageEnvelope neoMessage = messages.get(i);
             // Store the message in storage.
-            messageMap.put(n3Message.nonce, stdLib.serialize(n3Message.message));
-            N3Message.N3Metadata metadata = (N3Message.N3Metadata) stdLib.deserialize(n3Message.message.metadataBytes);
+            messageMap.put(neoMessage.nonce, stdLib.serialize(neoMessage.message));
+            NeoMessage.NeoMetadata metadata =
+                    (NeoMessage.NeoMetadata) stdLib.deserialize(neoMessage.message.metadataBytes);
             if (metadata.type == MESSAGE_TYPE_EXECUTABLE) {
                 // Set the execution state for executable messages.
-                msgExecStateMap.put(n3Message.nonce, execState);
+                msgExecStateMap.put(neoMessage.nonce, execState);
             }
             if (metadata.type == MESSAGE_TYPE_RESULT) {
                 // Link the result to the related executable message for direct lookup.
-                resultEvmExecMap.put(((N3Message.N3MetadataResult) metadata).initialMessageNonce, n3Message.nonce);
+                resultEvmExecMap.put(((NeoMessage.NeoMetadataResult) metadata).initialMessageNonce, neoMessage.nonce);
             }
             // Fire event including the nonce and the message's metadata.
-            MessageBridgeContract.onStore.fire(n3Message.nonce, n3Message.message.metadataBytes);
+            MessageBridgeContract.onStore.fire(neoMessage.nonce, neoMessage.message.metadataBytes);
         }
     }
 
     // Makes sure the messages have subsequent nonces.
-    private static boolean subsequentNonces(List<N3MessageEnvelope> n3Messages, int startNonce) {
-        int nrMessage = n3Messages.size();
+    private static boolean subsequentNonces(List<NeoMessageEnvelope> neoMessages, int startNonce) {
+        int nrMessage = neoMessages.size();
         for (int i = 1; i <= nrMessage; i++) {
-            if (n3Messages.get(i - 1).nonce != startNonce + i) {
+            if (neoMessages.get(i - 1).nonce != startNonce + i) {
                 return false;
             }
         }
         return true;
     }
 
-    static N3Message getMessage(int nonce) {
-        return (N3Message) new StdLib().deserialize(
+    static NeoMessage getMessage(int nonce) {
+        return (NeoMessage) new StdLib().deserialize(
                 new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_MESSAGES).get(nonce)
         );
     }
 
-    static N3Message.N3Metadata getMetadata(int nonce) {
+    static NeoMessage.NeoMetadata getMetadata(int nonce) {
         return getMetadata(getMessage(nonce));
     }
 
-    static N3Message.N3Metadata getMetadata(N3Message message) {
-        return (N3Message.N3Metadata) new StdLib().deserialize(message.metadataBytes);
+    static NeoMessage.NeoMetadata getMetadata(NeoMessage message) {
+        return (NeoMessage.NeoMetadata) new StdLib().deserialize(message.metadataBytes);
     }
 
     static ExecutableState getExecutableState(int nonce) throws Exception {
@@ -219,13 +220,13 @@ class MessageBridgeImpl {
 
     static void executeMessage(int nonce) {
         // Validate that the message is executable.
-        N3Message message = getMessage(nonce);
-        N3Message.N3Metadata abstractMetadata = getMetadata(message);
+        NeoMessage message = getMessage(nonce);
+        NeoMessage.NeoMetadata abstractMetadata = getMetadata(message);
         assert abstractMetadata.type == 0 : "Message metadata type is not executable";
         if (abstractMetadata.type != MESSAGE_TYPE_EXECUTABLE) {
             abort("Message is not executable");
         }
-        N3Message.N3MetadataExecutable metadata = (N3Message.N3MetadataExecutable) abstractMetadata;
+        NeoMessage.NeoMetadataExecutable metadata = (NeoMessage.NeoMetadataExecutable) abstractMetadata;
 
         // Validate that the message has not been executed yet and has not expired.
         checkExecutableStateAndMarkExecuted(nonce);
@@ -236,7 +237,7 @@ class MessageBridgeImpl {
         ByteString serializedResult = new StdLib().serialize(result);
 
         if (metadata.storeResult) {
-            new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT_N3_EXEC).put(nonce, serializedResult);
+            new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT_NEO_EXEC).put(nonce, serializedResult);
         }
 
         // The max message size is used as the max byte size for results in a single event.
@@ -305,8 +306,8 @@ class MessageBridgeImpl {
         int timestamp = Runtime.getTime();
         Hash160 callingScriptHash = Runtime.getCallingScriptHash();
 
-        N3Message.N3MetadataStoreOnly metadata = new N3Message.N3MetadataStoreOnly(timestamp, callingScriptHash);
-        return serializeAndUpdateEvmMessageState(metadata, rawMsg);
+        NeoMessage.NeoMetadataStoreOnly metadata = new NeoMessage.NeoMetadataStoreOnly(timestamp, callingScriptHash);
+        return serializeAndUpdateNeoToEvmMessageState(metadata, rawMsg);
     }
 
     public static int sendExecutableMessage(ByteString rawMsg, boolean storeResult, Hash160 feeSponsor, int maxFee) {
@@ -315,13 +316,13 @@ class MessageBridgeImpl {
 
         int timestamp = Runtime.getTime();
         Hash160 callingScriptHash = Runtime.getCallingScriptHash();
-        N3Message.N3MetadataExecutable metadata = new N3Message.N3MetadataExecutable(timestamp, callingScriptHash,
+        NeoMessage.NeoMetadataExecutable metadata = new NeoMessage.NeoMetadataExecutable(timestamp, callingScriptHash,
                 storeResult);
-        return serializeAndUpdateEvmMessageState(metadata, rawMsg);
+        return serializeAndUpdateNeoToEvmMessageState(metadata, rawMsg);
     }
 
     public static int sendResultMessage(int relatedMessageNonce, Hash160 feeSponsor, int maxFee) {
-        ByteString result = getResult(relatedMessageNonce);
+        ByteString result = getNeoExecutionResult(relatedMessageNonce);
         if (result == null) {
             abort("Result not found");
         }
@@ -332,9 +333,9 @@ class MessageBridgeImpl {
         int timestamp = Runtime.getTime();
         Hash160 callingScriptHash = Runtime.getCallingScriptHash();
 
-        N3Message.N3MetadataResult metadata = new N3Message.N3MetadataResult(timestamp, callingScriptHash,
+        NeoMessage.NeoMetadataResult metadata = new NeoMessage.NeoMetadataResult(timestamp, callingScriptHash,
                 relatedMessageNonce);
-        return serializeAndUpdateEvmMessageState(metadata, result);
+        return serializeAndUpdateNeoToEvmMessageState(metadata, result);
     }
 
     private static void checkMsgSize(int msgSize) {
@@ -343,25 +344,25 @@ class MessageBridgeImpl {
         }
     }
 
-    private static int serializeAndUpdateEvmMessageState(Object metadata, ByteString rawMessage) {
+    private static int serializeAndUpdateNeoToEvmMessageState(Object metadata, ByteString rawMessage) {
         MessageBridge messageBridge = getMessageBridge();
         ByteString serializedMetadata = new StdLib().serialize(metadata);
-        N3Message message = new N3Message(serializedMetadata, rawMessage);
-        return updateEvmMessageState(messageBridge, message);
+        NeoMessage message = new NeoMessage(serializedMetadata, rawMessage);
+        return updateNeoToEvmMessageState(messageBridge, message);
     }
 
-    static ByteString getResult(int relatedMessageNonce) {
-        return new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_RESULT_N3_EXEC)
+    static ByteString getNeoExecutionResult(int relatedMessageNonce) {
+        return new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_RESULT_NEO_EXEC)
                 .get(relatedMessageNonce);
     }
 
-    static int getEvmResultNonce(int relatedMessageNonce) {
+    static int getEvmExecutionResultNonce(int relatedMessageNonce) {
         return new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_RESULT_EVM_EXEC)
                 .getIntOrZero(relatedMessageNonce);
     }
 
-    static ByteString getEvmResult(int relatedMessageNonce) {
-        int resultMessageNonce = getEvmResultNonce(relatedMessageNonce);
+    static ByteString getEvmExecutionResult(int relatedMessageNonce) {
+        int resultMessageNonce = getEvmExecutionResultNonce(relatedMessageNonce);
         if (resultMessageNonce == 0) {
             return null;
         }
@@ -394,14 +395,14 @@ class MessageBridgeImpl {
         MessageBridgeContract.baseMap.put(KEY_UNCLAIMED_FEES, currentlyUnclaimedFees + amount);
     }
 
-    private static int updateEvmMessageState(MessageBridge messageBridge, N3Message message) {
-        messageBridge.n3ToEvmMessageState.nonce++;
-        N3MessageEnvelope msgEnvelope = new N3MessageEnvelope(messageBridge.n3ToEvmMessageState.nonce, message);
+    private static int updateNeoToEvmMessageState(MessageBridge messageBridge, NeoMessage message) {
+        messageBridge.neoToEvmState.nonce++;
+        NeoMessageEnvelope msgEnvelope = new NeoMessageEnvelope(messageBridge.neoToEvmState.nonce, message);
         ByteString messageHash = MessageBridgeLib.hashMessageBridgeOp(MessageBridgeContract.cryptoLib, msgEnvelope);
         ByteString newRoot = BridgeLib.computeNewRoot(MessageBridgeContract.cryptoLib,
-                messageBridge.n3ToEvmMessageState.root, messageHash);
-        messageBridge.n3ToEvmMessageState.root = newRoot;
-        assert messageBridge.n3ToEvmMessageState.root == newRoot : "Root not set correctly";
+                messageBridge.neoToEvmState.root, messageHash);
+        messageBridge.neoToEvmState.root = newRoot;
+        assert messageBridge.neoToEvmState.root == newRoot : "Root not set correctly";
         storeMessageBridge(messageBridge);
         MessageBridgeContract.onMessageSend.fire(msgEnvelope.nonce, msgEnvelope.message.metadataBytes,
                 msgEnvelope.message.rawMessage, messageHash, newRoot);

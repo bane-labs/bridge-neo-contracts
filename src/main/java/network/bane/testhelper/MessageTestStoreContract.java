@@ -11,9 +11,8 @@ import io.neow3j.devpack.annotations.DisplayName;
 import io.neow3j.devpack.annotations.ManifestExtra;
 import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.contracts.ContractInterface;
-import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.StdLib;
-import network.bane.structs.message.N3Message;
+import network.bane.structs.message.NeoMessage;
 
 import static io.neow3j.devpack.Helper.abort;
 
@@ -100,7 +99,7 @@ public class MessageTestStoreContract {
         }
 
         @CallFlags(io.neow3j.devpack.constants.CallFlags.ReadOnly)
-        public native N3Message getMessage(int nonce);
+        public native NeoMessage getMessage(int nonce);
     }
 
 }

@@ -311,8 +311,8 @@ public class MessageBridge extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("executeMessage", integer(nonce)).signers(signer));
     }
 
-    public byte[] getResult(BigInteger nonce) throws IOException {
-        StackItem item = callInvokeFunction("getResult", asList(integer(nonce))).getInvocationResult()
+    public byte[] getNeoExecutionResult(BigInteger nonce) throws IOException {
+        StackItem item = callInvokeFunction("getNeoExecutionResult", asList(integer(nonce))).getInvocationResult()
                 .getFirstStackItem();
         if (item.getValue() == null) {
             return new byte[0];
@@ -320,12 +320,12 @@ public class MessageBridge extends SmartContractHelper {
         return item.getByteArray();
     }
 
-    public BigInteger getEvmResultNonce(BigInteger relatedNonce) throws IOException {
-        return callFunctionReturningInt("getEvmResultNonce", integer(relatedNonce));
+    public BigInteger getEvmExecutionResultNonce(BigInteger relatedNonce) throws IOException {
+        return callFunctionReturningInt("getEvmExecutionResultNonce", integer(relatedNonce));
     }
 
-    public byte[] getEvmResult(BigInteger relatedNonce) throws IOException {
-        StackItem item = callInvokeFunction("getEvmResult", asList(integer(relatedNonce))).getInvocationResult()
+    public byte[] getEvmExecutionResult(BigInteger relatedNonce) throws IOException {
+        StackItem item = callInvokeFunction("getEvmExecutionResult", asList(integer(relatedNonce))).getInvocationResult()
                 .getFirstStackItem();
         if (item.getValue() == null) {
             return new byte[0];
