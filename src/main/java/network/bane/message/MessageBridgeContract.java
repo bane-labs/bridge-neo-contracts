@@ -403,14 +403,27 @@ public class MessageBridgeContract {
     }
 
     /**
-     * Gets the nonce of the result message that corresponds to the execution of an N3 executable message.
+     * Gets the result of the execution of an executable message that was sent and executed on N3. If the result was
+     * not returned AND stored as a result message to EVM, the result is null.
      *
      * @param relatedEvmToNeoMessageNonce the nonce of the N3 executable message.
      * @return the result of the execution of the N3 executable message.
      */
     @Safe
-    public static ByteString getNeoExecutionResult(int relatedEvmToNeoMessageNonce) {
+    public static Object getNeoExecutionResult(int relatedEvmToNeoMessageNonce) {
         return MessageBridgeImpl.getNeoExecutionResult(relatedEvmToNeoMessageNonce);
+    }
+
+    /**
+     * Gets the serialized result of the execution of an executable message that was sent and executed on N3. If the
+     * result was not returned AND stored as a result message to EVM, the result is null.
+     *
+     * @param relatedEvmToNeoMessageNonce the nonce of the N3 executable message.
+     * @return the result of the execution of the N3 executable message in serialized form.
+     */
+    @Safe
+    public static ByteString getSerializedNeoExecutionResult(int relatedEvmToNeoMessageNonce) {
+        return MessageBridgeImpl.getSerializedNeoExecutionResult(relatedEvmToNeoMessageNonce);
     }
 
     /**

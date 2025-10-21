@@ -322,7 +322,7 @@ class MessageBridgeImpl {
     }
 
     public static int sendResultMessage(int relatedMessageNonce, Hash160 feeSponsor, int maxFee) {
-        ByteString result = getNeoExecutionResult(relatedMessageNonce);
+        ByteString result = getSerializedNeoExecutionResult(relatedMessageNonce);
         if (result == null) {
             abort("Result not found");
         }
@@ -351,7 +351,11 @@ class MessageBridgeImpl {
         return updateNeoToEvmMessageState(messageBridge, message);
     }
 
-    static ByteString getNeoExecutionResult(int relatedMessageNonce) {
+    static Object getNeoExecutionResult(int relatedMessageNonce) {
+        return new StdLib().deserialize(getSerializedNeoExecutionResult(relatedMessageNonce));
+    }
+
+    static ByteString getSerializedNeoExecutionResult(int relatedMessageNonce) {
         return new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_RESULT_NEO_EXEC)
                 .get(relatedMessageNonce);
     }

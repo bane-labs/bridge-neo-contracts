@@ -311,13 +311,18 @@ public class MessageBridge extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("executeMessage", integer(nonce)).signers(signer));
     }
 
-    public byte[] getNeoExecutionResult(BigInteger nonce) throws IOException {
-        StackItem item = callInvokeFunction("getNeoExecutionResult", asList(integer(nonce))).getInvocationResult()
+    public byte[] getSerializedNeoExecutionResult(BigInteger nonce) throws IOException {
+        StackItem item = callInvokeFunction("getSerializedNeoExecutionResult", asList(integer(nonce))).getInvocationResult()
                 .getFirstStackItem();
         if (item.getValue() == null) {
             return new byte[0];
         }
         return item.getByteArray();
+    }
+
+    public StackItem getNeoExecutionResult(BigInteger nonce) throws IOException {
+        return callInvokeFunction("getNeoExecutionResult", asList(integer(nonce))).getInvocationResult()
+                .getFirstStackItem();
     }
 
     public BigInteger getEvmExecutionResultNonce(BigInteger relatedNonce) throws IOException {
