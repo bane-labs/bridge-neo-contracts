@@ -52,11 +52,11 @@ public class UnpauseAll {
         } else {
             System.out.println("MessageBridge is paused - unpausing...");
             Transaction tx = msgBridge.invokeFunction("unpause").signers(calledByEntry(governor)).sign();
-            NeoSendRawTransaction rawTxResponse = tx.send();
-            if (rawTxResponse.hasError()) {
-                throw new Exception("Error unpausing message bridge: " + rawTxResponse.getError().getMessage());
+            NeoSendRawTransaction response = tx.send();
+            if (response.hasError()) {
+                throw new Exception("Error unpausing message bridge: " + response.getError().getMessage());
             }
-            Hash256 txHash = rawTxResponse.getSendRawTransaction().getHash();
+            Hash256 txHash = response.getSendRawTransaction().getHash();
             System.out.println("Transaction sent: " + txHash);
             waitUntilTransactionIsExecuted(txHash, neow3j);
             if (msgBridge.callFunctionReturningBool("isPaused")) {

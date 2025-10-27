@@ -8,7 +8,6 @@ import io.neow3j.transaction.Transaction;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
-import network.bane.utils.env.EnvVariables;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -63,14 +62,14 @@ public class UnpauseAll {
         } else {
             System.out.println("Bridge is paused - unpausing...");
             Transaction tx = bridge.invokeFunction("unpauseBridge").signers(calledByEntry(governor)).sign();
-            NeoSendRawTransaction rawTxResponse = tx.send();
-            if (rawTxResponse.hasError()) {
-                throw new Exception("Error unpausing bridge: " + rawTxResponse.getError().getMessage());
+            NeoSendRawTransaction response = tx.send();
+            if (response.hasError()) {
+                throw new Exception("Error unpausing bridge: " + response.getError().getMessage());
             }
-            Hash256 txHash = rawTxResponse.getSendRawTransaction().getHash();
+            Hash256 txHash = response.getSendRawTransaction().getHash();
             System.out.println("Transaction sent: " + txHash);
             waitUntilTransactionIsExecuted(txHash, neow3j);
-            if (!bridge.callFunctionReturningBool("isPaused")) {
+            if (bridge.callFunctionReturningBool("isPaused")) {
                 throw new Exception("Unpausing the bridge contract failed in transaction: " + txHash);
             }
             overallPauseState = SUCCESS;
@@ -122,7 +121,7 @@ public class UnpauseAll {
             } else {
                 System.out.println("Token bridge for token " + tokenHash + " is paused - unpausing...");
                 NeoSendRawTransaction response = bridge.invokeFunction("unpauseTokenBridge", hash160(tokenHash))
-                        .signers(calledByEntry(EnvVariables.governor)).sign().send();
+                        .signers(calledByEntry(governor)).sign().send();
                 Hash256 txHash = response.getSendRawTransaction().getHash();
                 waitUntilTransactionIsExecuted(txHash, neow3j);
                 if (tokenBridgeIsPaused(bridge, tokenHash)) {
@@ -170,7 +169,7 @@ public class UnpauseAll {
         System.out.printf("Token unpause state: %s tokens registered\n", registeredTokens.size());
         for (int i = 0; i < registeredTokens.size(); i++) {
             Hash160 token = registeredTokens.get(i);
-            System.out.printf(" - %s/%s %s: %s\n", i, registeredTokens.size(), stateMap.get(token), token);
+            System.out.printf(" - %s/%s %s: %s\n", i + 1, registeredTokens.size(), stateMap.get(token), token);
         }
         System.out.println("Deposits unpause state: " + depositsPauseState);
     }
