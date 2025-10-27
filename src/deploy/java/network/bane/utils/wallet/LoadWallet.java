@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static network.bane.utils.env.GetEnv.getEnvVariable;
+import static network.bane.utils.env.GetEnv.getEnvVariableOrDefault;
 
 public class LoadWallet {
 
@@ -25,6 +26,14 @@ public class LoadWallet {
             CipherException, IOException {
         String filePath = getEnvVariable("NEON3_DEPLOYER_WALLET");
         String password = getEnvVariable("NEON3_DEPLOYER_PASSWORD");
+        Account acc = getAccountFromWallet(filePath, password);
+        return acc;
+    }
+
+    public static Account getGovernorAccountFromWallet() throws NEP2InvalidPassphrase, NEP2InvalidFormat,
+            CipherException, IOException {
+        String filePath = getEnvVariableOrDefault("NEON3_GOVERNOR_WALLET", "wallets/governor.json");
+        String password = getEnvVariableOrDefault("NEON3_GOVERNOR_PASSWORD", "");
         Account acc = getAccountFromWallet(filePath, password);
         return acc;
     }
