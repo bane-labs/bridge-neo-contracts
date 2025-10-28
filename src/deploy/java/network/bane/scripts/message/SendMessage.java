@@ -62,6 +62,16 @@ public class SendMessage {
             // Ignore if not set
         }
 
+        // Get storeResult from env (default: false)
+        boolean storeResult = false;
+        String storeResultEnv;
+        try {
+            storeResultEnv = GetEnv.getEnvVariable("MESSAGE_STORE_RESULT");
+        } catch (Exception e) {
+            storeResultEnv = "false";
+        }
+        storeResult = Boolean.parseBoolean(storeResultEnv);
+
         // Validate message type
         boolean isExecutable;
         if ("executable".equalsIgnoreCase(messageType)) {
@@ -73,7 +83,7 @@ public class SendMessage {
         }
 
         byte[] messageData = hexStringToByteArray(messageHex);
-        Hash160 feeSponsor = (feeSponsorEnv != null && !feeSponsorEnv.equals("")) ? new Hash160(feeSponsorEnv) : senderAccount.getScriptHash();
+        Hash160 feeSponsor = (feeSponsorEnv != null && !feeSponsorEnv.isEmpty()) ? new Hash160(feeSponsorEnv) : senderAccount.getScriptHash();
 
         System.out.println("Message Bridge Contract: " + messageBridgeHash);
         System.out.println("Sender: " + senderAccount.getScriptHash());
@@ -81,6 +91,7 @@ public class SendMessage {
         System.out.println("Message Data (bytes): " + messageData.length + " bytes");
         System.out.println("Message Type: " + messageType);
         System.out.println("Fee Sponsor: " + feeSponsor);
+        System.out.println("Store Result : " + storeResult);
 
         // Get the message bridge contract
         SmartContract messageBridge = new SmartContract(messageBridgeHash, neow3j);
@@ -94,10 +105,10 @@ public class SendMessage {
         Transaction tx;
         if (isExecutable) {
             System.out.println("\n--- Sending Executable Message ---");
-            // Send executable message: sendExecutableMessage(rawMessage, isResultRequired, feeSponsor, sendingFee)
+            // Send executable message: sendExecutableMessage(rawMessage, storeResult, feeSponsor, sendingFee)
             tx = messageBridge.invokeFunction("sendExecutableMessage",
                     byteArray(messageData),
-                    bool(false), // isResultRequired - can be made configurable if needed
+                    bool(storeResult),
                     hash160(feeSponsor),
                     integer(sendingFee)
             ).signers(global(senderAccount)).sign();
