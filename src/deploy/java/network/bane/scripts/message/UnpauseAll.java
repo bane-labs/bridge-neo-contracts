@@ -67,7 +67,7 @@ public class UnpauseAll {
             System.out.println("MessageBridge unpaused successfully");
         }
 
-        // Unause sending
+        // Unpause sending
         System.out.println("\nUnpausing sending");
         if (!msgBridge.callFunctionReturningBool("sendingIsPaused")) {
             sendingPauseState = ALREADY_UNPAUSED;
