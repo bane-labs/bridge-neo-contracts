@@ -3,6 +3,8 @@ package network.bane.scripts.message;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
+import io.neow3j.protocol.core.response.NeoBlock;
+import io.neow3j.protocol.core.response.NeoGetTransaction;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.protocol.http.HttpService;
@@ -125,6 +127,10 @@ public class SendMessage {
         System.out.println("Waiting for transaction execution...");
         waitUntilTransactionIsExecuted(txHash, neow3j);
         NeoApplicationLog appLog = neow3j.getApplicationLog(txHash).send().getApplicationLog();
+        NeoGetTransaction transaction = neow3j.getTransaction(txHash).send();
+        Hash256 blockHash = transaction.getResult().getBlockHash();
+        NeoBlock block = neow3j.getBlock(blockHash, false).send().getBlock();
+        System.out.println("Included in Block: " + block.getIndex());
 
         if (appLog.getExecutions().get(0).getState().equals(NeoVMStateType.HALT)) {
             System.out.println("Message sent successfully!");
