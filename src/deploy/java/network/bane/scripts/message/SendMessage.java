@@ -26,7 +26,7 @@ import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static network.bane.utils.env.EnvVariables.NODE;
 import static network.bane.utils.env.GetEnv.getEnvVariable;
-import static network.bane.utils.wallet.LoadWallet.getOwnerAccountFromWallet;
+import static network.bane.utils.wallet.LoadWallet.getDeployerAccountFromWallet;
 
 /**
  * Helper tool for sending messages through the Message Bridge.
@@ -50,7 +50,7 @@ public class SendMessage {
 
         // Get contract hash and sender account
         Hash160 messageBridgeHash = new Hash160(getEnvVariable("MESSAGE_BRIDGE_HASH"));
-        Account senderAccount = getOwnerAccountFromWallet();
+        Account senderAccount = getDeployerAccountFromWallet();
 
         // Get message parameters from environment (all required)
         String messageHex = getEnvVariable("MESSAGE_DATA");
