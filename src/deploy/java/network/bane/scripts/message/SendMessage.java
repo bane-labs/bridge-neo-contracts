@@ -1,10 +1,10 @@
 package network.bane.scripts.message;
 
+import io.neow3j.contract.GasToken;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.NeoBlock;
-import io.neow3j.protocol.core.response.NeoGetTransaction;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.protocol.http.HttpService;
@@ -13,115 +13,77 @@ import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.types.NeoVMStateType;
 import io.neow3j.wallet.Account;
-import network.bane.utils.env.GetEnv;
 
 import java.math.BigInteger;
 
-import static io.neow3j.transaction.AccountSigner.global;
-import static io.neow3j.types.ContractParameter.bool;
+import static io.neow3j.transaction.AccountSigner.none;
+import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.byteArray;
-import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
-import static network.bane.utils.env.EnvVariables.NODE;
-import static network.bane.utils.env.GetEnv.getEnvVariable;
-import static network.bane.utils.wallet.LoadWallet.getDeployerAccountFromWallet;
+import static io.neow3j.utils.Numeric.isValidHexString;
+import static io.neow3j.utils.Numeric.toHexString;
+import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
+import static network.bane.utils.env.EnvVariables.MESSAGE_SEND_STORE_ONLY_MESSAGE;
+import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
+import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_PERSONAL;
+import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_PERSONAL;
+import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 /**
- * Helper tool for sending messages through the Message Bridge.
- *
- * Usage:
- * 1. Set environment variables:
- *    - MESSAGE_BRIDGE_HASH: Hash of the deployed message bridge contract
- *    - MESSAGE_DATA: Hex string of the message data to send
- *    - MESSAGE_TYPE: Either "executable" or "store-only"
- *    - FEE_SPONSOR: Hash160 of fee sponsor (optional, uses sender if not set)
- *
- * 2. Run the script: gradle run -PmainClass=network.bane.scripts.message.SendMessage
+ * Sends a store-only message
+ * <p>
+ * Requires the following environment variables to be set:
+ * - N3_JSON_RPC: The RPC endpoint of the N3 node
+ * - WALLET_FILEPATH_PERSONAL: the filepath to the personal wallet. This wallet is used to send the message.
+ * - WALLET_PASSWORD_PERSONAL: the password for the personal wallet
+ * - MESSAGE_SEND_STORE_ONLY_MESSAGE: The message to send as a hex string or UTF-8 string. If the string is a valid
+ *    hex string, it will be interpreted as hex, otherwise as UTF-8.
+ * - MESSAGE_BRIDGE_HASH: Hash of the deployed message bridge contract
+ * - MESSAGE_DATA: Hex string of the message data to send
+ * - MESSAGE_TYPE: Either "executable" or "store-only"
+ * - FEE_SPONSOR: Hash160 of fee sponsor (optional, uses sender if not set)
+ * <p>
+ * Run with: gradle run -PmainClass=network.bane.scripts.message.SendMessage
  */
 public class SendMessage {
 
+    // The following are the required env variables for running this script
+    private static final Neow3j neow3j = Neow3j.build(new HttpService(N3_JSON_RPC));
+    private static final SmartContract messageBridge = new SmartContract(MESSAGE_BRIDGE_HASH, neow3j);
+    private static final String personalWalletPath = WALLET_FILEPATH_PERSONAL;
+    private static final String personalWalletPassword = WALLET_PASSWORD_PERSONAL;
+    private static final String messageToSend = MESSAGE_SEND_STORE_ONLY_MESSAGE;
+
     public static void main(String[] args) throws Throwable {
-        System.out.println("=== Message Bridge - Send Message Tool ===");
+        System.out.println("=== Message Bridge - Send Store-Only Message ===");
+        System.out.println("Using Message Bridge Contract: " + messageBridge.getScriptHash());
 
-        // Initialize Neo connection
-        Neow3j neow3j = Neow3j.build(new HttpService(NODE));
+        Account senderAcc = getAccountFromWallet(personalWalletPath, personalWalletPassword);
 
-        // Get contract hash and sender account
-        Hash160 messageBridgeHash = new Hash160(getEnvVariable("MESSAGE_BRIDGE_HASH"));
-        Account senderAccount = getDeployerAccountFromWallet();
-
-        // Get message parameters from environment (all required)
-        String messageHex = getEnvVariable("MESSAGE_DATA");
-        String messageType = getEnvVariable("MESSAGE_TYPE");
-        String feeSponsorEnv = null;
-        try {
-            feeSponsorEnv = GetEnv.getEnvVariable("FEE_SPONSOR");
-        } catch (Exception e) {
-            // Ignore if not set
-        }
-
-        // Get storeResult from env (default: false)
-        boolean storeResult = false;
-        String storeResultEnv;
-        try {
-            storeResultEnv = GetEnv.getEnvVariable("MESSAGE_STORE_RESULT");
-        } catch (Exception e) {
-            storeResultEnv = "false";
-        }
-        storeResult = Boolean.parseBoolean(storeResultEnv);
-
-        // Validate message type
-        boolean isExecutable;
-        if ("executable".equalsIgnoreCase(messageType)) {
-            isExecutable = true;
-        } else if ("store-only".equalsIgnoreCase(messageType)) {
-            isExecutable = false;
-        } else {
-            throw new IllegalArgumentException("MESSAGE_TYPE must be either 'executable' or 'store-only', got: " + messageType);
-        }
-
-        byte[] messageData = hexStringToByteArray(messageHex);
-        Hash160 feeSponsor = (feeSponsorEnv != null && !feeSponsorEnv.isEmpty()) ? new Hash160(feeSponsorEnv) : senderAccount.getScriptHash();
-
-        System.out.println("Message Bridge Contract: " + messageBridgeHash);
-        System.out.println("Sender: " + senderAccount.getScriptHash());
-        System.out.println("Message Data (hex): " + messageHex);
-        System.out.println("Message Data (bytes): " + messageData.length + " bytes");
-        System.out.println("Message Type: " + messageType);
-        System.out.println("Fee Sponsor: " + feeSponsor);
-        System.out.println("Store Result : " + storeResult);
-
-        // Get the message bridge contract
-        SmartContract messageBridge = new SmartContract(messageBridgeHash, neow3j);
+        byte[] messageData = getMessageDataBytes(messageToSend);
+        printSendingMessageInfo(senderAcc, messageData, "Store-Only");
 
         // Get the current sending fee
-        BigInteger sendingFee = messageBridge.callInvokeFunction("sendingFee").getInvocationResult()
-                .getStack().get(0).getInteger();
-        System.out.println("Sending Fee: " + sendingFee + " GAS fractions");
+        BigInteger sendingFee = messageBridge.callFunctionReturningInt("sendingFee");
+        System.out.printf("Sending Fee: %s GAS%n", GasToken.toDecimals(sendingFee, 8));
+        BigInteger maxFee = sendingFee;
 
-        // Build the transaction based on message type
-        Transaction tx;
-        if (isExecutable) {
-            System.out.println("\n--- Sending Executable Message ---");
-            // Send executable message: sendExecutableMessage(rawMessage, storeResult, feeSponsor, sendingFee)
-            tx = messageBridge.invokeFunction("sendExecutableMessage",
-                    byteArray(messageData),
-                    bool(storeResult),
-                    hash160(feeSponsor),
-                    integer(sendingFee)
-            ).signers(global(senderAccount)).sign();
-        } else {
-            System.out.println("\n--- Sending Store-Only Message ---");
-            // Send store-only message: sendMessage(rawMessage, feeSponsor, sendingFee)
-            tx = messageBridge.invokeFunction("sendMessage",
-                    byteArray(messageData),
-                    hash160(feeSponsor),
-                    integer(sendingFee)
-            ).signers(global(senderAccount)).sign();
-        }
+        // Invoking: sendMessage(rawMessage, feeSponsor, sendingFee)
+        Transaction tx = messageBridge.invokeFunction("sendMessage",
+                        byteArray(messageData),
+                        any(null),
+                        integer(maxFee)
+                )
+                .signers(none(senderAcc).setAllowedContracts(GasToken.SCRIPT_HASH))
+                .sign();
 
+        System.out.println("\n--- Sending Store-Only Message ---");
+        sendMessageSendTransaction(neow3j, tx, messageBridge.getScriptHash());
+    }
+
+    static void sendMessageSendTransaction(Neow3j neow3j, Transaction tx, Hash160 messageBridgeHash) throws Exception {
         // Send the transaction
         System.out.println("Sending transaction...");
         NeoSendRawTransaction response = tx.send();
@@ -137,17 +99,16 @@ public class SendMessage {
         // Wait for transaction execution and get the result
         System.out.println("Waiting for transaction execution...");
         waitUntilTransactionIsExecuted(txHash, neow3j);
-        NeoApplicationLog appLog = neow3j.getApplicationLog(txHash).send().getApplicationLog();
-        NeoGetTransaction transaction = neow3j.getTransaction(txHash).send();
-        Hash256 blockHash = transaction.getResult().getBlockHash();
-        NeoBlock block = neow3j.getBlock(blockHash, false).send().getBlock();
+        Hash256 blockHash = neow3j.getTransaction(txHash).send().getTransaction().getBlockHash();
+        NeoBlock block = neow3j.getBlockHeader(blockHash).send().getBlock();
         System.out.println("Included in Block: " + block.getIndex());
 
-        if (appLog.getExecutions().get(0).getState().equals(NeoVMStateType.HALT)) {
-            System.out.println("Message sent successfully!");
+        NeoApplicationLog.Execution exec = tx.getApplicationLog().getFirstExecution();
+        if (exec.getState().equals(NeoVMStateType.HALT)) {
+            System.out.println("Message execution successful!");
 
             // Look for MessageSend event in the logs
-            appLog.getExecutions().get(0).getNotifications().stream()
+            exec.getNotifications().stream()
                     .filter(notification -> notification.getContract().equals(messageBridgeHash))
                     .filter(notification -> "MessageSend".equals(notification.getEventName()))
                     .findFirst()
@@ -158,7 +119,25 @@ public class SendMessage {
                     });
         } else {
             System.out.println("Transaction failed!");
-            System.out.println("Exception: " + appLog.getExecutions().get(0).getException());
+            System.out.println("Exception: " + exec.getException());
         }
     }
+
+    static byte[] getMessageDataBytes(String messageToSend) {
+        if (!isValidHexString(messageToSend)) {
+            return hexStringToByteArray(messageToSend);
+        } else {
+            System.out.println("Provided message is not in hexadecimal format - using UTF-8 bytes");
+            return messageToSend.getBytes();
+        }
+    }
+
+    static void printSendingMessageInfo(Account senderAcc, byte[] messageData, String typeString) {
+        System.out.println("Sending message (hex): " + toHexString(messageData));
+        System.out.println("Sender: " + senderAcc.getScriptHash());
+        System.out.println("Message Data (hex): " + toHexString(messageData));
+        System.out.println("Message Data Size: " + messageData.length + " bytes");
+        System.out.println("Message Type: " + typeString);
+    }
+
 }
