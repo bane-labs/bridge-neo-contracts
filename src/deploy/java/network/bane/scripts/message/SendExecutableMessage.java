@@ -3,7 +3,6 @@ package network.bane.scripts.message;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.http.HttpService;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.wallet.Account;
 
@@ -23,6 +22,10 @@ import static network.bane.utils.env.EnvVariables.MESSAGE_SEND_EXECUTABLE_STORE_
 import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
 import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_PERSONAL;
 import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_PERSONAL;
+import static network.bane.utils.env.EnvVariables.getBooleanFromEnvVar;
+import static network.bane.utils.env.EnvVariables.getEnvVariable;
+import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
+import static network.bane.utils.env.EnvVariables.getNeow3jFromEnvVar;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 /**
@@ -40,19 +43,14 @@ import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
  */
 public class SendExecutableMessage {
 
-    // The following are the required env variables for running this script
-    private static final Neow3j neow3j = Neow3j.build(new HttpService(N3_JSON_RPC));
-    private static final SmartContract messageBridge = new SmartContract(MESSAGE_BRIDGE_HASH, neow3j);
-    private static final String personalWalletPath = WALLET_FILEPATH_PERSONAL;
-    private static final String personalWalletPassword = WALLET_PASSWORD_PERSONAL;
-    private static final String messageToSend = MESSAGE_SEND_EXECUTABLE_MESSAGE;
-
     public static void main(String[] args) throws Throwable {
-        boolean storeResult = true;
-        try {
-            storeResult = MESSAGE_SEND_EXECUTABLE_STORE_BOOL;
-        } catch (Exception ignore) {
-        }
+        Neow3j neow3j = getNeow3jFromEnvVar(N3_JSON_RPC);
+        SmartContract messageBridge = new SmartContract(getHash160FromEnvVar(MESSAGE_BRIDGE_HASH), neow3j);
+        String personalWalletPath = getEnvVariable(WALLET_FILEPATH_PERSONAL);
+        String personalWalletPassword = getEnvVariable(WALLET_PASSWORD_PERSONAL);
+        String messageToSend = getEnvVariable(MESSAGE_SEND_EXECUTABLE_MESSAGE);
+        boolean storeResult = getBooleanFromEnvVar(MESSAGE_SEND_EXECUTABLE_STORE_BOOL);
+
         Account senderAcc = getAccountFromWallet(personalWalletPath, personalWalletPassword);
 
         System.out.println("=== Message Bridge - Send Executable Message ===");

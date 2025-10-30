@@ -36,14 +36,13 @@ import static network.bane.utils.deployment.DeploymentHelper.ensureConsistentSta
 import static network.bane.utils.env.EnvVariables.BRIDGE_CONTRACT_NAME;
 import static network.bane.utils.env.EnvVariables.MANAGEMENT_CONTRACT_NAME;
 import static network.bane.utils.env.EnvVariables.ROLE_OWNER_ADDRESS;
+import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_OWNER;
 import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_DEPLOYER;
 import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_DEPLOYER;
 import static network.bane.utils.env.EnvVariables.LINKED_CHAIN_ID;
 import static network.bane.utils.env.EnvVariables.MANAGEMENT_NUMBER_OF_VALIDATORS;
 import static network.bane.utils.env.EnvVariables.MANAGEMENT_VALIDATOR_THRESHOLD;
 import static network.bane.utils.env.EnvVariables.ROLE_GOVERNOR_ADDRESS;
-import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_OWNER;
-import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_OWNER;
 import static network.bane.utils.env.EnvVariables.ROLE_RELAYER_ADDRESS;
 import static network.bane.utils.env.EnvVariables.ROLE_SECURITY_GUARD_ADDRESS;
 import static network.bane.utils.env.EnvVariables.ROLE_VALIDATOR_01_PUBLIC_KEY;
@@ -53,38 +52,31 @@ import static network.bane.utils.env.EnvVariables.ROLE_VALIDATOR_04_PUBLIC_KEY;
 import static network.bane.utils.env.EnvVariables.ROLE_VALIDATOR_05_PUBLIC_KEY;
 import static network.bane.utils.env.EnvVariables.ROLE_VALIDATOR_06_PUBLIC_KEY;
 import static network.bane.utils.env.EnvVariables.ROLE_VALIDATOR_07_PUBLIC_KEY;
+import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_OWNER;
+import static network.bane.utils.env.EnvVariables.getAddressFromEnv;
+import static network.bane.utils.env.EnvVariables.getBigIntegerFromEnvVar;
+import static network.bane.utils.env.EnvVariables.getEnvVariable;
+import static network.bane.utils.env.EnvVariables.getIntegerFromEnvVar;
+import static network.bane.utils.env.EnvVariables.getPublicKeyFromEnvVar;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 public class BridgeCompilation {
 
     private static final int MAX_NR_VALIDATORS = 7;
 
-    // The following are the required env variables for running this script
-    private static final String ownerWalletPath = WALLET_FILEPATH_OWNER;
-    private static final String ownerWalletPassword = WALLET_PASSWORD_OWNER;
-    private static final String deployerWalletPath = WALLET_FILEPATH_DEPLOYER;
-    private static final String deployerWalletPassword = WALLET_PASSWORD_DEPLOYER;
-
-    private static final String managementContractName = MANAGEMENT_CONTRACT_NAME;
-    private static final String bridgeContractName = BRIDGE_CONTRACT_NAME;
-    private static final BigInteger linkedChainId = LINKED_CHAIN_ID;
-
-    // Roles
-    private static final Hash160 owner = ROLE_OWNER_ADDRESS;
-    private static final Hash160 relayer = ROLE_RELAYER_ADDRESS;
-    private static final Hash160 governor = ROLE_GOVERNOR_ADDRESS;
-    private static final Hash160 securityGuard = ROLE_SECURITY_GUARD_ADDRESS;
-    private static final int validatorThreshold = MANAGEMENT_VALIDATOR_THRESHOLD;
-    private static final int nrValidators = MANAGEMENT_NUMBER_OF_VALIDATORS;
-    public static final ECKeyPair.ECPublicKey validator01 = ROLE_VALIDATOR_01_PUBLIC_KEY;
-    public static final ECKeyPair.ECPublicKey validator02 = ROLE_VALIDATOR_02_PUBLIC_KEY;
-    public static final ECKeyPair.ECPublicKey validator03 = ROLE_VALIDATOR_03_PUBLIC_KEY;
-    public static final ECKeyPair.ECPublicKey validator04 = ROLE_VALIDATOR_04_PUBLIC_KEY;
-    public static final ECKeyPair.ECPublicKey validator05 = ROLE_VALIDATOR_05_PUBLIC_KEY;
-    public static final ECKeyPair.ECPublicKey validator06 = ROLE_VALIDATOR_06_PUBLIC_KEY;
-    public static final ECKeyPair.ECPublicKey validator07 = ROLE_VALIDATOR_07_PUBLIC_KEY;
-
     public static Hash160 compileAndPrintManagementDeploymentTxData(Neow3j neow3j) throws Throwable {
+        String deployerWalletPath = getEnvVariable(WALLET_FILEPATH_DEPLOYER);
+        String deployerWalletPassword = getEnvVariable(WALLET_PASSWORD_DEPLOYER);
+
+        String managementContractName = getEnvVariable(MANAGEMENT_CONTRACT_NAME);
+
+        int validatorThreshold = getIntegerFromEnvVar(MANAGEMENT_VALIDATOR_THRESHOLD);
+        int nrValidators = getIntegerFromEnvVar(MANAGEMENT_NUMBER_OF_VALIDATORS);
+        Hash160 owner = getAddressFromEnv(ROLE_OWNER_ADDRESS);
+        Hash160 relayer = getAddressFromEnv(ROLE_RELAYER_ADDRESS);
+        Hash160 governor = getAddressFromEnv(ROLE_GOVERNOR_ADDRESS);
+        Hash160 securityGuard = getAddressFromEnv(ROLE_SECURITY_GUARD_ADDRESS);
+
         // Compile the Bridge Management contract
         HashMap<String, String> substitutions = new HashMap<>();
         substitutions.put("BridgeManagementName", managementContractName);
@@ -100,12 +92,19 @@ public class BridgeCompilation {
         if (validatorThreshold < 2) {
             throw new Exception("Validator threshold cannot be less than 2");
         }
-        List<ECKeyPair.ECPublicKey> completeValidatorList = asList(validator01, validator02, validator03, validator04,
-                validator05, validator06, validator07);
+        List<String> validatorEnvVars = asList(
+                ROLE_VALIDATOR_01_PUBLIC_KEY,
+                ROLE_VALIDATOR_02_PUBLIC_KEY,
+                ROLE_VALIDATOR_03_PUBLIC_KEY,
+                ROLE_VALIDATOR_04_PUBLIC_KEY,
+                ROLE_VALIDATOR_05_PUBLIC_KEY,
+                ROLE_VALIDATOR_06_PUBLIC_KEY,
+                ROLE_VALIDATOR_07_PUBLIC_KEY
+        );
         List<ECKeyPair.ECPublicKey> validatorList = new ArrayList<>();
         // Only use the first n validators
         for (int i = 0; i < nrValidators; i++) {
-            validatorList.add(completeValidatorList.get(i));
+            validatorList.add(getPublicKeyFromEnvVar(validatorEnvVars.get(i)));
         }
 
         Account deployerAcc = getAccountFromWallet(deployerWalletPath, deployerWalletPassword);
@@ -128,6 +127,11 @@ public class BridgeCompilation {
 
     public static Hash160 compileAndPrintBridgeDeploymentTxData(Neow3j neow3j, Hash160 managementContractHash)
             throws Throwable {
+        String deployerWalletPath = getEnvVariable(WALLET_FILEPATH_DEPLOYER);
+        String deployerWalletPassword = getEnvVariable(WALLET_PASSWORD_DEPLOYER);
+        String bridgeContractName = getEnvVariable(BRIDGE_CONTRACT_NAME);
+        BigInteger linkedChainId = getBigIntegerFromEnvVar(LINKED_CHAIN_ID);
+
         HashMap<String, String> substitutions = new HashMap<>();
         substitutions.put("BridgeName", bridgeContractName);
         CompilationUnit bridgeCompUnit = new Compiler().compile(BridgeContract.class.getCanonicalName(), substitutions);
@@ -148,18 +152,22 @@ public class BridgeCompilation {
     }
 
     @NotNull
-    private static NeoSendRawTransaction deployContractFromCompilationUnit(Neow3j neow3j,
-            CompilationUnit compilationUnit, ContractParameter deployParameter, Hash160 allowedContractHash)
-            throws Throwable {
+    private static NeoSendRawTransaction deployContractFromCompilationUnit(Neow3j neow3j, CompilationUnit compUnit,
+            ContractParameter deployParameter, Hash160 allowedContractHash) throws Throwable {
+        String ownerWalletPath = getEnvVariable(WALLET_FILEPATH_OWNER);
+        String ownerWalletPassword = getEnvVariable(WALLET_PASSWORD_OWNER);
+        String deployerWalletPath = getEnvVariable(WALLET_FILEPATH_DEPLOYER);
+        String deployerWalletPassword = getEnvVariable(WALLET_PASSWORD_DEPLOYER);
+
         Account ownerAcc = getAccountFromWallet(ownerWalletPath, ownerWalletPassword);
         Account deployerAcc = getAccountFromWallet(deployerWalletPath, deployerWalletPassword);
         // Build the deployment transaction
-        Transaction deploymentTx = new ContractManagement(neow3j).deploy(compilationUnit.getNefFile(),
-                compilationUnit.getManifest(), deployParameter).signers(AccountSigner.none(deployerAcc),
+        Transaction deploymentTx = new ContractManagement(neow3j).deploy(compUnit.getNefFile(),
+                compUnit.getManifest(), deployParameter).signers(AccountSigner.none(deployerAcc),
                 AccountSigner.none(ownerAcc).setAllowedContracts(allowedContractHash)).sign();
         BigDecimal totalFee = new BigDecimal(deploymentTx.getNetworkFee() + deploymentTx.getSystemFee());
         System.out.printf("💰 Fee of $GAS %s for deployment transaction of %s contract%n",
-                totalFee.divide(BigDecimal.valueOf(100_000_000)), compilationUnit.getManifest().getName());
+                totalFee.divide(BigDecimal.valueOf(100_000_000)), compUnit.getManifest().getName());
         NeoSendRawTransaction deploymentTxResponse = deploymentTx.send();
         if (deploymentTxResponse.hasError()) {
             throw new Exception(

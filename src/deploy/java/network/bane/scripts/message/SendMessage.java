@@ -7,7 +7,6 @@ import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.NeoBlock;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.stackitem.StackItem;
-import io.neow3j.protocol.http.HttpService;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -29,6 +28,9 @@ import static network.bane.utils.env.EnvVariables.MESSAGE_SEND_STORE_ONLY_MESSAG
 import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
 import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_PERSONAL;
 import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_PERSONAL;
+import static network.bane.utils.env.EnvVariables.getEnvVariable;
+import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
+import static network.bane.utils.env.EnvVariables.getNeow3jFromEnvVar;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 /**
@@ -49,14 +51,13 @@ import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
  */
 public class SendMessage {
 
-    // The following are the required env variables for running this script
-    private static final Neow3j neow3j = Neow3j.build(new HttpService(N3_JSON_RPC));
-    private static final SmartContract messageBridge = new SmartContract(MESSAGE_BRIDGE_HASH, neow3j);
-    private static final String personalWalletPath = WALLET_FILEPATH_PERSONAL;
-    private static final String personalWalletPassword = WALLET_PASSWORD_PERSONAL;
-    private static final String messageToSend = MESSAGE_SEND_STORE_ONLY_MESSAGE;
-
     public static void main(String[] args) throws Throwable {
+        Neow3j neow3j = getNeow3jFromEnvVar(N3_JSON_RPC);
+        SmartContract messageBridge = new SmartContract(getHash160FromEnvVar(MESSAGE_BRIDGE_HASH), neow3j);
+        String personalWalletPath = getEnvVariable(WALLET_FILEPATH_PERSONAL);
+        String personalWalletPassword = getEnvVariable(WALLET_PASSWORD_PERSONAL);
+        String messageToSend = getEnvVariable(MESSAGE_SEND_STORE_ONLY_MESSAGE);
+
         System.out.println("=== Message Bridge - Send Store-Only Message ===");
         System.out.println("Using Message Bridge Contract: " + messageBridge.getScriptHash());
 

@@ -2,7 +2,6 @@ package network.bane.scripts.deploy;
 
 import io.neow3j.compiler.CompilationUnit;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.http.HttpService;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -22,16 +21,19 @@ import static network.bane.utils.env.EnvVariables.LINKED_CHAIN_ID;
 import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
 import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_DEPLOYER;
 import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_DEPLOYER;
+import static network.bane.utils.env.EnvVariables.getBigIntegerFromEnvVar;
+import static network.bane.utils.env.EnvVariables.getEnvVariable;
+import static network.bane.utils.env.EnvVariables.getNeow3jFromEnvVar;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 public class DeployMessageBridgeWithManagement {
 
-    private static final Neow3j neow3j = Neow3j.build(new HttpService(N3_JSON_RPC, true));
-    private static final String deployerWalletPath = WALLET_FILEPATH_DEPLOYER;
-    private static final String deployerWalletPassword = WALLET_PASSWORD_DEPLOYER;
-    private static final BigInteger linkedChainId = LINKED_CHAIN_ID;
-
     public static void main(String[] args) throws Throwable {
+        Neow3j neow3j = getNeow3jFromEnvVar(N3_JSON_RPC);
+        String deployerWalletPath = getEnvVariable(WALLET_FILEPATH_DEPLOYER);
+        String deployerWalletPassword = getEnvVariable(WALLET_PASSWORD_DEPLOYER);
+        BigInteger linkedChainId = getBigIntegerFromEnvVar(LINKED_CHAIN_ID);
+
         Account deployerAcc = getAccountFromWallet(deployerWalletPath, deployerWalletPassword);
 
         Hash160 managementContract = compileAndPrintManagementDeploymentTxData(neow3j);

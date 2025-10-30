@@ -3,7 +3,6 @@ package network.bane.scripts.token;
 import io.neow3j.contract.FungibleToken;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
-import io.neow3j.protocol.http.HttpService;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -19,6 +18,10 @@ import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_PERSONAL;
 import static network.bane.utils.env.EnvVariables.TOKEN_DEPOSIT_AMOUNT;
 import static network.bane.utils.env.EnvVariables.TOKEN_DEPOSIT_RECIPIENT_ON_EVM;
 import static network.bane.utils.env.EnvVariables.TOKEN_TRANSFER_TOKEN_HASH;
+import static network.bane.utils.env.EnvVariables.getBigIntegerFromEnvVar;
+import static network.bane.utils.env.EnvVariables.getEnvVariable;
+import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
+import static network.bane.utils.env.EnvVariables.getNeow3jFromEnvVar;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 /**
@@ -36,15 +39,14 @@ import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
  */
 public class TransferToken {
 
-    // The following are the required env variables for running this script
-    private static final Neow3j neow3j = Neow3j.build(new HttpService(N3_JSON_RPC));
-    private static final String personalWalletPath = WALLET_FILEPATH_PERSONAL;
-    private static final String personalWalletPassword = WALLET_PASSWORD_PERSONAL;
-    private static final Hash160 tokenHash = TOKEN_TRANSFER_TOKEN_HASH;
-    private static final Hash160 to = TOKEN_DEPOSIT_RECIPIENT_ON_EVM;
-    private static final BigInteger amount = TOKEN_DEPOSIT_AMOUNT;
-
     public static void main(String[] args) throws Throwable {
+        Neow3j neow3j = getNeow3jFromEnvVar(N3_JSON_RPC);
+        String personalWalletPath = getEnvVariable(WALLET_FILEPATH_PERSONAL);
+        String personalWalletPassword = getEnvVariable(WALLET_PASSWORD_PERSONAL);
+        Hash160 tokenHash = getHash160FromEnvVar(TOKEN_TRANSFER_TOKEN_HASH);
+        Hash160 to =getHash160FromEnvVar(TOKEN_DEPOSIT_RECIPIENT_ON_EVM);
+        BigInteger amount = getBigIntegerFromEnvVar(TOKEN_DEPOSIT_AMOUNT);
+
         Account signerAcc = getAccountFromWallet(personalWalletPath, personalWalletPassword);
         Hash160 from = signerAcc.getScriptHash();
 

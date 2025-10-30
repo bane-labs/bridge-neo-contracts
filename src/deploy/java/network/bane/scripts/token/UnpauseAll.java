@@ -3,7 +3,6 @@ package network.bane.scripts.token;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
-import io.neow3j.protocol.http.HttpService;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -23,6 +22,9 @@ import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
 import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
 import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
+import static network.bane.utils.env.EnvVariables.getEnvVariable;
+import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
+import static network.bane.utils.env.EnvVariables.getNeow3jFromEnvVar;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 /**
@@ -43,17 +45,16 @@ import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
  */
 public class UnpauseAll {
 
-    // The following are the required env variables for running this script
-    private static final Neow3j neow3j = Neow3j.build(new HttpService(N3_JSON_RPC));
-    private static final SmartContract bridge = new SmartContract(BRIDGE_HASH, neow3j);
-    private static final String governorWalletPath = WALLET_FILEPATH_GOVERNOR;
-    private static final String governorWalletPassword = WALLET_PASSWORD_GOVERNOR;
-
     private static final String ALREADY_UNPAUSED = "Already unpaused";
     private static final String SUCCESS = "Successful";
     private static final String NOT_SET = "Not set - nothing to unpause";
 
     public static void main(String[] args) throws Throwable {
+        Neow3j neow3j = getNeow3jFromEnvVar(N3_JSON_RPC);
+        SmartContract bridge = new SmartContract(getHash160FromEnvVar(BRIDGE_HASH), neow3j);
+        String governorWalletPath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
+        String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);
+
         String overallPauseState;
         String nativePauseState;
         String depositsPauseState;
