@@ -13,17 +13,28 @@ import java.io.IOException;
 import java.util.List;
 
 import static io.neow3j.types.ContractParameter.hash160;
+import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
 import static network.bane.utils.structs.TokenBridge.TokenConfig;
 import static java.util.Arrays.asList;
-import static network.bane.utils.env.EnvVariables.NODE;
-import static network.bane.utils.env.GetEnv.getEnvVariable;
+import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
 
+/**
+ * This script retrieves and prints all registered tokens in the bridge contract along with their token bridge
+ * information.
+ * <p>
+ * Requires the following environment variables to be set:
+ * - N3_JSON_RPC: The RPC endpoint of the N3 node
+ * - BRIDGE_HASH: Hash of the deployed bridge contract
+ * <p>
+ * Run with: gradle run -PmainClass=network.bane.scripts.token.GetRegisteredTokens
+ */
 public class GetRegisteredTokens {
 
+    // The following are the required env variables for running this script
+    private static final Neow3j neow3j = Neow3j.build(new HttpService(N3_JSON_RPC));
+    private static final SmartContract bridge = new SmartContract(BRIDGE_HASH, neow3j);
+
     public static void main(String[] args) throws IOException {
-        Neow3j neow3j = Neow3j.build(new HttpService(NODE));
-        Hash160 bridgeAddress = new Hash160(getEnvVariable("BRIDGE_HASH"));
-        SmartContract bridge = new SmartContract(bridgeAddress, neow3j);
         List<StackItem> registeredTokensStack = bridge.callInvokeFunction("getRegisteredTokens")
                 .getInvocationResult().getFirstStackItem().getList();
 

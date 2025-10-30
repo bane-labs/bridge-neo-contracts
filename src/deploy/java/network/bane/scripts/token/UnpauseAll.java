@@ -19,9 +19,11 @@ import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static network.bane.utils.env.EnvVariables.NODE;
-import static network.bane.utils.env.GetEnv.getEnvVariable;
-import static network.bane.utils.wallet.LoadWallet.getGovernorAccountFromWallet;
+import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
+import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
+import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
+import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
+import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 /**
  * This class makes sure everything in the bridge contract is unpaused. If something is paused, it sends a
@@ -30,8 +32,22 @@ import static network.bane.utils.wallet.LoadWallet.getGovernorAccountFromWallet;
  * - Unpausing native bridge
  * - Unpausing token bridges
  * - Unpausing deposits
+ * <p>
+ * Requires the following environment variables to be set:
+ * - N3_JSON_RPC: The RPC endpoint of the N3 node
+ * - BRIDGE_HASH: Hash of the deployed bridge contract
+ * - WALLET_FILEPATH_GOVERNOR: the filepath to the governor wallet
+ * - WALLET_PASSWORD_GOVERNOR: the password for the governor wallet
+ * <p>
+ * Run with: gradle run -PmainClass=network.bane.scripts.token.UnpauseAll
  */
 public class UnpauseAll {
+
+    // The following are the required env variables for running this script
+    private static final Neow3j neow3j = Neow3j.build(new HttpService(N3_JSON_RPC));
+    private static final SmartContract bridge = new SmartContract(BRIDGE_HASH, neow3j);
+    private static final String governorWalletPath = WALLET_FILEPATH_GOVERNOR;
+    private static final String governorWalletPassword = WALLET_PASSWORD_GOVERNOR;
 
     private static final String ALREADY_UNPAUSED = "Already unpaused";
     private static final String SUCCESS = "Successful";
@@ -42,19 +58,15 @@ public class UnpauseAll {
         String nativePauseState;
         String depositsPauseState;
 
+        Account governor = getAccountFromWallet(governorWalletPath, governorWalletPassword);
+
         System.out.println("Unpausing BridgeContract");
-
-        Neow3j neow3j = Neow3j.build(new HttpService(NODE));
-
-        Hash160 bridgeHash = new Hash160(getEnvVariable("BRIDGE_HASH"));
-        System.out.println("Unpausing BridgeContract at address: " + bridgeHash);
-        Account governor = getGovernorAccountFromWallet();
+        System.out.println("Unpausing BridgeContract at address: " + bridge.getScriptHash());
         System.out.println("Governor address: " + governor.getScriptHash());
 
         System.out.println("\nAttempting unpause operations...");
         System.out.println("Note: Operations will be skipped automatically if components are already unpaused.");
 
-        SmartContract bridge = new SmartContract(bridgeHash, neow3j);
         System.out.println("\nOverall bridge pausing");
         if (!bridge.callFunctionReturningBool("isPaused")) {
             overallPauseState = ALREADY_UNPAUSED;

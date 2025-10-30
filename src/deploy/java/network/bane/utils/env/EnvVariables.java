@@ -1,85 +1,134 @@
 package network.bane.utils.env;
 
 import io.neow3j.crypto.ECKeyPair;
-import io.neow3j.crypto.exceptions.CipherException;
-import io.neow3j.crypto.exceptions.NEP2InvalidFormat;
-import io.neow3j.crypto.exceptions.NEP2InvalidPassphrase;
 import io.neow3j.types.Hash160;
-import io.neow3j.wallet.Account;
 
-import java.io.IOException;
 import java.math.BigInteger;
-
-import static network.bane.utils.env.GetEnv.getEnvVariableOrDefault;
-import static network.bane.utils.wallet.LoadWallet.getDeployerAccountFromWallet;
-import static network.bane.utils.wallet.LoadWallet.getOwnerAccountFromWallet;
 
 public class EnvVariables {
 
-    public static final String NODE = getEnvVariableOrDefault("NEON3_JSON_RPC", "http://127.0.0.1:40332");
-
-    public static Account deployerAcc;
-    public static Account ownerAcc;
-
-    static {
-        try {
-            deployerAcc = getDeployerAccountFromWallet();
-            ownerAcc = getOwnerAccountFromWallet();
-        } catch (NEP2InvalidPassphrase | NEP2InvalidFormat | CipherException | IOException e) {
-            throw new RuntimeException(e);
+    public static String getEnvVariable(String variableName) {
+        String value = System.getenv(variableName);
+        if (value == null) {
+            throw new IllegalArgumentException("Environment variable " + variableName + " is not set.");
         }
+        return value;
     }
 
-    public static final Hash160 relayer = Hash160.fromAddress(
-            getEnvVariableOrDefault("NEON3_RELAYER_ADDRESS", "NSsMzYzdLsXG6mjp4MHyGZHuKssakqpv3g"));
+    // For local use: "http://127.0.0.1:40332"
+    public static final String N3_JSON_RPC = getEnvVariable("N3_JSON_RPC");
 
-    public static final int MAX_NR_VALIDATORS = 7;
-    // This env variable specifies the number of validators (n). The first n validators are used and remaining
-    // validators will be ignored. If n is lower than 2 or higher than 7, an exception will be thrown.
-    public static final int nrValidators = Integer.parseInt(getEnvVariableOrDefault("NEON3_NR_VALIDATORS", "7"));
-    public static final ECKeyPair.ECPublicKey validator_1 = new ECKeyPair.ECPublicKey(
-            getEnvVariableOrDefault("NEON3_VALIDATOR1_PUBKEY",
-                    "021fed0d208f2c4b2fe425571c36aea1d465159c93af349581896fe38553dffae1"));
-    public static final ECKeyPair.ECPublicKey validator_2 = new ECKeyPair.ECPublicKey(
-            getEnvVariableOrDefault("NEON3_VALIDATOR2_PUBKEY",
-                    "021986f90b2596322c9f681c42814237555732411e8c517100c702b91cd404f090"));
-    public static final ECKeyPair.ECPublicKey validator_3 = new ECKeyPair.ECPublicKey(
-            getEnvVariableOrDefault("NEON3_VALIDATOR3_PUBKEY",
-                    "021387fa5748344658778d9a3de2bd99f2133b96a3fe5ab2cda007bce3531f4d9f"));
-    public static final ECKeyPair.ECPublicKey validator_4 = new ECKeyPair.ECPublicKey(
-            getEnvVariableOrDefault("NEON3_VALIDATOR4_PUBKEY",
-                    "02108e50c32a9b4c12b90013b145370530a413a605ced93491ba2523d903295f45"));
-    public static final ECKeyPair.ECPublicKey validator_5 = new ECKeyPair.ECPublicKey(
-            getEnvVariableOrDefault("NEON3_VALIDATOR5_PUBKEY",
-                    "030187e4b19cddfa93f282c0bba9759446094c006a9f91c5e80963b2d9f8c4b568"));
-    public static final ECKeyPair.ECPublicKey validator_6 = new ECKeyPair.ECPublicKey(
-            getEnvVariableOrDefault("NEON3_VALIDATOR6_PUBKEY",
-                    "037c94e4ef2445f283ab7b02a1c26783ab39527404c157f4eb686edbdd0e651ade"));
-    public static final ECKeyPair.ECPublicKey validator_7 = new ECKeyPair.ECPublicKey(
-            getEnvVariableOrDefault("NEON3_VALIDATOR7_PUBKEY",
-                    "02189efe8f9d4fc34cceaae9fa79346525810143d5f198070594c7da12facfd4ab"));
+    // Wallets
+    public static final String WALLET_FILEPATH_PERSONAL = getEnvVariable("WALLET_FILEPATH_PERSONAL");
+    public static final String WALLET_PASSWORD_PERSONAL = getEnvVariable("WALLET_PASSWORD_PERSONAL");
 
-    public static final int validator_threshold =
-            Integer.parseInt(getEnvVariableOrDefault("NEON3_VALIDATOR_THRESHOLD", "5"));
+    public static final String WALLET_FILEPATH_DEPLOYER = getEnvVariable("WALLET_FILEPATH_DEPLOYER");
+    public static final String WALLET_PASSWORD_DEPLOYER = getEnvVariable("WALLET_PASSWORD_DEPLOYER");
 
-    public static final Hash160 governor = Hash160.fromAddress(
-            getEnvVariableOrDefault("NEON3_GOVERNOR_ADDRESS", "NbdSPqc4iADXLT6XzFUtwhDKAfPU8JdT5b"));
+    public static final String WALLET_FILEPATH_OWNER = getEnvVariable("WALLET_FILEPATH_OWNER");
+    public static final String WALLET_PASSWORD_OWNER = getEnvVariable("WALLET_PASSWORD_OWNER");
 
-    public static final Hash160 securityGuard = Hash160.fromAddress(
-            getEnvVariableOrDefault("NEON3_SECURITYGUARD_ADDRESS", "NKybo9Fy5d84RFeWGMvqJgKtEwDsD1CrDD"));
+    public static final String WALLET_FILEPATH_GOVERNOR = getEnvVariable("WALLET_FILEPATH_GOVERNOR");
+    public static final String WALLET_PASSWORD_GOVERNOR = getEnvVariable("WALLET_PASSWORD_GOVERNOR");
 
-    // Parameters
+    // Contract Addresses
+    public static final Hash160 BRIDGE_HASH = new Hash160(getEnvVariable("BRIDGE_HASH"));
+    public static final Hash160 MESSAGE_BRIDGE_HASH = new Hash160(getEnvVariable("MESSAGE_BRIDGE_HASH"));
 
-    public static final BigInteger depositFee =
-            new BigInteger(getEnvVariableOrDefault("NEON3_DEPOSIT_FEE", "10000000"));
-    public static final BigInteger minDepositAmount =
-            new BigInteger(getEnvVariableOrDefault("NEON3_MIN_DEPOSIT_AMOUNT", "100000000"));
-    public static final BigInteger maxDepositAmount =
-            new BigInteger(getEnvVariableOrDefault("NEON3_MAX_DEPOSIT_AMOUNT", "1000000000000"));
-    public static final BigInteger maxTotalDeposited =
-            new BigInteger(getEnvVariableOrDefault("NEON3_MAX_TOTAL_DEPOSITED", "100000000000000"));
+    // Role Addresses and Validator Public Keys
+    public static final Hash160 ROLE_OWNER_ADDRESS = Hash160.fromAddress("ROLE_OWNER_ADDRESS");
+    public static final Hash160 ROLE_RELAYER_ADDRESS = Hash160.fromAddress("ROLE_RELAYER_ADDRESS");
+    public static final Hash160 ROLE_GOVERNOR_ADDRESS = Hash160.fromAddress("ROLE_GOVERNOR_ADDRESS");
+    public static final Hash160 ROLE_SECURITY_GUARD_ADDRESS = Hash160.fromAddress("ROLE_SECURITY_GUARD_ADDRESS");
+    public static final ECKeyPair.ECPublicKey ROLE_VALIDATOR_01_PUBLIC_KEY =
+            new ECKeyPair.ECPublicKey(getEnvVariable("ROLE_VALIDATOR_01_PUBLIC_KEY"));
+    public static final ECKeyPair.ECPublicKey ROLE_VALIDATOR_02_PUBLIC_KEY =
+            new ECKeyPair.ECPublicKey(getEnvVariable("ROLE_VALIDATOR_02_PUBLIC_KEY"));
+    public static final ECKeyPair.ECPublicKey ROLE_VALIDATOR_03_PUBLIC_KEY =
+            new ECKeyPair.ECPublicKey(getEnvVariable("ROLE_VALIDATOR_03_PUBLIC_KEY"));
+    public static final ECKeyPair.ECPublicKey ROLE_VALIDATOR_04_PUBLIC_KEY =
+            new ECKeyPair.ECPublicKey(getEnvVariable("ROLE_VALIDATOR_04_PUBLIC_KEY"));
+    public static final ECKeyPair.ECPublicKey ROLE_VALIDATOR_05_PUBLIC_KEY =
+            new ECKeyPair.ECPublicKey(getEnvVariable("ROLE_VALIDATOR_05_PUBLIC_KEY"));
+    public static final ECKeyPair.ECPublicKey ROLE_VALIDATOR_06_PUBLIC_KEY =
+            new ECKeyPair.ECPublicKey(getEnvVariable("ROLE_VALIDATOR_06_PUBLIC_KEY"));
+    public static final ECKeyPair.ECPublicKey ROLE_VALIDATOR_07_PUBLIC_KEY =
+            new ECKeyPair.ECPublicKey(getEnvVariable("ROLE_VALIDATOR_07_PUBLIC_KEY"));
 
-    public static final BigInteger linkedChainId =
-            new BigInteger(getEnvVariableOrDefault("NEON3_LINKED_CHAIN_ID", "1"));
+    // Deployment - Management
+    public static final String MANAGEMENT_CONTRACT_NAME = getEnvVariable("MANAGEMENT_CONTRACT_NAME");
+    // The first n validators are taken into account when deploying the management contract.
+    // For example, if this value is 2, validator 01, 02, and 03 will be used as the validators in the deployment of
+    // the management contract.
+    public static final int MANAGEMENT_NUMBER_OF_VALIDATORS =
+            Integer.parseInt(getEnvVariable("MANAGEMENT_NUMBER_OF_VALIDATORS"));
+    public static final int MANAGEMENT_VALIDATOR_THRESHOLD =
+            Integer.parseInt(getEnvVariable("MANAGEMENT_VALIDATOR_THRESHOLD"));
+
+    // Deployment - Bridge
+    public static final String BRIDGE_CONTRACT_NAME = getEnvVariable("BRIDGE_CONTRACT_NAME");
+    public static final BigInteger LINKED_CHAIN_ID = new BigInteger(getEnvVariable("LINKED_CHAIN_ID"));
+
+    // Deployment - Message Bridge
+    // Reuses the linked chain ID from Bridge deployment.
+    // The current scripts always deploy the message bridge in connection to a management bridge as well as in
+    // connection to an Execution Manager contract, so neither the address of the management contract, nor the
+    // execution manager is needed here for now. Once standalone deployment scripts are added, appropriate env variables
+    // for the management contract address and the execution manager should be added here.
+
+    // Deployment - Token Contract
+    public static final String TOKEN_DEPLOY_TOKEN_NAME = getEnvVariable("TOKEN_DEPLOY_TOKEN_NAME");
+    public static final String TOKEN_DEPLOY_TOKEN_SYMBOL = getEnvVariable("TOKEN_DEPLOY_TOKEN_SYMBOL");
+
+    // Native Bridge Setting
+    public static final Hash160 NATIVE_SET_TOKEN_FOR_NATIVE_BRIDGE =
+            new Hash160(getEnvVariable("NATIVE_SET_TOKEN_FOR_NATIVE_BRIDGE"));
+    public static final BigInteger NATIVE_SET_DECIMALS_ON_LINKED_CHAIN =
+            new BigInteger(getEnvVariable("NATIVE_SET_DECIMALS_ON_LINKED_CHAIN"));
+    public static final BigInteger NATIVE_SET_DEPOSIT_FEE = new BigInteger(getEnvVariable("NATIVE_SET_DEPOSIT_FEE"));
+    public static final BigInteger NATIVE_SET_MIN_AMOUNT = new BigInteger(getEnvVariable("NATIVE_SET_MIN_AMOUNT"));
+    public static final BigInteger NATIVE_SET_MAX_AMOUNT = new BigInteger(getEnvVariable("NATIVE_SET_MAX_AMOUNT"));
+    public static final BigInteger NATIVE_SET_MAX_WITHDRAWALS =
+            new BigInteger(getEnvVariable("NATIVE_SET_MAX_WITHDRAWALS"));
+    public static final BigInteger NATIVE_SET_MAX_TOTAL_DEPOSITED =
+            new BigInteger(getEnvVariable("NATIVE_SET_MAX_TOTAL_DEPOSITED"));
+
+    // Token Registration Setting
+    public static final Hash160 TOKEN_REGISTRATION_TOKEN_CONTRACT_HASH_ON_N3 =
+            new Hash160(getEnvVariable("TOKEN_REGISTRATION_TOKEN_CONTRACT_HASH_ON_N3"));
+    public static final Hash160 TOKEN_REGISTRATION_TOKEN_CONTRACT_HASH_ON_EVM =
+            new Hash160(getEnvVariable("TOKEN_REGISTRATION_TOKEN_CONTRACT_HASH_ON_EVM"));
+    public static final BigInteger TOKEN_REGISTRATION_DEPOSIT_FEE =
+            new BigInteger(getEnvVariable("TOKEN_REGISTRATION_DEPOSIT_FEE"));
+    public static final BigInteger TOKEN_REGISTRATION_MIN_AMOUNT =
+            new BigInteger(getEnvVariable("TOKEN_REGISTRATION_MIN_AMOUNT"));
+    public static final BigInteger TOKEN_REGISTRATION_MAX_AMOUNT =
+            new BigInteger(getEnvVariable("TOKEN_REGISTRATION_MAX_AMOUNT"));
+    public static final BigInteger TOKEN_REGISTRATION_MAX_WITHDRAWALS =
+            new BigInteger(getEnvVariable("TOKEN_REGISTRATION_MAX_WITHDRAWALS"));
+    public static final BigInteger TOKEN_REGISTRATION_DECIMAL_SCALING_FACTOR =
+            new BigInteger(getEnvVariable("TOKEN_REGISTRATION_DECIMAL_SCALING_FACTOR"));
+
+    // Native Bridge Deposit
+    public static final Hash160 NATIVE_DEPOSIT_RECIPIENT_ON_EVM =
+            new Hash160(getEnvVariable("NATIVE_DEPOSIT_RECIPIENT_ON_EVM"));
+    public static final BigInteger NATIVE_DEPOSIT_AMOUNT = new BigInteger(getEnvVariable("NATIVE_DEPOSIT_AMOUNT"));
+
+    // Token Bridge Deposit
+    public static final Hash160 TOKEN_DEPOSIT_TOKEN_HASH = new Hash160(getEnvVariable("TOKEN_DEPOSIT_TOKEN_HASH"));
+    public static final Hash160 TOKEN_DEPOSIT_RECIPIENT_ON_EVM =
+            new Hash160(getEnvVariable("TOKEN_DEPOSIT_RECIPIENT_ON_EVM"));
+    public static final BigInteger TOKEN_DEPOSIT_AMOUNT = new BigInteger(getEnvVariable("TOKEN_DEPOSIT_AMOUNT"));
+
+    // Token Transfer
+    public static final Hash160 TOKEN_TRANSFER_TOKEN_HASH = new Hash160(getEnvVariable("TOKEN_TRANSFER_TOKEN_HASH"));
+
+    // Message Bridge Sending Store-Only Message
+    public static final String MESSAGE_SEND_STORE_ONLY_MESSAGE = getEnvVariable("MESSAGE_SEND_STORE_ONLY_MESSAGE");
+
+    // Message Bridge Sending Executable Message
+    public static final String MESSAGE_SEND_EXECUTABLE_MESSAGE = getEnvVariable("MESSAGE_SEND_EXECUTABLE_MESSAGE");
+    public static final boolean MESSAGE_SEND_EXECUTABLE_STORE_BOOL =
+            Boolean.parseBoolean(getEnvVariable("MESSAGE_SEND_EXECUTABLE_STORE_BOOL"));
 
 }

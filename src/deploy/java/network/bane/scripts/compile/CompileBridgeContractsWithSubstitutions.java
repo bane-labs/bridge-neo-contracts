@@ -12,16 +12,18 @@ import java.util.HashMap;
 
 import static io.neow3j.contract.ContractUtils.writeContractManifestFile;
 import static io.neow3j.contract.ContractUtils.writeNefFile;
+import static network.bane.utils.env.EnvVariables.BRIDGE_CONTRACT_NAME;
+import static network.bane.utils.env.EnvVariables.MANAGEMENT_CONTRACT_NAME;
 
 public class CompileBridgeContractsWithSubstitutions {
 
     // Note: If you need to update existing contracts, the names must remain the same.
-    public static final String BRIDGE_CONTRACT_NAME = "NeoXBridge";
-    public static final String BRIDGE_MANAGEMENT_CONTRACT_NAME = "NeoXBridgeManagement";
+    public static final String bridgeContractName = BRIDGE_CONTRACT_NAME;
+    public static final String bridgeManagementName = MANAGEMENT_CONTRACT_NAME;
 
     public static void main(String[] args) throws IOException {
-        compileAndWriteNefAndManifestFilesBridge(BRIDGE_CONTRACT_NAME);
-        compileAndWriteNefAndManifestFilesManagement(BRIDGE_MANAGEMENT_CONTRACT_NAME);
+        compileAndWriteNefAndManifestFilesBridge(bridgeContractName);
+        compileAndWriteNefAndManifestFilesManagement(bridgeManagementName);
     }
 
     private static void compileAndWriteNefAndManifestFilesBridge(String bridgeContractName) throws IOException {
