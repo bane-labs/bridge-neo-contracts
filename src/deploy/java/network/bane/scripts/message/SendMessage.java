@@ -124,7 +124,7 @@ public class SendMessage {
     }
 
     static byte[] getMessageDataBytes(String messageToSend) {
-        if (!isValidHexString(messageToSend)) {
+        if (isValidHexString(messageToSend)) {
             return hexStringToByteArray(messageToSend);
         } else {
             System.out.println("Provided message is not in hexadecimal format - using UTF-8 bytes");

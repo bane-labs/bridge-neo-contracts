@@ -33,8 +33,8 @@ import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
  * - WALLET_FILEPATH_PERSONAL: the filepath to the personal wallet. This wallet is used to send the deposit.
  * - WALLET_PASSWORD_PERSONAL: the password for the personal wallet
  * - TOKEN_DEPOSIT_TOKEN_HASH: Hash of the token to deposit
- * - NATIVE_DEPOSIT_RECIPIENT_ON_EVM: The recipient address on the EVM chain as a Hash160 (e.g., 0x...)
- * - NATIVE_DEPOSIT_AMOUNT: The amount of tokens to deposit as a BigInteger
+ * - TOKEN_DEPOSIT_RECIPIENT_ON_EVM: The recipient address on the EVM chain as a Hash160 (e.g., 0x...)
+ * - TOKEN_DEPOSIT_AMOUNT: The amount of tokens to deposit as a BigInteger
  * <p>
  * Run with: gradle run -PmainClass=network.bane.scripts.token.DepositToken
  */

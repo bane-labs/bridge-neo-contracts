@@ -36,10 +36,11 @@ public class EnvVariables {
     public static final Hash160 MESSAGE_BRIDGE_HASH = new Hash160(getEnvVariable("MESSAGE_BRIDGE_HASH"));
 
     // Role Addresses and Validator Public Keys
-    public static final Hash160 ROLE_OWNER_ADDRESS = Hash160.fromAddress("ROLE_OWNER_ADDRESS");
-    public static final Hash160 ROLE_RELAYER_ADDRESS = Hash160.fromAddress("ROLE_RELAYER_ADDRESS");
-    public static final Hash160 ROLE_GOVERNOR_ADDRESS = Hash160.fromAddress("ROLE_GOVERNOR_ADDRESS");
-    public static final Hash160 ROLE_SECURITY_GUARD_ADDRESS = Hash160.fromAddress("ROLE_SECURITY_GUARD_ADDRESS");
+    public static final Hash160 ROLE_OWNER_ADDRESS = Hash160.fromAddress(getEnvVariable("ROLE_OWNER_ADDRESS"));
+    public static final Hash160 ROLE_RELAYER_ADDRESS = Hash160.fromAddress(getEnvVariable("ROLE_RELAYER_ADDRESS"));
+    public static final Hash160 ROLE_GOVERNOR_ADDRESS = Hash160.fromAddress(getEnvVariable("ROLE_GOVERNOR_ADDRESS"));
+    public static final Hash160 ROLE_SECURITY_GUARD_ADDRESS =
+            Hash160.fromAddress(getEnvVariable("ROLE_SECURITY_GUARD_ADDRESS"));
     public static final ECKeyPair.ECPublicKey ROLE_VALIDATOR_01_PUBLIC_KEY =
             new ECKeyPair.ECPublicKey(getEnvVariable("ROLE_VALIDATOR_01_PUBLIC_KEY"));
     public static final ECKeyPair.ECPublicKey ROLE_VALIDATOR_02_PUBLIC_KEY =

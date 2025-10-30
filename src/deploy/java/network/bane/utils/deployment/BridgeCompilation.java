@@ -108,7 +108,6 @@ public class BridgeCompilation {
             validatorList.add(completeValidatorList.get(i));
         }
 
-        Account ownerAcc = getAccountFromWallet(ownerWalletPath, ownerWalletPassword);
         Account deployerAcc = getAccountFromWallet(deployerWalletPath, deployerWalletPassword);
 
         // Prepare the deployment parameter for the bridge management contract
