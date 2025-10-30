@@ -189,12 +189,12 @@ public class UnpauseAll {
 
     static boolean nativeBridgeIsPaused(SmartContract bridge) throws IOException {
         return bridge.callInvokeFunction("getNativeBridge", asList()).getInvocationResult().getFirstStackItem()
-                .getList().get(0).getList().get(0).getBoolean();
+                .getList().get(0).getBoolean();
     }
 
     static boolean tokenBridgeIsPaused(SmartContract bridge, Hash160 tokenHash) throws IOException {
         return bridge.callInvokeFunction("getTokenBridge", asList(hash160(tokenHash))).getInvocationResult()
-                .getFirstStackItem().getList().get(0).getList().get(0).getBoolean();
+                .getFirstStackItem().getList().get(0).getBoolean();
     }
 
 }
