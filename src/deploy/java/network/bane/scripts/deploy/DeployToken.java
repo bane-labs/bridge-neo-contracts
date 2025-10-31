@@ -7,13 +7,12 @@ import io.neow3j.wallet.Account;
 import static io.neow3j.types.ContractParameter.hash160;
 import static network.bane.utils.deployment.TokenCompilation.compileTokenContract;
 import static network.bane.utils.deployment.TokenDeployment.deployContract;
-import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
 import static network.bane.utils.env.EnvVariables.TOKEN_DEPLOY_TOKEN_NAME;
 import static network.bane.utils.env.EnvVariables.TOKEN_DEPLOY_TOKEN_SYMBOL;
 import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_DEPLOYER;
 import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_DEPLOYER;
 import static network.bane.utils.env.EnvVariables.getEnvVariable;
-import static network.bane.utils.env.EnvVariables.getNeow3jFromEnvVar;
+import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 /**
@@ -31,7 +30,7 @@ import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 public class DeployToken {
 
     public static void main(String[] args) throws Throwable {
-        Neow3j neow3j = getNeow3jFromEnvVar(N3_JSON_RPC);
+        Neow3j neow3j = getNeow3jFromEnv();
         String deployerWalletFilepath = WALLET_FILEPATH_DEPLOYER;
         String deployerWalletPassword = WALLET_PASSWORD_DEPLOYER;
         String tokenName = getEnvVariable(TOKEN_DEPLOY_TOKEN_NAME);

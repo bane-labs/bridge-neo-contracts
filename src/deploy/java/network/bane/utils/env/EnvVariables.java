@@ -12,8 +12,8 @@ import static java.lang.Integer.parseInt;
 
 public class EnvVariables {
 
-    public static Neow3j getNeow3jFromEnvVar(String variableName) {
-        return Neow3j.build(new HttpService(getEnvVariable(variableName), true));
+    public static Neow3j getNeow3jFromEnv() {
+        return Neow3j.build(new HttpService(getEnvVariable(N3_JSON_RPC), true));
     }
 
     public static Hash160 getHash160FromEnvVar(String variableName) {

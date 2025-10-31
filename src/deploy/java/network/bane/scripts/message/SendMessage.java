@@ -25,12 +25,11 @@ import static io.neow3j.utils.Numeric.isValidHexString;
 import static io.neow3j.utils.Numeric.toHexString;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.MESSAGE_SEND_STORE_ONLY_MESSAGE;
-import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
 import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_PERSONAL;
 import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_PERSONAL;
 import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
-import static network.bane.utils.env.EnvVariables.getNeow3jFromEnvVar;
+import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 /**
@@ -52,7 +51,7 @@ import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 public class SendMessage {
 
     public static void main(String[] args) throws Throwable {
-        Neow3j neow3j = getNeow3jFromEnvVar(N3_JSON_RPC);
+        Neow3j neow3j = getNeow3jFromEnv();
         SmartContract messageBridge = new SmartContract(getHash160FromEnvVar(MESSAGE_BRIDGE_HASH), neow3j);
         String personalWalletPath = getEnvVariable(WALLET_FILEPATH_PERSONAL);
         String personalWalletPassword = getEnvVariable(WALLET_PASSWORD_PERSONAL);

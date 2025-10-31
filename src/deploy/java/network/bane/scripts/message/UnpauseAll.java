@@ -9,12 +9,11 @@ import io.neow3j.wallet.Account;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
-import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
 import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
 import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
 import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
-import static network.bane.utils.env.EnvVariables.getNeow3jFromEnvVar;
+import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 /**
@@ -38,7 +37,7 @@ public class UnpauseAll {
     private static final String SUCCESS = "Successful";
 
     public static void main(String[] args) throws Throwable {
-        Neow3j neow3j = getNeow3jFromEnvVar(N3_JSON_RPC);
+        Neow3j neow3j = getNeow3jFromEnv();
         SmartContract messageBridge = new SmartContract(getHash160FromEnvVar(MESSAGE_BRIDGE_HASH), neow3j);
         String governorWalletPath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
         String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);

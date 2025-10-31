@@ -14,10 +14,9 @@ import java.util.List;
 import static io.neow3j.types.ContractParameter.hash160;
 import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
-import static network.bane.utils.env.EnvVariables.getNeow3jFromEnvVar;
+import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 import static network.bane.utils.structs.TokenBridge.TokenConfig;
 import static java.util.Arrays.asList;
-import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
 
 /**
  * This script retrieves and prints all registered tokens in the bridge contract along with their token bridge
@@ -32,7 +31,7 @@ import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
 public class GetRegisteredTokens {
 
     public static void main(String[] args) throws IOException {
-        Neow3j neow3j = getNeow3jFromEnvVar(N3_JSON_RPC);
+        Neow3j neow3j = getNeow3jFromEnv();
         SmartContract bridge = new SmartContract(getHash160FromEnvVar(BRIDGE_HASH), neow3j);
 
         List<StackItem> registeredTokensStack = bridge.callInvokeFunction("getRegisteredTokens")

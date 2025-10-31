@@ -18,18 +18,17 @@ import static network.bane.utils.deployment.DeploymentHelper.calculateContractHa
 import static network.bane.utils.deployment.DeploymentHelper.deployContract;
 import static network.bane.utils.deployment.DeploymentHelper.ensureConsistentState;
 import static network.bane.utils.env.EnvVariables.LINKED_CHAIN_ID;
-import static network.bane.utils.env.EnvVariables.N3_JSON_RPC;
 import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_DEPLOYER;
 import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_DEPLOYER;
 import static network.bane.utils.env.EnvVariables.getBigIntegerFromEnvVar;
 import static network.bane.utils.env.EnvVariables.getEnvVariable;
-import static network.bane.utils.env.EnvVariables.getNeow3jFromEnvVar;
+import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 public class DeployMessageBridgeWithManagement {
 
     public static void main(String[] args) throws Throwable {
-        Neow3j neow3j = getNeow3jFromEnvVar(N3_JSON_RPC);
+        Neow3j neow3j = getNeow3jFromEnv();
         String deployerWalletPath = getEnvVariable(WALLET_FILEPATH_DEPLOYER);
         String deployerWalletPassword = getEnvVariable(WALLET_PASSWORD_DEPLOYER);
         BigInteger linkedChainId = getBigIntegerFromEnvVar(LINKED_CHAIN_ID);
