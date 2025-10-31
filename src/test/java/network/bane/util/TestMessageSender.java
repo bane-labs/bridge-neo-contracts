@@ -35,13 +35,13 @@ public class TestMessageSender extends SmartContractHelper {
         );
     }
 
-    public Hash256 sendMessage(byte[] rawMessage) throws Throwable {
-        return sendMessage(global(alice), rawMessage);
+    public Hash256 sendStoreOnlyMessage(byte[] rawMessage) throws Throwable {
+        return sendStoreOnlyMessage(global(alice), rawMessage);
     }
 
-    public Hash256 sendMessage(AccountSigner signer, byte[] rawMessage) throws Throwable {
+    public Hash256 sendStoreOnlyMessage(AccountSigner signer, byte[] rawMessage) throws Throwable {
         return sendAndAwaitExecution(
-                invokeFunction("sendMessage", byteArray(rawMessage),
+                invokeFunction("sendStoreOnlyMessage", byteArray(rawMessage),
                         hash160(signer.getAccount()), integer(messageBridge.sendingFee())
                 ).signers(signer)
         );

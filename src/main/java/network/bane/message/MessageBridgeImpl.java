@@ -299,7 +299,19 @@ class MessageBridgeImpl {
         executableStateMap.put(nonce, new StdLib().serialize(executableState));
     }
 
-    public static int sendMessage(ByteString rawMsg, Hash160 feeSponsor, int maxFee) {
+    public static int sendExecutableMessage(ByteString rawMsg, boolean storeResult, Hash160 feeSponsor, int maxFee) {
+        MessageBridgeImpl.checkMsgSize(rawMsg.length());
+        MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
+
+        int timestamp = Runtime.getTime();
+        Hash160 callingScriptHash = Runtime.getCallingScriptHash();
+
+        NeoMessage.NeoMetadataExecutable metadata = new NeoMessage.NeoMetadataExecutable(timestamp, callingScriptHash,
+                storeResult);
+        return serializeAndUpdateNeoToEvmMessageState(metadata, rawMsg);
+    }
+
+    public static int sendStoreOnlyMessage(ByteString rawMsg, Hash160 feeSponsor, int maxFee) {
         MessageBridgeImpl.checkMsgSize(rawMsg.length());
         MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 
@@ -307,17 +319,6 @@ class MessageBridgeImpl {
         Hash160 callingScriptHash = Runtime.getCallingScriptHash();
 
         NeoMessage.NeoMetadataStoreOnly metadata = new NeoMessage.NeoMetadataStoreOnly(timestamp, callingScriptHash);
-        return serializeAndUpdateNeoToEvmMessageState(metadata, rawMsg);
-    }
-
-    public static int sendExecutableMessage(ByteString rawMsg, boolean storeResult, Hash160 feeSponsor, int maxFee) {
-        MessageBridgeImpl.checkMsgSize(rawMsg.length());
-        MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
-
-        int timestamp = Runtime.getTime();
-        Hash160 callingScriptHash = Runtime.getCallingScriptHash();
-        NeoMessage.NeoMetadataExecutable metadata = new NeoMessage.NeoMetadataExecutable(timestamp, callingScriptHash,
-                storeResult);
         return serializeAndUpdateNeoToEvmMessageState(metadata, rawMsg);
     }
 

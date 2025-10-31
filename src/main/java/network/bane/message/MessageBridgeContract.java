@@ -301,17 +301,17 @@ public class MessageBridgeContract {
     // region message bridge functionality
     // region message sending (N3 to EVM)
 
-    public static int sendMessage(ByteString rawMessage, Hash160 feeSponsor, int maxFee) {
-        onlyWhenNotPaused();
-        onlyWhenSendingNotPaused();
-        return MessageBridgeImpl.sendMessage(rawMessage, feeSponsor, maxFee);
-    }
-
     public static int sendExecutableMessage(ByteString rawMessage, boolean storeResult, Hash160 feeSponsor,
             int maxFee) {
         onlyWhenNotPaused();
         onlyWhenSendingNotPaused();
         return MessageBridgeImpl.sendExecutableMessage(rawMessage, storeResult, feeSponsor, maxFee);
+    }
+
+    public static int sendStoreOnlyMessage(ByteString rawMessage, Hash160 feeSponsor, int maxFee) {
+        onlyWhenNotPaused();
+        onlyWhenSendingNotPaused();
+        return MessageBridgeImpl.sendStoreOnlyMessage(rawMessage, feeSponsor, maxFee);
     }
 
     public static int sendResultMessage(int relatedMessageNonce, Hash160 feeSponsor, int maxFee) {

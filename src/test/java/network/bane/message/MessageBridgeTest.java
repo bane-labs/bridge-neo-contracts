@@ -221,7 +221,7 @@ public class MessageBridgeTest {
         BigInteger sendingFee = messageBridge.sendingFee();
 
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
-        Hash256 tx = messageBridge.sendMessage(global(alice), rawMessage);
+        Hash256 tx = messageBridge.sendStoreOnlyMessage(global(alice), rawMessage);
 
         BigInteger gasBalanceAfter = gasToken.getBalanceOf(messageBridge.getScriptHash());
         assertThat(gasBalanceAfter, is(initialBalance.add(sendingFee)));
@@ -301,7 +301,7 @@ public class MessageBridgeTest {
         assertThat(rawMessage.length, greaterThan(messageBridge.maxMessageSize().intValue()));
         BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.sendMessage(global(alice), rawMessage, alice, sendingFee));
+                () -> messageBridge.sendStoreOnlyMessage(global(alice), rawMessage, alice, sendingFee));
         assertThat(thrown.getMessage(), containsString("Message too large"));
 
         // Revert the state for further tests
@@ -331,7 +331,7 @@ public class MessageBridgeTest {
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
         BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.sendMessage(global(alice), rawMessage, alice, sendingFee.subtract(BigInteger.ONE)));
+                () -> messageBridge.sendStoreOnlyMessage(global(alice), rawMessage, alice, sendingFee.subtract(BigInteger.ONE)));
         assertThat(thrown.getMessage(), containsString("Max fee exceeded"));
     }
 
@@ -352,7 +352,7 @@ public class MessageBridgeTest {
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
         BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.sendMessage(global(alice), rawMessage, messageBridge.getScriptHash(), sendingFee));
+                () -> messageBridge.sendStoreOnlyMessage(global(alice), rawMessage, messageBridge.getScriptHash(), sendingFee));
         assertThat(thrown.getMessage(), containsString("Prohibited 'feeSponsor'"));
     }
 
