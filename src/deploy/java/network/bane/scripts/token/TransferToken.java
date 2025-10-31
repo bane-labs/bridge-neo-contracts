@@ -43,7 +43,7 @@ public class TransferToken {
         String personalWalletPath = getEnvVariable(WALLET_FILEPATH_PERSONAL);
         String personalWalletPassword = getEnvVariable(WALLET_PASSWORD_PERSONAL);
         Hash160 tokenHash = getHash160FromEnvVar(TOKEN_TRANSFER_TOKEN_HASH);
-        Hash160 to =getHash160FromEnvVar(TOKEN_DEPOSIT_RECIPIENT_ON_EVM);
+        Hash160 to = getHash160FromEnvVar(TOKEN_DEPOSIT_RECIPIENT_ON_EVM);
         BigInteger amount = getBigIntegerFromEnvVar(TOKEN_DEPOSIT_AMOUNT);
 
         Account signerAcc = getAccountFromWallet(personalWalletPath, personalWalletPassword);

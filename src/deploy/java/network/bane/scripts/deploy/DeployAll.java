@@ -42,6 +42,8 @@ import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
  * - WALLET_FILEPATH_DEPLOYER: the filepath to the deployer wallet
  * - WALLET_PASSWORD_DEPLOYER: the password for the deployer wallet
  * - LINKED_CHAIN_ID: The chain ID of the linked chain
+ * - BRIDGE_CONTRACT_NAME: The name of the Bridge contract
+ * - MANAGEMENT_CONTRACT_NAME: The name of the Bridge Management contract
  * <p>
  * Run with: gradle run -PmainClass=network.bane.scripts.deploy.DeployAll
  */

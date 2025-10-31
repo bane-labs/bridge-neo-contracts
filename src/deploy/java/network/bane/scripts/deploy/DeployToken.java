@@ -31,8 +31,8 @@ public class DeployToken {
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
-        String deployerWalletFilepath = WALLET_FILEPATH_DEPLOYER;
-        String deployerWalletPassword = WALLET_PASSWORD_DEPLOYER;
+        String deployerWalletFilepath = getEnvVariable(WALLET_FILEPATH_DEPLOYER);
+        String deployerWalletPassword = getEnvVariable(WALLET_PASSWORD_DEPLOYER);
         String tokenName = getEnvVariable(TOKEN_DEPLOY_TOKEN_NAME);
         String tokenSymbol = getEnvVariable(TOKEN_DEPLOY_TOKEN_SYMBOL);
         Account deployerAcc = getAccountFromWallet(deployerWalletFilepath, deployerWalletPassword);

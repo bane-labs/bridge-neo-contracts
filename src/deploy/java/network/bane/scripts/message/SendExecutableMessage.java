@@ -34,9 +34,9 @@ import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
  * <p>
  * Requires the following environment variables to be set:
  * - N3_JSON_RPC: The RPC endpoint of the N3 node
- * - MESSAGE_BRIDGE_HASH: Hash of the deployed message bridge contract
  * - WALLET_FILEPATH_PERSONAL: the filepath to the personal wallet. This wallet is used to send the message.
  * - WALLET_PASSWORD_PERSONAL: the password for the personal wallet
+ * - MESSAGE_BRIDGE_HASH: Hash of the deployed message bridge contract
  * - MESSAGE_SEND_EXECUTABLE_MESSAGE: The message to send as a hex string.
  * - MESSAGE_SEND_EXECUTABLE_STORE_BOOL: Boolean indicating whether to store the result of the execution.
  * <p>

@@ -14,14 +14,15 @@ import static io.neow3j.contract.ContractUtils.writeContractManifestFile;
 import static io.neow3j.contract.ContractUtils.writeNefFile;
 import static network.bane.utils.env.EnvVariables.BRIDGE_CONTRACT_NAME;
 import static network.bane.utils.env.EnvVariables.MANAGEMENT_CONTRACT_NAME;
+import static network.bane.utils.env.EnvVariables.getEnvVariable;
 
 public class CompileBridgeContractsWithSubstitutions {
 
-    // Note: If you need to update existing contracts, the names must remain the same.
-    public static final String bridgeContractName = BRIDGE_CONTRACT_NAME;
-    public static final String bridgeManagementName = MANAGEMENT_CONTRACT_NAME;
-
     public static void main(String[] args) throws IOException {
+        // Note: If you need to update existing contracts, the names must remain the same.
+        String bridgeContractName = getEnvVariable(BRIDGE_CONTRACT_NAME);
+        String bridgeManagementName = getEnvVariable(MANAGEMENT_CONTRACT_NAME);
+
         compileAndWriteNefAndManifestFilesBridge(bridgeContractName);
         compileAndWriteNefAndManifestFilesManagement(bridgeManagementName);
     }
