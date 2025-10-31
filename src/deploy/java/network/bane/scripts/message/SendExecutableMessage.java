@@ -3,6 +3,7 @@ package network.bane.scripts.message;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
+import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.wallet.Account;
 
@@ -14,8 +15,9 @@ import static io.neow3j.types.ContractParameter.bool;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
-import static network.bane.scripts.message.SendMessage.printSendingMessageInfo;
-import static network.bane.scripts.message.SendMessage.sendMessageSendTransaction;
+import static network.bane.scripts.message.MessageSendHelper.getMessageSendEvents;
+import static network.bane.scripts.message.MessageSendHelper.printSendingMessageInfo;
+import static network.bane.scripts.message.MessageSendHelper.sendTransaction;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.MESSAGE_SEND_EXECUTABLE_MESSAGE;
 import static network.bane.utils.env.EnvVariables.MESSAGE_SEND_EXECUTABLE_STORE_BOOL;
@@ -75,7 +77,8 @@ public class SendExecutableMessage {
                 .sign();
 
         System.out.println("\n--- Sending Executable Message ---");
-        sendMessageSendTransaction(neow3j, tx, messageBridge.getScriptHash());
+        NeoApplicationLog log = sendTransaction(neow3j, tx);
+        getMessageSendEvents(log, messageBridge.getScriptHash());
     }
 
 }

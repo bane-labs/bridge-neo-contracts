@@ -4,13 +4,7 @@ import io.neow3j.contract.GasToken;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
-import io.neow3j.protocol.core.response.NeoBlock;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
-import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.transaction.Transaction;
-import io.neow3j.types.Hash160;
-import io.neow3j.types.Hash256;
-import io.neow3j.types.NeoVMStateType;
 import io.neow3j.wallet.Account;
 
 import java.math.BigInteger;
@@ -19,10 +13,11 @@ import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.integer;
-import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.isValidHexString;
-import static io.neow3j.utils.Numeric.toHexString;
+import static network.bane.scripts.message.MessageSendHelper.getMessageSendEvents;
+import static network.bane.scripts.message.MessageSendHelper.printSendingMessageInfo;
+import static network.bane.scripts.message.MessageSendHelper.sendTransaction;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.MESSAGE_SEND_STORE_ONLY_MESSAGE;
 import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_PERSONAL;
@@ -48,7 +43,7 @@ import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
  * <p>
  * Run with: gradle run -PmainClass=network.bane.scripts.message.SendMessage
  */
-public class SendMessage {
+public class SendStoreOnlyMessage {
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
@@ -80,64 +75,17 @@ public class SendMessage {
                 .sign();
 
         System.out.println("\n--- Sending Store-Only Message ---");
-        sendMessageSendTransaction(neow3j, tx, messageBridge.getScriptHash());
+        NeoApplicationLog log = sendTransaction(neow3j, tx);
+        getMessageSendEvents(log, messageBridge.getScriptHash());
     }
 
-    static void sendMessageSendTransaction(Neow3j neow3j, Transaction tx, Hash160 messageBridgeHash) throws Exception {
-        // Send the transaction
-        System.out.println("Sending transaction...");
-        NeoSendRawTransaction response = tx.send();
-
-        if (response.hasError()) {
-            throw new Exception("Error sending message: " + response.getError().getMessage());
-        }
-
-        Hash256 txHash = response.getSendRawTransaction().getHash();
-        System.out.println("Transaction sent successfully!");
-        System.out.println("Transaction Hash: " + txHash);
-
-        // Wait for transaction execution and get the result
-        System.out.println("Waiting for transaction execution...");
-        waitUntilTransactionIsExecuted(txHash, neow3j);
-        Hash256 blockHash = neow3j.getTransaction(txHash).send().getTransaction().getBlockHash();
-        NeoBlock block = neow3j.getBlockHeader(blockHash).send().getBlock();
-        System.out.println("Included in Block: " + block.getIndex());
-
-        NeoApplicationLog.Execution exec = tx.getApplicationLog().getFirstExecution();
-        if (exec.getState().equals(NeoVMStateType.HALT)) {
-            System.out.println("Message execution successful!");
-
-            // Look for MessageSend event in the logs
-            exec.getNotifications().stream()
-                    .filter(notification -> notification.getContract().equals(messageBridgeHash))
-                    .filter(notification -> "MessageSend".equals(notification.getEventName()))
-                    .findFirst()
-                    .ifPresent(notification -> {
-                        System.out.println("\n--- Message Send Event ---");
-                        StackItem state = notification.getState();
-                        System.out.println(state);
-                    });
-        } else {
-            System.out.println("Transaction failed!");
-            System.out.println("Exception: " + exec.getException());
-        }
-    }
-
-    static byte[] getMessageDataBytes(String messageToSend) {
+    private static byte[] getMessageDataBytes(String messageToSend) {
         if (isValidHexString(messageToSend)) {
             return hexStringToByteArray(messageToSend);
         } else {
             System.out.println("Provided message is not in hexadecimal format - using UTF-8 bytes");
             return messageToSend.getBytes();
         }
-    }
-
-    static void printSendingMessageInfo(Account senderAcc, byte[] messageData, String typeString) {
-        System.out.println("Sending message (hex): " + toHexString(messageData));
-        System.out.println("Sender: " + senderAcc.getScriptHash());
-        System.out.println("Message Data (hex): " + toHexString(messageData));
-        System.out.println("Message Data Size: " + messageData.length + " bytes");
-        System.out.println("Message Type: " + typeString);
     }
 
 }
