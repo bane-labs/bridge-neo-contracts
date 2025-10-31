@@ -3,17 +3,18 @@ package network.bane.scripts.message;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
-import io.neow3j.protocol.http.HttpService;
-import io.neow3j.transaction.Transaction;
-import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
-import static network.bane.utils.env.EnvVariables.NODE;
-import static network.bane.utils.env.GetEnv.getEnvVariable;
-import static network.bane.utils.wallet.LoadWallet.getGovernorAccountFromWallet;
+import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
+import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
+import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
+import static network.bane.utils.env.EnvVariables.getEnvVariable;
+import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
+import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
+import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 /**
  * This class makes sure everything in the message bridge contract is unpaused. If something is paused, it sends a
@@ -21,6 +22,14 @@ import static network.bane.utils.wallet.LoadWallet.getGovernorAccountFromWallet;
  * - Unpausing message bridge overall
  * - Unpausing sending messages
  * - Unpausing executing messages
+ * <p>
+ * Requires the following environment variables to be set:
+ * - N3_JSON_RPC: The RPC endpoint of the N3 node
+ * - MESSAGE_BRIDGE_HASH: Hash of the deployed message bridge contract
+ * - WALLET_FILEPATH_GOVERNOR: the filepath to the governor wallet.
+ * - WALLET_PASSWORD_GOVERNOR: the password for the governor wallet
+ * <p>
+ * Run with: gradle run -PmainClass=network.bane.scripts.message.UnpauseAll
  */
 public class UnpauseAll {
 
@@ -28,38 +37,41 @@ public class UnpauseAll {
     private static final String SUCCESS = "Successful";
 
     public static void main(String[] args) throws Throwable {
+        Neow3j neow3j = getNeow3jFromEnv();
+        SmartContract messageBridge = new SmartContract(getHash160FromEnvVar(MESSAGE_BRIDGE_HASH), neow3j);
+        String governorWalletPath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
+        String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);
+
+        Account governor = getAccountFromWallet(governorWalletPath, governorWalletPassword);
+
+        System.out.println("Unpausing MessageBridge");
+
         String overallPauseState;
         String sendingPauseState;
         String executingPauseState;
 
-        System.out.println("Unpausing MessageBridge");
-
-        Neow3j neow3j = Neow3j.build(new HttpService(NODE));
-
-        Hash160 msgBridgeHash = new Hash160(getEnvVariable("MESSAGE_BRIDGE_HASH"));
-        System.out.println("Unpausing MessageBridge at address: " + msgBridgeHash);
-        Account governor = getGovernorAccountFromWallet();
+        System.out.println("Unpausing MessageBridge at address: " + messageBridge.getScriptHash());
         System.out.println("Governor address: " + governor.getScriptHash());
 
         System.out.println("\nAttempting unpause operations...");
         System.out.println("Note: Operations will be skipped automatically if components are already unpaused.");
 
-        SmartContract msgBridge = new SmartContract(msgBridgeHash, neow3j);
         System.out.println("\nOverall bridge pausing");
-        if (!msgBridge.callFunctionReturningBool("isPaused")) {
+        if (!messageBridge.callFunctionReturningBool("isPaused")) {
             overallPauseState = ALREADY_UNPAUSED;
             System.out.println("MessageBridge is not paused - no action needed");
         } else {
             System.out.println("MessageBridge is paused - unpausing...");
-            Transaction tx = msgBridge.invokeFunction("unpause").signers(calledByEntry(governor)).sign();
-            NeoSendRawTransaction response = tx.send();
+            NeoSendRawTransaction response = messageBridge.invokeFunction("unpause")
+                    .signers(calledByEntry(governor))
+                    .sign().send();
             if (response.hasError()) {
                 throw new Exception("Error unpausing message bridge: " + response.getError().getMessage());
             }
             Hash256 txHash = response.getSendRawTransaction().getHash();
             System.out.println("Transaction sent: " + txHash);
             waitUntilTransactionIsExecuted(txHash, neow3j);
-            if (msgBridge.callFunctionReturningBool("isPaused")) {
+            if (messageBridge.callFunctionReturningBool("isPaused")) {
                 throw new Exception("Unpausing the message bridge contract failed in transaction: " + txHash);
             }
             overallPauseState = SUCCESS;
@@ -69,20 +81,21 @@ public class UnpauseAll {
 
         // Unpause sending
         System.out.println("\nUnpausing sending");
-        if (!msgBridge.callFunctionReturningBool("sendingIsPaused")) {
+        if (!messageBridge.callFunctionReturningBool("sendingIsPaused")) {
             sendingPauseState = ALREADY_UNPAUSED;
             System.out.println("Sending is not paused - no action needed");
         } else {
             System.out.println("Sending is paused - unpausing...");
-            Transaction tx = msgBridge.invokeFunction("unpauseSending").signers(calledByEntry(governor)).sign();
-            NeoSendRawTransaction response = tx.send();
+            NeoSendRawTransaction response = messageBridge.invokeFunction("unpauseSending")
+                    .signers(calledByEntry(governor))
+                    .sign().send();
             if (response.hasError()) {
                 throw new Exception("Error unpausing sending: " + response.getError().getMessage());
             }
             Hash256 txHash = response.getSendRawTransaction().getHash();
             System.out.println("Transaction sent: " + txHash);
             waitUntilTransactionIsExecuted(txHash, neow3j);
-            if (msgBridge.callFunctionReturningBool("sendingIsPaused")) {
+            if (messageBridge.callFunctionReturningBool("sendingIsPaused")) {
                 throw new Exception("Unpausing sending failed in transaction: " + txHash);
             }
             sendingPauseState = SUCCESS;
@@ -92,20 +105,21 @@ public class UnpauseAll {
 
         // Unpause executing
         System.out.println("\nUnpausing executing");
-        if (!msgBridge.callFunctionReturningBool("executingIsPaused")) {
+        if (!messageBridge.callFunctionReturningBool("executingIsPaused")) {
             executingPauseState = ALREADY_UNPAUSED;
             System.out.println("Executing is not paused - no action needed");
         } else {
             System.out.println("Executing is paused - unpausing...");
-            Transaction tx = msgBridge.invokeFunction("unpauseExecuting").signers(calledByEntry(governor)).sign();
-            NeoSendRawTransaction response = tx.send();
+            NeoSendRawTransaction response = messageBridge.invokeFunction("unpauseExecuting")
+                    .signers(calledByEntry(governor))
+                    .sign().send();
             if (response.hasError()) {
                 throw new Exception("Error unpausing executing: " + response.getError().getMessage());
             }
             Hash256 txHash = response.getSendRawTransaction().getHash();
             System.out.println("Transaction sent: " + txHash);
             waitUntilTransactionIsExecuted(txHash, neow3j);
-            if (!msgBridge.callFunctionReturningBool("executingIsPaused")) {
+            if (!messageBridge.callFunctionReturningBool("executingIsPaused")) {
                 throw new Exception("Unpausing executing failed in transaction: " + txHash);
             }
             executingPauseState = SUCCESS;

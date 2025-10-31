@@ -3,7 +3,6 @@ package network.bane.scripts.token;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
-import io.neow3j.protocol.http.HttpService;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -19,9 +18,13 @@ import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static network.bane.utils.env.EnvVariables.NODE;
-import static network.bane.utils.env.GetEnv.getEnvVariable;
-import static network.bane.utils.wallet.LoadWallet.getGovernorAccountFromWallet;
+import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
+import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
+import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
+import static network.bane.utils.env.EnvVariables.getEnvVariable;
+import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
+import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
+import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 /**
  * This class makes sure everything in the bridge contract is unpaused. If something is paused, it sends a
@@ -30,6 +33,14 @@ import static network.bane.utils.wallet.LoadWallet.getGovernorAccountFromWallet;
  * - Unpausing native bridge
  * - Unpausing token bridges
  * - Unpausing deposits
+ * <p>
+ * Requires the following environment variables to be set:
+ * - N3_JSON_RPC: The RPC endpoint of the N3 node
+ * - BRIDGE_HASH: Hash of the deployed bridge contract
+ * - WALLET_FILEPATH_GOVERNOR: the filepath to the governor wallet
+ * - WALLET_PASSWORD_GOVERNOR: the password for the governor wallet
+ * <p>
+ * Run with: gradle run -PmainClass=network.bane.scripts.token.UnpauseAll
  */
 public class UnpauseAll {
 
@@ -38,23 +49,24 @@ public class UnpauseAll {
     private static final String NOT_SET = "Not set - nothing to unpause";
 
     public static void main(String[] args) throws Throwable {
+        Neow3j neow3j = getNeow3jFromEnv();
+        SmartContract bridge = new SmartContract(getHash160FromEnvVar(BRIDGE_HASH), neow3j);
+        String governorWalletPath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
+        String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);
+
         String overallPauseState;
         String nativePauseState;
         String depositsPauseState;
 
+        Account governor = getAccountFromWallet(governorWalletPath, governorWalletPassword);
+
         System.out.println("Unpausing BridgeContract");
-
-        Neow3j neow3j = Neow3j.build(new HttpService(NODE));
-
-        Hash160 bridgeHash = new Hash160(getEnvVariable("BRIDGE_HASH"));
-        System.out.println("Unpausing BridgeContract at address: " + bridgeHash);
-        Account governor = getGovernorAccountFromWallet();
+        System.out.println("Unpausing BridgeContract at address: " + bridge.getScriptHash());
         System.out.println("Governor address: " + governor.getScriptHash());
 
         System.out.println("\nAttempting unpause operations...");
         System.out.println("Note: Operations will be skipped automatically if components are already unpaused.");
 
-        SmartContract bridge = new SmartContract(bridgeHash, neow3j);
         System.out.println("\nOverall bridge pausing");
         if (!bridge.callFunctionReturningBool("isPaused")) {
             overallPauseState = ALREADY_UNPAUSED;
@@ -176,12 +188,12 @@ public class UnpauseAll {
 
     static boolean nativeBridgeIsPaused(SmartContract bridge) throws IOException {
         return bridge.callInvokeFunction("getNativeBridge", asList()).getInvocationResult().getFirstStackItem()
-                .getList().get(0).getList().get(0).getBoolean();
+                .getList().get(0).getBoolean();
     }
 
     static boolean tokenBridgeIsPaused(SmartContract bridge, Hash160 tokenHash) throws IOException {
         return bridge.callInvokeFunction("getTokenBridge", asList(hash160(tokenHash))).getInvocationResult()
-                .getFirstStackItem().getList().get(0).getList().get(0).getBoolean();
+                .getFirstStackItem().getList().get(0).getBoolean();
     }
 
 }
