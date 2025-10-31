@@ -163,19 +163,19 @@ public class MessageBridge extends SmartContractHelper {
     // region message bridge
     // region sending messages
 
-    public Hash256 sendMessage(AccountSigner signer, byte[] rawMessage, Hash160 feeSponsor, BigInteger maxFee)
+    public Hash256 sendStoreOnlyMessage(AccountSigner signer, byte[] rawMessage, Hash160 feeSponsor, BigInteger maxFee)
             throws Throwable {
-        return sendAndAwaitExecution(invokeFunction("sendMessage", byteArray(rawMessage), hash160(feeSponsor),
+        return sendAndAwaitExecution(invokeFunction("sendStoreOnlyMessage", byteArray(rawMessage), hash160(feeSponsor),
                 integer(maxFee)).signers(signer));
     }
 
-    public Hash256 sendMessage(AccountSigner signer, byte[] rawMessage) throws Throwable {
-        return sendMessage(signer, rawMessage, signer.getAccount(), sendingFee());
+    public Hash256 sendStoreOnlyMessage(AccountSigner signer, byte[] rawMessage) throws Throwable {
+        return sendStoreOnlyMessage(signer, rawMessage, signer.getAccount(), sendingFee());
     }
 
-    public Hash256 sendMessage(AccountSigner signer, byte[] rawMessage, Account feeSponsor, BigInteger maxFee)
+    public Hash256 sendStoreOnlyMessage(AccountSigner signer, byte[] rawMessage, Account feeSponsor, BigInteger maxFee)
             throws Throwable {
-        TransactionBuilder b = invokeFunction("sendMessage", byteArray(rawMessage), hash160(feeSponsor),
+        TransactionBuilder b = invokeFunction("sendStoreOnlyMessage", byteArray(rawMessage), hash160(feeSponsor),
                 integer(maxFee));
         if (signer.getScriptHash().equals(feeSponsor.getScriptHash())) {
             return sendAndAwaitExecution(b.signers(signer));
@@ -183,9 +183,9 @@ public class MessageBridge extends SmartContractHelper {
         return sendAndAwaitExecution(b.signers(signer, global(feeSponsor)));
     }
 
-    public Hash256 sendMessage(AccountSigner signer, String rawMessageHex, Hash160 feeSponsor, BigInteger maxFee)
+    public Hash256 sendStoreOnlyMessage(AccountSigner signer, String rawMessageHex, Hash160 feeSponsor, BigInteger maxFee)
             throws Throwable {
-        return sendMessage(signer, hexStringToByteArray(rawMessageHex), feeSponsor, maxFee);
+        return sendStoreOnlyMessage(signer, hexStringToByteArray(rawMessageHex), feeSponsor, maxFee);
     }
 
     public Hash256 sendExecutableMessage(AccountSigner signer, byte[] rawMessage, boolean storeResult,

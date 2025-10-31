@@ -20,8 +20,8 @@ public class TestMessageSenderContract {
         return new IMessageBridge(Storage.getHash160(Storage.getStorageContext(), KEY_MESSAGE_BRIDGE));
     }
 
-    public static int sendMessage(ByteString rawMessage, Hash160 feeSponsor, int maxFee) {
-        return getMessageBridge().sendMessage(rawMessage, feeSponsor, maxFee);
+    public static int sendStoreOnlyMessage(ByteString rawMessage, Hash160 feeSponsor, int maxFee) {
+        return getMessageBridge().sendStoreOnlyMessage(rawMessage, feeSponsor, maxFee);
     }
 
     public static int sendExecutableMessage(ByteString rawMessage, boolean storeResult, Hash160 feeSponsor,
@@ -39,7 +39,7 @@ public class TestMessageSenderContract {
         }
 
         @CallFlags(io.neow3j.devpack.constants.CallFlags.All)
-        public native int sendMessage(ByteString rawMessage, Hash160 feeSponsor, int maxFee);
+        public native int sendStoreOnlyMessage(ByteString rawMessage, Hash160 feeSponsor, int maxFee);
 
         @CallFlags(io.neow3j.devpack.constants.CallFlags.All)
         public native int sendExecutableMessage(ByteString rawMessage, boolean storeResult, Hash160 feeSponsor,

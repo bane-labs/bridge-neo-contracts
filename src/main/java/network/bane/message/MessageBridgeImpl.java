@@ -299,7 +299,7 @@ class MessageBridgeImpl {
         executableStateMap.put(nonce, new StdLib().serialize(executableState));
     }
 
-    public static int sendMessage(ByteString rawMsg, Hash160 feeSponsor, int maxFee) {
+    public static int sendStoreOnlyMessage(ByteString rawMsg, Hash160 feeSponsor, int maxFee) {
         MessageBridgeImpl.checkMsgSize(rawMsg.length());
         MessageBridgeImpl.payMessageSendingFee(feeSponsor, maxFee);
 

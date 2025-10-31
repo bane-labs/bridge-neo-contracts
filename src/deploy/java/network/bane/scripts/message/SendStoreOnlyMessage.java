@@ -62,8 +62,8 @@ public class SendStoreOnlyMessage {
         System.out.printf("Sending Fee: %s GAS%n", GasToken.toDecimals(sendingFee, 8));
         BigInteger maxFee = sendingFee;
 
-        // Invoking: sendMessage(rawMessage, feeSponsor, sendingFee)
-        Transaction tx = messageBridge.invokeFunction("sendMessage",
+        // Invoking: sendStoreOnlyMessage(rawMessage, feeSponsor, sendingFee)
+        Transaction tx = messageBridge.invokeFunction("sendStoreOnlyMessage",
                         byteArray(messageData),
                         any(null),
                         integer(maxFee)

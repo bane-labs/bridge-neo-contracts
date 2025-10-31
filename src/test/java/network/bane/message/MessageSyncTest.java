@@ -425,7 +425,7 @@ public class MessageSyncTest {
         String msg = "There's nowhere I can't go. There's nowhere I won't find you.";
         byte[] rawMessage = msg.getBytes();
 
-        Hash256 tx = testMessageSender.sendMessage(rawMessage);
+        Hash256 tx = testMessageSender.sendStoreOnlyMessage(rawMessage);
 
         NeoApplicationLog.Execution firstExec = neow3j.getApplicationLog(tx).send().getApplicationLog()
                 .getFirstExecution();
