@@ -165,15 +165,15 @@ public class MessageBridgeContract {
         }
     }
 
-    @Safe
-    public static String version() {
-        return baseMap.getString(KEY_VERSION);
-    }
-
     public static void update(ByteString nef, String manifest, Object data) {
         onlyWhenPaused();
         if (!checkWitness(managementContract().owner())) abort("No authorization - only owner");
         new ContractManagement().update(nef, manifest, data);
+    }
+
+    @Safe
+    public static String version() {
+        return baseMap.getString(KEY_VERSION);
     }
 
     // endregion

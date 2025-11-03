@@ -202,6 +202,11 @@ public class ExecutionManagerContract {
         new ContractManagement().update(nef, manifest, data);
     }
 
+    @Safe
+    public static String version() {
+        return baseMap.getString(KEY_VERSION);
+    }
+
     // endregion
     // region modifiers
 

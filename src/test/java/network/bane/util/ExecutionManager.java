@@ -30,6 +30,13 @@ public class ExecutionManager extends SmartContractHelper {
         super(scriptHash, neow3j);
     }
 
+    // region version
+
+    public String version() throws IOException {
+        return callFunctionReturningString("version");
+    }
+
+    // endregion
     // region execution
 
     public Hash256 executeMessage(AccountSigner signer, BigInteger nonce, byte[] n3FunctionCallBytes) throws Throwable {
