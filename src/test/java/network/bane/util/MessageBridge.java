@@ -64,6 +64,13 @@ public class MessageBridge extends SmartContractHelper {
         super(scriptHash, neow3j);
     }
 
+    // region version
+
+    public String version() throws IOException {
+        return callFunctionReturningString("version");
+    }
+
+    // endregion
     // region update
 
     public Hash256 update(NefFile newNefFile, ContractManifest newManifest, ContractParameter data) throws Throwable {

@@ -189,7 +189,7 @@ public class ExecutionManagerContract {
             if (!MessageExecutorDeploymentData.isValid(deploymentData)) {
                 abort("Invalid deployment data for MessageExecutor.");
             }
-            baseMap.put(KEY_VERSION, 1);
+            baseMap.put(KEY_VERSION, "1.0.0");
             baseMap.put(KEY_BRIDGE_MANAGEMENT, deploymentData.management);
             baseMap.put(KEY_MESSAGE_BRIDGE, deploymentData.messageBridge);
             baseMap.put(KEY_PAUSE, false);
@@ -200,6 +200,11 @@ public class ExecutionManagerContract {
         onlyOwner();
         onlyWhenPaused();
         new ContractManagement().update(nef, manifest, data);
+    }
+
+    @Safe
+    public static String version() {
+        return baseMap.getString(KEY_VERSION);
     }
 
     // endregion

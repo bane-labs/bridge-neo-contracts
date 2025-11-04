@@ -132,6 +132,16 @@ public class MessageExecutionManagerTest {
         return createExecutionManagerDeployConfig();
     }
 
+    // region version
+
+    @Test
+    @Order(0)
+    public void testVersion() throws IOException {
+        assertThat(messageBridge.version(), is("1.0.0"));
+        assertThat(executionManager.version(), is("1.0.0"));
+    }
+
+    // endregion
     // region pause
 
     @Test

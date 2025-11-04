@@ -136,9 +136,9 @@ public class MessageBridgeContract {
     public static void deploy(Object data, boolean isUpdate) {
         if (isUpdate) {
             // Make sure that this version of the contract is only used to update a deployed contract in version 1.
-            // if (baseMap.getInt(KEY_VERSION) != 1) abort("Invalid version");
+            // if (baseMap.getString(KEY_VERSION) != "1.0.0") abort("Invalid version");
             // Update internal versioning.
-            // baseMap.put(KEY_VERSION, 2);
+            // baseMap.put(KEY_VERSION, "x.x.x");
             // Migrate storage here if required.
         } else {
             DeploymentData deploymentData = (DeploymentData) data;
@@ -158,7 +158,7 @@ public class MessageBridgeContract {
             baseMap.put(KEY_EXECUTING_PAUSE, false);
 
             baseMap.put(KEY_ENTERED, false);
-            baseMap.put(KEY_VERSION, 1);
+            baseMap.put(KEY_VERSION, "1.0.0");
 
             // Set message bridge configuration upon deployment
             MessageBridgeImpl.setDefaultMessageBridge(deploymentData.executionManager);
@@ -169,6 +169,11 @@ public class MessageBridgeContract {
         onlyWhenPaused();
         if (!checkWitness(managementContract().owner())) abort("No authorization - only owner");
         new ContractManagement().update(nef, manifest, data);
+    }
+
+    @Safe
+    public static String version() {
+        return baseMap.getString(KEY_VERSION);
     }
 
     // endregion

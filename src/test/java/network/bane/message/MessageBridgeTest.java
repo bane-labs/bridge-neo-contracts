@@ -151,8 +151,17 @@ public class MessageBridgeTest {
     private static BigInteger getBestBlockTime() throws IOException {
         return BigInteger.valueOf(
                 neow3j.getBlockHeader(neow3j.getBestBlockHash().send().getBlockHash()).send().getBlock().getTime());
+
+    }
+    // region version
+
+    @Test
+    @Order(0)
+    public void testVersion() throws IOException {
+        assertThat(messageBridge.version(), is("1.0.0"));
     }
 
+    // endregion
     // region pause
 
     @Test
@@ -331,7 +340,8 @@ public class MessageBridgeTest {
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
         BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.sendStoreOnlyMessage(global(alice), rawMessage, alice, sendingFee.subtract(BigInteger.ONE)));
+                () -> messageBridge.sendStoreOnlyMessage(global(alice), rawMessage, alice,
+                        sendingFee.subtract(BigInteger.ONE)));
         assertThat(thrown.getMessage(), containsString("Max fee exceeded"));
     }
 
@@ -352,7 +362,8 @@ public class MessageBridgeTest {
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
         BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.sendStoreOnlyMessage(global(alice), rawMessage, messageBridge.getScriptHash(), sendingFee));
+                () -> messageBridge.sendStoreOnlyMessage(global(alice), rawMessage, messageBridge.getScriptHash(),
+                        sendingFee));
         assertThat(thrown.getMessage(), containsString("Prohibited 'feeSponsor'"));
     }
 
@@ -711,7 +722,8 @@ public class MessageBridgeTest {
         assertThat(thrown.getMessage(), containsString("Executable state not found"));
 
         assertThat(messageBridge.getEvmExecutionResultNonce(nonceOfMsgSentToEvm), is(nonce));
-        assertThat(toHexStringNoPrefix(messageBridge.getEvmExecutionResult(nonceOfMsgSentToEvm)), is(cleanHexPrefix(msgBytes)));
+        assertThat(toHexStringNoPrefix(messageBridge.getEvmExecutionResult(nonceOfMsgSentToEvm)),
+                is(cleanHexPrefix(msgBytes)));
     }
 
     // endregion
@@ -992,7 +1004,8 @@ public class MessageBridgeTest {
     @Test
     @Order(0)
     public void test_setExecutionWindowMilliseconds_valueTooLarge() {
-        BigInteger invalidExecWindowSeconds = UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS.add(BigInteger.ONE); // 1ms too large
+        BigInteger invalidExecWindowSeconds = UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS.add(
+                BigInteger.ONE); // 1ms too large
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.setExecutionWindowMilliseconds(invalidExecWindowSeconds));
         assertThat(thrown.getMessage(), containsString("Execution window too large"));
