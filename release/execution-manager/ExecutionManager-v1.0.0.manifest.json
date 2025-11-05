@@ -1,0 +1,143 @@
+{
+  "name" : "ExecutionManager",
+  "groups" : [ ],
+  "features" : { },
+  "supportedstandards" : [ ],
+  "abi" : {
+    "methods" : [ {
+      "name" : "isPaused",
+      "parameters" : [ ],
+      "offset" : 0,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "pause",
+      "parameters" : [ ],
+      "offset" : 18,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "unpause",
+      "parameters" : [ ],
+      "offset" : 46,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "getExecutingNonce",
+      "parameters" : [ ],
+      "offset" : 74,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "executeMessage",
+      "parameters" : [ {
+        "name" : "nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "executableCode",
+        "type" : "ByteArray"
+      } ],
+      "offset" : 140,
+      "returntype" : "Any",
+      "safe" : false
+    }, {
+      "name" : "serializeCall",
+      "parameters" : [ {
+        "name" : "target",
+        "type" : "Hash160"
+      }, {
+        "name" : "method",
+        "type" : "String"
+      }, {
+        "name" : "callFlags",
+        "type" : "Integer"
+      }, {
+        "name" : "args",
+        "type" : "Array"
+      } ],
+      "offset" : 320,
+      "returntype" : "ByteArray",
+      "safe" : true
+    }, {
+      "name" : "isValidCall",
+      "parameters" : [ {
+        "name" : "serializedCall",
+        "type" : "ByteArray"
+      } ],
+      "offset" : 425,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "isAllowedCall",
+      "parameters" : [ {
+        "name" : "serializedCall",
+        "type" : "ByteArray"
+      } ],
+      "offset" : 488,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "bridgeManagement",
+      "parameters" : [ ],
+      "offset" : 645,
+      "returntype" : "Hash160",
+      "safe" : true
+    }, {
+      "name" : "messageBridge",
+      "parameters" : [ ],
+      "offset" : 667,
+      "returntype" : "Hash160",
+      "safe" : true
+    }, {
+      "name" : "_deploy",
+      "parameters" : [ {
+        "name" : "data",
+        "type" : "Any"
+      }, {
+        "name" : "update",
+        "type" : "Boolean"
+      } ],
+      "offset" : 683,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "update",
+      "parameters" : [ {
+        "name" : "nef",
+        "type" : "ByteArray"
+      }, {
+        "name" : "manifest",
+        "type" : "String"
+      }, {
+        "name" : "data",
+        "type" : "Any"
+      } ],
+      "offset" : 832,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "version",
+      "parameters" : [ ],
+      "offset" : 906,
+      "returntype" : "String",
+      "safe" : true
+    }, {
+      "name" : "_initialize",
+      "parameters" : [ ],
+      "offset" : 1621,
+      "returntype" : "Void",
+      "safe" : false
+    } ],
+    "events" : [ ]
+  },
+  "permissions" : [ {
+    "contract" : "*",
+    "methods" : "*"
+  } ],
+  "trusts" : [ ],
+  "extra" : {
+    "Description" : "Contract for managing the execution of messages from the Neo X bridge contract.",
+    "Author" : "BaneLabs",
+    "Source" : "https://github.com/bane-labs/bridge-neo-contracts"
+  }
+}
