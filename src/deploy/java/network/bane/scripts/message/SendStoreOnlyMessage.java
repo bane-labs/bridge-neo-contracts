@@ -10,8 +10,8 @@ import io.neow3j.wallet.Account;
 import java.math.BigInteger;
 
 import static io.neow3j.transaction.AccountSigner.none;
-import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.byteArray;
+import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.isValidHexString;
@@ -65,7 +65,7 @@ public class SendStoreOnlyMessage {
         // Invoking: sendStoreOnlyMessage(rawMessage, feeSponsor, sendingFee)
         Transaction tx = messageBridge.invokeFunction("sendStoreOnlyMessage",
                         byteArray(messageData),
-                        any(null),
+                        hash160(senderAcc),
                         integer(maxFee)
                 )
                 .signers(none(senderAcc).setAllowedContracts(GasToken.SCRIPT_HASH))
