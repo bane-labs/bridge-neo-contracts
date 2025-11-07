@@ -2,22 +2,18 @@ package network.bane.scripts.message;
 
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.stackitem.ArrayStackItem;
-import io.neow3j.protocol.core.stackitem.ByteStringStackItem;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.transaction.Transaction;
-import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 
-import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.integer;
 import static java.util.Collections.singletonList;
 import static network.bane.scripts.message.MessageSendHelper.checkExecutionResult;
+import static network.bane.scripts.message.MessageSendHelper.checkThatMessageExists;
 import static network.bane.scripts.message.MessageSendHelper.printStateRoot;
 import static network.bane.scripts.message.MessageSendHelper.sendTransaction;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
@@ -98,28 +94,5 @@ public class ExecuteMessage {
         }
 
         System.out.println("\n=== Message Execution Complete ===");
-    }
-
-    private static boolean checkThatMessageExists(SmartContract messageBridge, BigInteger nonce) throws IOException {
-        // Check if message exists and print its details
-        List<StackItem> messageResult = messageBridge.callInvokeFunction(
-                "getMessage",
-                singletonList(integer(nonce))
-        ).getInvocationResult().getStack();
-        if (!messageResult.isEmpty() && messageResult.get(0).getValue() != null) {
-            System.out.println("Message found for nonce: " + nonce);
-            // Print message details
-            System.out.println("Message Details:");
-            StackItem item = messageResult.get(0);
-            System.out.println(
-                    "  Message: " + Numeric.toHexString(
-                            ((ByteStringStackItem) ((ArrayStackItem) item).getValue().get(1)).getValue()
-                    )
-            );
-        } else {
-            System.err.println("ERROR: No message found for nonce: " + nonce);
-            return true;
-        }
-        return false;
     }
 }

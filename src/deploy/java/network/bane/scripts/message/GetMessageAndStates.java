@@ -2,19 +2,17 @@ package network.bane.scripts.message;
 
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.stackitem.StackItem;
 
 import java.math.BigInteger;
-import java.util.Collections;
 
-import static io.neow3j.types.ContractParameter.integer;
 import static network.bane.scripts.message.MessageSendHelper.checkExecutionResult;
+import static network.bane.scripts.message.MessageSendHelper.checkThatMessageExists;
+import static network.bane.scripts.message.MessageSendHelper.printStateRoot;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.MESSAGE_NONCE;
 import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.scripts.message.MessageSendHelper.printStateRoot;
 
 /**
  * Sends a store-only message
@@ -37,6 +35,9 @@ public class GetMessageAndStates {
         String nonceStr = getEnvVariable(MESSAGE_NONCE);
 
         BigInteger nonce = new BigInteger(nonceStr);
+
+        checkThatMessageExists(messageBridge, nonce);
+
         checkExecutionResult(messageBridge, nonce);
 
         // Get and print the EVM to NeoN3 root

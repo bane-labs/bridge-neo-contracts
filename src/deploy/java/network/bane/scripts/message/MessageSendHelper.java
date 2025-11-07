@@ -5,6 +5,7 @@ import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.NeoBlock;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
+import io.neow3j.protocol.core.stackitem.ArrayStackItem;
 import io.neow3j.protocol.core.stackitem.ByteStringStackItem;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.transaction.Transaction;
@@ -100,5 +101,28 @@ class MessageSendHelper {
                 System.out.println("No execution result stored.");
             }
         }
+    }
+
+    static boolean checkThatMessageExists(SmartContract messageBridge, BigInteger nonce) throws IOException {
+        // Check if message exists and print its details
+        List<StackItem> messageResult = messageBridge.callInvokeFunction(
+                "getMessage",
+                singletonList(integer(nonce))
+        ).getInvocationResult().getStack();
+        if (!messageResult.isEmpty() && messageResult.get(0).getValue() != null) {
+            System.out.println("Message found for nonce: " + nonce);
+            // Print message details
+            System.out.println("Message Details:");
+            StackItem item = messageResult.get(0);
+            System.out.println(
+                    "  Message: " + Numeric.toHexString(
+                            ((ByteStringStackItem) ((ArrayStackItem) item).getValue().get(1)).getValue()
+                    )
+            );
+        } else {
+            System.err.println("ERROR: No message found for nonce: " + nonce);
+            return true;
+        }
+        return false;
     }
 }
