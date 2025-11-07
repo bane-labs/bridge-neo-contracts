@@ -14,6 +14,8 @@ import io.neow3j.types.Hash256;
 import io.neow3j.types.NeoVMStateType;
 import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -26,6 +28,8 @@ import static io.neow3j.utils.Numeric.toHexString;
 import static java.util.Collections.singletonList;
 
 class MessageSendHelper {
+
+    private static final Logger log = LoggerFactory.getLogger(MessageSendHelper.class);
 
     static NeoApplicationLog sendTransaction(Neow3j neow3j, Transaction tx) throws Exception {
         // Send the transaction
@@ -86,12 +90,18 @@ class MessageSendHelper {
     }
 
     static void checkExecutionResult(SmartContract messageBridge, BigInteger nonce) throws IOException {
-        List<StackItem> resultAfter = messageBridge.callInvokeFunction(
+        List<StackItem> objectResult = messageBridge.callInvokeFunction(
+                "getNeoExecutionResult",
+                singletonList(integer(nonce))
+        ).getInvocationResult().getStack();
+        System.out.println("Execution result for nonce " + nonce + ":" + objectResult);
+
+        List<StackItem> serializedResult = messageBridge.callInvokeFunction(
                 "getSerializedNeoExecutionResult",
                 singletonList(integer(nonce))
         ).getInvocationResult().getStack();
-        if (!resultAfter.isEmpty() && resultAfter.get(0).getValue() != null) {
-            byte[] resultBytes = ((ByteStringStackItem) resultAfter.get(0)).getValue();
+        if (!serializedResult.isEmpty() && serializedResult.get(0).getValue() != null) {
+            byte[] resultBytes = ((ByteStringStackItem) serializedResult.get(0)).getValue();
             if (resultBytes.length > 0) {
                 System.out.println("\n--- Execution Result for nonce " + nonce + " ---");
                 System.out.println("Result bytes length: " + resultBytes.length);
