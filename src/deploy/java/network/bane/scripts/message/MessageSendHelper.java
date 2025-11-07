@@ -1,18 +1,28 @@
 package network.bane.scripts.message;
 
+import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.NeoBlock;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
+import io.neow3j.protocol.core.stackitem.ByteStringStackItem;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.types.NeoVMStateType;
+import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 
+import java.io.IOException;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static io.neow3j.utils.Numeric.toHexString;
+import static java.util.Collections.singletonList;
 
 class MessageSendHelper {
 
@@ -68,4 +78,27 @@ class MessageSendHelper {
         System.out.println("Message Type: " + typeString);
     }
 
+    static void printStateRoot(SmartContract messageBridge, String getRootMethodName) throws IOException {
+        List<StackItem> evmToNeoRootResult = messageBridge.callInvokeFunction(getRootMethodName).getInvocationResult().getStack();
+        byte[] evmToNeoRootBytes = ((ByteStringStackItem) evmToNeoRootResult.get(0)).getValue();
+        System.out.println(getRootMethodName + ": " + Numeric.toHexString(evmToNeoRootBytes));
+    }
+
+    static void checkExecutionResult(SmartContract messageBridge, BigInteger nonce) throws IOException {
+        List<StackItem> resultAfter = messageBridge.callInvokeFunction(
+                "getSerializedNeoExecutionResult",
+                singletonList(integer(nonce))
+        ).getInvocationResult().getStack();
+        if (!resultAfter.isEmpty() && resultAfter.get(0).getValue() != null) {
+            byte[] resultBytes = ((ByteStringStackItem) resultAfter.get(0)).getValue();
+            if (resultBytes.length > 0) {
+                System.out.println("\n--- Execution Result for nonce " + nonce + " ---");
+                System.out.println("Result bytes length: " + resultBytes.length);
+                System.out.println("Result as hex: " + Numeric.toHexString(resultBytes));
+                System.out.println("Result as UTF-8: " + new String(resultBytes, StandardCharsets.UTF_8));
+            } else {
+                System.out.println("No execution result stored.");
+            }
+        }
+    }
 }

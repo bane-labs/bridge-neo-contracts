@@ -143,4 +143,7 @@ public class EnvVariables {
     public static final String MESSAGE_SEND_EXECUTABLE_MESSAGE = "MESSAGE_SEND_EXECUTABLE_MESSAGE";
     public static final String MESSAGE_SEND_EXECUTABLE_STORE_BOOL = "MESSAGE_SEND_EXECUTABLE_STORE_BOOL";
 
+    // Message Bridge Executing/Reading Message Nonce
+    public static final String MESSAGE_NONCE = "MESSAGE_NONCE";
+
 }
