@@ -25,14 +25,17 @@ import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 /**
- * Executes a message by its nonce
+ * Sends a result message to the Message Bridge contract using a specified nonce.
  * <p>
- * Requires the following environment variables to be set:
- * - N3_JSON_RPC: The RPC endpoint of the N3 node
- * - WALLET_FILEPATH_PERSONAL: the filepath to the personal wallet. This wallet is used to execute the message.
- * - WALLET_PASSWORD_PERSONAL: the password for the personal wallet
- * - MESSAGE_BRIDGE_HASH: Hash of the deployed message bridge contract
- * - MESSAGE_EXECUTE_NONCE: The nonce of the message to execute (as integer)
+ * This script loads the personal wallet, retrieves the required sending fee from the contract,
+ * and invokes the 'sendResultMessage' method on the Message Bridge contract with the provided nonce.
+ * <p>
+ * Required environment variables:
+ * - N3_JSON_RPC: The RPC endpoint of the N3 node.
+ * - WALLET_FILEPATH_PERSONAL: Filepath to the personal wallet (used as sender).
+ * - WALLET_PASSWORD_PERSONAL: Password for the personal wallet.
+ * - MESSAGE_BRIDGE_HASH: Hash of the deployed Message Bridge contract.
+ * - MESSAGE_NONCE: The nonce of the message to send (as integer).
  * <p>
  * Run with: gradle run -PmainClass=network.bane.scripts.message.SendResultMessage
  */
@@ -58,7 +61,7 @@ public class SendResultMessage {
 
         BigInteger nonce = new BigInteger(nonceStr);
 
-        // Invoking: sendResultMessage(rawMessage, storeResult, feeSponsor, sendingFee)
+        // Invoking: sendResultMessage(nonce, feeSponsor, sendingFee)
         Transaction tx = messageBridge.invokeFunction("sendResultMessage",
                         integer(nonce),
                         hash160(senderAcc.getScriptHash()),

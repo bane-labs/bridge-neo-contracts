@@ -15,18 +15,18 @@ import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 
 /**
- * Sends a store-only message
+ * Retrieves message information and state roots from the message bridge
  * <p>
  * Requires the following environment variables to be set:
  * - N3_JSON_RPC: The RPC endpoint of the N3 node
- * - WALLET_FILEPATH_PERSONAL: the filepath to the personal wallet. This wallet is used to send the message.
+ * - WALLET_FILEPATH_PERSONAL: the filepath to the personal wallet
  * - WALLET_PASSWORD_PERSONAL: the password for the personal wallet
  * - MESSAGE_BRIDGE_HASH: Hash of the deployed message bridge contract
- * - MESSAGE_SEND_STORE_ONLY_MESSAGE: The message to send as a hex string or UTF-8 string. If the string is a valid
- * hex string, it will be interpreted as hex, otherwise as UTF-8.
+ * - MESSAGE_NONCE: The nonce of the message to retrieve
  * <p>
  * Run with: gradle run -PmainClass=network.bane.scripts.message.GetMessageAndStates
  */
+
 public class GetMessageAndStates {
 
     public static void main(String[] args) throws Throwable {
