@@ -1,20 +1,35 @@
 package network.bane.scripts.message;
 
+import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.NeoBlock;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
+import io.neow3j.protocol.core.stackitem.ArrayStackItem;
+import io.neow3j.protocol.core.stackitem.ByteStringStackItem;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.types.NeoVMStateType;
+import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static io.neow3j.utils.Numeric.toHexString;
+import static java.util.Collections.singletonList;
 
 class MessageSendHelper {
+
+    private static final Logger log = LoggerFactory.getLogger(MessageSendHelper.class);
 
     static NeoApplicationLog sendTransaction(Neow3j neow3j, Transaction tx) throws Exception {
         // Send the transaction
@@ -68,4 +83,56 @@ class MessageSendHelper {
         System.out.println("Message Type: " + typeString);
     }
 
+    static void printStateRoot(SmartContract messageBridge, String getRootMethodName) throws IOException {
+        List<StackItem> evmToNeoRootResult = messageBridge.callInvokeFunction(getRootMethodName).getInvocationResult().getStack();
+        byte[] evmToNeoRootBytes = ((ByteStringStackItem) evmToNeoRootResult.get(0)).getValue();
+        System.out.println(getRootMethodName + ": " + Numeric.toHexString(evmToNeoRootBytes));
+    }
+
+    static void checkExecutionResult(SmartContract messageBridge, BigInteger nonce) throws IOException {
+        List<StackItem> objectResult = messageBridge.callInvokeFunction(
+                "getNeoExecutionResult",
+                singletonList(integer(nonce))
+        ).getInvocationResult().getStack();
+        System.out.println("Execution result for nonce " + nonce + ":" + objectResult);
+
+        List<StackItem> serializedResult = messageBridge.callInvokeFunction(
+                "getSerializedNeoExecutionResult",
+                singletonList(integer(nonce))
+        ).getInvocationResult().getStack();
+        if (!serializedResult.isEmpty() && serializedResult.get(0).getValue() != null) {
+            byte[] resultBytes = ((ByteStringStackItem) serializedResult.get(0)).getValue();
+            if (resultBytes.length > 0) {
+                System.out.println("\n--- Execution Result for nonce " + nonce + " ---");
+                System.out.println("Result bytes length: " + resultBytes.length);
+                System.out.println("Result as hex: " + Numeric.toHexString(resultBytes));
+                System.out.println("Result as UTF-8: " + new String(resultBytes, StandardCharsets.UTF_8));
+            } else {
+                System.out.println("No execution result stored.");
+            }
+        }
+    }
+
+    static boolean checkThatMessageExists(SmartContract messageBridge, BigInteger nonce) throws IOException {
+        // Check if message exists and print its details
+        List<StackItem> messageResult = messageBridge.callInvokeFunction(
+                "getMessage",
+                singletonList(integer(nonce))
+        ).getInvocationResult().getStack();
+        if (!messageResult.isEmpty() && messageResult.get(0).getValue() != null) {
+            System.out.println("Message found for nonce: " + nonce);
+            // Print message details
+            System.out.println("Message Details:");
+            StackItem item = messageResult.get(0);
+            System.out.println(
+                    "  Message: " + Numeric.toHexString(
+                            ((ByteStringStackItem) ((ArrayStackItem) item).getValue().get(1)).getValue()
+                    )
+            );
+        } else {
+            System.err.println("ERROR: No message found for nonce: " + nonce);
+            return true;
+        }
+        return false;
+    }
 }
