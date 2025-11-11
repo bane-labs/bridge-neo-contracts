@@ -2,7 +2,6 @@ package network.bane.scripts.token.unpause;
 
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.types.Hash160;
 import io.neow3j.wallet.Account;
 
