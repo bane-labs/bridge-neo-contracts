@@ -37,7 +37,7 @@ public class PauseTokenBridge {
         pauseTokenBridge(neow3j, bridgeHash, tokenHash, governor);
     }
 
-    public static void  pauseTokenBridge(Neow3j neow3j, Hash160 bridgeContractHash, Hash160 tokenHash,
+    private static void pauseTokenBridge(Neow3j neow3j, Hash160 bridgeContractHash, Hash160 tokenHash,
             Account governor) throws Throwable {
 
         SmartContract bridge = new SmartContract(bridgeContractHash, neow3j);
@@ -48,7 +48,7 @@ public class PauseTokenBridge {
         boolean isPaused = bridge.callInvokeFunction("getTokenBridge", asList(hash160(tokenHash))).getInvocationResult()
                 .getFirstStackItem().getList().get(0).getBoolean();
         if (isPaused) {
-            System.out.printf("\nToken bridge '%s' is already paused - no action needed", tokenHash);
+            System.out.printf("\nToken bridge '%s' is already paused - no action needed\n", tokenHash);
             return;
         }
         System.out.printf("\nToken bridge '%s' is not paused, proceeding to pause...\n", tokenHash);

@@ -37,8 +37,8 @@ public class UnpauseTokenBridge {
         unpauseTokenBridge(neow3j, bridgeHash, tokenHash, governor);
     }
 
-    public static void unpauseTokenBridge(Neow3j neow3j, Hash160 bridgeContractHash, Hash160 tokenHash,
-            Account governor) throws Throwable {
+    static void unpauseTokenBridge(Neow3j neow3j, Hash160 bridgeContractHash, Hash160 tokenHash, Account governor)
+            throws Throwable {
 
         SmartContract bridge = new SmartContract(bridgeContractHash, neow3j);
         if (!bridge.callFunctionReturningBool("isRegisteredToken", hash160(tokenHash))) {
