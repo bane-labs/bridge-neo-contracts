@@ -68,6 +68,10 @@ public class EnvVariables {
     public static final String BRIDGE_HASH = "BRIDGE_HASH";
     public static final String MESSAGE_BRIDGE_HASH = "MESSAGE_BRIDGE_HASH";
 
+    // Pausing/Unpausing
+    public static final String PAUSE_TOKEN_HASH = "PAUSE_TOKEN_HASH";
+    public static final String UNPAUSE_TOKEN_HASH = "UNPAUSE_TOKEN_HASH";
+
     // Role Addresses and Validator Public Keys
     public static final String ROLE_OWNER_ADDRESS = "ROLE_OWNER_ADDRESS";
     public static final String ROLE_RELAYER_ADDRESS = "ROLE_RELAYER_ADDRESS";
