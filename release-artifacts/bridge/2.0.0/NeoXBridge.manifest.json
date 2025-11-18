@@ -1,0 +1,755 @@
+{
+  "name" : "NeoXBridge",
+  "groups" : [ ],
+  "features" : { },
+  "supportedstandards" : [ ],
+  "abi" : {
+    "methods" : [ {
+      "name" : "_deploy",
+      "parameters" : [ {
+        "name" : "data",
+        "type" : "Any"
+      }, {
+        "name" : "isUpdate",
+        "type" : "Boolean"
+      } ],
+      "offset" : 0,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "update",
+      "parameters" : [ {
+        "name" : "nef",
+        "type" : "ByteArray"
+      }, {
+        "name" : "manifest",
+        "type" : "String"
+      }, {
+        "name" : "data",
+        "type" : "Any"
+      } ],
+      "offset" : 563,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "pauseBridge",
+      "parameters" : [ ],
+      "offset" : 707,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "unpauseBridge",
+      "parameters" : [ ],
+      "offset" : 755,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "isPaused",
+      "parameters" : [ ],
+      "offset" : 805,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "pauseDeposits",
+      "parameters" : [ ],
+      "offset" : 823,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "unpauseDeposits",
+      "parameters" : [ ],
+      "offset" : 872,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "depositsArePaused",
+      "parameters" : [ ],
+      "offset" : 923,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "onNEP17Payment",
+      "parameters" : [ {
+        "name" : "from",
+        "type" : "Hash160"
+      }, {
+        "name" : "amount",
+        "type" : "Integer"
+      }, {
+        "name" : "data",
+        "type" : "Any"
+      } ],
+      "offset" : 941,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "management",
+      "parameters" : [ ],
+      "offset" : 1078,
+      "returntype" : "Hash160",
+      "safe" : true
+    }, {
+      "name" : "unclaimedRewards",
+      "parameters" : [ ],
+      "offset" : 1094,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "neoHoldingGasRewards",
+      "parameters" : [ ],
+      "offset" : 1100,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "pauseGasBridge",
+      "parameters" : [ ],
+      "offset" : 1106,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "unpauseGasBridge",
+      "parameters" : [ ],
+      "offset" : 1145,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "depositGas",
+      "parameters" : [ {
+        "name" : "from",
+        "type" : "Hash160"
+      }, {
+        "name" : "to",
+        "type" : "Hash160"
+      }, {
+        "name" : "amount",
+        "type" : "Integer"
+      }, {
+        "name" : "maxFee",
+        "type" : "Integer"
+      } ],
+      "offset" : 1186,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "withdrawGas",
+      "parameters" : [ {
+        "name" : "withdrawalRoot",
+        "type" : "ByteArray"
+      }, {
+        "name" : "signatures",
+        "type" : "Map"
+      }, {
+        "name" : "withdrawals",
+        "type" : "Array"
+      } ],
+      "offset" : 1215,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "claimGas",
+      "parameters" : [ {
+        "name" : "nonce",
+        "type" : "Integer"
+      } ],
+      "offset" : 1243,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "getGasBridge",
+      "parameters" : [ ],
+      "offset" : 1263,
+      "returntype" : "Any",
+      "safe" : true
+    }, {
+      "name" : "gasDepositFee",
+      "parameters" : [ ],
+      "offset" : 1335,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setGasDepositFee",
+      "parameters" : [ {
+        "name" : "newFee",
+        "type" : "Integer"
+      } ],
+      "offset" : 1345,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "minGasDeposit",
+      "parameters" : [ ],
+      "offset" : 1579,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setMinGasDeposit",
+      "parameters" : [ {
+        "name" : "newMinAmount",
+        "type" : "Integer"
+      } ],
+      "offset" : 1589,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "maxGasDeposit",
+      "parameters" : [ ],
+      "offset" : 1832,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setMaxGasDeposit",
+      "parameters" : [ {
+        "name" : "newMaxAmount",
+        "type" : "Integer"
+      } ],
+      "offset" : 1842,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "maxTotalDepositedGas",
+      "parameters" : [ ],
+      "offset" : 2094,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setMaxTotalDepositedGas",
+      "parameters" : [ {
+        "name" : "newMaxTotalDeposited",
+        "type" : "Integer"
+      } ],
+      "offset" : 2104,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "gasDepositNonce",
+      "parameters" : [ ],
+      "offset" : 2155,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "gasDepositRoot",
+      "parameters" : [ ],
+      "offset" : 2165,
+      "returntype" : "ByteArray",
+      "safe" : true
+    }, {
+      "name" : "gasWithdrawalNonce",
+      "parameters" : [ ],
+      "offset" : 2175,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "gasWithdrawalRoot",
+      "parameters" : [ ],
+      "offset" : 2185,
+      "returntype" : "ByteArray",
+      "safe" : true
+    }, {
+      "name" : "isRegisteredToken",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      } ],
+      "offset" : 2195,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "getTokenBridge",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      } ],
+      "offset" : 2205,
+      "returntype" : "Any",
+      "safe" : true
+    }, {
+      "name" : "getRegisteredTokensIterator",
+      "parameters" : [ ],
+      "offset" : 2215,
+      "returntype" : "InteropInterface",
+      "safe" : true
+    }, {
+      "name" : "getRegisteredTokens",
+      "parameters" : [ ],
+      "offset" : 2221,
+      "returntype" : "Array",
+      "safe" : true
+    }, {
+      "name" : "registerToken",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      }, {
+        "name" : "tokenConfig",
+        "type" : "Any"
+      } ],
+      "offset" : 2227,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "pauseTokenBridge",
+      "parameters" : [ {
+        "name" : "neoN3Token",
+        "type" : "Hash160"
+      } ],
+      "offset" : 2311,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "unpauseTokenBridge",
+      "parameters" : [ {
+        "name" : "neoN3Token",
+        "type" : "Hash160"
+      } ],
+      "offset" : 2371,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "depositToken",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      }, {
+        "name" : "from",
+        "type" : "Hash160"
+      }, {
+        "name" : "to",
+        "type" : "Hash160"
+      }, {
+        "name" : "amount",
+        "type" : "Integer"
+      }, {
+        "name" : "maxFee",
+        "type" : "Integer"
+      } ],
+      "offset" : 2433,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "withdrawToken",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      }, {
+        "name" : "withdrawalRoot",
+        "type" : "ByteArray"
+      }, {
+        "name" : "signatures",
+        "type" : "Map"
+      }, {
+        "name" : "withdrawals",
+        "type" : "Array"
+      } ],
+      "offset" : 2475,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "claimToken",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      }, {
+        "name" : "nonce",
+        "type" : "Integer"
+      } ],
+      "offset" : 2505,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "tokenDepositFee",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      } ],
+      "offset" : 2528,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setTokenDepositFee",
+      "parameters" : [ {
+        "name" : "tokens",
+        "type" : "Array"
+      }, {
+        "name" : "newDepositFees",
+        "type" : "Array"
+      } ],
+      "offset" : 2542,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "minTokenDeposit",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      } ],
+      "offset" : 2726,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setMinTokenDeposit",
+      "parameters" : [ {
+        "name" : "tokens",
+        "type" : "Array"
+      }, {
+        "name" : "newMinDeposits",
+        "type" : "Array"
+      } ],
+      "offset" : 2740,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "maxTokenDeposit",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      } ],
+      "offset" : 2924,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setMaxTokenDeposit",
+      "parameters" : [ {
+        "name" : "tokens",
+        "type" : "Array"
+      }, {
+        "name" : "newMaxDeposits",
+        "type" : "Array"
+      } ],
+      "offset" : 2938,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "maxTokenWithdrawals",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      } ],
+      "offset" : 3167,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setMaxTokenWithdrawals",
+      "parameters" : [ {
+        "name" : "tokens",
+        "type" : "Array"
+      }, {
+        "name" : "newMaxWithdrawals",
+        "type" : "Array"
+      } ],
+      "offset" : 3181,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "tokenDepositNonce",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      } ],
+      "offset" : 3369,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "tokenDepositRoot",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      } ],
+      "offset" : 3383,
+      "returntype" : "ByteArray",
+      "safe" : true
+    }, {
+      "name" : "tokenWithdrawalNonce",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      } ],
+      "offset" : 3397,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "tokenWithdrawalRoot",
+      "parameters" : [ {
+        "name" : "token",
+        "type" : "Hash160"
+      } ],
+      "offset" : 3411,
+      "returntype" : "ByteArray",
+      "safe" : true
+    }, {
+      "name" : "_initialize",
+      "parameters" : [ ],
+      "offset" : 9873,
+      "returntype" : "Void",
+      "safe" : false
+    } ],
+    "events" : [ {
+      "name" : "BridgePause",
+      "parameters" : [ ]
+    }, {
+      "name" : "BridgeUnpause",
+      "parameters" : [ ]
+    }, {
+      "name" : "DepositPause",
+      "parameters" : [ ]
+    }, {
+      "name" : "DepositUnpause",
+      "parameters" : [ ]
+    }, {
+      "name" : "GasBridgePause",
+      "parameters" : [ ]
+    }, {
+      "name" : "GasBridgeUnpause",
+      "parameters" : [ ]
+    }, {
+      "name" : "GasDeposit",
+      "parameters" : [ {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "Recipient",
+        "type" : "Hash160"
+      }, {
+        "name" : "Amount",
+        "type" : "Integer"
+      }, {
+        "name" : "Depositor",
+        "type" : "Hash160"
+      }, {
+        "name" : "DepositHash",
+        "type" : "ByteArray"
+      }, {
+        "name" : "NewDepositRoot",
+        "type" : "ByteArray"
+      } ]
+    }, {
+      "name" : "GasClaimable",
+      "parameters" : [ {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "Recipient",
+        "type" : "Hash160"
+      }, {
+        "name" : "Amount",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "GasClaim",
+      "parameters" : [ {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "Recipient",
+        "type" : "Hash160"
+      }, {
+        "name" : "Amount",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "GasWithdrawal",
+      "parameters" : [ {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "Recipient",
+        "type" : "Hash160"
+      }, {
+        "name" : "Amount",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "GasWithdrawalRootUpdate",
+      "parameters" : [ {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "WithdrawalRoot",
+        "type" : "ByteArray"
+      } ]
+    }, {
+      "name" : "GasDepositFeeChange",
+      "parameters" : [ {
+        "name" : "NewFee",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "MinGasDepositChange",
+      "parameters" : [ {
+        "name" : "NewMinDeposit",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "MaxGasDepositChange",
+      "parameters" : [ {
+        "name" : "NewMaxDeposit",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "MaxTotalDepositedGasChange",
+      "parameters" : [ {
+        "name" : "NewMaxTotalDepositedGas",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "TokenRegister",
+      "parameters" : [ {
+        "name" : "NeoN3Token",
+        "type" : "Hash160"
+      }, {
+        "name" : "TokenConfig",
+        "type" : "Any"
+      } ]
+    }, {
+      "name" : "TokenBridgePause",
+      "parameters" : [ {
+        "name" : "NeoN3Token",
+        "type" : "Hash160"
+      }, {
+        "name" : "NeoXToken",
+        "type" : "Hash160"
+      } ]
+    }, {
+      "name" : "TokenBridgeUnpause",
+      "parameters" : [ {
+        "name" : "NeoN3Token",
+        "type" : "Hash160"
+      }, {
+        "name" : "NeoXToken",
+        "type" : "Hash160"
+      } ]
+    }, {
+      "name" : "TokenDeposit",
+      "parameters" : [ {
+        "name" : "NeoN3Token",
+        "type" : "Hash160"
+      }, {
+        "name" : "NeoXToken",
+        "type" : "Hash160"
+      }, {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "Recipient",
+        "type" : "Hash160"
+      }, {
+        "name" : "Value",
+        "type" : "Integer"
+      }, {
+        "name" : "Depositor",
+        "type" : "Hash160"
+      }, {
+        "name" : "DepositHash",
+        "type" : "ByteArray"
+      }, {
+        "name" : "NewDepositRoot",
+        "type" : "ByteArray"
+      } ]
+    }, {
+      "name" : "TokenClaimable",
+      "parameters" : [ {
+        "name" : "NeoN3Token",
+        "type" : "Hash160"
+      }, {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "Recipient",
+        "type" : "Hash160"
+      }, {
+        "name" : "Value",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "TokenClaim",
+      "parameters" : [ {
+        "name" : "NeoN3Token",
+        "type" : "Hash160"
+      }, {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "Recipient",
+        "type" : "Hash160"
+      }, {
+        "name" : "Value",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "TokenWithdrawal",
+      "parameters" : [ {
+        "name" : "NeoN3Token",
+        "type" : "Hash160"
+      }, {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "Recipient",
+        "type" : "Hash160"
+      }, {
+        "name" : "Value",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "TokenWithdrawalRootUpdate",
+      "parameters" : [ {
+        "name" : "NeoN3Token",
+        "type" : "Hash160"
+      }, {
+        "name" : "NeoXToken",
+        "type" : "Hash160"
+      }, {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "WithdrawalRoot",
+        "type" : "ByteArray"
+      } ]
+    }, {
+      "name" : "TokenDepositFeeChange",
+      "parameters" : [ {
+        "name" : "NeoN3Token",
+        "type" : "Hash160"
+      }, {
+        "name" : "NewFee",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "MinTokenDepositChange",
+      "parameters" : [ {
+        "name" : "NeoN3Token",
+        "type" : "Hash160"
+      }, {
+        "name" : "NewMinDeposit",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "MaxTokenDepositChange",
+      "parameters" : [ {
+        "name" : "NeoN3Token",
+        "type" : "Hash160"
+      }, {
+        "name" : "NewMaxDeposit",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "MaxTokenWithdrawalsChange",
+      "parameters" : [ {
+        "name" : "NeoN3Token",
+        "type" : "Hash160"
+      }, {
+        "name" : "NewMaxWithdrawals",
+        "type" : "Integer"
+      } ]
+    } ]
+  },
+  "permissions" : [ {
+    "contract" : "*",
+    "methods" : "*"
+  } ],
+  "trusts" : [ ],
+  "extra" : {
+    "Description" : "Contract for bridging GAS and tokens between Neo N3 and Neo X.",
+    "Author" : "BaneLabs",
+    "Source" : "https://github.com/bane-labs/bridge-neo-contracts"
+  }
+}
