@@ -1,20 +1,24 @@
-# Neo Contracts for N3-Bane Bridge
+# Neo Contracts for the N3 - Neo X Bridge
 
-This repository is used for the development of the Neo contracts for the bridge between Neo N3 and Bane.
+This repository is used for the development of the Neo contracts for the bridge between Neo N3 and Neo X.
 
 ## Mainnet
 
 | Contract             | Hash                                         |
-| -------------------- | -------------------------------------------- |
+|----------------------|----------------------------------------------|
 | NeoXBridgeManagement | `0x148b3e0ca4f77476252862645e58f06b2562c414` |
 | NeoXBridge           | `0xbb19cfc864b73159277e1fd39694b3fd5fc613d2` |
+| MessageBridge        | `0xde9cc59df7484ae2f2d2c1ce7a66dccbd5c8bd11` | 
+| ExecutionManager     | `0x1c8a07253c148555bb22cfd514ef7f8777b0dfea` | 
 
 ## Testnet (for Neo X T4)
 
 | Contract             | Hash                                         |
-| -------------------- | -------------------------------------------- |
+|----------------------|----------------------------------------------|
 | NeoXBridgeManagement | `0x7c83816fb00b95b87119f7e28f7b044e4ac7bac8` |
 | NeoXBridge           | `0x2ba94444d43c9a084a5660982a9f95f43f07422e` |
+| MessageBridge        | `0xde9cc59df7484ae2f2d2c1ce7a66dccbd5c8bd11` |
+| ExecutionManager     | `0x1c8a07253c148555bb22cfd514ef7f8777b0dfea` |
 
 ## Quickstart
 
@@ -79,7 +83,7 @@ drwxr-xr-x  7 user  wheel  224 23 Feb 17:40 ..
 
 - Run a local [Neo Express](https://github.com/neo-project/neo-express) instance. The project includes a Neo Express configuration file.
 - Fund Alice's account: `neoxp transfer 100 GAS genesis alice`
-- Go to the `network.bane.scripts.DeployBridgeContracts` class and run it.
+- Go to the `network.bane.scripts.deploy.DeployAll` class and run it.
 
 ## About
 

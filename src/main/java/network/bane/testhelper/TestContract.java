@@ -1,6 +1,8 @@
 package network.bane.testhelper;
 
+import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.Hash160;
+import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.annotations.DisplayName;
 import io.neow3j.devpack.annotations.ManifestExtra;
 import io.neow3j.devpack.annotations.OnNEP17Payment;
@@ -12,6 +14,14 @@ public class TestContract {
 
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
+    }
+
+    public static void store(int key, int value) {
+        Storage.put(Storage.getStorageContext(), key, value);
+    }
+
+    public static ByteString get(int key) {
+        return Storage.get(Storage.getStorageContext(), key);
     }
 
 }

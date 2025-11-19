@@ -1,0 +1,245 @@
+{
+  "name" : "NeoXBridgeManagement",
+  "groups" : [ ],
+  "features" : { },
+  "supportedstandards" : [ ],
+  "abi" : {
+    "methods" : [ {
+      "name" : "_deploy",
+      "parameters" : [ {
+        "name" : "data",
+        "type" : "Any"
+      }, {
+        "name" : "isUpdate",
+        "type" : "Boolean"
+      } ],
+      "offset" : 0,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "setOwner",
+      "parameters" : [ {
+        "name" : "newOwner",
+        "type" : "Hash160"
+      } ],
+      "offset" : 506,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "setRelayer",
+      "parameters" : [ {
+        "name" : "newRelayer",
+        "type" : "Hash160"
+      } ],
+      "offset" : 650,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "addValidator",
+      "parameters" : [ {
+        "name" : "validator",
+        "type" : "PublicKey"
+      }, {
+        "name" : "incrementThreshold",
+        "type" : "Boolean"
+      } ],
+      "offset" : 748,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "removeValidator",
+      "parameters" : [ {
+        "name" : "validator",
+        "type" : "PublicKey"
+      }, {
+        "name" : "decrementThreshold",
+        "type" : "Boolean"
+      } ],
+      "offset" : 831,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "replaceValidator",
+      "parameters" : [ {
+        "name" : "oldValidator",
+        "type" : "PublicKey"
+      }, {
+        "name" : "newValidator",
+        "type" : "PublicKey"
+      } ],
+      "offset" : 917,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "setValidatorThreshold",
+      "parameters" : [ {
+        "name" : "newThreshold",
+        "type" : "Integer"
+      } ],
+      "offset" : 962,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "isValidator",
+      "parameters" : [ {
+        "name" : "validator",
+        "type" : "PublicKey"
+      } ],
+      "offset" : 1011,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "setGovernor",
+      "parameters" : [ {
+        "name" : "newGovernor",
+        "type" : "Hash160"
+      } ],
+      "offset" : 1055,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "setSecurityGuard",
+      "parameters" : [ {
+        "name" : "newSecurityGuard",
+        "type" : "Hash160"
+      } ],
+      "offset" : 1155,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "owner",
+      "parameters" : [ ],
+      "offset" : 1266,
+      "returntype" : "Hash160",
+      "safe" : true
+    }, {
+      "name" : "relayer",
+      "parameters" : [ ],
+      "offset" : 1282,
+      "returntype" : "Hash160",
+      "safe" : true
+    }, {
+      "name" : "validators",
+      "parameters" : [ ],
+      "offset" : 1298,
+      "returntype" : "Array",
+      "safe" : true
+    }, {
+      "name" : "validatorThreshold",
+      "parameters" : [ ],
+      "offset" : 1344,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "verifyValidatorSignatures",
+      "parameters" : [ {
+        "name" : "linkedChainId",
+        "type" : "Integer"
+      }, {
+        "name" : "root",
+        "type" : "ByteArray"
+      }, {
+        "name" : "signatures",
+        "type" : "Map"
+      } ],
+      "offset" : 1362,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "governor",
+      "parameters" : [ ],
+      "offset" : 1572,
+      "returntype" : "Hash160",
+      "safe" : true
+    }, {
+      "name" : "securityGuard",
+      "parameters" : [ ],
+      "offset" : 1588,
+      "returntype" : "Hash160",
+      "safe" : true
+    }, {
+      "name" : "update",
+      "parameters" : [ {
+        "name" : "nef",
+        "type" : "ByteArray"
+      }, {
+        "name" : "manifest",
+        "type" : "String"
+      }, {
+        "name" : "data",
+        "type" : "Any"
+      } ],
+      "offset" : 1652,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "_initialize",
+      "parameters" : [ ],
+      "offset" : 2450,
+      "returntype" : "Void",
+      "safe" : false
+    } ],
+    "events" : [ {
+      "name" : "OwnerChange",
+      "parameters" : [ {
+        "name" : "NewOwner",
+        "type" : "Hash160"
+      } ]
+    }, {
+      "name" : "RelayerChange",
+      "parameters" : [ {
+        "name" : "NewRelayer",
+        "type" : "Hash160"
+      } ]
+    }, {
+      "name" : "ValidatorAdd",
+      "parameters" : [ {
+        "name" : "Validator",
+        "type" : "PublicKey"
+      } ]
+    }, {
+      "name" : "ValidatorRemove",
+      "parameters" : [ {
+        "name" : "Validator",
+        "type" : "PublicKey"
+      } ]
+    }, {
+      "name" : "ValidatorReplace",
+      "parameters" : [ {
+        "name" : "OldValidator",
+        "type" : "PublicKey"
+      }, {
+        "name" : "NewValidator",
+        "type" : "PublicKey"
+      } ]
+    }, {
+      "name" : "ValidatorThresholdChange",
+      "parameters" : [ {
+        "name" : "Threshold",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "GovernorChange",
+      "parameters" : [ {
+        "name" : "NewGovernor",
+        "type" : "Hash160"
+      } ]
+    }, {
+      "name" : "SecurityGuardChange",
+      "parameters" : [ {
+        "name" : "NewSecurityGuard",
+        "type" : "Hash160"
+      } ]
+    } ]
+  },
+  "permissions" : [ {
+    "contract" : "0xfffdc93764dbaddd97c48f252a53ea4643faa3fd",
+    "methods" : [ "update" ]
+  } ],
+  "trusts" : [ ],
+  "extra" : {
+    "Description" : "Contract for managing roles in the bridge",
+    "Author" : "BaneLabs",
+    "Source" : "https://github.com/bane-labs/bridge-neo-contracts"
+  }
+}

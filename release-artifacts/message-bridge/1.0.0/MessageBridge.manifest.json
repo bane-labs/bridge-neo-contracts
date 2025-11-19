@@ -1,0 +1,581 @@
+{
+  "name" : "MessageBridge",
+  "groups" : [ ],
+  "features" : { },
+  "supportedstandards" : [ ],
+  "abi" : {
+    "methods" : [ {
+      "name" : "_deploy",
+      "parameters" : [ {
+        "name" : "data",
+        "type" : "Any"
+      }, {
+        "name" : "isUpdate",
+        "type" : "Boolean"
+      } ],
+      "offset" : 0,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "update",
+      "parameters" : [ {
+        "name" : "nef",
+        "type" : "ByteArray"
+      }, {
+        "name" : "manifest",
+        "type" : "String"
+      }, {
+        "name" : "data",
+        "type" : "Any"
+      } ],
+      "offset" : 276,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "version",
+      "parameters" : [ ],
+      "offset" : 409,
+      "returntype" : "String",
+      "safe" : true
+    }, {
+      "name" : "pause",
+      "parameters" : [ ],
+      "offset" : 426,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "unpause",
+      "parameters" : [ ],
+      "offset" : 468,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "isPaused",
+      "parameters" : [ ],
+      "offset" : 512,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "pauseSending",
+      "parameters" : [ ],
+      "offset" : 530,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "unpauseSending",
+      "parameters" : [ ],
+      "offset" : 579,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "pauseExecuting",
+      "parameters" : [ ],
+      "offset" : 630,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "unpauseExecuting",
+      "parameters" : [ ],
+      "offset" : 681,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "sendingIsPaused",
+      "parameters" : [ ],
+      "offset" : 734,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "executingIsPaused",
+      "parameters" : [ ],
+      "offset" : 752,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "onNEP17Payment",
+      "parameters" : [ {
+        "name" : "from",
+        "type" : "Hash160"
+      }, {
+        "name" : "amount",
+        "type" : "Integer"
+      }, {
+        "name" : "data",
+        "type" : "Any"
+      } ],
+      "offset" : 770,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "linkedChainId",
+      "parameters" : [ ],
+      "offset" : 897,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "management",
+      "parameters" : [ ],
+      "offset" : 915,
+      "returntype" : "Hash160",
+      "safe" : true
+    }, {
+      "name" : "unclaimedFees",
+      "parameters" : [ ],
+      "offset" : 931,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "sendExecutableMessage",
+      "parameters" : [ {
+        "name" : "rawMessage",
+        "type" : "ByteArray"
+      }, {
+        "name" : "storeResult",
+        "type" : "Boolean"
+      }, {
+        "name" : "feeSponsor",
+        "type" : "Hash160"
+      }, {
+        "name" : "maxFee",
+        "type" : "Integer"
+      } ],
+      "offset" : 937,
+      "returntype" : "Integer",
+      "safe" : false
+    }, {
+      "name" : "sendStoreOnlyMessage",
+      "parameters" : [ {
+        "name" : "rawMessage",
+        "type" : "ByteArray"
+      }, {
+        "name" : "feeSponsor",
+        "type" : "Hash160"
+      }, {
+        "name" : "maxFee",
+        "type" : "Integer"
+      } ],
+      "offset" : 961,
+      "returntype" : "Integer",
+      "safe" : false
+    }, {
+      "name" : "sendResultMessage",
+      "parameters" : [ {
+        "name" : "relatedMessageNonce",
+        "type" : "Integer"
+      }, {
+        "name" : "feeSponsor",
+        "type" : "Hash160"
+      }, {
+        "name" : "maxFee",
+        "type" : "Integer"
+      } ],
+      "offset" : 984,
+      "returntype" : "Integer",
+      "safe" : false
+    }, {
+      "name" : "serializeCall",
+      "parameters" : [ {
+        "name" : "target",
+        "type" : "Hash160"
+      }, {
+        "name" : "method",
+        "type" : "String"
+      }, {
+        "name" : "callFlags",
+        "type" : "Integer"
+      }, {
+        "name" : "args",
+        "type" : "Array"
+      } ],
+      "offset" : 1007,
+      "returntype" : "ByteArray",
+      "safe" : true
+    }, {
+      "name" : "isValidCall",
+      "parameters" : [ {
+        "name" : "serializedCall",
+        "type" : "ByteArray"
+      } ],
+      "offset" : 1066,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "isAllowedCall",
+      "parameters" : [ {
+        "name" : "serializedCall",
+        "type" : "ByteArray"
+      } ],
+      "offset" : 1105,
+      "returntype" : "Boolean",
+      "safe" : true
+    }, {
+      "name" : "concatenateOperation",
+      "parameters" : [ {
+        "name" : "message",
+        "type" : "Any"
+      } ],
+      "offset" : 1146,
+      "returntype" : "ByteArray",
+      "safe" : true
+    }, {
+      "name" : "storeMessages",
+      "parameters" : [ {
+        "name" : "evmToNeoRoot",
+        "type" : "ByteArray"
+      }, {
+        "name" : "signatures",
+        "type" : "Map"
+      }, {
+        "name" : "messages",
+        "type" : "Array"
+      } ],
+      "offset" : 1156,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "getMessage",
+      "parameters" : [ {
+        "name" : "nonce",
+        "type" : "Integer"
+      } ],
+      "offset" : 1179,
+      "returntype" : "Any",
+      "safe" : true
+    }, {
+      "name" : "deserialize",
+      "parameters" : [ {
+        "name" : "serializedMessage",
+        "type" : "ByteArray"
+      } ],
+      "offset" : 1189,
+      "returntype" : "Any",
+      "safe" : true
+    }, {
+      "name" : "getMetadata",
+      "parameters" : [ {
+        "name" : "nonce",
+        "type" : "Integer"
+      } ],
+      "offset" : 1245,
+      "returntype" : "Any",
+      "safe" : true
+    }, {
+      "name" : "serializeMetadataExecutable",
+      "parameters" : [ {
+        "name" : "timestamp",
+        "type" : "Integer"
+      }, {
+        "name" : "sender",
+        "type" : "Hash160"
+      }, {
+        "name" : "storeResult",
+        "type" : "Boolean"
+      } ],
+      "offset" : 1255,
+      "returntype" : "Any",
+      "safe" : true
+    }, {
+      "name" : "serializeMetadataStoreOnly",
+      "parameters" : [ {
+        "name" : "timestamp",
+        "type" : "Integer"
+      }, {
+        "name" : "sender",
+        "type" : "Hash160"
+      } ],
+      "offset" : 1320,
+      "returntype" : "Any",
+      "safe" : true
+    }, {
+      "name" : "serializeMetadataResult",
+      "parameters" : [ {
+        "name" : "timestamp",
+        "type" : "Integer"
+      }, {
+        "name" : "sender",
+        "type" : "Hash160"
+      }, {
+        "name" : "initialMessageNonce",
+        "type" : "Integer"
+      } ],
+      "offset" : 1384,
+      "returntype" : "Any",
+      "safe" : true
+    }, {
+      "name" : "getExecutableState",
+      "parameters" : [ {
+        "name" : "nonce",
+        "type" : "Integer"
+      } ],
+      "offset" : 1449,
+      "returntype" : "Any",
+      "safe" : true
+    }, {
+      "name" : "executeMessage",
+      "parameters" : [ {
+        "name" : "nonce",
+        "type" : "Integer"
+      } ],
+      "offset" : 1459,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "getNeoExecutionResult",
+      "parameters" : [ {
+        "name" : "relatedEvmToNeoMessageNonce",
+        "type" : "Integer"
+      } ],
+      "offset" : 1479,
+      "returntype" : "Any",
+      "safe" : true
+    }, {
+      "name" : "getSerializedNeoExecutionResult",
+      "parameters" : [ {
+        "name" : "relatedEvmToNeoMessageNonce",
+        "type" : "Integer"
+      } ],
+      "offset" : 1489,
+      "returntype" : "ByteArray",
+      "safe" : true
+    }, {
+      "name" : "getEvmExecutionResultNonce",
+      "parameters" : [ {
+        "name" : "relatedNeoToEvmMessageNonce",
+        "type" : "Integer"
+      } ],
+      "offset" : 1499,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "getEvmExecutionResult",
+      "parameters" : [ {
+        "name" : "relatedNeoToEvmMessageNonce",
+        "type" : "Integer"
+      } ],
+      "offset" : 1509,
+      "returntype" : "ByteArray",
+      "safe" : true
+    }, {
+      "name" : "getMessageBridge",
+      "parameters" : [ ],
+      "offset" : 1519,
+      "returntype" : "Any",
+      "safe" : true
+    }, {
+      "name" : "sendingFee",
+      "parameters" : [ ],
+      "offset" : 1525,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setSendingFee",
+      "parameters" : [ {
+        "name" : "newFee",
+        "type" : "Integer"
+      } ],
+      "offset" : 1535,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "maxMessageSize",
+      "parameters" : [ ],
+      "offset" : 1576,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setMaxMessageSize",
+      "parameters" : [ {
+        "name" : "newMaxBytes",
+        "type" : "Integer"
+      } ],
+      "offset" : 1586,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "maxNrMessages",
+      "parameters" : [ ],
+      "offset" : 1631,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setMaxNrMessages",
+      "parameters" : [ {
+        "name" : "newMaxNrMessages",
+        "type" : "Integer"
+      } ],
+      "offset" : 1641,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "executionManager",
+      "parameters" : [ ],
+      "offset" : 1685,
+      "returntype" : "Hash160",
+      "safe" : true
+    }, {
+      "name" : "setExecutionManager",
+      "parameters" : [ {
+        "name" : "newExecutionManager",
+        "type" : "Hash160"
+      } ],
+      "offset" : 1695,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "executionWindowMilliseconds",
+      "parameters" : [ ],
+      "offset" : 1742,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setExecutionWindowMilliseconds",
+      "parameters" : [ {
+        "name" : "newExecutionWindowMilliseconds",
+        "type" : "Integer"
+      } ],
+      "offset" : 1752,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "neoToEvmNonce",
+      "parameters" : [ ],
+      "offset" : 1798,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "neoToEvmRoot",
+      "parameters" : [ ],
+      "offset" : 1808,
+      "returntype" : "ByteArray",
+      "safe" : true
+    }, {
+      "name" : "evmToNeoNonce",
+      "parameters" : [ ],
+      "offset" : 1818,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "evmToNeoRoot",
+      "parameters" : [ ],
+      "offset" : 1828,
+      "returntype" : "ByteArray",
+      "safe" : true
+    }, {
+      "name" : "_initialize",
+      "parameters" : [ ],
+      "offset" : 6807,
+      "returntype" : "Void",
+      "safe" : false
+    } ],
+    "events" : [ {
+      "name" : "Pause",
+      "parameters" : [ ]
+    }, {
+      "name" : "Unpause",
+      "parameters" : [ ]
+    }, {
+      "name" : "SendingPause",
+      "parameters" : [ ]
+    }, {
+      "name" : "SendingUnpause",
+      "parameters" : [ ]
+    }, {
+      "name" : "ExecutingPause",
+      "parameters" : [ ]
+    }, {
+      "name" : "ExecutingUnpause",
+      "parameters" : [ ]
+    }, {
+      "name" : "MessageSend",
+      "parameters" : [ {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "Metadata",
+        "type" : "ByteArray"
+      }, {
+        "name" : "Message",
+        "type" : "ByteArray"
+      }, {
+        "name" : "MessageHash",
+        "type" : "ByteArray"
+      }, {
+        "name" : "NeoToEvmRoot",
+        "type" : "ByteArray"
+      } ]
+    }, {
+      "name" : "EvmToNeoRootUpdate",
+      "parameters" : [ {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "EvmToNeoRoot",
+        "type" : "ByteArray"
+      } ]
+    }, {
+      "name" : "Store",
+      "parameters" : [ {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "MetadataBytes",
+        "type" : "ByteArray"
+      } ]
+    }, {
+      "name" : "Execution",
+      "parameters" : [ {
+        "name" : "Nonce",
+        "type" : "Integer"
+      }, {
+        "name" : "NumberOfChunks",
+        "type" : "Integer"
+      }, {
+        "name" : "Index",
+        "type" : "Integer"
+      }, {
+        "name" : "Result",
+        "type" : "Any"
+      } ]
+    }, {
+      "name" : "SendingFeeChange",
+      "parameters" : [ {
+        "name" : "NewFee",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "MaxMessageSizeChange",
+      "parameters" : [ {
+        "name" : "NewMaxBytes",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "MaxNrMessagesChange",
+      "parameters" : [ {
+        "name" : "NewMaxNrMessages",
+        "type" : "Integer"
+      } ]
+    }, {
+      "name" : "ExecutionManagerChange",
+      "parameters" : [ {
+        "name" : "NewExecutionManager",
+        "type" : "Hash160"
+      } ]
+    }, {
+      "name" : "ExecutionWindowChange",
+      "parameters" : [ {
+        "name" : "NewExecutionWindowMilliseconds",
+        "type" : "Integer"
+      } ]
+    } ]
+  },
+  "permissions" : [ {
+    "contract" : "*",
+    "methods" : "*"
+  } ],
+  "trusts" : [ ],
+  "extra" : {
+    "Description" : "Contract for bridging arbitrary messages between Neo N3 and a linked EVM chain.",
+    "Author" : "BaneLabs",
+    "Source" : "https://github.com/bane-labs/bridge-neo-contracts"
+  }
+}

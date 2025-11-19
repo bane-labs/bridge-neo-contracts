@@ -15,14 +15,27 @@ public class BridgeDeploymentParameters {
 
     public static ContractParameter prepareManagementDeployParameter(Hash160 owner, Hash160 relayer,
             List<ECKeyPair.ECPublicKey> validators, Integer threshold, Hash160 governor, Hash160 securityGuard) {
-        return array(hash160(owner), hash160(relayer), array(validators), integer(threshold), hash160(governor),
-                hash160(securityGuard));
+        return array(
+                hash160(owner),
+                hash160(relayer),
+                array(validators),
+                integer(threshold),
+                hash160(governor),
+                hash160(securityGuard)
+        );
     }
 
-    public static ContractParameter prepareBridgeDeployParameter(Hash160 managementContractHash,
-            BigInteger depositFee, BigInteger minDeposit, BigInteger maxDeposit, BigInteger maxTotalDeposited) {
-        return array(hash160(managementContractHash), array(integer(depositFee), integer(minDeposit),
-                integer(maxDeposit), integer(100), integer(maxTotalDeposited)));
+    public static ContractParameter prepareBridgeDeployParameter(BigInteger linkedChain, Hash160 managementContract) {
+        return array(integer(linkedChain), hash160(managementContract));
+    }
+
+    public static ContractParameter prepMsgBridgeDeployParam(BigInteger linkedChain, Hash160 managementContract,
+            Hash160 execManagerHash) {
+        return array(integer(linkedChain), hash160(managementContract), hash160(execManagerHash));
+    }
+
+    public static ContractParameter prepExecManagerDeployParam(Hash160 managementContract, Hash160 messageBridgeHash) {
+        return array(hash160(managementContract), hash160(messageBridgeHash));
     }
 
 }

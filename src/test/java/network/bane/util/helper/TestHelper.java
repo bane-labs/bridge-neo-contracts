@@ -18,11 +18,20 @@ import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
 import network.bane.bridge.BridgeContract;
 import network.bane.management.BridgeManagementContract;
+import network.bane.message.MessageBridgeContract;
+import network.bane.messageexecution.ExecutionManagerContract;
+import network.bane.testhelper.MessageTestStoreContract;
 import network.bane.testhelper.TestContract;
+import network.bane.testhelper.TestMessageSenderContract;
 import network.bane.util.Bridge;
+import network.bane.util.ExecutionManager;
 import network.bane.util.Management;
+import network.bane.util.MessageBridge;
+import network.bane.util.MessageTestStorer;
+import network.bane.util.TestMessageSender;
 import network.bane.util.structs.TokenBridge;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -44,7 +53,9 @@ import static network.bane.util.TestHelper.validator5PubKey;
 import static network.bane.util.TestHelper.validator6PubKey;
 import static network.bane.util.TestHelper.validator7PubKey;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_LINKED_CHAIN_ID;
+import static network.bane.util.helper.DefaultTestValues.EXECUTION_MANAGER_CONTRACT_HASH;
 import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
+import static network.bane.util.helper.DefaultTestValues.MESSAGE_BRIDGE_CONTRACT_HASH;
 import static network.bane.util.helper.NetworkSettingsHelper.updateNetworkSettings;
 
 public class TestHelper {
@@ -57,6 +68,10 @@ public class TestHelper {
 
     public static Bridge bridge;
     public static Management management;
+    public static MessageBridge messageBridge;
+    public static ExecutionManager executionManager;
+    public static MessageTestStorer messageTestStorer;
+    public static TestMessageSender testMessageSender;
 
     public static Hash160 testContract;
     public static final Hash160 neoXNeoTokenHash = new Hash160("0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f");
@@ -69,6 +84,9 @@ public class TestHelper {
 
     public static BigInteger withdrawalNonce = BigInteger.ZERO;
     public static BigInteger depositNonce = BigInteger.ZERO;
+
+    public static BigInteger n3MessageNonce = BigInteger.ZERO;
+    public static BigInteger evmMessageNonce = BigInteger.ZERO;
 
     public static Account alice;
     public static Account bob;
@@ -102,10 +120,42 @@ public class TestHelper {
         updateNetworkSettings(neow3j, committee, alice);
     }
 
-    public static void setupBridge(ContractTestExtension ext) {
+    public static void setupManagement(ContractTestExtension ext) {
         management = new Management(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
+    }
+
+    public static void setupBridge(ContractTestExtension ext) {
+        setupManagement(ext);
         bridge = new Bridge(ext.getDeployedContract(BridgeContract.class).getScriptHash(), neow3j);
+        setupTestContract(ext);
+    }
+
+    public static void setupTestContract(ContractTestExtension ext) {
         testContract = ext.getDeployedContract(TestContract.class).getScriptHash();
+    }
+
+    public static void setupTestMessageSender(ContractTestExtension ext) throws Throwable {
+        if (messageBridge == null) {
+            throw new IllegalStateException("MessageBridge must be set up before TestMessageSender.");
+        }
+        testMessageSender =
+                new TestMessageSender(ext.getDeployedContract(TestMessageSenderContract.class).getScriptHash(), neow3j);
+        testMessageSender.setMessageBridge(messageBridge.getScriptHash());
+    }
+
+    public static void setupMessageBridge(ContractTestExtension ext) {
+        setupManagement(ext);
+        messageBridge = new MessageBridge(ext.getDeployedContract(MessageBridgeContract.class).getScriptHash(), neow3j);
+    }
+
+    public static void setupExecutionManager(ContractTestExtension ext) {
+        executionManager = new ExecutionManager(ext.getDeployedContract(ExecutionManagerContract.class).getScriptHash(),
+                neow3j);
+    }
+
+    public static void setupMessageTestStorer(ContractTestExtension ext) {
+        messageTestStorer = new MessageTestStorer(
+                ext.getDeployedContract(MessageTestStoreContract.class).getScriptHash(), neow3j);
     }
 
     public static DeployConfiguration createBridgeManagementDeployConfig() {
@@ -154,11 +204,54 @@ public class TestHelper {
         return config;
     }
 
+    public static DeployConfiguration createMessageBridgeDeployConfig() {
+        DeployConfiguration config = new DeployConfiguration();
+        config.setDeployParam(
+                prepareMessageBridgeDeployParameter(
+                        DEFAULT_LINKED_CHAIN_ID,
+                        MANAGEMENT_CONTRACT_HASH,
+                        EXECUTION_MANAGER_CONTRACT_HASH
+                )
+        );
+        config.setSigner(AccountSigner.none(owner));
+        return config;
+    }
+
+    private static ContractParameter prepareMessageBridgeDeployParameter(BigInteger linkedChain,
+            Hash160 managementContractHash, Hash160 executionManager) {
+        return array(
+                integer(linkedChain),
+                hash160(managementContractHash),
+                hash160(executionManager)
+        );
+    }
+
+    public static DeployConfiguration createExecutionManagerDeployConfig() {
+        DeployConfiguration config = new DeployConfiguration();
+        config.setDeployParam(
+                prepareExecutionManagerDeployParameter(
+                        MANAGEMENT_CONTRACT_HASH,
+                        MESSAGE_BRIDGE_CONTRACT_HASH
+                )
+        );
+        AccountSigner deploySigner = AccountSigner.none(owner);
+        config.setSigner(deploySigner);
+        return config;
+    }
+
     public static ContractParameter prepareBridgeDeployParameter(BigInteger linkedChainId,
             Hash160 managementContractHash) {
         return array(
                 integer(linkedChainId),
                 hash160(managementContractHash)
+        );
+    }
+
+    private static ContractParameter prepareExecutionManagerDeployParameter(Hash160 managementContractHash,
+            Hash160 bridgeContractHash) {
+        return array(
+                hash160(managementContractHash),
+                hash160(bridgeContractHash)
         );
     }
 
@@ -170,6 +263,14 @@ public class TestHelper {
     public static BigInteger incrementAndGetDepositNonce() {
         depositNonce = depositNonce.add(BigInteger.ONE);
         return depositNonce;
+    }
+
+    public static BigInteger getNextEvmNonce() throws IOException {
+        return messageBridge.getMessageBridge().n3ToEvmMessageState.nonce.add(BigInteger.ONE);
+    }
+
+    public static BigInteger getNextN3Nonce() throws IOException {
+        return messageBridge.getMessageBridge().evmToN3MessageState.nonce.add(BigInteger.ONE);
     }
 
     public static void registerNeoTokenBridge() throws Throwable {

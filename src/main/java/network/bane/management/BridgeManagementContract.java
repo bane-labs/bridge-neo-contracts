@@ -19,7 +19,7 @@ import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.constants.FindOptions;
-import io.neow3j.devpack.constants.NamedCurve;
+import io.neow3j.devpack.constants.NamedCurveHash;
 import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.ContractManagement;
 import io.neow3j.devpack.contracts.CryptoLib;
@@ -95,10 +95,10 @@ public class BridgeManagementContract {
     @OnDeployment
     public static void deploy(Object data, boolean isUpdate) {
         if (isUpdate) {
-            // Make sure that this version of the contract is only used to update a deployed contract in version 1.
-            if (baseMap.getInt(key_version) != 1) abort("Invalid version.");
+            // Make sure that this version of the contract is only used to update a deployed contract in version 3.
+            if (baseMap.getInt(key_version) != 3) abort("Invalid version.");
             // Update internal versioning.
-            baseMap.put(key_version, 3);
+            baseMap.put(key_version, 4);
             // Implement potential storage migration here if needed.
         } else {
             ManagementDeploymentData deploymentData = (ManagementDeploymentData) data;
@@ -126,7 +126,7 @@ public class BridgeManagementContract {
             baseMap.put(key_governor, governor);
             baseMap.put(key_securityguard, securityGuard);
 
-            baseMap.put(key_version, 3);
+            baseMap.put(key_version, 4);
 
             if (!checkWitness(owner())) abort("Owner must witness the deployment.");
         }
@@ -251,7 +251,7 @@ public class BridgeManagementContract {
             ECPoint validator = validators.get(i);
             if (signatures.containsKey(validator)) {
                 boolean verified =
-                        cryptoLib.verifyWithECDsa(msg, validator, signatures.get(validator), NamedCurve.Secp256r1);
+                        cryptoLib.verifyWithECDsa(msg, validator, signatures.get(validator), NamedCurveHash.secp256r1SHA256);
                 if (verified) {
                     covered++;
                 }
