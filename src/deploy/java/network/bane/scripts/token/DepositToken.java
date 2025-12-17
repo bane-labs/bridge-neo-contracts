@@ -52,7 +52,7 @@ public class DepositToken {
         BigInteger amount = getBigIntegerFromEnvVar(TOKEN_DEPOSIT_AMOUNT);
 
         Account from = getAccountFromWallet(personalWalletPath, personalWalletPassword);
-        BigInteger maxFee = bridge.callFunctionReturningInt("tokenDepositFee");
+        BigInteger maxFee = bridge.callFunctionReturningInt("tokenDepositFee", hash160(tokenHash));
 
         Transaction tx = bridge.invokeFunction("depositToken",
                         hash160(tokenHash),
