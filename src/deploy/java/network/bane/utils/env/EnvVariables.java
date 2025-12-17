@@ -128,6 +128,12 @@ public class EnvVariables {
     public static final String TOKEN_REGISTRATION_MAX_WITHDRAWALS = "TOKEN_REGISTRATION_MAX_WITHDRAWALS";
     public static final String TOKEN_REGISTRATION_DECIMAL_SCALING_FACTOR = "TOKEN_REGISTRATION_DECIMAL_SCALING_FACTOR";
 
+    // Distinct Settings
+    public static final String SETTING_TOKEN_HASH = "SETTING_TOKEN_HASH";
+    public static final String NATIVE_DEPOSIT_FEE = "NATIVE_DEPOSIT_FEE";
+    public static final String TOKEN_DEPOSIT_FEE = "TOKEN_DEPOSIT_FEE";
+    public static final String MESSAGE_DEPOSIT_FEE = "MESSAGE_DEPOSIT_FEE";
+
     // Native Bridge Deposit
     public static final String NATIVE_DEPOSIT_RECIPIENT_ON_EVM = "NATIVE_DEPOSIT_RECIPIENT_ON_EVM";
     public static final String NATIVE_DEPOSIT_AMOUNT = "NATIVE_DEPOSIT_AMOUNT";
