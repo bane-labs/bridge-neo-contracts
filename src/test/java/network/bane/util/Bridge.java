@@ -463,6 +463,10 @@ public class Bridge extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("claimToken", hash160(tokenHash), integer(nonce)).signers(signer));
     }
 
+    public boolean isClaimableToken(Hash160 token, BigInteger nonce) throws IOException {
+        return callFunctionReturningBool("isClaimableToken", hash160(token), integer(nonce));
+    }
+
     // endregion
     // region token bridge configuration/state
     // region token bridge configuration

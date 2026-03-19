@@ -183,6 +183,12 @@ public class TokenBridgeImpl {
         }
     }
 
+    public static boolean isClaimableToken(Hash160 token, int nonce) {
+        StorageMap tokenClaimableMap = new StorageMap(BridgeContract.ctx,
+                concat(BridgeContract.PREFIX_TOKEN_CLAIMABLES, token.toByteString()));
+        return tokenClaimableMap.get(nonce) != null;
+    }
+
     // endregion
     // region transfer execution
 
