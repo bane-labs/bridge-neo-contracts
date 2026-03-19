@@ -227,6 +227,10 @@ public class Bridge extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("claimNative", integer(nonce)).signers(signer));
     }
 
+    public boolean isClaimableNative(BigInteger nonce) throws IOException {
+        return callFunctionReturningBool("isClaimableNative", integer(nonce));
+    }
+
     // endregion
     // region native bridge configuration/state
     // region native bridge configuration

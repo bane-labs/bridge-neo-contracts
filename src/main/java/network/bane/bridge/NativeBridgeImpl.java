@@ -194,6 +194,10 @@ public class NativeBridgeImpl {
         }
     }
 
+    static boolean isClaimableNative(int nonce) {
+        return new StorageMap(BridgeContract.ctx, PREFIX_NATIVE_CLAIMABLES).get(nonce) != null;
+    }
+
     static void addNativeClaimable(Withdrawal withdrawal) {
         new StorageMap(BridgeContract.ctx, PREFIX_NATIVE_CLAIMABLES).put(withdrawal.nonce,
                 new StdLib().serialize(new Claimable(withdrawal.to, withdrawal.amount)));
