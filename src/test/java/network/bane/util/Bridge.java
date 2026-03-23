@@ -227,6 +227,10 @@ public class Bridge extends SmartContractHelper {
         return sendAndAwaitExecution(invokeFunction("claimNative", integer(nonce)).signers(signer));
     }
 
+    public boolean isClaimableNative(BigInteger nonce) throws IOException {
+        return callFunctionReturningBool("isClaimableNative", integer(nonce));
+    }
+
     // endregion
     // region native bridge configuration/state
     // region native bridge configuration
@@ -457,6 +461,10 @@ public class Bridge extends SmartContractHelper {
     public Hash256 claimToken(Account sender, Hash160 tokenHash, BigInteger nonce) throws Throwable {
         Signer signer = AccountSigner.none(sender).setAllowedContracts(tokenHash);
         return sendAndAwaitExecution(invokeFunction("claimToken", hash160(tokenHash), integer(nonce)).signers(signer));
+    }
+
+    public boolean isClaimableToken(Hash160 token, BigInteger nonce) throws IOException {
+        return callFunctionReturningBool("isClaimableToken", hash160(token), integer(nonce));
     }
 
     // endregion

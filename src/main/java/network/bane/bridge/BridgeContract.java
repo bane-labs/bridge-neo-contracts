@@ -520,6 +520,20 @@ public class BridgeContract {
         exitingNonReentrant();
     }
 
+    /**
+     * Checks if a withdrawal of the linked chain's native token representative with the provided nonce is claimable,
+     * i.e., it has a contract as recipient or the transfer has failed (this should never happen as long as the
+     * deposited funds are held in this contract).
+     *
+     * @param nonce the nonce of the withdrawal.
+     * @return true if the withdrawal with the provided nonce is claimable, i.e., it has a contract as recipient or
+     * the transfer has failed, and false otherwise.
+     */
+    @Safe
+    public static boolean isClaimableNative(int nonce) {
+        return NativeBridgeImpl.isClaimableNative(nonce);
+    }
+
     // endregion
     // region native bridge configuration/state
     // region native bridge configuration
@@ -754,6 +768,7 @@ public class BridgeContract {
      * In order to claim a withdrawal, provide the nonce of the withdrawal and the amount will be transferred to the
      * already specified recipient.
      *
+     * @param token the token to claim.
      * @param nonce the nonce of the withdrawal that is claimable.
      */
     public static void claimToken(Hash160 token, int nonce) {
@@ -765,6 +780,20 @@ public class BridgeContract {
         TokenBridgeImpl.claimToken(token, nonce);
 
         exitingNonReentrant();
+    }
+
+    /**
+     * Checks if a withdrawal of the linked chain's token with the provided nonce is claimable, i.e., the recipient
+     * is a contract or the token transfer has failed (this should never happen as long as the deposited funds are
+     * held in this contract).
+     *
+     * @param token the token.
+     * @param nonce the nonce of the withdrawal.
+     * @return true if the withdrawal is claimable, and false otherwise.
+     */
+    @Safe
+    public static boolean isClaimableToken(Hash160 token, int nonce) {
+        return TokenBridgeImpl.isClaimableToken(token, nonce);
     }
 
     // endregion

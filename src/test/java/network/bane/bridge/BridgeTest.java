@@ -757,6 +757,8 @@ public class BridgeTest {
         BigInteger amount = bridge.minNativeDeposit().multiply(BigInteger.valueOf(2));
         BigInteger nextNonce = incrementAndGetWithdrawalNonce();
 
+        assertFalse(bridge.isClaimableNative(nextNonce));
+
         String withdrawRootBefore = bridge.nativeWithdrawRoot();
         String d1 = createDepositHash(nextNonce, to, amount);
         String root = concatAndKeccak256(withdrawRootBefore, d1);
@@ -766,6 +768,8 @@ public class BridgeTest {
         bridge.withdrawNative(root, signMsg(validators, root), withdrawal);
         DepositHelper.depositNative(alice, to, amount);
 
+        assertTrue(bridge.isClaimableNative(nextNonce));
+
         Hash256 txHash = bridge.claimNative(alice, nextNonce);
         List<TestHelper.ClaimEvent> claimEvents = getClaimEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(claimEvents, hasSize(1));
@@ -773,6 +777,8 @@ public class BridgeTest {
         assertThat(claimEvent.nonce, is(nextNonce));
         assertThat(claimEvent.to, is(to));
         assertThat(claimEvent.amount, is(amount));
+
+        assertFalse(bridge.isClaimableNative(nextNonce));
     }
 
     // endregion
