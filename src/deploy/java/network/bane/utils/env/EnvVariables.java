@@ -134,7 +134,7 @@ public class EnvVariables {
     public static final String NATIVE_DEPOSIT_MIN_AMOUNT = "NATIVE_DEPOSIT_MIN_AMOUNT";
     public static final String TOKEN_DEPOSIT_FEE = "TOKEN_DEPOSIT_FEE";
     public static final String TOKEN_DEPOSIT_MIN_AMOUNT = "TOKEN_DEPOSIT_MIN_AMOUNT";
-    public static final String MESSAGE_DEPOSIT_FEE = "MESSAGE_DEPOSIT_FEE";
+    public static final String MESSAGE_SENDING_FEE = "MESSAGE_SENDING_FEE";
 
     // Native Bridge Deposit
     public static final String NATIVE_DEPOSIT_RECIPIENT_ON_EVM = "NATIVE_DEPOSIT_RECIPIENT_ON_EVM";
