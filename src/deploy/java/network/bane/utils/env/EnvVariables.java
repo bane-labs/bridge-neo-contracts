@@ -131,7 +131,9 @@ public class EnvVariables {
     // Distinct Settings
     public static final String SETTING_TOKEN_HASH = "SETTING_TOKEN_HASH";
     public static final String NATIVE_DEPOSIT_FEE = "NATIVE_DEPOSIT_FEE";
+    public static final String NATIVE_DEPOSIT_MIN_AMOUNT = "NATIVE_DEPOSIT_MIN_AMOUNT";
     public static final String TOKEN_DEPOSIT_FEE = "TOKEN_DEPOSIT_FEE";
+    public static final String TOKEN_DEPOSIT_MIN_AMOUNT = "TOKEN_DEPOSIT_MIN_AMOUNT";
     public static final String MESSAGE_DEPOSIT_FEE = "MESSAGE_DEPOSIT_FEE";
 
     // Native Bridge Deposit

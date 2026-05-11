@@ -1,8 +1,10 @@
 package network.bane.utils.structs;
 
+import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.types.Hash256;
 
 import java.math.BigInteger;
+import java.util.List;
 
 public class State {
     public BigInteger nonce;
@@ -23,6 +25,13 @@ public class State {
         State state = (State) o;
         return nonce.equals(state.nonce) &&
                 root.equals(state.root);
+    }
+
+    public static State fromStackItem(StackItem item) {
+        List<StackItem> list = item.getList();
+        BigInteger nonce = list.get(0).getInteger();
+        Hash256 root = new Hash256(list.get(1).getByteArray());
+        return new State(nonce, root);
     }
 
     @Override

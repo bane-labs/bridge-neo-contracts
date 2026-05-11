@@ -1,5 +1,6 @@
-package network.bane.scripts.token;
+package network.bane.scripts.token.configure;
 
+import io.neow3j.contract.FungibleToken;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
@@ -23,7 +24,7 @@ import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
-public class SetNativeDepositFee {
+public class NativeSetDepositFee {
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
@@ -31,6 +32,8 @@ public class SetNativeDepositFee {
         String governorWalletPath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
         String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);
         BigInteger depositFee = getBigIntegerFromEnvVar(NATIVE_DEPOSIT_FEE);
+
+        FungibleToken token = new FungibleToken(bridge.callFunctionReturningScriptHash("nativeToken"), neow3j);
 
         Account governorAcc = getAccountFromWallet(governorWalletPath, governorWalletPassword);
 
@@ -48,7 +51,7 @@ public class SetNativeDepositFee {
 
         BigInteger actualDepositFee = bridge.callFunctionReturningInt("nativeDepositFee");
         System.out.println("Native deposit fee set successfully");
-        System.out.printf("New native deposit fee: %s GAS%n", new GasToken(neow3j).toDecimals(actualDepositFee));
+        System.out.printf("New native deposit fee: %s $%s%n", token.toDecimals(actualDepositFee), token.getSymbol());
         System.out.println("Transaction hash: " + txHash);
     }
 
