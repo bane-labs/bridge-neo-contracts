@@ -1,5 +1,7 @@
 package network.bane.scripts.token;
 
+import io.neow3j.contract.FungibleToken;
+import io.neow3j.contract.GasToken;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
@@ -14,9 +16,9 @@ import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
+import static network.bane.utils.PrintHelper.printNetwork;
+import static network.bane.utils.PrintHelper.printSender;
 import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
-import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
-import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
 import static network.bane.utils.env.EnvVariables.NATIVE_SET_DECIMALS_ON_LINKED_CHAIN;
 import static network.bane.utils.env.EnvVariables.NATIVE_SET_DEPOSIT_FEE;
 import static network.bane.utils.env.EnvVariables.NATIVE_SET_MAX_AMOUNT;
@@ -25,10 +27,9 @@ import static network.bane.utils.env.EnvVariables.NATIVE_SET_MAX_WITHDRAWALS;
 import static network.bane.utils.env.EnvVariables.NATIVE_SET_MIN_AMOUNT;
 import static network.bane.utils.env.EnvVariables.NATIVE_SET_TOKEN_FOR_NATIVE_BRIDGE;
 import static network.bane.utils.env.EnvVariables.getBigIntegerFromEnvVar;
-import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
+import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
 
 /**
  * This script sets the native token bridge in the bridge contract.
@@ -53,8 +54,6 @@ public class SetNativeBridge {
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
         SmartContract bridge = new SmartContract(getHash160FromEnvVar(BRIDGE_HASH), neow3j);
-        String governorWalletPath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
-        String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);
         Hash160 tokenForNativeBridge = getHash160FromEnvVar(NATIVE_SET_TOKEN_FOR_NATIVE_BRIDGE);
         BigInteger decimalsOnLinkedChain = getBigIntegerFromEnvVar(NATIVE_SET_DECIMALS_ON_LINKED_CHAIN);
         BigInteger depositFee = getBigIntegerFromEnvVar(NATIVE_SET_DEPOSIT_FEE);
@@ -63,7 +62,24 @@ public class SetNativeBridge {
         BigInteger maxWithdrawals = getBigIntegerFromEnvVar(NATIVE_SET_MAX_WITHDRAWALS);
         BigInteger maxTotalDeposited = getBigIntegerFromEnvVar(NATIVE_SET_MAX_TOTAL_DEPOSITED);
 
-        Account governorAcc = getAccountFromWallet(governorWalletPath, governorWalletPassword);
+        GasToken gasToken = new GasToken(neow3j);
+        FungibleToken token = new FungibleToken(tokenForNativeBridge, neow3j);
+
+        Account governorAcc = getGovernorAccountFromEnv();
+        System.out.println("Set native bridge...");
+        printNetwork(neow3j);
+        printSender(governorAcc.getScriptHash());
+        System.out.println("Token:               " + tokenForNativeBridge);
+        System.out.println("Decimals on EVM:     " + decimalsOnLinkedChain);
+        System.out.printf("Deposit fee:         %s (%s %s)%n" + depositFee, gasToken.toDecimals(depositFee),
+                gasToken.getSymbol());
+        System.out.printf("Min amount:          %s (%s %s)%n", minAmount, token.toDecimals(minAmount),
+                token.getSymbol());
+        System.out.printf("Max amount:          %s (%s %s)%n", maxAmount, token.toDecimals(maxAmount),
+                token.getSymbol());
+        System.out.println("Max withdrawals:     " + maxWithdrawals);
+        System.out.printf("Max total deposited: %s (%s %s)%n", maxTotalDeposited, token.toDecimals(maxTotalDeposited),
+                token.getSymbol());
 
         Transaction tx = bridge.invokeFunction("setNativeBridge",
                         hash160(tokenForNativeBridge),

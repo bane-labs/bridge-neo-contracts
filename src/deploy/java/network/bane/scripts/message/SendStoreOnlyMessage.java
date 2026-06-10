@@ -18,14 +18,14 @@ import static io.neow3j.utils.Numeric.isValidHexString;
 import static network.bane.scripts.message.MessageSendHelper.getMessageSendEvents;
 import static network.bane.scripts.message.MessageSendHelper.printSendingMessageInfo;
 import static network.bane.scripts.message.MessageSendHelper.sendTransaction;
+import static network.bane.utils.PrintHelper.printNetwork;
+import static network.bane.utils.PrintHelper.printSender;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.MESSAGE_SEND_STORE_ONLY_MESSAGE;
-import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_PERSONAL;
-import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_PERSONAL;
 import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
+import static network.bane.utils.env.EnvWallets.getPersonalAccountFromEnv;
 
 /**
  * Sends a store-only message
@@ -45,14 +45,14 @@ public class SendStoreOnlyMessage {
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
         SmartContract messageBridge = new SmartContract(getHash160FromEnvVar(MESSAGE_BRIDGE_HASH), neow3j);
-        String personalWalletPath = getEnvVariable(WALLET_FILEPATH_PERSONAL);
-        String personalWalletPassword = getEnvVariable(WALLET_PASSWORD_PERSONAL);
         String messageToSend = getEnvVariable(MESSAGE_SEND_STORE_ONLY_MESSAGE);
 
-        System.out.println("=== Message Bridge - Send Store-Only Message ===");
-        System.out.println("Using Message Bridge Contract: " + messageBridge.getScriptHash());
+        Account senderAcc = getPersonalAccountFromEnv();
 
-        Account senderAcc = getAccountFromWallet(personalWalletPath, personalWalletPassword);
+        System.out.println("=== Message Bridge - Send Store-Only Message ===");
+        printNetwork(neow3j);
+        printSender(senderAcc.getScriptHash());
+        System.out.println("Using Message Bridge Contract: " + messageBridge.getScriptHash());
 
         byte[] messageData = getMessageDataBytes(messageToSend);
         printSendingMessageInfo(senderAcc, messageData, "Store-Only");

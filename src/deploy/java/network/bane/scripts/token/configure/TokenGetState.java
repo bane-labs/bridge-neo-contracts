@@ -13,17 +13,22 @@ import java.math.BigDecimal;
 
 import static io.neow3j.types.ContractParameter.hash160;
 import static java.util.Arrays.asList;
+import static network.bane.utils.PrintHelper.printNetwork;
 import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.SETTING_TOKEN_HASH;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 
-public class GetStateToken {
+public class TokenGetState {
 
     public static void main(String[] args) throws IOException {
         Neow3j neow3j = getNeow3jFromEnv();
         SmartContract bridge = new SmartContract(getHash160FromEnvVar(BRIDGE_HASH), neow3j);
         Hash160 tokenHash = getHash160FromEnvVar(SETTING_TOKEN_HASH);
+
+        System.out.println("Get token bridge state...");
+        printNetwork(neow3j);
+        System.out.println("Token: " + tokenHash);
 
         StackItem tokenBridgeStateItem = bridge.callInvokeFunction("getTokenBridge", asList(hash160(tokenHash)))
                 .getInvocationResult().getFirstStackItem();

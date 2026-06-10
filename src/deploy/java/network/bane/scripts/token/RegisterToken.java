@@ -1,5 +1,7 @@
 package network.bane.scripts.token;
 
+import io.neow3j.contract.FungibleToken;
+import io.neow3j.contract.GasToken;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
@@ -15,9 +17,9 @@ import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
+import static network.bane.utils.PrintHelper.printNetwork;
+import static network.bane.utils.PrintHelper.printSender;
 import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
-import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
-import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
 import static network.bane.utils.env.EnvVariables.TOKEN_REGISTRATION_DECIMAL_SCALING_FACTOR;
 import static network.bane.utils.env.EnvVariables.TOKEN_REGISTRATION_DEPOSIT_FEE;
 import static network.bane.utils.env.EnvVariables.TOKEN_REGISTRATION_TOKEN_CONTRACT_HASH_ON_EVM;
@@ -26,10 +28,9 @@ import static network.bane.utils.env.EnvVariables.TOKEN_REGISTRATION_MAX_WITHDRA
 import static network.bane.utils.env.EnvVariables.TOKEN_REGISTRATION_MIN_AMOUNT;
 import static network.bane.utils.env.EnvVariables.TOKEN_REGISTRATION_TOKEN_CONTRACT_HASH_ON_N3;
 import static network.bane.utils.env.EnvVariables.getBigIntegerFromEnvVar;
-import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
+import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
 
 /**
  * This script registers a token in the bridge contract.
@@ -54,8 +55,6 @@ public class RegisterToken {
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
         SmartContract bridge = new SmartContract(getHash160FromEnvVar(BRIDGE_HASH), neow3j);
-        String governorWalletPath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
-        String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);
         Hash160 tokenHashOnN3 = getHash160FromEnvVar(TOKEN_REGISTRATION_TOKEN_CONTRACT_HASH_ON_N3);
         Hash160 tokenHashOnEvm = getHash160FromEnvVar(TOKEN_REGISTRATION_TOKEN_CONTRACT_HASH_ON_EVM);
         BigInteger depositFee = getBigIntegerFromEnvVar(TOKEN_REGISTRATION_DEPOSIT_FEE);
@@ -64,7 +63,23 @@ public class RegisterToken {
         BigInteger maxWithdrawals = getBigIntegerFromEnvVar(TOKEN_REGISTRATION_MAX_WITHDRAWALS);
         BigInteger decimalScalingFactor = getBigIntegerFromEnvVar(TOKEN_REGISTRATION_DECIMAL_SCALING_FACTOR);
 
-        Account governorAcc = getAccountFromWallet(governorWalletPath, governorWalletPassword);
+        GasToken gasToken = new GasToken(neow3j);
+        FungibleToken token = new FungibleToken(tokenHashOnN3, neow3j);
+
+        Account governorAcc = getGovernorAccountFromEnv();
+        System.out.println("Register token in bridge...");
+        printNetwork(neow3j);
+        printSender(governorAcc.getScriptHash());
+        System.out.println("Token:                  " + tokenHashOnN3);
+        System.out.println("Token on EVM:           " + tokenHashOnEvm);
+        System.out.printf("Deposit Fee:            %s (%s %s)%n", depositFee, gasToken.toDecimals(depositFee),
+                gasToken.getSymbol());
+        System.out.printf("Min Amount:             %s (%s %s)%n", minAmount, token.toDecimals(minAmount),
+                token.getSymbol());
+        System.out.printf("Max Amount:             %s (%s %s)%n", maxAmount, token.toDecimals(minAmount),
+                token.getSymbol());
+        System.out.println("Max Withdrawals:        " + maxWithdrawals);
+        System.out.println("Decimal Scaling Factor: " + decimalScalingFactor);
 
         Transaction tx = bridge.invokeFunction("registerToken",
                         hash160(tokenHashOnN3),

@@ -48,21 +48,37 @@ public class EnvVariables {
         return value;
     }
 
+    public static String getEnvVariableOrDefault(String variableName, String defaultValue) {
+        String value;
+        try {
+            value = getEnvVariable(variableName);
+        } catch (Exception e) {
+            value = defaultValue;
+        }
+        return value;
+    }
+
     // For local use: "http://127.0.0.1:40332"
     public static final String N3_JSON_RPC = "N3_JSON_RPC";
 
     // Wallets
+    public static final String WALLET_USE_WIF = "WALLET_USE_WIF";
+
     public static final String WALLET_FILEPATH_PERSONAL = "WALLET_FILEPATH_PERSONAL";
     public static final String WALLET_PASSWORD_PERSONAL = "WALLET_PASSWORD_PERSONAL";
+    public static final String WALLET_WIF_PERSONAL = "WALLET_WIF_PERSONAL";
 
     public static final String WALLET_FILEPATH_DEPLOYER = "WALLET_FILEPATH_DEPLOYER";
     public static final String WALLET_PASSWORD_DEPLOYER = "WALLET_PASSWORD_DEPLOYER";
+    public static final String WALLET_WIF_DEPLOYER = "WALLET_WIF_DEPLOYER";
 
     public static final String WALLET_FILEPATH_OWNER = "WALLET_FILEPATH_OWNER";
     public static final String WALLET_PASSWORD_OWNER = "WALLET_PASSWORD_OWNER";
+    public static final String WALLET_WIF_OWNER = "WALLET_WIF_OWNER";
 
     public static final String WALLET_FILEPATH_GOVERNOR = "WALLET_FILEPATH_GOVERNOR";
     public static final String WALLET_PASSWORD_GOVERNOR = "WALLET_PASSWORD_GOVERNOR";
+    public static final String WALLET_WIF_GOVERNOR = "WALLET_WIF_GOVERNOR";
 
     // Contract Addresses
     public static final String BRIDGE_HASH = "BRIDGE_HASH";

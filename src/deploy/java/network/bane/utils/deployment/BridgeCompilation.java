@@ -58,6 +58,7 @@ import static network.bane.utils.env.EnvVariables.getBigIntegerFromEnvVar;
 import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getIntegerFromEnvVar;
 import static network.bane.utils.env.EnvVariables.getPublicKeyFromEnvVar;
+import static network.bane.utils.env.EnvWallets.getDeployerAccountFromEnv;
 import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
 
 public class BridgeCompilation {
@@ -65,9 +66,6 @@ public class BridgeCompilation {
     private static final int MAX_NR_VALIDATORS = 7;
 
     public static Hash160 compileAndPrintManagementDeploymentTxData(Neow3j neow3j) throws Throwable {
-        String deployerWalletPath = getEnvVariable(WALLET_FILEPATH_DEPLOYER);
-        String deployerWalletPassword = getEnvVariable(WALLET_PASSWORD_DEPLOYER);
-
         String managementContractName = getEnvVariable(MANAGEMENT_CONTRACT_NAME);
 
         int validatorThreshold = getIntegerFromEnvVar(MANAGEMENT_VALIDATOR_THRESHOLD);
@@ -107,7 +105,7 @@ public class BridgeCompilation {
             validatorList.add(getPublicKeyFromEnvVar(validatorEnvVars.get(i)));
         }
 
-        Account deployerAcc = getAccountFromWallet(deployerWalletPath, deployerWalletPassword);
+        Account deployerAcc = getDeployerAccountFromEnv();
 
         // Prepare the deployment parameter for the bridge management contract
         ContractParameter managementDeployParameter = prepareManagementDeployParameter(owner,

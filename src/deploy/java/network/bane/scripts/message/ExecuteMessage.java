@@ -16,14 +16,14 @@ import static network.bane.scripts.message.MessageSendHelper.checkExecutionResul
 import static network.bane.scripts.message.MessageSendHelper.checkThatMessageExists;
 import static network.bane.scripts.message.MessageSendHelper.printStateRoot;
 import static network.bane.scripts.message.MessageSendHelper.sendTransaction;
+import static network.bane.utils.PrintHelper.printNetwork;
+import static network.bane.utils.PrintHelper.printSender;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.MESSAGE_NONCE;
-import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_PERSONAL;
-import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_PERSONAL;
 import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
+import static network.bane.utils.env.EnvWallets.getPersonalAccountFromEnv;
 
 /**
  * Executes a message by its nonce
@@ -42,14 +42,15 @@ public class ExecuteMessage {
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
         SmartContract messageBridge = new SmartContract(getHash160FromEnvVar(MESSAGE_BRIDGE_HASH), neow3j);
-        String personalWalletPath = getEnvVariable(WALLET_FILEPATH_PERSONAL);
-        String personalWalletPassword = getEnvVariable(WALLET_PASSWORD_PERSONAL);
         String nonceStr = getEnvVariable(MESSAGE_NONCE);
 
+        Account executorAcc = getPersonalAccountFromEnv();
+
         System.out.println("=== Message Bridge - Execute Message ===");
+        printNetwork(neow3j);
+        printSender(executorAcc.getScriptHash());
         System.out.println("Using Message Bridge Contract: " + messageBridge.getScriptHash());
 
-        Account executorAcc = getAccountFromWallet(personalWalletPath, personalWalletPassword);
         BigInteger nonce = new BigInteger(nonceStr);
 
         System.out.println("Executor Account: " + executorAcc.getAddress());

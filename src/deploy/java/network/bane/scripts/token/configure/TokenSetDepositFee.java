@@ -1,5 +1,6 @@
 package network.bane.scripts.token.configure;
 
+import io.neow3j.contract.FungibleToken;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
@@ -16,28 +17,33 @@ import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.map;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
+import static network.bane.utils.PrintHelper.printNetwork;
+import static network.bane.utils.PrintHelper.printSender;
 import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.SETTING_TOKEN_HASH;
 import static network.bane.utils.env.EnvVariables.TOKEN_DEPOSIT_FEE;
-import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
-import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
 import static network.bane.utils.env.EnvVariables.getBigIntegerFromEnvVar;
-import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
+import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
 
 public class TokenSetDepositFee {
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
         SmartContract bridge = new SmartContract(getHash160FromEnvVar(BRIDGE_HASH), neow3j);
-        String governorWalletPath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
-        String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);
         Hash160 tokenHash = getHash160FromEnvVar(SETTING_TOKEN_HASH);
         BigInteger depositFee = getBigIntegerFromEnvVar(TOKEN_DEPOSIT_FEE);
+        FungibleToken gasToken = new GasToken(neow3j);
 
-        Account governorAcc = getAccountFromWallet(governorWalletPath, governorWalletPassword);
+        Account governorAcc = getGovernorAccountFromEnv();
+
+        System.out.println("Setting token deposit fee...");
+        printNetwork(neow3j);
+        printSender(governorAcc.getScriptHash());
+        System.out.println("Token:   " + tokenHash);
+        System.out.printf("New fee: %s (%s $%s) %n" + depositFee, gasToken.toDecimals(depositFee),
+                gasToken.getSymbol());
 
         HashMap<Hash160, BigInteger> feeMap = new HashMap<>();
         feeMap.put(tokenHash, depositFee);

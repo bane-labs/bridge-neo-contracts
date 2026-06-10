@@ -13,13 +13,12 @@ import static network.bane.scripts.token.unpause.Unpause.unpause;
 import static network.bane.scripts.token.unpause.UnpauseDeposits.unpauseDeposits;
 import static network.bane.scripts.token.unpause.UnpauseNativeBridge.unpauseNativeBridge;
 import static network.bane.scripts.token.unpause.UnpauseTokenBridge.unpauseTokenBridge;
+import static network.bane.utils.PrintHelper.printNetwork;
+import static network.bane.utils.PrintHelper.printSender;
 import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
-import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
-import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
-import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
+import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
 
 public class UnpauseAll {
 
@@ -27,17 +26,18 @@ public class UnpauseAll {
         Neow3j neow3j = getNeow3jFromEnv();
         Hash160 bridgeHash = getHash160FromEnvVar(BRIDGE_HASH);
 
-        String governorWalletFilepath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
-        String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);
+        Account governorAcc = getGovernorAccountFromEnv();
 
-        Account governor = getAccountFromWallet(governorWalletFilepath, governorWalletPassword);
+        System.out.println("Unpausing all components of the token bridge...");
+        printNetwork(neow3j);
+        printSender(governorAcc.getScriptHash());
 
-        unpause(neow3j, bridgeHash, governor);
-        unpauseNativeBridge(neow3j, bridgeHash, governor);
-        unpauseDeposits(neow3j, bridgeHash, governor);
+        unpause(neow3j, bridgeHash, governorAcc);
+        unpauseNativeBridge(neow3j, bridgeHash, governorAcc);
+        unpauseDeposits(neow3j, bridgeHash, governorAcc);
 
         for (Hash160 token : getRegisteredTokenBridges(neow3j, bridgeHash)) {
-            unpauseTokenBridge(neow3j, bridgeHash, token, governor);
+            unpauseTokenBridge(neow3j, bridgeHash, token, governorAcc);
         }
     }
 

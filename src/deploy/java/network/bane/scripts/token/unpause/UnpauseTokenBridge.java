@@ -13,14 +13,13 @@ import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static network.bane.utils.PrintHelper.printNetwork;
+import static network.bane.utils.PrintHelper.printSender;
 import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.UNPAUSE_TOKEN_HASH;
-import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
-import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
-import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
+import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
 
 public class UnpauseTokenBridge {
 
@@ -29,12 +28,14 @@ public class UnpauseTokenBridge {
         Hash160 bridgeHash = getHash160FromEnvVar(BRIDGE_HASH);
         Hash160 tokenHash = getHash160FromEnvVar(UNPAUSE_TOKEN_HASH);
 
-        String governorWalletFilepath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
-        String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);
+        Account governorAcc = getGovernorAccountFromEnv();
 
-        Account governor = getAccountFromWallet(governorWalletFilepath, governorWalletPassword);
+        System.out.println("Unpause token bridge...");
+        printNetwork(neow3j);
+        printSender(governorAcc.getScriptHash());
+        System.out.println("Token: " + tokenHash);
 
-        unpauseTokenBridge(neow3j, bridgeHash, tokenHash, governor);
+        unpauseTokenBridge(neow3j, bridgeHash, tokenHash, governorAcc);
     }
 
     static void unpauseTokenBridge(Neow3j neow3j, Hash160 bridgeContractHash, Hash160 tokenHash, Account governor)

@@ -10,13 +10,12 @@ import io.neow3j.wallet.Account;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
+import static network.bane.utils.PrintHelper.printNetwork;
+import static network.bane.utils.PrintHelper.printSender;
 import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
-import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
-import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
-import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
+import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
 
 public class Pause {
 
@@ -24,12 +23,13 @@ public class Pause {
         Neow3j neow3j = getNeow3jFromEnv();
         Hash160 bridgeHash = getHash160FromEnvVar(BRIDGE_HASH);
 
-        String governorWalletFilepath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
-        String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);
+        Account governorAcc = getGovernorAccountFromEnv();
 
-        Account governor = getAccountFromWallet(governorWalletFilepath, governorWalletPassword);
+        System.out.println("Pause bridge...");
+        printNetwork(neow3j);
+        printSender(governorAcc.getScriptHash());
 
-        pause(neow3j, bridgeHash, governor);
+        pause(neow3j, bridgeHash, governorAcc);
     }
 
     private static void pause(Neow3j neow3j, Hash160 bridgeContractHash, Account governor) throws Throwable {

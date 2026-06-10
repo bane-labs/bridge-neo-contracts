@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.List;
 
 import static io.neow3j.types.ContractParameter.hash160;
+import static network.bane.utils.PrintHelper.printNetwork;
 import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
@@ -33,6 +34,9 @@ public class GetRegisteredTokens {
     public static void main(String[] args) throws IOException {
         Neow3j neow3j = getNeow3jFromEnv();
         SmartContract bridge = new SmartContract(getHash160FromEnvVar(BRIDGE_HASH), neow3j);
+
+        System.out.println("Get registered tokens...");
+        printNetwork(neow3j);
 
         List<StackItem> registeredTokensStack = bridge.callInvokeFunction("getRegisteredTokens")
                 .getInvocationResult().getFirstStackItem().getList();

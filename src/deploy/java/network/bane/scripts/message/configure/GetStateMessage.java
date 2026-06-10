@@ -9,6 +9,7 @@ import network.bane.utils.structs.MessageBridge;
 import java.io.IOException;
 import java.math.BigDecimal;
 
+import static network.bane.utils.PrintHelper.printNetwork;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
@@ -18,6 +19,9 @@ public class GetStateMessage {
     public static void main(String[] args) throws IOException {
         Neow3j neow3j = getNeow3jFromEnv();
         SmartContract bridge = new SmartContract(getHash160FromEnvVar(MESSAGE_BRIDGE_HASH), neow3j);
+
+        System.out.println("Get message bridge state...");
+        printNetwork(neow3j);
 
         StackItem msgBridgeStateItem = bridge.callInvokeFunction("getMessageBridge").getInvocationResult()
                 .getFirstStackItem();

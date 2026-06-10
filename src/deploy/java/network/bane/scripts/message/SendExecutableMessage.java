@@ -18,16 +18,16 @@ import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static network.bane.scripts.message.MessageSendHelper.getMessageSendEvents;
 import static network.bane.scripts.message.MessageSendHelper.printSendingMessageInfo;
 import static network.bane.scripts.message.MessageSendHelper.sendTransaction;
+import static network.bane.utils.PrintHelper.printNetwork;
+import static network.bane.utils.PrintHelper.printSender;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.MESSAGE_SEND_EXECUTABLE_MESSAGE;
 import static network.bane.utils.env.EnvVariables.MESSAGE_SEND_EXECUTABLE_STORE_BOOL;
-import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_PERSONAL;
-import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_PERSONAL;
 import static network.bane.utils.env.EnvVariables.getBooleanFromEnvVar;
 import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
+import static network.bane.utils.env.EnvWallets.getPersonalAccountFromEnv;
 
 /**
  * Sends an executable message
@@ -47,14 +47,14 @@ public class SendExecutableMessage {
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
         SmartContract messageBridge = new SmartContract(getHash160FromEnvVar(MESSAGE_BRIDGE_HASH), neow3j);
-        String personalWalletPath = getEnvVariable(WALLET_FILEPATH_PERSONAL);
-        String personalWalletPassword = getEnvVariable(WALLET_PASSWORD_PERSONAL);
         String messageToSend = getEnvVariable(MESSAGE_SEND_EXECUTABLE_MESSAGE);
         boolean storeResult = getBooleanFromEnvVar(MESSAGE_SEND_EXECUTABLE_STORE_BOOL);
 
-        Account senderAcc = getAccountFromWallet(personalWalletPath, personalWalletPassword);
+        Account senderAcc = getPersonalAccountFromEnv();
 
         System.out.println("=== Message Bridge - Send Executable Message ===");
+        printNetwork(neow3j);
+        printSender(senderAcc.getScriptHash());
         System.out.println("Using Message Bridge Contract: " + messageBridge.getScriptHash());
 
         byte[] messageData = hexStringToByteArray(messageToSend);

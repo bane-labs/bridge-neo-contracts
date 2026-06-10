@@ -8,6 +8,7 @@ import java.math.BigInteger;
 import static network.bane.scripts.message.MessageSendHelper.checkExecutionResult;
 import static network.bane.scripts.message.MessageSendHelper.checkThatMessageExists;
 import static network.bane.scripts.message.MessageSendHelper.printStateRoot;
+import static network.bane.utils.PrintHelper.printNetwork;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.MESSAGE_NONCE;
 import static network.bane.utils.env.EnvVariables.getEnvVariable;
@@ -33,6 +34,9 @@ public class GetMessageAndStates {
         Neow3j neow3j = getNeow3jFromEnv();
         SmartContract messageBridge = new SmartContract(getHash160FromEnvVar(MESSAGE_BRIDGE_HASH), neow3j);
         String nonceStr = getEnvVariable(MESSAGE_NONCE);
+
+        System.out.println("Get message and state roots from message bridge...");
+        printNetwork(neow3j);
 
         BigInteger nonce = new BigInteger(nonceStr);
 

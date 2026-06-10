@@ -14,30 +14,29 @@ import java.math.BigInteger;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
+import static network.bane.utils.PrintHelper.printNetwork;
+import static network.bane.utils.PrintHelper.printSender;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.MESSAGE_SENDING_FEE;
-import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
-import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
 import static network.bane.utils.env.EnvVariables.getBigIntegerFromEnvVar;
-import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
+import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
 
 public class SetSendingFee {
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
         Hash160 msgBridgeHash = getHash160FromEnvVar(MESSAGE_BRIDGE_HASH);
-
         BigInteger sendingFee = getBigIntegerFromEnvVar(MESSAGE_SENDING_FEE);
-
-        String governorWalletFilepath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
-        String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);
-
         GasToken gasToken = new GasToken(neow3j);
 
-        Account governor = getAccountFromWallet(governorWalletFilepath, governorWalletPassword);
+        Account governorAcc = getGovernorAccountFromEnv();
+
+        System.out.println("Setting sending fee in message bridge...");
+        printNetwork(neow3j);
+        printSender(governorAcc.getScriptHash());
+        System.out.printf("New fee: %s (%s %s)", sendingFee, gasToken.toDecimals(sendingFee), gasToken.getSymbol());
 
         SmartContract msgBridge = new SmartContract(msgBridgeHash, neow3j);
 
@@ -51,7 +50,7 @@ public class SetSendingFee {
         System.out.printf("\nSetting sending fee to: %s (%s $GAS)\n", sendingFee, gasToken.toDecimals(sendingFee));
 
         Transaction tx = msgBridge.invokeFunction("setSendingFee", integer(sendingFee))
-                .signers(calledByEntry(governor))
+                .signers(calledByEntry(governorAcc))
                 .sign();
 
         NeoSendRawTransaction rawTxResponse = tx.send();

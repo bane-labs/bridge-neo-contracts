@@ -7,13 +7,12 @@ import io.neow3j.wallet.Account;
 import static network.bane.scripts.message.unpause.Unpause.unpause;
 import static network.bane.scripts.message.unpause.UnpauseExecuting.unpauseExecuting;
 import static network.bane.scripts.message.unpause.UnpauseSending.unpauseSending;
+import static network.bane.utils.PrintHelper.printNetwork;
+import static network.bane.utils.PrintHelper.printSender;
 import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
-import static network.bane.utils.env.EnvVariables.WALLET_FILEPATH_GOVERNOR;
-import static network.bane.utils.env.EnvVariables.WALLET_PASSWORD_GOVERNOR;
-import static network.bane.utils.env.EnvVariables.getEnvVariable;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
+import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
 
 public class UnpauseAll {
 
@@ -21,14 +20,15 @@ public class UnpauseAll {
         Neow3j neow3j = getNeow3jFromEnv();
         Hash160 bridgeHash = getHash160FromEnvVar(MESSAGE_BRIDGE_HASH);
 
-        String governorWalletFilepath = getEnvVariable(WALLET_FILEPATH_GOVERNOR);
-        String governorWalletPassword = getEnvVariable(WALLET_PASSWORD_GOVERNOR);
+        Account governorAcc = getGovernorAccountFromEnv();
 
-        Account governor = getAccountFromWallet(governorWalletFilepath, governorWalletPassword);
+        System.out.println("Unpause all in message bridge...");
+        printNetwork(neow3j);
+        printSender(governorAcc.getScriptHash());
 
-        unpause(neow3j, bridgeHash, governor);
-        unpauseSending(neow3j, bridgeHash, governor);
-        unpauseExecuting(neow3j, bridgeHash, governor);
+        unpause(neow3j, bridgeHash, governorAcc);
+        unpauseSending(neow3j, bridgeHash, governorAcc);
+        unpauseExecuting(neow3j, bridgeHash, governorAcc);
     }
 
 }
