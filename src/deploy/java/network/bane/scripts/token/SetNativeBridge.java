@@ -71,7 +71,7 @@ public class SetNativeBridge {
         printSender(governorAcc.getScriptHash());
         System.out.println("Token:               " + tokenForNativeBridge);
         System.out.println("Decimals on EVM:     " + decimalsOnLinkedChain);
-        System.out.printf("Deposit fee:         %s (%s %s)%n" + depositFee, gasToken.toDecimals(depositFee),
+        System.out.printf("Deposit fee:         %s (%s %s)%n", depositFee, gasToken.toDecimals(depositFee),
                 gasToken.getSymbol());
         System.out.printf("Min amount:          %s (%s %s)%n", minAmount, token.toDecimals(minAmount),
                 token.getSymbol());

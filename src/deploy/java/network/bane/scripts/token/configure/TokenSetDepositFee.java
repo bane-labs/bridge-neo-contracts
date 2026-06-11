@@ -42,8 +42,7 @@ public class TokenSetDepositFee {
         printNetwork(neow3j);
         printSender(governorAcc.getScriptHash());
         System.out.println("Token:   " + tokenHash);
-        System.out.printf("New fee: %s (%s $%s) %n" + depositFee, gasToken.toDecimals(depositFee),
-                gasToken.getSymbol());
+        System.out.printf("New fee: %s (%s $%s)%n", depositFee, gasToken.toDecimals(depositFee), gasToken.getSymbol());
 
         HashMap<Hash160, BigInteger> feeMap = new HashMap<>();
         feeMap.put(tokenHash, depositFee);

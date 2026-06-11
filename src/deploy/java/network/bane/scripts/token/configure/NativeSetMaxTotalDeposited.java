@@ -34,7 +34,7 @@ public class NativeSetMaxTotalDeposited {
         Account governorAcc = getGovernorAccountFromEnv();
 
         System.out.println("Setting native max total deposited...");
-        System.out.printf("New value: %s (%s $%s) %n" + maxTotalDeposited, token.toDecimals(maxTotalDeposited),
+        System.out.printf("New value: %s (%s $%s)%n", maxTotalDeposited, token.toDecimals(maxTotalDeposited),
                 token.getSymbol());
         printNetwork(neow3j);
         printSender(governorAcc.getScriptHash());

@@ -40,7 +40,7 @@ public class NativeSetMinAmount {
         Account governorAcc = getGovernorAccountFromEnv();
 
         System.out.println("Setting native min deposit amount...");
-        System.out.printf("New value: %s (%s $%s) %n" + minDepositAmount, token.toDecimals(minDepositAmount),
+        System.out.printf("New value: %s (%s $%s)%n", minDepositAmount, token.toDecimals(minDepositAmount),
                 token.getSymbol());
         printNetwork(neow3j);
         printSender(governorAcc.getScriptHash());

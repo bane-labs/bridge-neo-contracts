@@ -47,7 +47,7 @@ public class TokenSetMinAmount {
         printNetwork(neow3j);
         printSender(governorAcc.getScriptHash());
         System.out.println("Token:     " + tokenHash);
-        System.out.printf("New value: %s (%s $%s) %n" + minDepositAmount, token.toDecimals(minDepositAmount),
+        System.out.printf("New value: %s (%s $%s)%n", minDepositAmount, token.toDecimals(minDepositAmount),
                 token.getSymbol());
 
         HashMap<Hash160, BigInteger> minAmountMap = new HashMap<>();

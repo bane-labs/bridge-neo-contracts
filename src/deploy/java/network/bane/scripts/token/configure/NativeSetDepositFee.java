@@ -38,7 +38,7 @@ public class NativeSetDepositFee {
         System.out.println("Setting native deposit fee...");
         printNetwork(neow3j);
         printSender(governorAcc.getScriptHash());
-        System.out.printf("New fee: %s (%s $%s)%n" + depositFee, gasToken.toDecimals(depositFee), gasToken.getSymbol());
+        System.out.printf("New fee: %s (%s $%s)%n", depositFee, gasToken.toDecimals(depositFee), gasToken.getSymbol());
 
         Transaction tx = bridge.invokeFunction("setNativeDepositFee", integer(depositFee))
                 .signers(calledByEntry(governorAcc))
