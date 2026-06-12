@@ -5,8 +5,8 @@ import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
-import network.bane.utils.structs.State;
-import network.bane.utils.structs.TokenBridge;
+import network.bane.dto.State;
+import network.bane.dto.bridge.TokenBridge;
 
 import java.io.IOException;
 import java.util.List;
@@ -16,7 +16,7 @@ import static network.bane.utils.PrintHelper.printNetwork;
 import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
-import static network.bane.utils.structs.TokenBridge.TokenConfig;
+import static network.bane.dto.bridge.TokenBridge.TokenConfig;
 import static java.util.Arrays.asList;
 
 /**

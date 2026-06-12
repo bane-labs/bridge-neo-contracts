@@ -1,7 +1,8 @@
-package network.bane.utils.structs;
+package network.bane.dto.message;
 
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.types.Hash160;
+import network.bane.dto.State;
 
 import java.math.BigInteger;
 import java.util.List;

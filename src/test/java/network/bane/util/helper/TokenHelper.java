@@ -1,6 +1,6 @@
 package network.bane.util.helper;
 
-import network.bane.util.structs.TokenBridge;
+import network.bane.dto.bridge.TokenBridge;
 
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_DEPOSIT;

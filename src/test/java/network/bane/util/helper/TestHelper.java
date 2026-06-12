@@ -29,7 +29,7 @@ import network.bane.util.Management;
 import network.bane.util.MessageBridge;
 import network.bane.util.MessageTestStorer;
 import network.bane.util.TestMessageSender;
-import network.bane.util.structs.TokenBridge;
+import network.bane.dto.bridge.TokenBridge;
 
 import java.io.IOException;
 import java.math.BigDecimal;

@@ -6,11 +6,12 @@ import java.math.BigInteger;
 import java.util.Objects;
 
 public class MessageBridgeDto {
-    public State evmToN3MessageState;
-    public State n3ToEvmMessageState;
+    public network.bane.dto.State evmToN3MessageState;
+    public network.bane.dto.State n3ToEvmMessageState;
     public MessageConfigDto config;
 
-    public MessageBridgeDto(State evmToN3MessageState, State n3ToEvmMessageState, MessageConfigDto config) {
+    public MessageBridgeDto(network.bane.dto.State evmToN3MessageState, network.bane.dto.State n3ToEvmMessageState,
+            MessageConfigDto config) {
         this.evmToN3MessageState = evmToN3MessageState;
         this.n3ToEvmMessageState = n3ToEvmMessageState;
         this.config = config;

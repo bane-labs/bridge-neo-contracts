@@ -6,7 +6,7 @@ import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.types.Hash160;
-import network.bane.utils.structs.TokenBridge;
+import network.bane.dto.bridge.TokenBridge;
 
 import java.io.IOException;
 import java.math.BigDecimal;

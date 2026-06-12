@@ -15,6 +15,7 @@ import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
+import network.bane.dto.State;
 import network.bane.util.helper.SmartContractHelper;
 import network.bane.util.structs.ExecutableStateDto;
 import network.bane.util.structs.MessageBridgeDto;
@@ -22,7 +23,6 @@ import network.bane.util.structs.N3MessageDto;
 import network.bane.util.structs.N3MessageMetadataExecDto;
 import network.bane.util.structs.N3MessageMetadataResultDto;
 import network.bane.util.structs.N3MessageMetadataStoreOnlyDto;
-import network.bane.util.structs.State;
 
 import java.io.IOException;
 import java.math.BigInteger;

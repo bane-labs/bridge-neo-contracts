@@ -4,7 +4,7 @@ import io.neow3j.contract.GasToken;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.stackitem.StackItem;
-import network.bane.utils.structs.MessageBridge;
+import network.bane.dto.message.MessageBridge;
 
 import java.io.IOException;
 import java.math.BigDecimal;

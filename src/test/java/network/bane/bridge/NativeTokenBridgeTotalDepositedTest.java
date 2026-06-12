@@ -16,10 +16,10 @@ import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.types.NeoVMStateType;
 import io.neow3j.wallet.Account;
+import network.bane.dto.bridge.NativeBridge;
+import network.bane.dto.State;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
-import network.bane.util.structs.NativeBridge;
-import network.bane.util.structs.State;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -166,7 +166,7 @@ public class NativeTokenBridgeTotalDepositedTest {
         bridge.setMaxTotalDepositedNative(newMaxTotalDepositedNative);
         // Update max gas deposit as well to allow greater amounts in single deposits.
         bridge.setMaxNativeDeposit(gasToken.toFractions(new BigDecimal("4900")));
-        assertThat(bridge.getNativeBridge().config.maxTotalDeposit, is(newMaxTotalDepositedNative));
+        assertThat(bridge.getNativeBridge().config.maxTotalDeposited, is(newMaxTotalDepositedNative));
 
         // The max amount that can still be deposited is 5000 - 370 = 4630.
         // Depositing > 4630 should fail.
@@ -187,7 +187,7 @@ public class NativeTokenBridgeTotalDepositedTest {
 
         // Increasing the max total deposited gas should enable a gas deposit of 1 to work again.
         bridge.setMaxTotalDepositedNative(gasToken.toFractions(new BigDecimal("5001")));
-        assertThat(bridge.getNativeBridge().config.maxTotalDeposit, is(gasToken.toFractions(new BigDecimal("5001"))));
+        assertThat(bridge.getNativeBridge().config.maxTotalDeposited, is(gasToken.toFractions(new BigDecimal("5001"))));
         assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("5000"))));
 
         // Depositing 1 should not fail.

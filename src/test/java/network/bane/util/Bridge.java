@@ -14,10 +14,10 @@ import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
+import network.bane.dto.bridge.NativeBridge;
+import network.bane.dto.State;
+import network.bane.dto.bridge.TokenBridge;
 import network.bane.util.helper.SmartContractHelper;
-import network.bane.util.structs.NativeBridge;
-import network.bane.util.structs.State;
-import network.bane.util.structs.TokenBridge;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -39,7 +39,7 @@ import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_DEPOSIT;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_DEPOSIT;
 import static network.bane.util.helper.DefaultTestValues.DEFAULT_TOTAL_MAX_DEPOSITED_NATIVE;
-import static network.bane.util.structs.TokenBridge.getAsContractParameter;
+import static network.bane.dto.bridge.TokenBridge.getAsContractParameter;
 
 public class Bridge extends SmartContractHelper {
 
@@ -307,7 +307,7 @@ public class Bridge extends SmartContractHelper {
     }
 
     public BigInteger maxTotalDepositedNative() throws IOException {
-        return getNativeBridge().config.maxTotalDeposit;
+        return getNativeBridge().config.maxTotalDeposited;
     }
 
     public Hash256 setMaxTotalDepositedNative(BigInteger newMax) throws Throwable {

@@ -5,7 +5,7 @@ import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
-import network.bane.utils.structs.TokenBridge;
+import network.bane.dto.bridge.TokenBridge;
 
 import java.io.IOException;
 import java.math.BigInteger;

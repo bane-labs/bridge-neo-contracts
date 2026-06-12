@@ -1,10 +1,16 @@
-package network.bane.utils.structs;
+package network.bane.dto.bridge;
 
 import io.neow3j.protocol.core.stackitem.StackItem;
+import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
+import network.bane.dto.State;
 
 import java.math.BigInteger;
 import java.util.List;
+
+import static io.neow3j.types.ContractParameter.array;
+import static io.neow3j.types.ContractParameter.hash160;
+import static io.neow3j.types.ContractParameter.integer;
 
 public class TokenBridge {
     public boolean paused;
@@ -24,8 +30,19 @@ public class TokenBridge {
         boolean paused = list.get(0).getBoolean();
         State depositState = State.fromStackItem(list.get(1));
         State withdrawalState = State.fromStackItem(list.get(2));
-        TokenBridge.TokenConfig config = TokenBridge.TokenConfig.fromStackItem(list.get(3));
+        TokenConfig config = TokenConfig.fromStackItem(list.get(3));
         return new TokenBridge(paused, depositState, withdrawalState, config);
+    }
+
+    public static ContractParameter getAsContractParameter(TokenConfig config) {
+        return array(
+                hash160(config.tokenOnDestination),
+                integer(config.fee),
+                integer(config.minAmount),
+                integer(config.maxAmount),
+                integer(config.maxWithdrawals),
+                integer(config.decimalScalingFactor)
+        );
     }
 
     public boolean equals(Object o) {
