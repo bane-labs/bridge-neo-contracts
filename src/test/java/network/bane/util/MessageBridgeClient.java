@@ -17,8 +17,7 @@ import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 import network.bane.dto.State;
 import network.bane.util.helper.SmartContractHelper;
-import network.bane.util.structs.ExecutableStateDto;
-import network.bane.util.structs.MessageBridgeDto;
+import network.bane.dto.message.ExecutableState;
 import network.bane.util.structs.N3MessageDto;
 import network.bane.util.structs.N3MessageMetadataExecDto;
 import network.bane.util.structs.N3MessageMetadataResultDto;
@@ -302,7 +301,7 @@ public class MessageBridge extends SmartContractHelper {
     // endregion
     // region execution
 
-    public ExecutableStateDto getExecutableState(BigInteger nonce) throws IOException {
+    public network.bane.dto.message.ExecutableState getExecutableState(BigInteger nonce) throws IOException {
         InvocationResult result = callInvokeFunction("getExecutableState",
                 asList(integer(nonce))).getInvocationResult();
         if (result.hasStateFault()) {
@@ -311,7 +310,7 @@ public class MessageBridge extends SmartContractHelper {
         List<StackItem> items = result.getFirstStackItem().getList();
         boolean executed = items.get(0).getBoolean();
         BigInteger expirationTime = items.get(1).getInteger();
-        return new ExecutableStateDto(executed, expirationTime);
+        return new ExecutableState(executed, expirationTime);
     }
 
     public Hash256 executeMessage(AccountSigner signer, BigInteger nonce) throws Throwable {
@@ -349,7 +348,7 @@ public class MessageBridge extends SmartContractHelper {
     // region message bridge configuration/state
     // region message bridge configuration
 
-    public MessageBridgeDto getMessageBridge() throws IOException {
+    public MessageBridgeConfig getMessageBridge() throws IOException {
         List<StackItem> messageBridgeList = callInvokeFunction("getMessageBridge")
                 .getInvocationResult().getFirstStackItem().getList();
         List<StackItem> evmToN3StateList = messageBridgeList.get(0).getList();

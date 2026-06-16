@@ -1,13 +1,13 @@
-package network.bane.util.structs;
+package network.bane.dto.message;
 
 import java.math.BigInteger;
 import java.util.Objects;
 
-public class ExecutableStateDto {
+public class ExecutableState {
     public Boolean executed;
     public BigInteger expirationTimestamp;
 
-    public ExecutableStateDto(boolean executed, BigInteger expirationTimestamp) {
+    public ExecutableState(boolean executed, BigInteger expirationTimestamp) {
         this.executed = executed;
         this.expirationTimestamp = expirationTimestamp;
     }
@@ -17,10 +17,10 @@ public class ExecutableStateDto {
         if (other == null) {
             return false;
         }
-        if (!(other instanceof ExecutableStateDto)) {
+        if (!(other instanceof ExecutableState)) {
             return false;
         }
-        ExecutableStateDto that = (ExecutableStateDto) other;
+        ExecutableState that = (ExecutableState) other;
         return Objects.equals(this.executed, that.executed) &&
                 Objects.equals(this.expirationTimestamp, that.expirationTimestamp);
     }
