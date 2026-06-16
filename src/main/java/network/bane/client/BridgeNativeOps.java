@@ -1,4 +1,4 @@
-package network.bane.utils.bridge;
+package network.bane.client;
 
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
@@ -97,8 +97,7 @@ public interface BridgeNativeOps {
      * @param withdrawals    serialized list parameter of withdrawals to execute.
      * @return transaction hash.
      */
-    Hash256 withdrawNative(Account sender, String withdrawalRoot,
-            Map<ContractParameter, ContractParameter> signatures,
+    Hash256 withdrawNative(Account sender, String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
             ContractParameter withdrawals) throws Throwable;
 
     /**

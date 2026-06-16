@@ -1,4 +1,4 @@
-package network.bane.utils.bridge;
+package network.bane.client;
 
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;

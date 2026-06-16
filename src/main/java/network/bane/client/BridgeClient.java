@@ -1,7 +1,6 @@
-package network.bane.utils.bridge;
+package network.bane.client;
 
-import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.stackitem.StackItem;
+import io.neow3j.contract.Iterator;import io.neow3j.protocol.Neow3j;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -220,7 +219,7 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public StackItem getRegisteredTokensIterator() throws IOException {
+    public Iterator<Hash160> getRegisteredTokensIterator() throws IOException {
         return this.token.getRegisteredTokensIterator();
     }
 

@@ -1,4 +1,4 @@
-package network.bane.utils.bridge;
+package network.bane.client;
 
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
