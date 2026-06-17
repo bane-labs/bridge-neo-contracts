@@ -4,7 +4,8 @@ import io.neow3j.contract.Iterator;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
-import network.bane.client.interfaces.WriteCaller;
+import network.bane.client.interfaces.IBridgeTokenOps;
+import network.bane.client.interfaces.IWriteCaller;
 import network.bane.dto.bridge.TokenBridge;
 
 import java.io.IOException;
@@ -17,8 +18,10 @@ import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.map;
+import static io.neow3j.utils.Numeric.prependHexPrefix;
+import static java.util.Arrays.asList;
 
-class BridgeTokenModule implements BridgeTokenOps {
+class BridgeTokenModule implements IBridgeTokenOps {
 
     private final BridgeClientBase base;
 
@@ -53,22 +56,22 @@ class BridgeTokenModule implements BridgeTokenOps {
     }
 
     @Override
-    public WriteCaller registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
+    public IWriteCaller registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
         return base.invokeWrite("registerToken", hash160(token), tokenConfigAsParameter(tokenConfig));
     }
 
     @Override
-    public WriteCaller pauseTokenBridge(Hash160 neoN3Token) {
+    public IWriteCaller pauseTokenBridge(Hash160 neoN3Token) {
         return base.invokeWrite("pauseTokenBridge", hash160(neoN3Token));
     }
 
     @Override
-    public WriteCaller unpauseTokenBridge(Hash160 neoN3Token) {
+    public IWriteCaller unpauseTokenBridge(Hash160 neoN3Token) {
         return base.invokeWrite("unpauseTokenBridge", hash160(neoN3Token));
     }
 
     @Override
-    public WriteCaller depositToken(Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee) {
+    public IWriteCaller depositToken(Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee) {
         return base.invokeWrite("depositToken",
                 hash160(token),
                 hash160(from),
@@ -79,7 +82,7 @@ class BridgeTokenModule implements BridgeTokenOps {
     }
 
     @Override
-    public WriteCaller depositToken(Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
+    public IWriteCaller depositToken(Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
             Hash160 feeSponsor) {
         return base.invokeWrite("depositToken",
                 hash160(token),
@@ -92,14 +95,14 @@ class BridgeTokenModule implements BridgeTokenOps {
     }
 
     @Override
-    public WriteCaller withdrawToken(Hash160 token, String withdrawalRoot,
+    public IWriteCaller withdrawToken(Hash160 token, String withdrawalRoot,
             Map<ContractParameter, ContractParameter> signatures, ContractParameter withdrawals) {
         return base.invokeWrite("withdrawToken", hash160(token), byteArray(withdrawalRoot), map(signatures),
                 withdrawals);
     }
 
     @Override
-    public WriteCaller claimToken(Hash160 token, BigInteger nonce) {
+    public IWriteCaller claimToken(Hash160 token, BigInteger nonce) {
         return base.invokeWrite("claimToken", hash160(token), integer(nonce));
     }
 
@@ -114,7 +117,7 @@ class BridgeTokenModule implements BridgeTokenOps {
     }
 
     @Override
-    public WriteCaller setTokenDepositFee(Map<Hash160, BigInteger> newDepositFees) {
+    public IWriteCaller setTokenDepositFee(Map<Hash160, BigInteger> newDepositFees) {
         return base.invokeWrite("setTokenDepositFee", map(newDepositFees));
     }
 
@@ -124,7 +127,7 @@ class BridgeTokenModule implements BridgeTokenOps {
     }
 
     @Override
-    public WriteCaller setMinTokenDeposit(Map<Hash160, BigInteger> newMinDeposits) {
+    public IWriteCaller setMinTokenDeposit(Map<Hash160, BigInteger> newMinDeposits) {
         return base.invokeWrite("setMinTokenDeposit", map(newMinDeposits));
     }
 
@@ -134,7 +137,7 @@ class BridgeTokenModule implements BridgeTokenOps {
     }
 
     @Override
-    public WriteCaller setMaxTokenDeposit(Map<Hash160, BigInteger> newMaxDeposits) {
+    public IWriteCaller setMaxTokenDeposit(Map<Hash160, BigInteger> newMaxDeposits) {
         return base.invokeWrite("setMaxTokenDeposit", map(newMaxDeposits));
     }
 
@@ -144,7 +147,7 @@ class BridgeTokenModule implements BridgeTokenOps {
     }
 
     @Override
-    public WriteCaller setMaxTokenWithdrawals(Map<Hash160, Integer> newMaxWithdrawals) {
+    public IWriteCaller setMaxTokenWithdrawals(Map<Hash160, Integer> newMaxWithdrawals) {
         return base.invokeWrite("setMaxTokenWithdrawals", map(newMaxWithdrawals));
     }
 
@@ -155,7 +158,10 @@ class BridgeTokenModule implements BridgeTokenOps {
 
     @Override
     public String tokenDepositRoot(Hash160 token) throws IOException {
-        return base.callFunctionReturningString("tokenDepositRoot", hash160(token));
+        return prependHexPrefix(
+                base.callInvokeFunction("tokenDepositRoot", asList(hash160(token))).getInvocationResult()
+                        .getFirstStackItem().getHexString()
+        );
     }
 
     @Override
@@ -165,7 +171,10 @@ class BridgeTokenModule implements BridgeTokenOps {
 
     @Override
     public String tokenWithdrawalRoot(Hash160 token) throws IOException {
-        return base.callFunctionReturningString("tokenWithdrawalRoot", hash160(token));
+        return prependHexPrefix(
+                base.callInvokeFunction("tokenWithdrawalRoot", asList(hash160(token))).getInvocationResult()
+                        .getFirstStackItem().getHexString()
+        );
     }
 
     private ContractParameter tokenConfigAsParameter(TokenBridge.TokenConfig config) {

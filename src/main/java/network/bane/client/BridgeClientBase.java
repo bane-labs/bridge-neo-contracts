@@ -5,7 +5,7 @@ import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
-import network.bane.client.interfaces.WriteCaller;
+import network.bane.client.interfaces.IWriteCaller;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,7 +20,7 @@ class BridgeClientBase extends SmartContract {
         super(scriptHash, neow3j);
     }
 
-    WriteCaller invokeWrite(String function, ContractParameter... params) {
+    IWriteCaller invokeWrite(String function, ContractParameter... params) {
         return newWriteCall(neow3j, invokeFunction(function, params));
     }
 

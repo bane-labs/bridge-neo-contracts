@@ -1,9 +1,8 @@
-package network.bane.client;
+package network.bane.client.interfaces;
 
 import io.neow3j.contract.Iterator;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
-import network.bane.client.interfaces.WriteCaller;
 import network.bane.dto.bridge.TokenBridge;
 
 import java.io.IOException;
@@ -17,25 +16,29 @@ import java.util.Map;
  * If your script needs stricter scopes (e.g., allowed-contract restrictions), construct the
  * invocation manually.
  */
-public interface BridgeTokenOps {
+public interface IBridgeTokenOps {
 
     /**
      * @return true if token is registered on the bridge.
+     * @throws IOException if the RPC call fails.
      */
     boolean isRegisteredToken(Hash160 token) throws IOException;
 
     /**
      * @return full token bridge state DTO.
+     * @throws IOException if the RPC call fails.
      */
     TokenBridge getTokenBridge(Hash160 token) throws IOException;
 
     /**
      * @return iterator stack item over registered tokens.
+     * @throws IOException if the RPC call fails.
      */
     Iterator<Hash160> getRegisteredTokensIterator() throws IOException;
 
     /**
      * @return registered token script hashes.
+     * @throws IOException if the RPC call fails.
      */
     List<Hash160> getRegisteredTokens() throws IOException;
 
@@ -46,7 +49,7 @@ public interface BridgeTokenOps {
      * @param tokenConfig destination token and bridge config.
      * @return transaction hash.
      */
-    WriteCaller registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) ;
+    IWriteCaller registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig);
 
     /**
      * Pauses a token bridge.
@@ -54,7 +57,7 @@ public interface BridgeTokenOps {
      * @param neoN3Token token bridge to pause.
      * @return transaction hash.
      */
-    WriteCaller pauseTokenBridge(Hash160 neoN3Token) ;
+    IWriteCaller pauseTokenBridge(Hash160 neoN3Token);
 
     /**
      * Unpauses a token bridge.
@@ -62,7 +65,7 @@ public interface BridgeTokenOps {
      * @param neoN3Token token bridge to unpause.
      * @return transaction hash.
      */
-    WriteCaller unpauseTokenBridge(Hash160 neoN3Token);
+    IWriteCaller unpauseTokenBridge(Hash160 neoN3Token);
 
     /**
      * Deposits a token to be bridged to the linked chain.
@@ -75,7 +78,7 @@ public interface BridgeTokenOps {
      * @param maxFee max GAS fee accepted for this deposit.
      * @return transaction hash.
      */
-    WriteCaller depositToken(Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee);
+    IWriteCaller depositToken(Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee);
 
     /**
      * Deposits a token with an explicit fee sponsor.
@@ -89,7 +92,7 @@ public interface BridgeTokenOps {
      * @param feeSponsor account script hash that pays the deposit fee.
      * @return transaction hash.
      */
-    WriteCaller depositToken(Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
+    IWriteCaller depositToken(Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
             Hash160 feeSponsor);
 
     /**
@@ -102,25 +105,27 @@ public interface BridgeTokenOps {
      * @param withdrawals    serialized list parameter of withdrawals to execute.
      * @return transaction hash.
      */
-    WriteCaller withdrawToken(Hash160 token, String withdrawalRoot,
+    IWriteCaller withdrawToken(Hash160 token, String withdrawalRoot,
             Map<ContractParameter, ContractParameter> signatures, ContractParameter withdrawals);
 
     /**
      * Claims a previously marked claimable token withdrawal.
      *
-     * @param token  token bridge containing the claimable withdrawal.
-     * @param nonce  nonce of the claimable withdrawal.
+     * @param token token bridge containing the claimable withdrawal.
+     * @param nonce nonce of the claimable withdrawal.
      * @return transaction hash.
      */
-    WriteCaller claimToken(Hash160 token, BigInteger nonce);
+    IWriteCaller claimToken(Hash160 token, BigInteger nonce);
 
     /**
      * @return true if the token withdrawal nonce is claimable.
+     * @throws IOException if the RPC call fails.
      */
     boolean isClaimableToken(Hash160 token, BigInteger nonce) throws IOException;
 
     /**
      * @return token deposit fee.
+     * @throws IOException if the RPC call fails.
      */
     BigInteger tokenDepositFee(Hash160 token) throws IOException;
 
@@ -130,10 +135,11 @@ public interface BridgeTokenOps {
      * @param newDepositFees map of token hash to new fee.
      * @return transaction hash.
      */
-    WriteCaller setTokenDepositFee(Map<Hash160, BigInteger> newDepositFees);
+    IWriteCaller setTokenDepositFee(Map<Hash160, BigInteger> newDepositFees);
 
     /**
      * @return minimum token deposit.
+     * @throws IOException if the RPC call fails.
      */
     BigInteger minTokenDeposit(Hash160 token) throws IOException;
 
@@ -143,10 +149,11 @@ public interface BridgeTokenOps {
      * @param newMinDeposits map of token hash to new minimum.
      * @return transaction hash.
      */
-    WriteCaller setMinTokenDeposit(Map<Hash160, BigInteger> newMinDeposits);
+    IWriteCaller setMinTokenDeposit(Map<Hash160, BigInteger> newMinDeposits);
 
     /**
      * @return maximum token deposit.
+     * @throws IOException if the RPC call fails.
      */
     BigInteger maxTokenDeposit(Hash160 token) throws IOException;
 
@@ -156,10 +163,11 @@ public interface BridgeTokenOps {
      * @param newMaxDeposits map of token hash to new maximum.
      * @return transaction hash.
      */
-    WriteCaller setMaxTokenDeposit(Map<Hash160, BigInteger> newMaxDeposits);
+    IWriteCaller setMaxTokenDeposit(Map<Hash160, BigInteger> newMaxDeposits);
 
     /**
      * @return maximum number of token withdrawals processed in one operation.
+     * @throws IOException if the RPC call fails.
      */
     BigInteger maxTokenWithdrawals(Hash160 token) throws IOException;
 
@@ -169,25 +177,29 @@ public interface BridgeTokenOps {
      * @param newMaxWithdrawals map of token hash to new max withdrawals.
      * @return transaction hash.
      */
-    WriteCaller setMaxTokenWithdrawals(Map<Hash160, Integer> newMaxWithdrawals);
+    IWriteCaller setMaxTokenWithdrawals(Map<Hash160, Integer> newMaxWithdrawals);
 
     /**
      * @return current token deposit nonce.
+     * @throws IOException if the RPC call fails.
      */
     BigInteger tokenDepositNonce(Hash160 token) throws IOException;
 
     /**
      * @return current token deposit root.
+     * @throws IOException if the RPC call fails.
      */
     String tokenDepositRoot(Hash160 token) throws IOException;
 
     /**
      * @return current token withdrawal nonce.
+     * @throws IOException if the RPC call fails.
      */
     BigInteger tokenWithdrawalNonce(Hash160 token) throws IOException;
 
     /**
      * @return current token withdrawal root.
+     * @throws IOException if the RPC call fails.
      */
     String tokenWithdrawalRoot(Hash160 token) throws IOException;
 }

@@ -4,7 +4,7 @@ import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
-import network.bane.util.Bridge;
+import network.bane.util.BridgeTestClient;
 import network.bane.util.TestHelper;
 
 import java.io.IOException;
@@ -24,7 +24,7 @@ public class PrintHelper {
         System.out.printf("Transaction fee (%s): %s\n", description, totalFee);
     }
 
-    public static void printDepositEvent(Bridge bridge, Neow3j neow3j, Hash256 txHash, List<String> proof) throws IOException {
+    public static void printDepositEvent(BridgeTestClient bridge, Neow3j neow3j, Hash256 txHash, List<String> proof) throws IOException {
         Optional<Notification> onDepositOpt =
                 neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution()
                         .getNotifications().stream()

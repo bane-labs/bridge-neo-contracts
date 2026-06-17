@@ -21,6 +21,8 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.HashMap;
 
+import static io.neow3j.transaction.AccountSigner.global;
+import static network.bane.util.TestHelper.governor;
 import static network.bane.util.helper.TestHelper.bob;
 import static network.bane.util.helper.TestHelper.bridge;
 import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
@@ -58,7 +60,7 @@ public class TokenBridgeConfigTest {
         registerNeoTokenBridge();
 
         testTokenHash = deployTestToken(ext).getScriptHash();
-        bridge.registerToken(testTokenHash, dummyTokenConfig());
+        bridge.registerToken(governor, testTokenHash, dummyTokenConfig());
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -85,7 +87,7 @@ public class TokenBridgeConfigTest {
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValueNeo);
 
-        bridge.setTokenDepositFee(newValues);
+        bridge.setTokenDepositFee(governor, newValues);
 
         assertThat(bridge.tokenDepositFee(neoN3NeoTokenHash), is(newValueNeo));
         assertThat(bridge.tokenDepositFee(testTokenHash), is(initValueTestToken));
@@ -105,7 +107,7 @@ public class TokenBridgeConfigTest {
         newValues.put(neoN3NeoTokenHash, newValueNeo);
         newValues.put(testTokenHash, newValueTestToken);
 
-        bridge.setTokenDepositFee(newValues);
+        bridge.setTokenDepositFee(governor, newValues);
 
         assertThat(bridge.tokenDepositFee(neoN3NeoTokenHash), is(newValueNeo));
         assertThat(bridge.tokenDepositFee(testTokenHash), is(newValueTestToken));
@@ -121,8 +123,8 @@ public class TokenBridgeConfigTest {
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValue);
 
-        TransactionConfigurationException thrown = assertThrows(
-                TransactionConfigurationException.class, () -> bridge.setTokenDepositFee(bob, newValues));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setTokenDepositFee(bob, newValues));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
@@ -133,8 +135,8 @@ public class TokenBridgeConfigTest {
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(unregisteredTokenHash, BigInteger.ONE);
 
-        TransactionConfigurationException thrown = assertThrows(
-                TransactionConfigurationException.class, () -> bridge.setTokenDepositFee(newValues));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setTokenDepositFee(governor, newValues));
 
         assertThat(thrown.getMessage(), containsString("Token not registered"));
     }
@@ -154,7 +156,7 @@ public class TokenBridgeConfigTest {
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValueNeo);
 
-        bridge.setMinTokenDeposit(newValues);
+        bridge.setMinTokenDeposit(governor, newValues);
 
         assertThat(bridge.minTokenDeposit(neoN3NeoTokenHash), is(newValueNeo));
         assertThat(bridge.minTokenDeposit(testTokenHash), is(initValueTestToken));
@@ -174,7 +176,7 @@ public class TokenBridgeConfigTest {
         newValues.put(neoN3NeoTokenHash, newValueNeo);
         newValues.put(testTokenHash, newValueTestToken);
 
-        bridge.setMinTokenDeposit(newValues);
+        bridge.setMinTokenDeposit(governor, newValues);
 
         assertThat(bridge.minTokenDeposit(neoN3NeoTokenHash), is(newValueNeo));
         assertThat(bridge.minTokenDeposit(testTokenHash), is(newValueTestToken));
@@ -191,8 +193,8 @@ public class TokenBridgeConfigTest {
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValue);
 
-        TransactionConfigurationException thrown = assertThrows(
-                TransactionConfigurationException.class, () -> bridge.setMinTokenDeposit(bob, newValues));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMinTokenDeposit(bob, newValues));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
@@ -208,8 +210,8 @@ public class TokenBridgeConfigTest {
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, maxValue.add(BigInteger.ONE));
 
-        TransactionConfigurationException thrown = assertThrows(
-                TransactionConfigurationException.class, () -> bridge.setMinTokenDeposit(newValues));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMinTokenDeposit(governor, newValues));
 
         assertThat(thrown.getMessage(),
                 containsString("Minimum deposit must not be greater than the maximum deposit."));
@@ -222,8 +224,8 @@ public class TokenBridgeConfigTest {
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(unregisteredTokenHash, BigInteger.ONE);
 
-        TransactionConfigurationException thrown = assertThrows(
-                TransactionConfigurationException.class, () -> bridge.setMinTokenDeposit(newValues));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMinTokenDeposit(governor, newValues));
 
         assertThat(thrown.getMessage(), containsString("Token not registered"));
     }
@@ -243,7 +245,7 @@ public class TokenBridgeConfigTest {
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValueNeo);
 
-        bridge.setMaxTokenDeposit(newValues);
+        bridge.setMaxTokenDeposit(governor, newValues);
 
         assertThat(bridge.maxTokenDeposit(neoN3NeoTokenHash), is(newValueNeo));
         assertThat(bridge.maxTokenDeposit(testTokenHash), is(initValueTestToken));
@@ -263,7 +265,7 @@ public class TokenBridgeConfigTest {
         newValues.put(neoN3NeoTokenHash, newValueNeo);
         newValues.put(testTokenHash, newValueTestToken);
 
-        bridge.setMaxTokenDeposit(newValues);
+        bridge.setMaxTokenDeposit(governor, newValues);
 
         assertThat(bridge.maxTokenDeposit(neoN3NeoTokenHash), is(newValueNeo));
         assertThat(bridge.maxTokenDeposit(testTokenHash), is(newValueTestToken));
@@ -279,8 +281,8 @@ public class TokenBridgeConfigTest {
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValue);
 
-        TransactionConfigurationException thrown = assertThrows(
-                TransactionConfigurationException.class, () -> bridge.setMaxTokenDeposit(bob, newValues));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMaxTokenDeposit(newValues).withSigners(global(bob)).signSendAndAwait());
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
@@ -296,8 +298,8 @@ public class TokenBridgeConfigTest {
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, minValue.subtract(BigInteger.ONE));
 
-        TransactionConfigurationException thrown = assertThrows(
-                TransactionConfigurationException.class, () -> bridge.setMaxTokenDeposit(newValues));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMaxTokenDeposit(governor, newValues));
 
         assertThat(thrown.getMessage(), containsString("Maximum deposit must not be less than the minimum deposit."));
     }
@@ -309,8 +311,8 @@ public class TokenBridgeConfigTest {
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(unregisteredTokenHash, BigInteger.TEN);
 
-        TransactionConfigurationException thrown = assertThrows(
-                TransactionConfigurationException.class, () -> bridge.setMaxTokenDeposit(newValues));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMaxTokenDeposit(governor, newValues));
 
         assertThat(thrown.getMessage(), containsString("Token not registered"));
     }
@@ -322,26 +324,26 @@ public class TokenBridgeConfigTest {
     @Order(0)
     @Test
     public void testMaxWithdrawals() throws Throwable {
-        int initValueNeo = bridge.maxTokenWithdrawals(neoN3NeoTokenHash);
-        int initValueTestToken = bridge.maxTokenWithdrawals(testTokenHash);
+        int initValueNeo = bridge.maxTokenWithdrawals(neoN3NeoTokenHash).intValue();
+        int initValueTestToken = bridge.maxTokenWithdrawals(testTokenHash).intValue();
 
         int newValueNeo = initValueNeo + 1;
 
         HashMap<Hash160, Integer> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValueNeo);
 
-        bridge.setMaxTokenWithdrawals(newValues);
+        bridge.setMaxTokenWithdrawals(governor, newValues);
 
-        assertThat(bridge.maxTokenWithdrawals(neoN3NeoTokenHash), is(newValueNeo));
-        assertThat(bridge.maxTokenWithdrawals(testTokenHash), is(initValueTestToken));
+        assertThat(bridge.maxTokenWithdrawals(neoN3NeoTokenHash).intValue(), is(newValueNeo));
+        assertThat(bridge.maxTokenWithdrawals(testTokenHash).intValue(), is(initValueTestToken));
     }
 
     // Set multiple max withdrawals values.
     @Order(0)
     @Test
     public void testMaxWithdrawals_setMultiple() throws Throwable {
-        int initValueNeo = bridge.maxTokenWithdrawals(neoN3NeoTokenHash);
-        int initValueTestToken = bridge.maxTokenWithdrawals(testTokenHash);
+        int initValueNeo = bridge.maxTokenWithdrawals(neoN3NeoTokenHash).intValue();
+        int initValueTestToken = bridge.maxTokenWithdrawals(testTokenHash).intValue();
 
         int newValueNeo = initValueNeo + 1;
         int newValueTestToken = initValueTestToken - 14;
@@ -350,24 +352,24 @@ public class TokenBridgeConfigTest {
         newValues.put(neoN3NeoTokenHash, newValueNeo);
         newValues.put(testTokenHash, newValueTestToken);
 
-        bridge.setMaxTokenWithdrawals(newValues);
+        bridge.setMaxTokenWithdrawals(governor, newValues);
 
-        assertThat(bridge.maxTokenWithdrawals(neoN3NeoTokenHash), is(newValueNeo));
-        assertThat(bridge.maxTokenWithdrawals(testTokenHash), is(newValueTestToken));
+        assertThat(bridge.maxTokenWithdrawals(neoN3NeoTokenHash).intValue(), is(newValueNeo));
+        assertThat(bridge.maxTokenWithdrawals(testTokenHash).intValue(), is(newValueTestToken));
     }
 
     // Abort when a non-governor tries to set the max withdrawals value.
     @Order(0)
     @Test
     public void testMaxWithdrawals_unauthorized() throws IOException {
-        int initValueNeo = bridge.maxTokenWithdrawals(neoN3NeoTokenHash);
+        int initValueNeo = bridge.maxTokenWithdrawals(neoN3NeoTokenHash).intValue();
         int newValue = initValueNeo + 1;
 
         HashMap<Hash160, Integer> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValue);
 
-        TransactionConfigurationException thrown = assertThrows(
-                TransactionConfigurationException.class, () -> bridge.setMaxTokenWithdrawals(bob, newValues));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMaxTokenWithdrawals(bob, newValues));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
     }
 
@@ -378,8 +380,8 @@ public class TokenBridgeConfigTest {
         HashMap<Hash160, Integer> newValues = new HashMap<>();
         newValues.put(unregisteredTokenHash, 15);
 
-        TransactionConfigurationException thrown = assertThrows(
-                TransactionConfigurationException.class, () -> bridge.setMaxTokenWithdrawals(newValues));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMaxTokenWithdrawals(governor, newValues));
 
         assertThat(thrown.getMessage(), containsString("Token not registered"));
     }

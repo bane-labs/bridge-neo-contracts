@@ -1,8 +1,7 @@
-package network.bane.client;
+package network.bane.client.interfaces;
 
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
-import network.bane.client.interfaces.WriteCaller;
 import network.bane.dto.bridge.NativeBridge;
 
 import java.io.IOException;
@@ -18,7 +17,7 @@ import java.util.Map;
  *   allowed contracts to GAS ({@code GasToken.SCRIPT_HASH}).</li>
  * </ul>
  */
-public interface BridgeNativeOps {
+public interface IBridgeNativeOps {
 
     /**
      * Sets native bridge configuration.
@@ -32,7 +31,7 @@ public interface BridgeNativeOps {
      * @param maxTotalDeposited     cap for cumulative deposited amount in native bridge state.
      * @return transaction hash.
      */
-    WriteCaller setNativeBridge(Hash160 tokenForNativeBridge, int decimalsOnLinkedChain, BigInteger depositFee,
+    IWriteCaller setNativeBridge(Hash160 tokenForNativeBridge, int decimalsOnLinkedChain, BigInteger depositFee,
             BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals, BigInteger maxTotalDeposited);
 
     /**
@@ -40,14 +39,14 @@ public interface BridgeNativeOps {
      *
      * @return transaction hash.
      */
-    WriteCaller pauseNativeBridge();
+    IWriteCaller pauseNativeBridge();
 
     /**
      * Unpauses native bridge operations.
      *
      * @return transaction hash.
      */
-    WriteCaller unpauseNativeBridge();
+    IWriteCaller unpauseNativeBridge();
 
     /**
      * Deposits native token to be bridged to the linked chain.
@@ -59,7 +58,7 @@ public interface BridgeNativeOps {
      * @param maxFee max GAS fee the depositor is willing to pay.
      * @return transaction hash.
      */
-    WriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee);
+    IWriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee);
 
     /**
      * Deposits native token with an explicit fee sponsor.
@@ -73,7 +72,7 @@ public interface BridgeNativeOps {
      *                   as fee payer.
      * @return transaction hash.
      */
-    WriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee, Hash160 feeSponsor);
+    IWriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee, Hash160 feeSponsor);
 
     /**
      * Executes native withdrawals proven by validator signatures.
@@ -84,7 +83,7 @@ public interface BridgeNativeOps {
      * @param withdrawals    serialized list parameter of withdrawals to execute.
      * @return transaction hash.
      */
-    WriteCaller withdrawNative(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
+    IWriteCaller withdrawNative(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
             ContractParameter withdrawals);
 
     /**
@@ -93,30 +92,35 @@ public interface BridgeNativeOps {
      * @param nonce nonce of the claimable withdrawal.
      * @return transaction hash.
      */
-    WriteCaller claimNative(BigInteger nonce);
+    IWriteCaller claimNative(BigInteger nonce);
 
     /**
      * @return true if the native withdrawal nonce is claimable.
+     * @throws IOException if the RPC call fails.
      */
     boolean isClaimableNative(BigInteger nonce) throws IOException;
 
     /**
      * @return true if native bridge state is initialized.
+     * @throws IOException if the RPC call fails.
      */
     boolean nativeBridgeIsSet() throws IOException;
 
     /**
      * @return native token script hash configured for the bridge.
+     * @throws IOException if the RPC call fails.
      */
     Hash160 nativeToken() throws IOException;
 
     /**
      * @return full native bridge state DTO.
+     * @throws IOException if the RPC call fails.
      */
     NativeBridge getNativeBridge() throws IOException;
 
     /**
      * @return native deposit fee.
+     * @throws IOException if the RPC call fails.
      */
     BigInteger nativeDepositFee() throws IOException;
 
@@ -126,10 +130,11 @@ public interface BridgeNativeOps {
      * @param newFee new deposit fee.
      * @return transaction hash.
      */
-    WriteCaller setNativeDepositFee(BigInteger newFee);
+    IWriteCaller setNativeDepositFee(BigInteger newFee);
 
     /**
      * @return minimum accepted native deposit.
+     * @throws IOException if the RPC call fails.
      */
     BigInteger minNativeDeposit() throws IOException;
 
@@ -139,10 +144,11 @@ public interface BridgeNativeOps {
      * @param newMinAmount new minimum deposit value.
      * @return transaction hash.
      */
-    WriteCaller setMinNativeDeposit(BigInteger newMinAmount);
+    IWriteCaller setMinNativeDeposit(BigInteger newMinAmount);
 
     /**
      * @return maximum accepted native deposit.
+     * @throws IOException if the RPC call fails.
      */
     BigInteger maxNativeDeposit() throws IOException;
 
@@ -152,10 +158,11 @@ public interface BridgeNativeOps {
      * @param newMaxAmount new maximum deposit value.
      * @return transaction hash.
      */
-    WriteCaller setMaxNativeDeposit(BigInteger newMaxAmount);
+    IWriteCaller setMaxNativeDeposit(BigInteger newMaxAmount);
 
     /**
      * @return cap for total native amount deposited through the bridge.
+     * @throws IOException if the RPC call fails.
      */
     BigInteger maxTotalDepositedNative() throws IOException;
 
@@ -165,25 +172,29 @@ public interface BridgeNativeOps {
      * @param newMaxTotalDeposited new cap for cumulative deposits.
      * @return transaction hash.
      */
-    WriteCaller setMaxTotalDepositedNative(BigInteger newMaxTotalDeposited);
+    IWriteCaller setMaxTotalDepositedNative(BigInteger newMaxTotalDeposited);
 
     /**
      * @return current native deposit nonce.
+     * @throws IOException if the RPC call fails.
      */
     BigInteger nativeDepositNonce() throws IOException;
 
     /**
      * @return current native deposit root.
+     * @throws IOException if the RPC call fails.
      */
     String nativeDepositRoot() throws IOException;
 
     /**
      * @return current native withdrawal nonce.
+     * @throws IOException if the RPC call fails.
      */
     BigInteger nativeWithdrawalNonce() throws IOException;
 
     /**
      * @return current native withdrawal root.
+     * @throws IOException if the RPC call fails.
      */
     String nativeWithdrawalRoot() throws IOException;
 }

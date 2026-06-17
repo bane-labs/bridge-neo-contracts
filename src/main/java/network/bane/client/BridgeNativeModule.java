@@ -2,7 +2,8 @@ package network.bane.client;
 
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
-import network.bane.client.interfaces.WriteCaller;
+import network.bane.client.interfaces.IBridgeNativeOps;
+import network.bane.client.interfaces.IWriteCaller;
 import network.bane.dto.bridge.NativeBridge;
 
 import java.io.IOException;
@@ -13,8 +14,9 @@ import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.map;
+import static io.neow3j.utils.Numeric.prependHexPrefix;
 
-class BridgeNativeModule implements BridgeNativeOps {
+class BridgeNativeModule implements IBridgeNativeOps {
 
     private final BridgeClientBase base;
 
@@ -23,7 +25,7 @@ class BridgeNativeModule implements BridgeNativeOps {
     }
 
     @Override
-    public WriteCaller setNativeBridge(Hash160 tokenForNativeBridge, int decimalsOnLinkedChain, BigInteger depositFee,
+    public IWriteCaller setNativeBridge(Hash160 tokenForNativeBridge, int decimalsOnLinkedChain, BigInteger depositFee,
             BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals, BigInteger maxTotalDeposited) {
         return base.invokeWrite("setNativeBridge",
                 hash160(tokenForNativeBridge),
@@ -37,17 +39,17 @@ class BridgeNativeModule implements BridgeNativeOps {
     }
 
     @Override
-    public WriteCaller pauseNativeBridge() {
-        return base.invokeWrite( "pauseNativeBridge");
+    public IWriteCaller pauseNativeBridge() {
+        return base.invokeWrite("pauseNativeBridge");
     }
 
     @Override
-    public WriteCaller unpauseNativeBridge() {
+    public IWriteCaller unpauseNativeBridge() {
         return base.invokeWrite("unpauseNativeBridge");
     }
 
     @Override
-    public WriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee) {
+    public IWriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee) {
         return base.invokeWrite("depositNative",
                 hash160(from),
                 hash160(to),
@@ -57,25 +59,25 @@ class BridgeNativeModule implements BridgeNativeOps {
     }
 
     @Override
-    public WriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
+    public IWriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
             Hash160 feeSponsor) {
         return base.invokeWrite("depositNative",
-                        hash160(from),
-                        hash160(to),
-                        integer(amount),
-                        integer(maxFee),
-                        hash160(feeSponsor)
+                hash160(from),
+                hash160(to),
+                integer(amount),
+                integer(maxFee),
+                hash160(feeSponsor)
         );
     }
 
     @Override
-    public WriteCaller withdrawNative(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
+    public IWriteCaller withdrawNative(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
             ContractParameter withdrawals) {
         return base.invokeWrite("withdrawNative", byteArray(withdrawalRoot), map(signatures), withdrawals);
     }
 
     @Override
-    public WriteCaller claimNative(BigInteger nonce) {
+    public IWriteCaller claimNative(BigInteger nonce) {
         return base.invokeWrite("claimNative", integer(nonce));
     }
 
@@ -105,8 +107,8 @@ class BridgeNativeModule implements BridgeNativeOps {
     }
 
     @Override
-    public WriteCaller setNativeDepositFee(BigInteger newFee) {
-        return base.invokeWrite( "setNativeDepositFee", integer(newFee));
+    public IWriteCaller setNativeDepositFee(BigInteger newFee) {
+        return base.invokeWrite("setNativeDepositFee", integer(newFee));
     }
 
     @Override
@@ -115,7 +117,7 @@ class BridgeNativeModule implements BridgeNativeOps {
     }
 
     @Override
-    public WriteCaller setMinNativeDeposit( BigInteger newMinAmount) {
+    public IWriteCaller setMinNativeDeposit(BigInteger newMinAmount) {
         return base.invokeWrite("setMinNativeDeposit", integer(newMinAmount));
     }
 
@@ -125,8 +127,8 @@ class BridgeNativeModule implements BridgeNativeOps {
     }
 
     @Override
-    public WriteCaller setMaxNativeDeposit(BigInteger newMaxAmount) {
-        return base.invokeWrite( "setMaxNativeDeposit", integer(newMaxAmount));
+    public IWriteCaller setMaxNativeDeposit(BigInteger newMaxAmount) {
+        return base.invokeWrite("setMaxNativeDeposit", integer(newMaxAmount));
     }
 
     @Override
@@ -135,8 +137,8 @@ class BridgeNativeModule implements BridgeNativeOps {
     }
 
     @Override
-    public WriteCaller setMaxTotalDepositedNative( BigInteger newMaxTotalDeposited) {
-        return base.invokeWrite( "setMaxTotalDepositedNative", integer(newMaxTotalDeposited));
+    public IWriteCaller setMaxTotalDepositedNative(BigInteger newMaxTotalDeposited) {
+        return base.invokeWrite("setMaxTotalDepositedNative", integer(newMaxTotalDeposited));
     }
 
     @Override
@@ -146,7 +148,9 @@ class BridgeNativeModule implements BridgeNativeOps {
 
     @Override
     public String nativeDepositRoot() throws IOException {
-        return base.callFunctionReturningString("nativeDepositRoot");
+        return prependHexPrefix(
+                base.callInvokeFunction("nativeDepositRoot").getInvocationResult().getFirstStackItem().getHexString()
+        );
     }
 
     @Override
@@ -156,6 +160,8 @@ class BridgeNativeModule implements BridgeNativeOps {
 
     @Override
     public String nativeWithdrawalRoot() throws IOException {
-        return base.callFunctionReturningString("nativeWithdrawalRoot");
+        return prependHexPrefix(
+                base.callInvokeFunction("nativeWithdrawalRoot").getInvocationResult().getFirstStackItem().getHexString()
+        );
     }
 }

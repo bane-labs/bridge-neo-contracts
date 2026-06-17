@@ -37,6 +37,7 @@ import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.util.Arrays.asList;
 import static network.bane.util.TestHelper.computeNewTokenRootNoPrefix;
 import static network.bane.util.TestHelper.keccak256HexNoPrefix;
+import static network.bane.util.TestHelper.relayer;
 import static network.bane.util.TestHelper.signMsg;
 import static network.bane.util.TestHelper.validator1;
 import static network.bane.util.TestHelper.validator3;
@@ -235,7 +236,7 @@ public class TokenBridgeSyncTest {
                 is("0xe7bcedec3503f013e96c2656b3ea841f62787a06afd3a3df004635ec9a1432e7"));
 
         List<Account> signingValidators = asList(validator1, validator3, validator4, validator5, validator7);
-        Hash256 withdrawalTxHash = bridge.withdrawToken(neoN3NeoTokenHash, newRoot_3,
+        Hash256 withdrawalTxHash = bridge.withdrawToken(relayer, neoN3NeoTokenHash, newRoot_3,
                 signMsg(signingValidators, newRoot_3),
                 array(
                         array(integer(BigInteger.ONE), hash160(recipientOnNeoN3_1), integer(amount_1)),
@@ -244,7 +245,6 @@ public class TokenBridgeSyncTest {
                         )
                 )
         );
-        Await.waitUntilTransactionIsExecuted(withdrawalTxHash, neow3j);
 
         NeoApplicationLog.Execution exec_3 = neow3j.getApplicationLog(withdrawalTxHash).send()
                 .getApplicationLog().getFirstExecution();

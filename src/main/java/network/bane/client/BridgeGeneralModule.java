@@ -1,16 +1,20 @@
 package network.bane.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import io.neow3j.contract.NefFile;
+import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.types.Hash160;
-import network.bane.client.interfaces.WriteCaller;
+import network.bane.client.interfaces.IBridgeGeneralOps;
+import network.bane.client.interfaces.IWriteCaller;
 
 import java.io.IOException;
 import java.math.BigInteger;
 
+import static io.neow3j.protocol.ObjectMapperFactory.getObjectMapper;
 import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.byteArray;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
-class BridgeGeneralModule implements BridgeGeneralOps {
+class BridgeGeneralModule implements IBridgeGeneralOps {
 
     private final BridgeClientBase base;
 
@@ -19,17 +23,19 @@ class BridgeGeneralModule implements BridgeGeneralOps {
     }
 
     @Override
-    public WriteCaller update(byte[] nefBytes, String manifestJson, Object data) {
-        return base.invokeWrite("update", byteArray(nefBytes), byteArray(manifestJson.getBytes(UTF_8)), any(data));
+    public IWriteCaller update(NefFile nefFile, ContractManifest manifest, Object data) throws JsonProcessingException {
+        byte[] nefBytes = nefFile.toArray();
+        byte[] manifestBytes = getObjectMapper().writeValueAsBytes(manifest);
+        return base.invokeWrite("update", byteArray(nefBytes), byteArray(manifestBytes), any(data));
     }
 
     @Override
-    public WriteCaller pauseBridge() {
+    public IWriteCaller pauseBridge() {
         return base.invokeWrite("pauseBridge");
     }
 
     @Override
-    public WriteCaller unpauseBridge() {
+    public IWriteCaller unpauseBridge() {
         return base.invokeWrite("unpauseBridge");
     }
 
@@ -39,12 +45,12 @@ class BridgeGeneralModule implements BridgeGeneralOps {
     }
 
     @Override
-    public WriteCaller pauseDeposits() {
+    public IWriteCaller pauseDeposits() {
         return base.invokeWrite("pauseDeposits");
     }
 
     @Override
-    public WriteCaller unpauseDeposits() {
+    public IWriteCaller unpauseDeposits() {
         return base.invokeWrite("unpauseDeposits");
     }
 

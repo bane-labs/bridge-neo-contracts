@@ -6,17 +6,17 @@ import io.neow3j.transaction.Signer;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.TransactionBuilder;
 import io.neow3j.types.Hash256;
-import network.bane.client.interfaces.WriteCaller;
+import network.bane.client.interfaces.IWriteCaller;
 
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 
 /**
- * Default {@link WriteCaller} implementation backed by a neow3j {@link TransactionBuilder}.
+ * Default {@link IWriteCaller} implementation backed by a neow3j {@link TransactionBuilder}.
  * <p>
  * The wrapped builder is mutable. Fluent configuration methods mutate the underlying builder and return this same
  * instance.
  */
-public class WriteCall implements WriteCaller {
+public class WriteCall implements IWriteCaller {
 
     private Neow3j neow3j;
     private TransactionBuilder transactionBuilder;
@@ -57,7 +57,7 @@ public class WriteCall implements WriteCaller {
      * {@inheritDoc}
      */
     @Override
-    public WriteCaller withSigners(Signer... signers) {
+    public IWriteCaller withSigners(Signer... signers) {
         transactionBuilder.signers(signers);
         return this;
     }

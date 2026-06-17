@@ -12,7 +12,6 @@ import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
 import network.bane.dto.State;
-import network.bane.util.helper.DepositHelper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -21,6 +20,7 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 
+import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
@@ -68,8 +68,8 @@ public class PauseDepositsTest {
         setup(ext);
         setupBridge(ext);
 
-        bridge.setDefaultNativeBridge();
-        bridge.unpauseNativeBridge();
+        bridge.setDefaultNativeBridge().withSigners(calledByEntry(governor)).signSendAndAwait();
+        bridge.unpauseNativeBridge(governor);
 
         registerNeoTokenBridge();
     }
@@ -89,8 +89,8 @@ public class PauseDepositsTest {
 
     @Test
     public void testPauseDeposits_onlyGovernor() {
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> bridge.pauseDeposits(relayer));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.pauseDeposits(relayer));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
     }
@@ -98,13 +98,13 @@ public class PauseDepositsTest {
     @Test
     public void testUnpauseDeposits_onlyGovernor() throws Throwable {
         assertFalse(bridge.depositsArePaused());
-        bridge.pauseDeposits();
+        bridge.pauseDeposits(governor);
         assertTrue(bridge.depositsArePaused());
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> bridge.unpauseDeposits(securityGuard));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.unpauseDeposits(securityGuard));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
-        bridge.unpauseDeposits();
+        bridge.unpauseDeposits(governor);
     }
 
     @Test
@@ -120,7 +120,7 @@ public class PauseDepositsTest {
     public void testUnpauseDeposits_alreadyUnpaused() throws Throwable {
         assertFalse(bridge.depositsArePaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.unpauseDeposits());
+                () -> bridge.unpauseDeposits(governor));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Deposits not paused"));
     }
 
@@ -130,13 +130,13 @@ public class PauseDepositsTest {
     @Test
     public void testPausedDeposit_rejectDepositNative() throws Throwable {
         assertFalse(bridge.depositsArePaused());
-        bridge.pauseDeposits();
+        bridge.pauseDeposits(governor);
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> DepositHelper.depositNative(alice, recipient0, BigInteger.ONE));
+                () -> bridge.depositNative(alice, recipient0, BigInteger.ONE));
         assertThat(thrown.getMessage(), containsString("Deposits paused"));
 
-        bridge.unpauseDeposits();
+        bridge.unpauseDeposits(governor);
     }
 
     // endregion
@@ -145,7 +145,7 @@ public class PauseDepositsTest {
     @Test
     public void testPauseDeposits_withdrawNative() throws Throwable {
         assertFalse(bridge.depositsArePaused());
-        bridge.pauseDeposits();
+        bridge.pauseDeposits(governor);
         assertThat(bridge.getNativeBridge().withdrawalState.nonce, is(BigInteger.ZERO));
 
         BigInteger nonce = BigInteger.ONE;
@@ -156,16 +156,16 @@ public class PauseDepositsTest {
         String root = concatAndKeccak256(Hash256.ZERO.toString(), d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
-        bridge.withdrawNative(root, signMsg(validators, root), withdrawal);
+        bridge.withdrawNative(relayer, root, signMsg(validators, root), withdrawal);
 
         assertThat(bridge.getNativeBridge().withdrawalState.nonce, is(BigInteger.ONE));
-        bridge.unpauseDeposits();
+        bridge.unpauseDeposits(governor);
     }
 
     @Test
     public void testPauseDeposits_withdrawToken() throws Throwable {
         assertFalse(bridge.depositsArePaused());
-        bridge.pauseDeposits();
+        bridge.pauseDeposits(governor);
         assertThat(bridge.getTokenBridge(neoN3NeoTokenHash).withdrawalState.nonce, is(BigInteger.ZERO));
 
         BigInteger nonce = BigInteger.ONE;
@@ -174,14 +174,14 @@ public class PauseDepositsTest {
 
         State withdrawalState_before = bridge.getTokenBridge(neoN3NeoTokenHash).withdrawalState;
         String root = computeNewTokenRootNoPrefix(withdrawalState_before.root.toString(), neoN3NeoTokenHash,
-                        neoXNeoTokenHash, BigInteger.ONE, to, amount);
+                neoXNeoTokenHash, BigInteger.ONE, to, amount);
 
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
-        bridge.withdrawToken(neoN3NeoTokenHash, root, signMsg(validators, root), withdrawal);
+        bridge.withdrawToken(relayer, neoN3NeoTokenHash, root, signMsg(validators, root), withdrawal);
 
         assertThat(bridge.getTokenBridge(neoN3NeoTokenHash).withdrawalState.nonce, is(nonce));
-        bridge.unpauseDeposits();
+        bridge.unpauseDeposits(governor);
     }
 
     // endregion

@@ -13,7 +13,7 @@ import io.neow3j.types.Hash256;
  * This keeps client write methods aligned with the actual contract method signatures: contract arguments are passed to
  * the client method, while execution metadata such as signers is configured on the returned {@code WriteCaller}.
  */
-public interface WriteCaller {
+public interface IWriteCaller {
 
     /**
      * Returns the underlying transaction builder.
@@ -33,7 +33,7 @@ public interface WriteCaller {
      * @param signers signers to attach to the transaction builder.
      * @return this write-caller for fluent configuration.
      */
-    WriteCaller withSigners(Signer... signers);
+    IWriteCaller withSigners(Signer... signers);
 
     /**
      * Signs and sends the prepared transaction, waits until it is executed, and returns the transaction hash.

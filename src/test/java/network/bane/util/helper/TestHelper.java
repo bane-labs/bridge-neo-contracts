@@ -13,8 +13,6 @@ import io.neow3j.transaction.witnessrule.WitnessAction;
 import io.neow3j.transaction.witnessrule.WitnessRule;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
-import io.neow3j.types.Hash256;
-import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
 import network.bane.bridge.BridgeContract;
 import network.bane.management.BridgeManagementContract;
@@ -23,10 +21,10 @@ import network.bane.messageexecution.ExecutionManagerContract;
 import network.bane.testhelper.MessageTestStoreContract;
 import network.bane.testhelper.TestContract;
 import network.bane.testhelper.TestMessageSenderContract;
-import network.bane.util.Bridge;
+import network.bane.util.BridgeTestClient;
 import network.bane.util.ExecutionManager;
 import network.bane.util.Management;
-import network.bane.util.MessageBridge;
+import network.bane.util.MessageBridgeClient;
 import network.bane.util.MessageTestStorer;
 import network.bane.util.TestMessageSender;
 import network.bane.dto.bridge.TokenBridge;
@@ -35,10 +33,12 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static java.util.Arrays.asList;
+import static network.bane.util.TestHelper.governor;
 import static network.bane.util.TestHelper.governorScriptHash;
 import static network.bane.util.TestHelper.owner;
 import static network.bane.util.TestHelper.ownerScriptHash;
@@ -66,9 +66,9 @@ public class TestHelper {
     public static final int maxNativeWithdrawals = 100;
     public static final BigInteger maxTotalNativeDepositAmount = new BigInteger("10000000000000");
 
-    public static Bridge bridge;
+    public static BridgeTestClient bridge;
     public static Management management;
-    public static MessageBridge messageBridge;
+    public static MessageBridgeClient messageBridgeClient;
     public static ExecutionManager executionManager;
     public static MessageTestStorer messageTestStorer;
     public static TestMessageSender testMessageSender;
@@ -126,7 +126,7 @@ public class TestHelper {
 
     public static void setupBridge(ContractTestExtension ext) {
         setupManagement(ext);
-        bridge = new Bridge(ext.getDeployedContract(BridgeContract.class).getScriptHash(), neow3j);
+        bridge = new BridgeTestClient(ext.getDeployedContract(BridgeContract.class).getScriptHash(), neow3j);
         setupTestContract(ext);
     }
 
@@ -135,17 +135,17 @@ public class TestHelper {
     }
 
     public static void setupTestMessageSender(ContractTestExtension ext) throws Throwable {
-        if (messageBridge == null) {
+        if (messageBridgeClient == null) {
             throw new IllegalStateException("MessageBridge must be set up before TestMessageSender.");
         }
         testMessageSender =
                 new TestMessageSender(ext.getDeployedContract(TestMessageSenderContract.class).getScriptHash(), neow3j);
-        testMessageSender.setMessageBridge(messageBridge.getScriptHash());
+        testMessageSender.setMessageBridge(messageBridgeClient.getScriptHash());
     }
 
     public static void setupMessageBridge(ContractTestExtension ext) {
         setupManagement(ext);
-        messageBridge = new MessageBridge(ext.getDeployedContract(MessageBridgeContract.class).getScriptHash(), neow3j);
+        messageBridgeClient = new MessageBridgeClient(ext.getDeployedContract(MessageBridgeContract.class).getScriptHash(), neow3j);
     }
 
     public static void setupExecutionManager(ContractTestExtension ext) {
@@ -255,22 +255,17 @@ public class TestHelper {
         );
     }
 
-    public static BigInteger incrementAndGetWithdrawalNonce() {
-        withdrawalNonce = withdrawalNonce.add(BigInteger.ONE);
-        return withdrawalNonce;
-    }
-
     public static BigInteger incrementAndGetDepositNonce() {
         depositNonce = depositNonce.add(BigInteger.ONE);
         return depositNonce;
     }
 
     public static BigInteger getNextEvmNonce() throws IOException {
-        return messageBridge.getMessageBridge().n3ToEvmMessageState.nonce.add(BigInteger.ONE);
+        return messageBridgeClient.getMessageBridge().neoToEvmState.nonce.add(BigInteger.ONE);
     }
 
     public static BigInteger getNextN3Nonce() throws IOException {
-        return messageBridge.getMessageBridge().evmToN3MessageState.nonce.add(BigInteger.ONE);
+        return messageBridgeClient.getMessageBridge().evmToNeoState.nonce.add(BigInteger.ONE);
     }
 
     public static void registerNeoTokenBridge() throws Throwable {
@@ -282,10 +277,12 @@ public class TestHelper {
         TokenBridge.TokenConfig config = new TokenBridge.TokenConfig(neoXNeoTokenHash, fee, minAmount, maxAmount,
                 maxWithdrawals, decimalScalingFactor);
 
-        Hash256 txHash = bridge.registerToken(neoN3NeoTokenHash, config);
-        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
-        Hash256 unpauseTxHash = bridge.unpauseTokenBridge(neoN3NeoTokenHash);
-        Await.waitUntilTransactionIsExecuted(unpauseTxHash, neow3j);
+        bridge.registerToken(neoN3NeoTokenHash, config)
+                .withSigners(calledByEntry(governor))
+                .signSendAndAwait();
+        bridge.unpauseTokenBridge(neoN3NeoTokenHash)
+                .withSigners(calledByEntry(governor))
+                .signSendAndAwait();
     }
 
 }
