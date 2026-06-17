@@ -1,6 +1,8 @@
 package network.bane.client;
 
 import io.neow3j.contract.Iterator;
+import io.neow3j.crypto.ECKeyPair;
+import io.neow3j.crypto.Sign;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
@@ -96,7 +98,7 @@ class BridgeTokenModule implements IBridgeTokenOps {
 
     @Override
     public IWriteCaller withdrawToken(Hash160 token, String withdrawalRoot,
-            Map<ContractParameter, ContractParameter> signatures, ContractParameter withdrawals) {
+            Map<ECKeyPair.ECPublicKey, Sign.SignatureData> signatures, ContractParameter withdrawals) {
         return base.invokeWrite("withdrawToken", hash160(token), byteArray(withdrawalRoot), map(signatures),
                 withdrawals);
     }

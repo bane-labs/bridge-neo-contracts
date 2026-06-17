@@ -1,5 +1,7 @@
 package network.bane.client.interfaces;
 
+import io.neow3j.crypto.ECKeyPair;
+import io.neow3j.crypto.Sign;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import network.bane.dto.bridge.NativeBridge;
@@ -83,7 +85,7 @@ public interface IBridgeNativeOps {
      * @param withdrawals    serialized list parameter of withdrawals to execute.
      * @return transaction hash.
      */
-    IWriteCaller withdrawNative(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
+    IWriteCaller withdrawNative(String withdrawalRoot, Map<ECKeyPair.ECPublicKey, Sign.SignatureData> signatures,
             ContractParameter withdrawals);
 
     /**

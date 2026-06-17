@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.neow3j.contract.Iterator;
 import io.neow3j.contract.NefFile;
 import io.neow3j.contract.SmartContract;
+import io.neow3j.crypto.ECKeyPair;
+import io.neow3j.crypto.Sign;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.types.ContractParameter;
@@ -175,7 +177,7 @@ public class BridgeClient extends SmartContract implements IBridgeGeneralOps, IB
      * {@inheritDoc}
      */
     @Override
-    public IWriteCaller withdrawNative(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
+    public IWriteCaller withdrawNative(String withdrawalRoot, Map<ECKeyPair.ECPublicKey, Sign.SignatureData> signatures,
             ContractParameter withdrawals) {
         return nativeBridge.withdrawNative(withdrawalRoot, signatures, withdrawals);
     }
@@ -394,7 +396,7 @@ public class BridgeClient extends SmartContract implements IBridgeGeneralOps, IB
      */
     @Override
     public IWriteCaller withdrawToken(Hash160 token, String withdrawalRoot,
-            Map<ContractParameter, ContractParameter> signatures, ContractParameter withdrawals) {
+            Map<ECKeyPair.ECPublicKey, Sign.SignatureData> signatures, ContractParameter withdrawals) {
         return this.token.withdrawToken(token, withdrawalRoot, signatures, withdrawals);
     }
 

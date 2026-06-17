@@ -2,6 +2,8 @@ package network.bane.bridge;
 
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
+import io.neow3j.crypto.ECKeyPair;
+import io.neow3j.crypto.Sign;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.ContractStorageEntry;
@@ -26,7 +28,7 @@ import network.bane.dto.bridge.NativeBridge;
 import network.bane.dto.State;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
-import network.bane.util.TestHelper;
+import network.bane.support.event.TokenBridgeEventHelper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -55,51 +57,50 @@ import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.string;
 import static io.neow3j.utils.Numeric.toHexString;
 import static java.util.Arrays.asList;
-import static network.bane.util.TestHelper.getClaimEvents;
-import static network.bane.util.TestHelper.governor;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_DECIMAL_SCALING_FACTOR_GAS;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_TOTAL_MAX_DEPOSITED_GAS;
-import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_DEPOSIT_GAS;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_WITHDRAWALS;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_DEPOSIT_GAS;
-import static network.bane.util.helper.PrintHelper.printTransactionFee;
-import static network.bane.util.TestHelper.concatAndKeccak256;
-import static network.bane.util.TestHelper.createDepositHash;
-import static network.bane.util.TestHelper.getClaimableEvents;
-import static network.bane.util.TestHelper.getDepositEvents;
-import static network.bane.util.TestHelper.getWithdrawEvents;
-import static network.bane.util.TestHelper.hasFiredEvent;
-import static network.bane.util.TestHelper.owner;
-import static network.bane.util.TestHelper.recipient0;
-import static network.bane.util.TestHelper.recipient1;
-import static network.bane.util.TestHelper.recipient2;
-import static network.bane.util.TestHelper.recipient3;
-import static network.bane.util.TestHelper.recipient4;
-import static network.bane.util.TestHelper.relayer;
-import static network.bane.util.TestHelper.securityGuard;
-import static network.bane.util.TestHelper.signMsg;
-import static network.bane.util.TestHelper.validator1;
-import static network.bane.util.TestHelper.validator2;
-import static network.bane.util.TestHelper.validator3;
-import static network.bane.util.TestHelper.validator4;
-import static network.bane.util.TestHelper.validator5;
-import static network.bane.util.helper.TestHelper.alice;
-import static network.bane.util.helper.TestHelper.bob;
-import static network.bane.util.helper.TestHelper.bridge;
-import static network.bane.util.helper.TestHelper.charlie;
-import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
-import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
-import static network.bane.util.helper.TestHelper.denise;
-import static network.bane.util.helper.TestHelper.eve;
-import static network.bane.util.helper.TestHelper.gasToken;
-import static network.bane.util.helper.TestHelper.incrementAndGetDepositNonce;
-import static network.bane.util.helper.TestHelper.neoToken;
-import static network.bane.util.helper.TestHelper.neow3j;
-import static network.bane.util.helper.TestHelper.setup;
-import static network.bane.util.helper.TestHelper.setupBridge;
-import static network.bane.util.helper.TestHelper.testContract;
+import static network.bane.support.event.EventHelper.hasFiredEvent;
+import static network.bane.support.event.TokenBridgeEventHelper.getClaimEvents;
+import static network.bane.support.event.TokenBridgeEventHelper.getClaimableEvents;
+import static network.bane.support.event.TokenBridgeEventHelper.getDepositEvents;
+import static network.bane.support.event.TokenBridgeEventHelper.getWithdrawEvents;
+import static network.bane.support.hash.HashChainHelper.concatAndKeccak256;
+import static network.bane.support.hash.TokenBridgeHashChainHelper.createDepositHash;
+import static network.bane.support.crypto.SignHelper.signMsg;
+import static network.bane.support.TestConstants.governor;
+import static network.bane.support.TestConstants.DEFAULT_DEPOSIT_FEE;
+import static network.bane.support.TestConstants.DEFAULT_DECIMAL_SCALING_FACTOR_GAS;
+import static network.bane.support.TestConstants.DEFAULT_TOTAL_MAX_DEPOSITED_GAS;
+import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
+import static network.bane.support.TestConstants.DEFAULT_MAX_DEPOSIT_GAS;
+import static network.bane.support.TestConstants.DEFAULT_MAX_WITHDRAWALS;
+import static network.bane.support.TestConstants.DEFAULT_MIN_DEPOSIT_GAS;
+import static network.bane.support.io.PrintHelper.printTransactionFee;
+import static network.bane.support.TestConstants.owner;
+import static network.bane.support.TestConstants.recipient0;
+import static network.bane.support.TestConstants.recipient1;
+import static network.bane.support.TestConstants.recipient2;
+import static network.bane.support.TestConstants.recipient3;
+import static network.bane.support.TestConstants.recipient4;
+import static network.bane.support.TestConstants.relayer;
+import static network.bane.support.TestConstants.securityGuard;
+import static network.bane.support.TestConstants.validator1;
+import static network.bane.support.TestConstants.validator2;
+import static network.bane.support.TestConstants.validator3;
+import static network.bane.support.TestConstants.validator4;
+import static network.bane.support.TestConstants.validator5;
+import static network.bane.support.TestEnvironment.alice;
+import static network.bane.support.TestEnvironment.bob;
+import static network.bane.support.TestEnvironment.bridge;
+import static network.bane.support.TestEnvironment.charlie;
+import static network.bane.support.TestEnvironment.createBridgeDeployConfig;
+import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
+import static network.bane.support.TestEnvironment.denise;
+import static network.bane.support.TestEnvironment.eve;
+import static network.bane.support.TestEnvironment.gasToken;
+import static network.bane.support.TestEnvironment.neoToken;
+import static network.bane.support.TestEnvironment.neow3j;
+import static network.bane.support.TestEnvironment.setup;
+import static network.bane.support.TestEnvironment.setupBridge;
+import static network.bane.support.TestEnvironment.testContract;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
@@ -282,7 +283,6 @@ public class BridgeTest {
         // This test only works if it is the first test in the order of deposits, due to the use of raw data for the
         // nonce, to and amount.
         Account from = alice;
-        incrementAndGetDepositNonce(); // Necessary if other tests are run besides this one.
         BigInteger nextNonce = BigInteger.ONE;
         Hash160 to = new Hash160("0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
         BigInteger amount = gasToken.toFractions(BigDecimal.ONE);
@@ -304,9 +304,9 @@ public class BridgeTest {
         assertThat(newRoot, is("0x70789f5bdb108a6b6dc7d7aa0d31649ab5fa980bbbfd1868eb17821b1f61e0ac"));
         assertThat(bridge.nativeDepositRoot(), is(newRoot));
 
-        List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(depositEvents, hasSize(1));
-        TestHelper.DepositEvent depositEvent = depositEvents.get(0);
+        TokenBridgeEventHelper.DepositEvent depositEvent = depositEvents.get(0);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
@@ -320,7 +320,6 @@ public class BridgeTest {
     public void testRootComputation_2() throws Throwable {
         Account from = bob;
         BigInteger nextNonce = new BigInteger("2");
-        incrementAndGetDepositNonce();
         Hash160 to = new Hash160("0x89fc6b042b146f373cec4ca4a1b112697763360f");
         BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS;
 
@@ -338,9 +337,9 @@ public class BridgeTest {
 
         assertThat(bridge.nativeDepositRoot(), is(d12));
 
-        List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(depositEvents, hasSize(1));
-        TestHelper.DepositEvent depositEvent = depositEvents.get(0);
+        TokenBridgeEventHelper.DepositEvent depositEvent = depositEvents.get(0);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
@@ -355,7 +354,7 @@ public class BridgeTest {
         Account from = charlie;
         Hash160 to = recipient3;
         BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS.multiply(new BigInteger("3"));
-        BigInteger nextNonce = incrementAndGetDepositNonce();
+        BigInteger nextNonce = bridge.nativeDepositNonce().add(BigInteger.ONE);
 
         String depositRootBefore = bridge.nativeDepositRoot();
         Hash256 txHash = bridge.depositNative(from, to, amount);
@@ -365,9 +364,9 @@ public class BridgeTest {
 
         assertThat(bridge.nativeDepositRoot(), is(d12d3));
 
-        List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(depositEvents, hasSize(1));
-        TestHelper.DepositEvent depositEvent = depositEvents.get(0);
+        TokenBridgeEventHelper.DepositEvent depositEvent = depositEvents.get(0);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
@@ -382,7 +381,7 @@ public class BridgeTest {
         Account from = denise;
         Hash160 to = recipient4;
         BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS.multiply(new BigInteger("4"));
-        BigInteger nextNonce = incrementAndGetDepositNonce();
+        BigInteger nextNonce = bridge.nativeDepositNonce().add(BigInteger.ONE);
 
         String depositRootBefore = bridge.nativeDepositRoot();
 
@@ -393,9 +392,9 @@ public class BridgeTest {
 
         assertThat(bridge.nativeDepositRoot(), is(d1234));
 
-        List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(depositEvents, hasSize(1));
-        TestHelper.DepositEvent depositEvent = depositEvents.get(0);
+        TokenBridgeEventHelper.DepositEvent depositEvent = depositEvents.get(0);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
@@ -569,9 +568,9 @@ public class BridgeTest {
         Hash256 txHash = bridge.withdrawNative(root, signMsg(validators, root), withdrawal)
                 .withSigners(calledByEntry(relayer)).signSendAndAwait();
         printTransactionFee(neow3j, "tx with 1 withdrawals", txHash);
-        List<TestHelper.WithdrawEvent> withdrawEvents = getWithdrawEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.WithdrawEvent> withdrawEvents = getWithdrawEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(withdrawEvents, hasSize(1));
-        TestHelper.WithdrawEvent withdrawEvent = withdrawEvents.get(0);
+        TokenBridgeEventHelper.WithdrawEvent withdrawEvent = withdrawEvents.get(0);
         assertThat(withdrawEvent.nonce, is(nonce));
         assertThat(withdrawEvent.to, is(to));
         assertThat(withdrawEvent.amount, is(amount));
@@ -617,13 +616,13 @@ public class BridgeTest {
         Hash256 txHash = bridge.withdrawNative(newRoot, signMsg(validators, newRoot), withdrawal)
                 .withSigners(calledByEntry(relayer)).signSendAndAwait();
         printTransactionFee(neow3j, "tx with 2 withdrawals", txHash);
-        List<TestHelper.WithdrawEvent> withdrawEvents = getWithdrawEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.WithdrawEvent> withdrawEvents = getWithdrawEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(withdrawEvents, hasSize(2));
-        TestHelper.WithdrawEvent withdrawEvent1 = withdrawEvents.get(0);
+        TokenBridgeEventHelper.WithdrawEvent withdrawEvent1 = withdrawEvents.get(0);
         assertThat(withdrawEvent1.nonce, is(nonce1));
         assertThat(withdrawEvent1.to, is(to1));
         assertThat(withdrawEvent1.amount, is(amount1));
-        TestHelper.WithdrawEvent withdrawEvent2 = withdrawEvents.get(1);
+        TokenBridgeEventHelper.WithdrawEvent withdrawEvent2 = withdrawEvents.get(1);
         assertThat(withdrawEvent2.nonce, is(nonce2));
         assertThat(withdrawEvent2.to, is(to2));
         assertThat(withdrawEvent2.amount, is(amount2));
@@ -646,9 +645,9 @@ public class BridgeTest {
                 .withSigners(calledByEntry(relayer)).signSendAndAwait();
         printTransactionFee(neow3j, "tx with 1 withdrawals to claim", txHash);
 
-        List<TestHelper.ClaimableEvent> claimableEvents = getClaimableEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.ClaimableEvent> claimableEvents = getClaimableEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(claimableEvents, hasSize(1));
-        TestHelper.ClaimableEvent claimableEvent = claimableEvents.get(0);
+        TokenBridgeEventHelper.ClaimableEvent claimableEvent = claimableEvents.get(0);
         assertThat(claimableEvent.nonce, is(nonce));
         assertThat(claimableEvent.to, is(to));
         assertThat(claimableEvent.amount, is(amount));
@@ -740,9 +739,9 @@ public class BridgeTest {
         assertTrue(bridge.isClaimableNative(nextNonce));
 
         Hash256 txHash = bridge.claimNative(nextNonce).withSigners(calledByEntry(alice)).signSendAndAwait();
-        List<TestHelper.ClaimEvent> claimEvents = getClaimEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.ClaimEvent> claimEvents = getClaimEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(claimEvents, hasSize(1));
-        TestHelper.ClaimEvent claimEvent = claimEvents.get(0);
+        TokenBridgeEventHelper.ClaimEvent claimEvent = claimEvents.get(0);
         assertThat(claimEvent.nonce, is(nextNonce));
         assertThat(claimEvent.to, is(to));
         assertThat(claimEvent.amount, is(amount));
@@ -1023,9 +1022,9 @@ public class BridgeTest {
     @Order(0)
     public void testPauseBridge_withdrawal() throws Throwable {
         bridge.pauseBridge(governor);
-        HashMap<ContractParameter, ContractParameter> map = new HashMap<>();
+        HashMap<ECKeyPair.ECPublicKey, Sign.SignatureData> map = new HashMap<>();
         // Map content doesn't matter for this test, just required to have at least one entry.
-        map.put(integer(0), integer(0));
+        map.put(alice.getECKeyPair().getPublicKey(), Sign.signHexMessage("", alice.getECKeyPair()));
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.withdrawNative(relayer, "", map, array("")));

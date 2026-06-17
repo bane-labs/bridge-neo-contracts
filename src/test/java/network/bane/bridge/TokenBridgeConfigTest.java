@@ -1,12 +1,19 @@
 package network.bane.bridge;
 
+import io.neow3j.contract.ContractManagement;
+import io.neow3j.contract.NefFile;
+import io.neow3j.protocol.ObjectMapperFactory;
+import io.neow3j.protocol.core.response.ContractManifest;
+import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
+import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.Hash160;
 import io.neow3j.wallet.Account;
+import network.bane.dto.bridge.TokenBridge;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
 import org.junit.jupiter.api.BeforeAll;
@@ -16,24 +23,34 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.file.Paths;
 import java.util.HashMap;
 
+import static io.neow3j.contract.SmartContract.calcContractHash;
 import static io.neow3j.transaction.AccountSigner.global;
-import static network.bane.util.TestHelper.governor;
-import static network.bane.util.helper.TestHelper.bob;
-import static network.bane.util.helper.TestHelper.bridge;
-import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
-import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
-import static network.bane.util.helper.TestHelper.gasToken;
-import static network.bane.util.helper.TestHelper.neoN3NeoTokenHash;
-import static network.bane.util.helper.TestHelper.registerNeoTokenBridge;
-import static network.bane.util.helper.TestHelper.setup;
-import static network.bane.util.helper.TestHelper.setupBridge;
-import static network.bane.util.helper.TokenDeployment.deployTestToken;
-import static network.bane.util.helper.TokenHelper.dummyTokenConfig;
+import static io.neow3j.types.ContractParameter.hash160;
+import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
+import static network.bane.support.TestConstants.DEFAULT_DEPOSIT_FEE;
+import static network.bane.support.TestConstants.DEFAULT_MAX_DEPOSIT_GAS;
+import static network.bane.support.TestConstants.DEFAULT_MAX_WITHDRAWALS;
+import static network.bane.support.TestConstants.DEFAULT_MIN_DEPOSIT_GAS;
+import static network.bane.support.TestConstants.DUMMY_TARGET_CONTRACT_HASH;
+import static network.bane.support.TestConstants.governor;
+import static network.bane.support.TestConstants.owner;
+import static network.bane.support.TestEnvironment.bob;
+import static network.bane.support.TestEnvironment.bridge;
+import static network.bane.support.TestEnvironment.createBridgeDeployConfig;
+import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
+import static network.bane.support.TestEnvironment.gasToken;
+import static network.bane.support.TestEnvironment.neoN3NeoTokenHash;
+import static network.bane.support.TestEnvironment.registerNeoTokenBridge;
+import static network.bane.support.TestEnvironment.setup;
+import static network.bane.support.TestEnvironment.setupBridge;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
@@ -59,8 +76,16 @@ public class TokenBridgeConfigTest {
 
         registerNeoTokenBridge();
 
-        testTokenHash = deployTestToken(ext).getScriptHash();
-        bridge.registerToken(governor, testTokenHash, dummyTokenConfig());
+        testTokenHash = deployTestToken(ext);
+        TokenBridge.TokenConfig dummyTokenConfig = new TokenBridge.TokenConfig(
+                DUMMY_TARGET_CONTRACT_HASH,
+                DEFAULT_DEPOSIT_FEE,
+                DEFAULT_MIN_DEPOSIT_GAS,
+                DEFAULT_MAX_DEPOSIT_GAS,
+                DEFAULT_MAX_WITHDRAWALS,
+                0
+        );
+        bridge.registerToken(governor, testTokenHash, dummyTokenConfig);
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -71,6 +96,24 @@ public class TokenBridgeConfigTest {
     @DeployConfig(BridgeContract.class)
     public static DeployConfiguration deployConfigBridge() {
         return createBridgeDeployConfig();
+    }
+
+    private static Hash160 deployTestToken(ContractTestExtension ext) throws Throwable {
+        File contractNefFile = Paths.get("src", "test", "resources", "TestToken.nef").toFile();
+        NefFile nefFile = NefFile.readFromFile(contractNefFile);
+
+        File manifestFile = Paths.get("src", "test", "resources", "TestToken.manifest.json").toFile();
+        ContractManifest manifest;
+        try (FileInputStream s = new FileInputStream(manifestFile)) {
+            manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
+        }
+        NeoSendRawTransaction response =
+                new ContractManagement(ext.getNeow3j()).deploy(nefFile, manifest, hash160(owner))
+                        .signers(AccountSigner.calledByEntry(owner))
+                        .sign()
+                        .send();
+        waitUntilTransactionIsExecuted(response.getSendRawTransaction().getHash(), ext.getNeow3j());
+        return calcContractHash(owner.getScriptHash(), nefFile.getCheckSumAsInteger(), manifest.getName());
     }
 
     // region deposit fee

@@ -1,4 +1,4 @@
-package network.bane.util.helper;
+package network.bane.support;
 
 import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.GasToken;
@@ -15,6 +15,7 @@ import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.wallet.Account;
 import network.bane.bridge.BridgeContract;
+import network.bane.client.MessageBridgeTestClient;
 import network.bane.management.BridgeManagementContract;
 import network.bane.message.MessageBridgeContract;
 import network.bane.messageexecution.ExecutionManagerContract;
@@ -22,14 +23,12 @@ import network.bane.testhelper.MessageTestStoreContract;
 import network.bane.testhelper.TestContract;
 import network.bane.testhelper.TestMessageSenderContract;
 import network.bane.client.BridgeTestClient;
-import network.bane.util.ExecutionManager;
 import network.bane.client.ManagementTestClient;
-import network.bane.util.MessageBridgeClient;
-import network.bane.util.MessageTestStorer;
-import network.bane.util.TestMessageSender;
 import network.bane.dto.bridge.TokenBridge;
+import network.bane.support.contract.ExecutionManager;
+import network.bane.support.contract.MessageTestStorer;
+import network.bane.support.contract.TestMessageSender;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -38,27 +37,27 @@ import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static java.util.Arrays.asList;
-import static network.bane.util.TestHelper.governor;
-import static network.bane.util.TestHelper.governorScriptHash;
-import static network.bane.util.TestHelper.owner;
-import static network.bane.util.TestHelper.ownerScriptHash;
-import static network.bane.util.TestHelper.prepareManagementDeployParameter;
-import static network.bane.util.TestHelper.relayerScriptHash;
-import static network.bane.util.TestHelper.securityGuardScriptHash;
-import static network.bane.util.TestHelper.validator1PubKey;
-import static network.bane.util.TestHelper.validator2PubKey;
-import static network.bane.util.TestHelper.validator3PubKey;
-import static network.bane.util.TestHelper.validator4PubKey;
-import static network.bane.util.TestHelper.validator5PubKey;
-import static network.bane.util.TestHelper.validator6PubKey;
-import static network.bane.util.TestHelper.validator7PubKey;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_LINKED_CHAIN_ID;
-import static network.bane.util.helper.DefaultTestValues.EXECUTION_MANAGER_CONTRACT_HASH;
-import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
-import static network.bane.util.helper.DefaultTestValues.MESSAGE_BRIDGE_CONTRACT_HASH;
-import static network.bane.util.helper.NetworkSettingsHelper.updateNetworkSettings;
+import static network.bane.support.TestConstants.governor;
+import static network.bane.support.TestConstants.governorScriptHash;
+import static network.bane.support.TestConstants.owner;
+import static network.bane.support.TestConstants.ownerScriptHash;
+import static network.bane.support.TestConstants.prepareManagementDeployParameter;
+import static network.bane.support.TestConstants.relayerScriptHash;
+import static network.bane.support.TestConstants.securityGuardScriptHash;
+import static network.bane.support.TestConstants.validator1PubKey;
+import static network.bane.support.TestConstants.validator2PubKey;
+import static network.bane.support.TestConstants.validator3PubKey;
+import static network.bane.support.TestConstants.validator4PubKey;
+import static network.bane.support.TestConstants.validator5PubKey;
+import static network.bane.support.TestConstants.validator6PubKey;
+import static network.bane.support.TestConstants.validator7PubKey;
+import static network.bane.support.TestConstants.DEFAULT_LINKED_CHAIN_ID;
+import static network.bane.support.TestConstants.EXECUTION_MANAGER_CONTRACT_HASH;
+import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
+import static network.bane.support.TestConstants.MESSAGE_BRIDGE_CONTRACT_HASH;
+import static network.bane.support.NetworkSettingsHelper.updateNetworkSettings;
 
-public class TestHelper {
+public class TestEnvironment {
 
     public static final BigInteger nativeDepositFee = new BigInteger("10000000");
     public static final BigInteger minNativeDeposit = new BigInteger("100000000");
@@ -68,7 +67,7 @@ public class TestHelper {
 
     public static BridgeTestClient bridge;
     public static ManagementTestClient management;
-    public static MessageBridgeClient messageBridgeClient;
+    public static MessageBridgeTestClient messageBridge;
     public static ExecutionManager executionManager;
     public static MessageTestStorer messageTestStorer;
     public static TestMessageSender testMessageSender;
@@ -81,12 +80,6 @@ public class TestHelper {
     public static GasToken gasToken;
     public static NeoToken neoToken;
     public static PolicyContract policyContract;
-
-    public static BigInteger withdrawalNonce = BigInteger.ZERO;
-    public static BigInteger depositNonce = BigInteger.ZERO;
-
-    public static BigInteger n3MessageNonce = BigInteger.ZERO;
-    public static BigInteger evmMessageNonce = BigInteger.ZERO;
 
     public static Account alice;
     public static Account bob;
@@ -106,16 +99,16 @@ public class TestHelper {
         gasToken = new GasToken(neow3j);
         neoToken = new NeoToken(neow3j);
         policyContract = new PolicyContract(neow3j);
-        alice = ext.getAccount(network.bane.util.TestHelper.ALICE);
+        alice = ext.getAccount(TestConstants.ALICE);
         committee = Account.createMultiSigAccount(asList(alice.getECKeyPair().getPublicKey()), 1);
-        bob = ext.getAccount(network.bane.util.TestHelper.BOB);
-        charlie = ext.getAccount(network.bane.util.TestHelper.CHARLIE);
-        denise = ext.getAccount(network.bane.util.TestHelper.DENISE);
-        eve = ext.getAccount(network.bane.util.TestHelper.EVE);
-        florian = ext.getAccount(network.bane.util.TestHelper.FLORIAN);
-        gabriel = ext.getAccount(network.bane.util.TestHelper.GABRIEL);
-        henry = ext.getAccount(network.bane.util.TestHelper.HENRY);
-        isabella = ext.getAccount(network.bane.util.TestHelper.ISABELLA);
+        bob = ext.getAccount(TestConstants.BOB);
+        charlie = ext.getAccount(TestConstants.CHARLIE);
+        denise = ext.getAccount(TestConstants.DENISE);
+        eve = ext.getAccount(TestConstants.EVE);
+        florian = ext.getAccount(TestConstants.FLORIAN);
+        gabriel = ext.getAccount(TestConstants.GABRIEL);
+        henry = ext.getAccount(TestConstants.HENRY);
+        isabella = ext.getAccount(TestConstants.ISABELLA);
 
         updateNetworkSettings(neow3j, committee, alice);
     }
@@ -135,27 +128,28 @@ public class TestHelper {
     }
 
     public static void setupTestMessageSender(ContractTestExtension ext) throws Throwable {
-        if (messageBridgeClient == null) {
+        if (messageBridge == null) {
             throw new IllegalStateException("MessageBridge must be set up before TestMessageSender.");
         }
         testMessageSender =
                 new TestMessageSender(ext.getDeployedContract(TestMessageSenderContract.class).getScriptHash(), neow3j);
-        testMessageSender.setMessageBridge(messageBridgeClient.getScriptHash());
+        testMessageSender.setMessageBridge(messageBridge.getScriptHash());
     }
 
     public static void setupMessageBridge(ContractTestExtension ext) {
         setupManagement(ext);
-        messageBridgeClient = new MessageBridgeClient(ext.getDeployedContract(MessageBridgeContract.class).getScriptHash(), neow3j);
+        Hash160 messageBridgeHash = ext.getDeployedContract(MessageBridgeContract.class).getScriptHash();
+        messageBridge = new MessageBridgeTestClient(messageBridgeHash, neow3j);
     }
 
     public static void setupExecutionManager(ContractTestExtension ext) {
-        executionManager = new ExecutionManager(ext.getDeployedContract(ExecutionManagerContract.class).getScriptHash(),
-                neow3j);
+        Hash160 executionManagerHash = ext.getDeployedContract(ExecutionManagerContract.class).getScriptHash();
+        executionManager = new ExecutionManager(executionManagerHash, neow3j);
     }
 
     public static void setupMessageTestStorer(ContractTestExtension ext) {
-        messageTestStorer = new MessageTestStorer(
-                ext.getDeployedContract(MessageTestStoreContract.class).getScriptHash(), neow3j);
+        Hash160 messageTestStoreHash = ext.getDeployedContract(MessageTestStoreContract.class).getScriptHash();
+        messageTestStorer = new MessageTestStorer(messageTestStoreHash, neow3j);
     }
 
     public static DeployConfiguration createBridgeManagementDeployConfig() {
@@ -253,19 +247,6 @@ public class TestHelper {
                 hash160(managementContractHash),
                 hash160(bridgeContractHash)
         );
-    }
-
-    public static BigInteger incrementAndGetDepositNonce() {
-        depositNonce = depositNonce.add(BigInteger.ONE);
-        return depositNonce;
-    }
-
-    public static BigInteger getNextEvmNonce() throws IOException {
-        return messageBridgeClient.getMessageBridge().neoToEvmState.nonce.add(BigInteger.ONE);
-    }
-
-    public static BigInteger getNextN3Nonce() throws IOException {
-        return messageBridgeClient.getMessageBridge().evmToNeoState.nonce.add(BigInteger.ONE);
     }
 
     public static void registerNeoTokenBridge() throws Throwable {

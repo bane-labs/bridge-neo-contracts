@@ -1,11 +1,11 @@
-package network.bane.util.helper;
+package network.bane.support.io;
 
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
-import network.bane.util.BridgeTestClient;
-import network.bane.util.TestHelper;
+import network.bane.client.BridgeTestClient;
+import network.bane.support.event.TokenBridgeEventHelper;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static io.neow3j.utils.Numeric.prependHexPrefix;
+import static network.bane.support.event.TokenBridgeEventHelper.depositEventFromNotification;
 
 public class PrintHelper {
 
@@ -33,7 +34,7 @@ public class PrintHelper {
                         .findFirst();
         if (onDepositOpt.isPresent()) {
             Notification depositNotification = onDepositOpt.get();
-            TestHelper.DepositEvent depositEvent = TestHelper.depositEventFromNotification(depositNotification);
+            TokenBridgeEventHelper.DepositEvent depositEvent = depositEventFromNotification(depositNotification);
             BigInteger nonce = depositEvent.nonce;
             Hash160 to = depositEvent.to;
             BigInteger amount = depositEvent.amount;

@@ -1,6 +1,8 @@
 package network.bane.client.interfaces;
 
 import io.neow3j.contract.Iterator;
+import io.neow3j.crypto.ECKeyPair;
+import io.neow3j.crypto.Sign;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import network.bane.dto.bridge.TokenBridge;
@@ -106,7 +108,7 @@ public interface IBridgeTokenOps {
      * @return transaction hash.
      */
     IWriteCaller withdrawToken(Hash160 token, String withdrawalRoot,
-            Map<ContractParameter, ContractParameter> signatures, ContractParameter withdrawals);
+            Map<ECKeyPair.ECPublicKey, Sign.SignatureData> signatures, ContractParameter withdrawals);
 
     /**
      * Claims a previously marked claimable token withdrawal.

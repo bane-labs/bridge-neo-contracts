@@ -13,8 +13,8 @@ import static io.neow3j.types.ContractParameter.bool;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
-import static network.bane.util.helper.TestHelper.alice;
-import static network.bane.util.helper.TestHelper.messageBridge;
+import static network.bane.support.TestEnvironment.alice;
+import static network.bane.support.TestEnvironment.messageBridge;
 
 public class TestMessageSender extends SmartContractHelper {
 

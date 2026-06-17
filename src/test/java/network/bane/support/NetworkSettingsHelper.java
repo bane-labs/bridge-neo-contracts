@@ -1,16 +1,16 @@
-package network.bane.util.helper;
+package network.bane.support;
 
 import io.neow3j.contract.PolicyContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.types.Hash256;
-import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
 
 import java.io.IOException;
 import java.math.BigInteger;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
+import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 
 public class NetworkSettingsHelper {
 
@@ -44,7 +44,7 @@ public class NetworkSettingsHelper {
                 .getUnsignedTransaction();
         tx.addMultiSigWitness(committeeMultiSig.getVerificationScript(), committeeSignerAcc);
         Hash256 txHash = tx.send().getSendRawTransaction().getHash();
-        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
+        waitUntilTransactionIsExecuted(txHash, neow3j);
     }
 
     private static void setStorageFeeFactor(Neow3j neow3j, Account committeeMultiSigAcc, Account committeeSignerAcc) throws Throwable {
@@ -54,7 +54,7 @@ public class NetworkSettingsHelper {
                 .getUnsignedTransaction();
         tx.addMultiSigWitness(committeeMultiSigAcc.getVerificationScript(), committeeSignerAcc);
         Hash256 txHash = tx.send().getSendRawTransaction().getHash();
-        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
+        waitUntilTransactionIsExecuted(txHash, neow3j);
     }
 
     private static void setExecutionFeeFactor(Neow3j neow3j, Account committeeMultiSigAcc,
@@ -65,7 +65,7 @@ public class NetworkSettingsHelper {
                 .getUnsignedTransaction();
         tx.addMultiSigWitness(committeeMultiSigAcc.getVerificationScript(), committeeSignerAcc);
         Hash256 txHash = tx.send().getSendRawTransaction().getHash();
-        Await.waitUntilTransactionIsExecuted(txHash, neow3j);
+        waitUntilTransactionIsExecuted(txHash, neow3j);
     }
 
 }

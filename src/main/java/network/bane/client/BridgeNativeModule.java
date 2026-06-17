@@ -1,5 +1,7 @@
 package network.bane.client;
 
+import io.neow3j.crypto.ECKeyPair;
+import io.neow3j.crypto.Sign;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import network.bane.client.interfaces.IBridgeNativeOps;
@@ -71,7 +73,7 @@ class BridgeNativeModule implements IBridgeNativeOps {
     }
 
     @Override
-    public IWriteCaller withdrawNative(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
+    public IWriteCaller withdrawNative(String withdrawalRoot, Map<ECKeyPair.ECPublicKey, Sign.SignatureData> signatures,
             ContractParameter withdrawals) {
         return base.invokeWrite("withdrawNative", byteArray(withdrawalRoot), map(signatures), withdrawals);
     }

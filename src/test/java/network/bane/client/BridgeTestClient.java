@@ -3,6 +3,8 @@ package network.bane.client;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
 import io.neow3j.crypto.Base64;
+import io.neow3j.crypto.ECKeyPair;
+import io.neow3j.crypto.Sign;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.ContractStorageEntry;
@@ -22,11 +24,11 @@ import java.util.Map;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.utils.Numeric.toHexString;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_DEPOSIT_GAS;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_WITHDRAWALS;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_DEPOSIT_GAS;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_TOTAL_MAX_DEPOSITED_GAS;
+import static network.bane.support.TestConstants.DEFAULT_DEPOSIT_FEE;
+import static network.bane.support.TestConstants.DEFAULT_MAX_DEPOSIT_GAS;
+import static network.bane.support.TestConstants.DEFAULT_MAX_WITHDRAWALS;
+import static network.bane.support.TestConstants.DEFAULT_MIN_DEPOSIT_GAS;
+import static network.bane.support.TestConstants.DEFAULT_TOTAL_MAX_DEPOSITED_GAS;
 
 public class BridgeTestClient extends BridgeClient {
 
@@ -78,7 +80,7 @@ public class BridgeTestClient extends BridgeClient {
     }
 
     public Hash256 withdrawNative(Account sender, String withdrawalRoot,
-            Map<ContractParameter, ContractParameter> signatures, ContractParameter withdrawals) throws Throwable {
+            Map<ECKeyPair.ECPublicKey, Sign.SignatureData> signatures, ContractParameter withdrawals) throws Throwable {
         return withdrawNative(withdrawalRoot, signatures, withdrawals).withSigners(calledByEntry(sender))
                 .signSendAndAwait();
     }
@@ -124,7 +126,7 @@ public class BridgeTestClient extends BridgeClient {
     }
 
     public Hash256 withdrawToken(Account sender, Hash160 token, String withdrawalRoot,
-            Map<ContractParameter, ContractParameter> signatures, ContractParameter withdrawals) throws Throwable {
+            Map<ECKeyPair.ECPublicKey, Sign.SignatureData> signatures, ContractParameter withdrawals) throws Throwable {
         return withdrawToken(token, withdrawalRoot, signatures, withdrawals).withSigners(calledByEntry(sender))
                 .signSendAndAwait();
     }

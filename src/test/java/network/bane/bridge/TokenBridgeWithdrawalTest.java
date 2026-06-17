@@ -14,10 +14,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
-import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
-import static network.bane.util.helper.TestHelper.setup;
-import static network.bane.util.helper.TestHelper.setupBridge;
+import static network.bane.support.TestEnvironment.createBridgeDeployConfig;
+import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
+import static network.bane.support.TestEnvironment.setup;
+import static network.bane.support.TestEnvironment.setupBridge;
 
 @Disabled
 @ContractTest(

@@ -1,4 +1,4 @@
-package network.bane.util;
+package network.bane.support.contract;
 
 import io.neow3j.contract.NefFile;
 import io.neow3j.protocol.Neow3j;
@@ -11,7 +11,6 @@ import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
-import network.bane.util.helper.SmartContractHelper;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -20,9 +19,9 @@ import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.integer;
-import static network.bane.util.TestHelper.governor;
-import static network.bane.util.TestHelper.owner;
-import static network.bane.util.TestHelper.securityGuard;
+import static network.bane.support.TestConstants.governor;
+import static network.bane.support.TestConstants.owner;
+import static network.bane.support.TestConstants.securityGuard;
 
 public class ExecutionManager extends SmartContractHelper {
 
