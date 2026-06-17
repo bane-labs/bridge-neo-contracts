@@ -20,7 +20,7 @@ public class N3MessageMetadataExec extends N3MessageMetadata {
 
     @Override
     public byte[] serialize(IMetadataSerializer metadataSerializer) throws IOException {
-        return metadataSerializer.serializeMetadataExec(this);
+        return metadataSerializer.serializeMetadataExecutable(this);
     }
 
     @Override

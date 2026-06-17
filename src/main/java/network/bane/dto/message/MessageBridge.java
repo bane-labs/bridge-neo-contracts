@@ -98,8 +98,8 @@ public class MessageBridge {
     public String toString() {
         return "MessageBridge{" +
                 "evmToNeoState=" + evmToNeoState +
-                "neoToEvmState=" + neoToEvmState +
-                "config=" + config +
+                ", neoToEvmState=" + neoToEvmState +
+                ", config=" + config +
                 '}';
     }
 

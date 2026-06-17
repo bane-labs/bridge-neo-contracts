@@ -13,7 +13,6 @@ import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
-import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.CallFlags;
 import io.neow3j.types.ContractParameter;
@@ -25,7 +24,7 @@ import network.bane.messageexecution.ExecutionManagerContract;
 import network.bane.testhelper.DummyExecutionManagerContract;
 import network.bane.testhelper.MessageTestStoreContract;
 import network.bane.testhelper.TestContract;
-import network.bane.util.structs.N3MessageMetadataDto;
+import network.bane.dto.message.N3MessageMetadata;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -40,6 +39,7 @@ import java.math.BigInteger;
 import java.nio.file.Paths;
 import java.util.List;
 
+import static io.neow3j.transaction.AccountSigner.global;
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.byteArray;
@@ -49,25 +49,27 @@ import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static network.bane.util.TestHelper.owner;
-import static network.bane.util.TestHelper.securityGuard;
-import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
-import static network.bane.util.helper.DefaultTestValues.MESSAGE_BRIDGE_CONTRACT_HASH;
-import static network.bane.util.helper.TestHelper.alice;
-import static network.bane.util.helper.TestHelper.bob;
-import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
-import static network.bane.util.helper.TestHelper.createExecutionManagerDeployConfig;
-import static network.bane.util.helper.TestHelper.createMessageBridgeDeployConfig;
-import static network.bane.util.helper.TestHelper.executionManager;
-import static network.bane.util.helper.TestHelper.management;
-import static network.bane.util.helper.TestHelper.messageBridge;
-import static network.bane.util.helper.TestHelper.neow3j;
-import static network.bane.util.helper.TestHelper.setup;
-import static network.bane.util.helper.TestHelper.setupExecutionManager;
-import static network.bane.util.helper.TestHelper.setupMessageBridge;
-import static network.bane.util.helper.TestHelper.messageTestStorer;
-import static network.bane.util.helper.TestHelper.setupMessageTestStorer;
-import static network.bane.util.helper.TestHelper.setupTestContract;
+import static network.bane.support.TestConstants.governor;
+import static network.bane.support.TestConstants.owner;
+import static network.bane.support.TestConstants.relayer;
+import static network.bane.support.TestConstants.securityGuard;
+import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
+import static network.bane.support.TestConstants.MESSAGE_BRIDGE_CONTRACT_HASH;
+import static network.bane.support.TestEnvironment.alice;
+import static network.bane.support.TestEnvironment.bob;
+import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
+import static network.bane.support.TestEnvironment.createExecutionManagerDeployConfig;
+import static network.bane.support.TestEnvironment.createMessageBridgeDeployConfig;
+import static network.bane.support.TestEnvironment.executionManager;
+import static network.bane.support.TestEnvironment.management;
+import static network.bane.support.TestEnvironment.messageBridge;
+import static network.bane.support.TestEnvironment.neow3j;
+import static network.bane.support.TestEnvironment.setup;
+import static network.bane.support.TestEnvironment.setupExecutionManager;
+import static network.bane.support.TestEnvironment.setupMessageBridge;
+import static network.bane.support.TestEnvironment.messageTestStorer;
+import static network.bane.support.TestEnvironment.setupMessageTestStorer;
+import static network.bane.support.TestEnvironment.setupTestContract;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
@@ -111,9 +113,8 @@ public class MessageExecutionManagerTest {
                     "hash to 0x%s.", management.getScriptHash()));
         }
 
-        messageBridge.setExecutionManager(executionManager.getScriptHash());
-
-        messageBridge.unpause();
+        messageBridge.setExecutionManager(governor, executionManager.getScriptHash());
+        messageBridge.unpause(governor);
         messageTestStorer.setMessageBridge();
     }
 
@@ -219,9 +220,9 @@ public class MessageExecutionManagerTest {
         byte[] maliciousUpdateCall = messageBridge.serializeCall(ContractManagement.SCRIPT_HASH, "destroy",
                 CallFlags.ALL, asList());
 
-        BigInteger maliciousUpdateMsgNonce = messageBridge.storeMessage(maliciousUpdateCall);
+        BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer, maliciousUpdateCall);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.executeMessage(AccountSigner.global(alice), maliciousUpdateMsgNonce));
+                () -> messageBridge.executeMessage(nonce).withSigners(global(alice)).signSendAndAwait());
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Prohibited target"));
     }
 
@@ -235,9 +236,9 @@ public class MessageExecutionManagerTest {
         byte[] maliciousUpdateCall = messageBridge.serializeCall(ContractManagement.SCRIPT_HASH, "update",
                 CallFlags.ALL, asList(nefFileParam, manifestParam));
 
-        BigInteger maliciousUpdateMsgNonce = messageBridge.storeMessage(maliciousUpdateCall);
+        BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer, maliciousUpdateCall);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.executeMessage(AccountSigner.global(alice), maliciousUpdateMsgNonce));
+                () -> messageBridge.executeMessage(nonce).withSigners(global(alice)).signSendAndAwait());
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Prohibited target"));
     }
 
@@ -262,9 +263,10 @@ public class MessageExecutionManagerTest {
     @Test
     @Order(1)
     public void test_executeMessage_fail_n3MethodCallBytes_invalidFormatForDeserialization() throws Throwable {
-        BigInteger nonce = messageBridge.storeMessage(new byte[]{0x03, 0x04, 0x05}); // malformed N3 method call bytes
+        // malformed N3 method call bytes
+        BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer, new byte[]{0x03, 0x04, 0x05});
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.executeMessage(none(alice), nonce));
+                () -> messageBridge.executeMessage(alice, nonce));
         assertThat(thrown.getMessage(), containsString("invalid format"));
     }
 
@@ -277,9 +279,9 @@ public class MessageExecutionManagerTest {
         byte[] callWithZeroTarget =
                 hexStringToByteArray("400428140000000000000000000000000000000000000000280573746f726521010f4000");
 
-        BigInteger nonce = messageBridge.storeMessage(callWithZeroTarget);
+        BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer, callWithZeroTarget);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.executeMessage(none(alice), nonce));
+                () -> messageBridge.executeMessage(alice, nonce));
         assertThat(thrown.getMessage(), containsString("Method call has invalid values"));
     }
 
@@ -292,9 +294,9 @@ public class MessageExecutionManagerTest {
     public void test_executeMessage_fail_n3MethodCallBytes_invalidMethodName() throws Throwable {
         byte[] callWithEmptyMethod =
                 hexStringToByteArray("0x400428143c4cac7301ea80416d69b9a09cd60a9ee3dce1c2280021010f4000");
-        BigInteger nonce = messageBridge.storeMessage(callWithEmptyMethod);
+        BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer, callWithEmptyMethod);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.executeMessage(none(alice), nonce));
+                () -> messageBridge.executeMessage(alice, nonce));
         assertThat(thrown.getMessage(), containsString("Method call has invalid values"));
     }
 
@@ -304,7 +306,7 @@ public class MessageExecutionManagerTest {
     @Test
     @Order(0)
     public void test_executeMessage_fail_reenteringExecutionManager() throws Throwable {
-        BigInteger nextNonce = messageBridge.getMessageBridge().evmToN3MessageState.nonce.add(BigInteger.ONE);
+        BigInteger nextNonce = messageBridge.getMessageBridge().evmToNeoState.nonce.add(BigInteger.ONE);
         byte[] n3FuncCall = messageBridge.serializeCall(
                 executionManager.getScriptHash(), "executeMessage", CallFlags.ALL,
                 asList(
@@ -312,11 +314,11 @@ public class MessageExecutionManagerTest {
                         byteArray(getSerializedN3MethodForTestStoring("test_exec_reentering", string("hello")))
                 )
         );
-        BigInteger nonce = messageBridge.storeMessage(n3FuncCall);
+        BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer, n3FuncCall);
         assertThat(nonce, is(nextNonce));
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.executeMessage(none(alice), nonce));
+                () -> messageBridge.executeMessage(alice, nonce));
         assertThat(thrown.getMessage(), containsString("Prohibited target"));
     }
 
@@ -343,7 +345,7 @@ public class MessageExecutionManagerTest {
 
         BigInteger nonce = storeDefaultMessageForTestStoring(key, value);
 
-        Hash256 txHash = messageBridge.executeMessage(none(alice), nonce);
+        Hash256 txHash = messageBridge.executeMessage(alice, nonce);
         NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution();
         assertThat(exec.getNotifications(), hasSize(1));
@@ -380,11 +382,11 @@ public class MessageExecutionManagerTest {
         ContractParameter value = string("hello");
         assertThat(messageTestStorer.getStoredValue(key).getValue(), is(not("hello")));
 
-        BigInteger nonce = messageBridge.storeMessage(
+        BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer,
                 getSerializedN3MethodForTestStoring("storeValueAndReturnItsLength", key, value)
         );
 
-        Hash256 txHash = messageBridge.executeMessage(none(alice), nonce);
+        Hash256 txHash = messageBridge.executeMessage(alice, nonce);
         NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution();
 
@@ -415,11 +417,11 @@ public class MessageExecutionManagerTest {
             // Random byte
             resultArray[i] = (byte) (Math.random() * 256 - 128);
         }
-        BigInteger nonce = messageBridge.storeMessage(
+        BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer,
                 serializeMethodCall(messageTestStorer.getScriptHash(), "returnValue", asList(byteArray(resultArray)))
         );
 
-        Hash256 txHash = messageBridge.executeMessage(none(alice), nonce);
+        Hash256 txHash = messageBridge.executeMessage(alice, nonce);
         NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution();
 
@@ -473,11 +475,11 @@ public class MessageExecutionManagerTest {
             // Random byte
             resultArray[i] = (byte) (Math.random() * 256 - 128);
         }
-        BigInteger nonce = messageBridge.storeMessage(
+        BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer,
                 serializeMethodCall(messageTestStorer.getScriptHash(), "returnValue", asList(byteArray(resultArray)))
         );
 
-        Hash256 txHash = messageBridge.executeMessage(none(alice), nonce);
+        Hash256 txHash = messageBridge.executeMessage(alice, nonce);
         NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
                 .getFirstExecution();
 
@@ -534,17 +536,17 @@ public class MessageExecutionManagerTest {
                 "storeMetadataOfExecutingMessage", CallFlags.ALL, asList());
         BigInteger timestamp = bestBlockTime();
         Hash160 sender = bob.getScriptHash();
-        BigInteger nonce = messageBridge.storeMessage(serializedN3MethodCall, timestamp, sender, true);
+        BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer, serializedN3MethodCall);
 
         // Verify that nothing is stored yet - the interface returns zero values if there's nothing stored in the
         // contract.
         assertFalse(messageTestStorer.hasMetadataStored(nonce));
 
-        messageBridge.executeMessage(none(alice), nonce);
+        messageBridge.executeMessage(alice, nonce);
 
-        N3MessageMetadataDto storedMetadata = messageTestStorer.getStoredMetadata(nonce);
+        N3MessageMetadata storedMetadata = messageTestStorer.getStoredMetadata(nonce);
         assertThat(storedMetadata.timestamp, is(timestamp));
-        assertThat(storedMetadata.sender, is(sender));
+        assertThat(storedMetadata.sender, is(relayer.getScriptHash()));
 
         assertThat(executionManager.getExecutingNonce(), is(BigInteger.ZERO));
     }
@@ -611,7 +613,7 @@ public class MessageExecutionManagerTest {
     }
 
     private BigInteger storeDefaultMessageForTestStoring(String key, ContractParameter value) throws Throwable {
-        return messageBridge.storeMessage(getSerializedN3MethodForTestStoring(key, value));
+        return messageBridge.storeMessageAndGetNonce(relayer, getSerializedN3MethodForTestStoring(key, value));
     }
 
     private byte[] serializeMethodCall(Hash160 target, String method, List<ContractParameter> params)

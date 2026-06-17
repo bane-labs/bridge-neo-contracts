@@ -1,4 +1,4 @@
-package network.bane.util;
+package network.bane.support.contract;
 
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.stackitem.StackItem;
@@ -6,7 +6,6 @@ import io.neow3j.transaction.AccountSigner;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
-import network.bane.util.helper.SmartContractHelper;
 import network.bane.dto.message.N3Message;
 import network.bane.dto.message.N3MessageMetadata;
 import network.bane.dto.message.N3MessageMetadataExec;

@@ -1,10 +1,9 @@
-package network.bane.util;
+package network.bane.support.contract;
 
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
-import network.bane.util.helper.SmartContractHelper;
 
 import java.math.BigInteger;
 

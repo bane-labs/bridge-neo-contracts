@@ -7,7 +7,7 @@ import network.bane.dto.message.N3MessageMetadataStoreOnly;
 import java.io.IOException;
 
 public interface IMetadataSerializer {
-    byte[] serializeMetadataExec(N3MessageMetadataExec dto) throws IOException;
-    byte[] serializeMetadataStoreOnly(N3MessageMetadataStoreOnly dto) throws IOException;
-    byte[] serializeMetadataResult(N3MessageMetadataResult dto) throws IOException;
+    byte[] serializeMetadataExecutable(N3MessageMetadataExec metadata) throws IOException;
+    byte[] serializeMetadataStoreOnly(N3MessageMetadataStoreOnly metadata) throws IOException;
+    byte[] serializeMetadataResult(N3MessageMetadataResult metadata) throws IOException;
 }
