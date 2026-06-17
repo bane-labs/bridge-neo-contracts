@@ -2,11 +2,12 @@ package network.bane.bridge;
 
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
+import io.neow3j.crypto.ECKeyPair;
+import io.neow3j.crypto.Sign;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.ContractStorageEntry;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.ArrayStackItem;
 import io.neow3j.protocol.core.stackitem.IntegerStackItem;
@@ -15,7 +16,6 @@ import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
-import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.ContractSigner;
 import io.neow3j.transaction.Signer;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
@@ -24,12 +24,11 @@ import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
+import network.bane.dto.bridge.NativeBridge;
+import network.bane.dto.State;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
-import network.bane.util.helper.DepositHelper;
-import network.bane.util.structs.NativeBridge;
-import network.bane.util.structs.State;
-import network.bane.util.TestHelper;
+import network.bane.support.event.TokenBridgeEventHelper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -43,12 +42,12 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.global;
+import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
@@ -56,59 +55,52 @@ import static io.neow3j.types.ContractParameter.byteArrayFromString;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.string;
-import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
+import static io.neow3j.utils.Numeric.toHexString;
 import static java.util.Arrays.asList;
-import static network.bane.util.TestHelper.getClaimEvents;
-import static network.bane.util.TestHelper.governor;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_NATIVE_DECIMAL_SCALING_FACTOR;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_NATIVE_TOKEN_HASH;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_TOTAL_MAX_DEPOSITED_NATIVE;
-import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_DEPOSIT;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_WITHDRAWALS;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_DEPOSIT;
-import static network.bane.util.helper.DepositHelper.depositNative;
-import static network.bane.util.helper.PrintHelper.printTransactionFee;
-import static network.bane.util.TestHelper.concatAndKeccak256;
-import static network.bane.util.TestHelper.createDepositHash;
-import static network.bane.util.TestHelper.getClaimableEvents;
-import static network.bane.util.TestHelper.getDepositEvents;
-import static network.bane.util.TestHelper.getWithdrawEvents;
-import static network.bane.util.TestHelper.hasFiredEvent;
-import static network.bane.util.TestHelper.owner;
-import static network.bane.util.TestHelper.recipient0;
-import static network.bane.util.TestHelper.recipient1;
-import static network.bane.util.TestHelper.recipient2;
-import static network.bane.util.TestHelper.recipient3;
-import static network.bane.util.TestHelper.recipient4;
-import static network.bane.util.TestHelper.relayer;
-import static network.bane.util.TestHelper.securityGuard;
-import static network.bane.util.TestHelper.setDepositFee;
-import static network.bane.util.TestHelper.setMaxNativeDeposit;
-import static network.bane.util.TestHelper.setMinDeposit;
-import static network.bane.util.TestHelper.signMsg;
-import static network.bane.util.TestHelper.validator1;
-import static network.bane.util.TestHelper.validator2;
-import static network.bane.util.TestHelper.validator3;
-import static network.bane.util.TestHelper.validator4;
-import static network.bane.util.TestHelper.validator5;
-import static network.bane.util.helper.TestHelper.alice;
-import static network.bane.util.helper.TestHelper.bob;
-import static network.bane.util.helper.TestHelper.bridge;
-import static network.bane.util.helper.TestHelper.charlie;
-import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
-import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
-import static network.bane.util.helper.TestHelper.denise;
-import static network.bane.util.helper.TestHelper.eve;
-import static network.bane.util.helper.TestHelper.gasToken;
-import static network.bane.util.helper.TestHelper.incrementAndGetDepositNonce;
-import static network.bane.util.helper.TestHelper.incrementAndGetWithdrawalNonce;
-import static network.bane.util.helper.TestHelper.neoToken;
-import static network.bane.util.helper.TestHelper.neow3j;
-import static network.bane.util.helper.TestHelper.setup;
-import static network.bane.util.helper.TestHelper.setupBridge;
-import static network.bane.util.helper.TestHelper.testContract;
+import static network.bane.support.event.EventHelper.hasFiredEvent;
+import static network.bane.support.event.TokenBridgeEventHelper.getClaimEvents;
+import static network.bane.support.event.TokenBridgeEventHelper.getClaimableEvents;
+import static network.bane.support.event.TokenBridgeEventHelper.getDepositEvents;
+import static network.bane.support.event.TokenBridgeEventHelper.getWithdrawEvents;
+import static network.bane.support.hash.HashChainHelper.concatAndKeccak256;
+import static network.bane.support.hash.TokenBridgeHashChainHelper.createDepositHash;
+import static network.bane.support.crypto.SignHelper.signMsg;
+import static network.bane.support.TestConstants.governor;
+import static network.bane.support.TestConstants.DEFAULT_DEPOSIT_FEE;
+import static network.bane.support.TestConstants.DEFAULT_DECIMAL_SCALING_FACTOR_GAS;
+import static network.bane.support.TestConstants.DEFAULT_TOTAL_MAX_DEPOSITED_GAS;
+import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
+import static network.bane.support.TestConstants.DEFAULT_MAX_DEPOSIT_GAS;
+import static network.bane.support.TestConstants.DEFAULT_MAX_WITHDRAWALS;
+import static network.bane.support.TestConstants.DEFAULT_MIN_DEPOSIT_GAS;
+import static network.bane.support.io.PrintHelper.printTransactionFee;
+import static network.bane.support.TestConstants.owner;
+import static network.bane.support.TestConstants.recipient0;
+import static network.bane.support.TestConstants.recipient1;
+import static network.bane.support.TestConstants.recipient2;
+import static network.bane.support.TestConstants.recipient3;
+import static network.bane.support.TestConstants.recipient4;
+import static network.bane.support.TestConstants.relayer;
+import static network.bane.support.TestConstants.securityGuard;
+import static network.bane.support.TestConstants.validator1;
+import static network.bane.support.TestConstants.validator2;
+import static network.bane.support.TestConstants.validator3;
+import static network.bane.support.TestConstants.validator4;
+import static network.bane.support.TestConstants.validator5;
+import static network.bane.support.TestEnvironment.alice;
+import static network.bane.support.TestEnvironment.bob;
+import static network.bane.support.TestEnvironment.bridge;
+import static network.bane.support.TestEnvironment.charlie;
+import static network.bane.support.TestEnvironment.createBridgeDeployConfig;
+import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
+import static network.bane.support.TestEnvironment.denise;
+import static network.bane.support.TestEnvironment.eve;
+import static network.bane.support.TestEnvironment.gasToken;
+import static network.bane.support.TestEnvironment.neoToken;
+import static network.bane.support.TestEnvironment.neow3j;
+import static network.bane.support.TestEnvironment.setup;
+import static network.bane.support.TestEnvironment.setupBridge;
+import static network.bane.support.TestEnvironment.testContract;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
@@ -118,6 +110,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -138,8 +131,12 @@ public class BridgeTest {
         setup(ext);
         setupBridge(ext);
 
-        bridge.setDefaultNativeBridge();
-        bridge.unpauseNativeBridge();
+        bridge.setDefaultNativeBridge()
+                .withSigners(calledByEntry(governor))
+                .signSendAndAwait();
+        bridge.unpauseNativeBridge()
+                .withSigners(calledByEntry(governor))
+                .signSendAndAwait();
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -172,7 +169,7 @@ public class BridgeTest {
         assertThat(managementEntry.getKeyHex(), is("0x0a01"));
         assertArrayEquals(managementEntry.getValue(), MANAGEMENT_CONTRACT_HASH.toLittleEndianArray());
         assertThat(pauseEntry.getKeyHex(), is("0x0a02"));
-        assertArrayEquals(pauseEntry.getValue(), new byte[]{});
+        assertArrayEquals(new byte[]{}, pauseEntry.getValue());
         assertThat(nativeBridgeEntry.getKeyHex(), is("0x0a03"));
         String expectedStorageValue = "0x4005" + // array size 5
                 "2100" + // integer - pause
@@ -198,21 +195,21 @@ public class BridgeTest {
         NativeBridge expectedNativeBridge = new NativeBridge(false, BigInteger.ZERO, State.newState(), State.newState(),
                 new NativeBridge.NativeConfig(
                         DEFAULT_DEPOSIT_FEE,
-                        DEFAULT_MIN_DEPOSIT,
-                        DEFAULT_MAX_DEPOSIT,
+                        DEFAULT_MIN_DEPOSIT_GAS,
+                        DEFAULT_MAX_DEPOSIT_GAS,
                         DEFAULT_MAX_WITHDRAWALS,
-                        DEFAULT_TOTAL_MAX_DEPOSITED_NATIVE,
-                        DEFAULT_NATIVE_TOKEN_HASH,
-                        DEFAULT_NATIVE_DECIMAL_SCALING_FACTOR)
+                        DEFAULT_TOTAL_MAX_DEPOSITED_GAS,
+                        gasToken.getScriptHash(),
+                        DEFAULT_DECIMAL_SCALING_FACTOR_GAS)
         );
-        assertTrue(bridge.getNativeBridge().equals(expectedNativeBridge));
+        assertEquals(bridge.getNativeBridge(), expectedNativeBridge);
         assertThat(bridge.nativeDepositFee(), is(DEFAULT_DEPOSIT_FEE));
-        assertThat(bridge.minNativeDeposit(), is(DEFAULT_MIN_DEPOSIT));
-        assertThat(bridge.maxNativeDeposit(), is(DEFAULT_MAX_DEPOSIT));
+        assertThat(bridge.minNativeDeposit(), is(DEFAULT_MIN_DEPOSIT_GAS));
+        assertThat(bridge.maxNativeDeposit(), is(DEFAULT_MAX_DEPOSIT_GAS));
         assertThat(bridge.nativeDepositNonce(), is(BigInteger.ZERO));
-        assertThat(bridge.nativeDepositRoot(), is(Numeric.toHexString(Hash256.ZERO.toArray())));
+        assertThat(bridge.nativeDepositRoot(), is(toHexString(Hash256.ZERO.toArray())));
         assertThat(bridge.nativeWithdrawalNonce(), is(BigInteger.ZERO));
-        assertThat(bridge.nativeWithdrawRoot(), is(Numeric.toHexString(Hash256.ZERO.toArray())));
+        assertThat(bridge.nativeWithdrawalRoot(), is(toHexString(Hash256.ZERO.toArray())));
 
         assertThat(unclaimedRewardsEntry.getKeyHex(), is("0x0a04"));
         assertThat(unclaimedRewardsEntry.getValueHex(), is("0x"));
@@ -269,7 +266,7 @@ public class BridgeTest {
                         gasToken.transfer(
                                 alice,
                                 bridge.getScriptHash(),
-                                DEFAULT_MIN_DEPOSIT,
+                                DEFAULT_MIN_DEPOSIT_GAS,
                                 string(recipient0.toString())
                         ).sign()
                 );
@@ -286,13 +283,12 @@ public class BridgeTest {
         // This test only works if it is the first test in the order of deposits, due to the use of raw data for the
         // nonce, to and amount.
         Account from = alice;
-        incrementAndGetDepositNonce(); // Necessary if other tests are run besides this one.
         BigInteger nextNonce = BigInteger.ONE;
         Hash160 to = new Hash160("0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
         BigInteger amount = gasToken.toFractions(BigDecimal.ONE);
 
         String depositRootBefore = bridge.nativeDepositRoot();
-        Hash256 txHash = DepositHelper.depositNative(from, to, amount);
+        Hash256 txHash = bridge.depositNative(from, to, amount);
 
         assertThat(bridge.nativeDepositFee(), is(new BigInteger("10000000")));
 
@@ -308,9 +304,9 @@ public class BridgeTest {
         assertThat(newRoot, is("0x70789f5bdb108a6b6dc7d7aa0d31649ab5fa980bbbfd1868eb17821b1f61e0ac"));
         assertThat(bridge.nativeDepositRoot(), is(newRoot));
 
-        List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(depositEvents, hasSize(1));
-        TestHelper.DepositEvent depositEvent = depositEvents.get(0);
+        TokenBridgeEventHelper.DepositEvent depositEvent = depositEvents.get(0);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
@@ -324,12 +320,11 @@ public class BridgeTest {
     public void testRootComputation_2() throws Throwable {
         Account from = bob;
         BigInteger nextNonce = new BigInteger("2");
-        incrementAndGetDepositNonce();
         Hash160 to = new Hash160("0x89fc6b042b146f373cec4ca4a1b112697763360f");
-        BigInteger amount = DEFAULT_MIN_DEPOSIT;
+        BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS;
 
         String depositRootBefore = bridge.nativeDepositRoot();
-        Hash256 txHash = depositNative(from, to, amount, DEFAULT_DEPOSIT_FEE);
+        Hash256 txHash = bridge.depositNative(from, to, amount);
 
         // hex values and concatenation for the second deposit
         // 0000000000000000000000000000000000000000000000000000000000000002
@@ -342,9 +337,9 @@ public class BridgeTest {
 
         assertThat(bridge.nativeDepositRoot(), is(d12));
 
-        List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(depositEvents, hasSize(1));
-        TestHelper.DepositEvent depositEvent = depositEvents.get(0);
+        TokenBridgeEventHelper.DepositEvent depositEvent = depositEvents.get(0);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
@@ -358,20 +353,20 @@ public class BridgeTest {
     public void testRootComputation_3() throws Throwable {
         Account from = charlie;
         Hash160 to = recipient3;
-        BigInteger amount = DEFAULT_MIN_DEPOSIT.multiply(new BigInteger("3"));
-        BigInteger nextNonce = incrementAndGetDepositNonce();
+        BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS.multiply(new BigInteger("3"));
+        BigInteger nextNonce = bridge.nativeDepositNonce().add(BigInteger.ONE);
 
         String depositRootBefore = bridge.nativeDepositRoot();
-        Hash256 txHash = DepositHelper.depositNative(from, to, amount);
+        Hash256 txHash = bridge.depositNative(from, to, amount);
 
         String d3 = createDepositHash(nextNonce, to, amount);
         String d12d3 = concatAndKeccak256(depositRootBefore, d3);
 
         assertThat(bridge.nativeDepositRoot(), is(d12d3));
 
-        List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(depositEvents, hasSize(1));
-        TestHelper.DepositEvent depositEvent = depositEvents.get(0);
+        TokenBridgeEventHelper.DepositEvent depositEvent = depositEvents.get(0);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
@@ -385,21 +380,21 @@ public class BridgeTest {
     public void testRootComputation_4() throws Throwable {
         Account from = denise;
         Hash160 to = recipient4;
-        BigInteger amount = DEFAULT_MIN_DEPOSIT.multiply(new BigInteger("4"));
-        BigInteger nextNonce = incrementAndGetDepositNonce();
+        BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS.multiply(new BigInteger("4"));
+        BigInteger nextNonce = bridge.nativeDepositNonce().add(BigInteger.ONE);
 
         String depositRootBefore = bridge.nativeDepositRoot();
 
-        Hash256 txHash = DepositHelper.depositNative(from, to, amount);
+        Hash256 txHash = bridge.depositNative(from, to, amount);
 
         String depositHashOffChain = createDepositHash(nextNonce, to, amount);
         String d1234 = concatAndKeccak256(depositRootBefore, depositHashOffChain);
 
         assertThat(bridge.nativeDepositRoot(), is(d1234));
 
-        List<TestHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.DepositEvent> depositEvents = getDepositEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(depositEvents, hasSize(1));
-        TestHelper.DepositEvent depositEvent = depositEvents.get(0);
+        TokenBridgeEventHelper.DepositEvent depositEvent = depositEvents.get(0);
         assertThat(depositEvent.nonce, is(nextNonce));
         assertThat(depositEvent.from, is(from.getScriptHash()));
         assertThat(depositEvent.to, is(to));
@@ -411,38 +406,32 @@ public class BridgeTest {
     @Test
     @Order(15)
     public void testTryingToDepositWithBridgeContractAsFrom() throws Throwable {
-        BigInteger amount = DEFAULT_MIN_DEPOSIT.multiply(new BigInteger("3"));
+        BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS.multiply(new BigInteger("3"));
         assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), greaterThan(amount));
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class,
-                        () -> bridge.depositNative(alice, bridge.getScriptHash(), recipient0, amount));
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Prohibited 'from'"));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.depositNative(bridge.getScriptHash(), recipient0, amount, DEFAULT_DEPOSIT_FEE)
+                        .withSigners(global(alice)).signSendAndAwait());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Prohibited 'from'"));
     }
 
     @Test
     @Order(15)
     public void failDepositNative_invalidFrom() {
-        BigInteger amount = DEFAULT_MIN_DEPOSIT.multiply(new BigInteger("3"));
+        BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS.multiply(new BigInteger("3"));
 
         // Fail depositing with from = null
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class,
-                        () -> bridge.invokeFunction("depositNative",
-                                        any(null),
-                                        hash160(alice),
-                                        integer(amount),
-                                        integer(DEFAULT_DEPOSIT_FEE))
-                                .signers(global(alice))
-                                .sign());
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid 'from'"));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.invokeFunction("depositNative", any(null), hash160(alice), integer(amount),
+                                integer(DEFAULT_DEPOSIT_FEE))
+                        .signers(global(alice))
+                        .sign());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid 'from'"));
 
         // Fail depositing using the bridge contract's hash for 'from'
         thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.depositNative(alice, Hash160.ZERO, recipient0, amount));
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid 'from'"));
+                () -> bridge.depositNative(Hash160.ZERO, recipient0, amount, DEFAULT_DEPOSIT_FEE)
+                        .withSigners(global(alice)).signSendAndAwait());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid 'from'"));
 
         // Fail depositing with invalid script hash for 'from'
         thrown = assertThrows(TransactionConfigurationException.class,
@@ -453,27 +442,21 @@ public class BridgeTest {
                                 integer(DEFAULT_DEPOSIT_FEE))
                         .signers(global(alice))
                         .sign());
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid 'from'"));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid 'from'"));
     }
 
     @Test
     @Order(15)
     public void failDepositNative_invalidTo() {
-        BigInteger amount = DEFAULT_MIN_DEPOSIT.multiply(new BigInteger("3"));
+        BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS.multiply(new BigInteger("3"));
 
         // Fail depositing with to = null
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class,
-                        () -> bridge.invokeFunction("depositNative",
-                                        hash160(alice),
-                                        any(null),
-                                        integer(amount),
-                                        integer(DEFAULT_DEPOSIT_FEE))
-                                .signers(global(alice))
-                                .sign());
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid 'to'"));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.invokeFunction("depositNative", hash160(alice), any(null), integer(amount),
+                                integer(DEFAULT_DEPOSIT_FEE))
+                        .signers(global(alice))
+                        .sign());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid 'to'"));
 
         // Fail depositing with invalid script hash for 'to'
         thrown = assertThrows(TransactionConfigurationException.class,
@@ -484,8 +467,7 @@ public class BridgeTest {
                                 integer(DEFAULT_DEPOSIT_FEE))
                         .signers(global(alice))
                         .sign());
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid 'to'"));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid 'to'"));
     }
 
     @Test
@@ -499,9 +481,11 @@ public class BridgeTest {
         BigInteger sponsorBalanceBefore = gasToken.getBalanceOf(sponsor);
 
         BigInteger fee = bridge.getNativeBridge().config.fee;
-        BigInteger amount = DEFAULT_MIN_DEPOSIT;
+        BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS;
 
-        bridge.depositNative(sender, from, recipient0, amount, DEFAULT_DEPOSIT_FEE, sponsor);
+        bridge.depositNative(from.getScriptHash(), recipient0, amount, DEFAULT_DEPOSIT_FEE, sponsor.getScriptHash())
+                .withSigners(none(sender), global(from), global(sponsor))
+                .signSendAndAwait();
 
         BigInteger fromBalanceAfter = gasToken.getBalanceOf(from);
         BigInteger sponsorBalanceAfter = gasToken.getBalanceOf(sponsor);
@@ -518,23 +502,15 @@ public class BridgeTest {
         Hash160 sponsor = bridge.getScriptHash();
 
         BigInteger fee = bridge.getNativeBridge().config.fee;
-        BigInteger amount = DEFAULT_MIN_DEPOSIT;
+        BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS;
 
-        Signer senderSigner = AccountSigner.none(sender);
-        Signer fromSigner = AccountSigner.none(from).setAllowedContracts(GasToken.SCRIPT_HASH);
+        Signer senderSigner = none(sender);
+        Signer fromSigner = none(from).setAllowedContracts(GasToken.SCRIPT_HASH);
         Signer feeSponsorSigner = ContractSigner.calledByEntry(sponsor).setAllowedContracts(GasToken.SCRIPT_HASH);
-        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () ->
-                bridge.invokeFunction("depositNative",
-                                hash160(from),
-                                hash160(recipient0),
-                                integer(amount),
-                                integer(fee),
-                                hash160(sponsor)
-                        ).signers(senderSigner, fromSigner, feeSponsorSigner)
-                        .sign()
-        );
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Prohibited 'feeSponsor'"));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.depositNative(from.getScriptHash(), recipient0, amount, fee, sponsor)
+                        .withSigners(senderSigner, fromSigner, feeSponsorSigner).signSendAndAwait());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Prohibited 'feeSponsor'"));
     }
 
     @Test
@@ -544,12 +520,12 @@ public class BridgeTest {
         Account from = denise;
 
         BigInteger fee = bridge.getNativeBridge().config.fee;
-        BigInteger amount = DEFAULT_MIN_DEPOSIT;
+        BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS;
 
-        Signer senderSigner = AccountSigner.none(sender);
-        Signer fromSigner = AccountSigner.none(from).setAllowedContracts(GasToken.SCRIPT_HASH);
-        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () ->
-                bridge.invokeFunction("depositNative",
+        Signer senderSigner = none(sender);
+        Signer fromSigner = none(from).setAllowedContracts(GasToken.SCRIPT_HASH);
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.invokeFunction("depositNative",
                                 hash160(from),
                                 hash160(recipient0),
                                 integer(amount),
@@ -558,21 +534,12 @@ public class BridgeTest {
                         ).signers(senderSigner, fromSigner)
                         .sign()
         );
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid 'feeSponsor'"));
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid 'feeSponsor'"));
 
-        thrown = assertThrows(TransactionConfigurationException.class, () ->
-                bridge.invokeFunction("depositNative",
-                                hash160(from),
-                                hash160(recipient0),
-                                integer(amount),
-                                integer(fee),
-                                hash160(Hash160.ZERO)
-                        ).signers(senderSigner, fromSigner)
-                        .sign()
-        );
-        assertThat(thrown.getMessage(),
-                containsString("ABORTMSG is executed. Reason: Invalid 'feeSponsor'"));
+        thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.depositNative(from.getScriptHash(), recipient0, amount, fee, Hash160.ZERO)
+                        .withSigners(senderSigner, fromSigner).signSendAndAwait());
+        assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Invalid 'feeSponsor'"));
     }
 
     // endregion
@@ -584,7 +551,6 @@ public class BridgeTest {
         // This test only works if it is the first test in the order of withdrawals, due to the use of raw data for the
         // nonce, to and amount.
         BigInteger nonce = BigInteger.ONE;
-        incrementAndGetWithdrawalNonce(); // Necessary if other tests are run besides this one.
         Hash160 to = new Hash160("0x6472bf811b33b87f7872e31439cdbd16871d8cad");
         BigInteger amount = new BigInteger("200000000");
 
@@ -597,13 +563,14 @@ public class BridgeTest {
         assertThat(d1, is("0xe9b5d0fab709134768203ee7ad13daf4ecf24a261aa26ed371c3b546db89a789"));
         String root = concatAndKeccak256(Hash256.ZERO.toString(), d1);
         assertThat(root, is("0x295226ccd2cee4e7fef5bc9d18677c6228052b46109731fc25dbcd6982074a0e"));
-        List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
+        List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
-        Hash256 txHash = bridge.withdrawNative(root, signMsg(validators, root), withdrawal);
+        Hash256 txHash = bridge.withdrawNative(root, signMsg(validators, root), withdrawal)
+                .withSigners(calledByEntry(relayer)).signSendAndAwait();
         printTransactionFee(neow3j, "tx with 1 withdrawals", txHash);
-        List<TestHelper.WithdrawEvent> withdrawEvents = getWithdrawEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.WithdrawEvent> withdrawEvents = getWithdrawEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(withdrawEvents, hasSize(1));
-        TestHelper.WithdrawEvent withdrawEvent = withdrawEvents.get(0);
+        TokenBridgeEventHelper.WithdrawEvent withdrawEvent = withdrawEvents.get(0);
         assertThat(withdrawEvent.nonce, is(nonce));
         assertThat(withdrawEvent.to, is(to));
         assertThat(withdrawEvent.amount, is(amount));
@@ -615,13 +582,11 @@ public class BridgeTest {
         BigInteger nonce1 = new BigInteger("2");
         Hash160 to1 = new Hash160("0x9f20eee56cc5abe5955ee5e15835dc45344c368d");
         BigInteger amount1 = new BigInteger("100000000");
-        incrementAndGetWithdrawalNonce();
         BigInteger nonce2 = new BigInteger("3");
         Hash160 to2 = new Hash160("0xa71fbffad1f175bfddb1e81a63962212d2e72e8f");
         BigInteger amount2 = new BigInteger("100000000");
-        incrementAndGetWithdrawalNonce();
 
-        String withdrawRootBefore = bridge.nativeWithdrawRoot();
+        String withdrawRootBefore = bridge.nativeWithdrawalRoot();
 
         // hex values and concatenation for the second withdrawal
         // 0000000000000000000000000000000000000000000000000000000000000002
@@ -643,20 +608,21 @@ public class BridgeTest {
         String newRoot = concatAndKeccak256(root1, d2);
         assertThat(newRoot, is("0x3e94c8faca61ac1e24921638d4a6068f17ee3ae13f13fa60647643763d15ff6c"));
 
-        List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
+        List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(
                 array(integer(nonce1), hash160(to1), integer(amount1)),
                 array(integer(nonce2), hash160(to2), integer(amount2))
         );
-        Hash256 txHash = bridge.withdrawNative(newRoot, signMsg(validators, newRoot), withdrawal);
+        Hash256 txHash = bridge.withdrawNative(newRoot, signMsg(validators, newRoot), withdrawal)
+                .withSigners(calledByEntry(relayer)).signSendAndAwait();
         printTransactionFee(neow3j, "tx with 2 withdrawals", txHash);
-        List<TestHelper.WithdrawEvent> withdrawEvents = getWithdrawEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.WithdrawEvent> withdrawEvents = getWithdrawEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(withdrawEvents, hasSize(2));
-        TestHelper.WithdrawEvent withdrawEvent1 = withdrawEvents.get(0);
+        TokenBridgeEventHelper.WithdrawEvent withdrawEvent1 = withdrawEvents.get(0);
         assertThat(withdrawEvent1.nonce, is(nonce1));
         assertThat(withdrawEvent1.to, is(to1));
         assertThat(withdrawEvent1.amount, is(amount1));
-        TestHelper.WithdrawEvent withdrawEvent2 = withdrawEvents.get(1);
+        TokenBridgeEventHelper.WithdrawEvent withdrawEvent2 = withdrawEvents.get(1);
         assertThat(withdrawEvent2.nonce, is(nonce2));
         assertThat(withdrawEvent2.to, is(to2));
         assertThat(withdrawEvent2.amount, is(amount2));
@@ -666,21 +632,22 @@ public class BridgeTest {
     @Order(22)
     public void testWithdrawalToContract() throws Throwable {
         Hash160 to = testContract;
-        BigInteger amount = DEFAULT_MIN_DEPOSIT;
-        BigInteger nonce = incrementAndGetWithdrawalNonce();
+        BigInteger amount = DEFAULT_MIN_DEPOSIT_GAS;
+        BigInteger nonce = bridge.nativeWithdrawalNonce().add(BigInteger.ONE);
 
-        String withdrawRootBefore = bridge.nativeWithdrawRoot();
+        String withdrawRootBefore = bridge.nativeWithdrawalRoot();
         String d1 = createDepositHash(nonce, to, amount);
         String root = concatAndKeccak256(withdrawRootBefore, d1);
-        List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
+        List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
 
-        Hash256 txHash = bridge.withdrawNative(root, signMsg(validators, root), withdrawal);
+        Hash256 txHash = bridge.withdrawNative(root, signMsg(validators, root), withdrawal)
+                .withSigners(calledByEntry(relayer)).signSendAndAwait();
         printTransactionFee(neow3j, "tx with 1 withdrawals to claim", txHash);
 
-        List<TestHelper.ClaimableEvent> claimableEvents = getClaimableEvents(txHash, neow3j, bridge.getScriptHash());
+        List<TokenBridgeEventHelper.ClaimableEvent> claimableEvents = getClaimableEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(claimableEvents, hasSize(1));
-        TestHelper.ClaimableEvent claimableEvent = claimableEvents.get(0);
+        TokenBridgeEventHelper.ClaimableEvent claimableEvent = claimableEvents.get(0);
         assertThat(claimableEvent.nonce, is(nonce));
         assertThat(claimableEvent.to, is(to));
         assertThat(claimableEvent.amount, is(amount));
@@ -689,7 +656,6 @@ public class BridgeTest {
     @Test
     @Order(23)
     public void testMultipleWithdrawals() throws Throwable {
-        System.out.println(gasToken.getBalanceOf(bridge.getScriptHash()));
         Hash160 to1 = recipient0;
         Hash160 to2 = recipient1;
         Hash160 to3 = recipient2;
@@ -704,16 +670,16 @@ public class BridgeTest {
         // tested here.
         assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), lessThan(new BigInteger("1400000000")));
         assertThat(gasToken.getBalanceOf(bridge.getScriptHash()), greaterThanOrEqualTo(new BigInteger("500000000")));
-        BigInteger amount1 = DEFAULT_MIN_DEPOSIT.multiply(new BigInteger("2"));
-        BigInteger amount2 = DEFAULT_MIN_DEPOSIT.multiply(new BigInteger("12"));
-        BigInteger amount3 = DEFAULT_MIN_DEPOSIT.multiply(new BigInteger("3"));
-        BigInteger amount4 = DEFAULT_MIN_DEPOSIT.multiply(new BigInteger("9"));
-        BigInteger nonce1 = incrementAndGetWithdrawalNonce();
-        BigInteger nonce2 = incrementAndGetWithdrawalNonce();
-        BigInteger nonce3 = incrementAndGetWithdrawalNonce();
-        BigInteger nonce4 = incrementAndGetWithdrawalNonce();
+        BigInteger amount1 = DEFAULT_MIN_DEPOSIT_GAS.multiply(new BigInteger("2"));
+        BigInteger amount2 = DEFAULT_MIN_DEPOSIT_GAS.multiply(new BigInteger("12"));
+        BigInteger amount3 = DEFAULT_MIN_DEPOSIT_GAS.multiply(new BigInteger("3"));
+        BigInteger amount4 = DEFAULT_MIN_DEPOSIT_GAS.multiply(new BigInteger("9"));
+        BigInteger nonce1 = bridge.nativeWithdrawalNonce().add(BigInteger.ONE);
+        BigInteger nonce2 = nonce1.add(BigInteger.ONE);
+        BigInteger nonce3 = nonce2.add(BigInteger.ONE);
+        BigInteger nonce4 = nonce3.add(BigInteger.ONE);
 
-        String rootBefore = bridge.nativeWithdrawRoot();
+        String rootBefore = bridge.nativeWithdrawalRoot();
         String d1 = createDepositHash(nonce1, to1, amount1);
         String root = concatAndKeccak256(rootBefore, d1);
         String d2 = createDepositHash(nonce2, to2, amount2);
@@ -723,16 +689,17 @@ public class BridgeTest {
         String d4 = createDepositHash(nonce4, to4, amount4);
         root = concatAndKeccak256(root, d4);
 
-        List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
+        List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawals = array(
                 array(integer(nonce1), hash160(to1), integer(amount1)),
                 array(integer(nonce2), hash160(to2), integer(amount2)),
                 array(integer(nonce3), hash160(to3), integer(amount3)),
                 array(integer(nonce4), hash160(to4), integer(amount4))
         );
-        Hash256 txHash = bridge.withdrawNative(root, signMsg(validators, root), withdrawals);
+        Hash256 txHash = bridge.withdrawNative(root, signMsg(validators, root), withdrawals)
+                .withSigners(calledByEntry(relayer)).signSendAndAwait();
 
-        assertThat(bridge.nativeWithdrawRoot(), is(root));
+        assertThat(bridge.nativeWithdrawalRoot(), is(root));
         NeoApplicationLog appLog = neow3j.getApplicationLog(txHash).send().getApplicationLog();
         assertThat(appLog.getFirstExecution().getNotifications(), hasSize(7));
         Notification firstNotification = appLog.getFirstExecution().getNotification(0);
@@ -751,29 +718,30 @@ public class BridgeTest {
     }
 
     @Test
-    @Order(23)
+    @Order(24)
     public void testClaim() throws Throwable {
         Hash160 to = testContract;
         BigInteger amount = bridge.minNativeDeposit().multiply(BigInteger.valueOf(2));
-        BigInteger nextNonce = incrementAndGetWithdrawalNonce();
+        BigInteger nextNonce = bridge.nativeWithdrawalNonce().add(BigInteger.ONE);
 
         assertFalse(bridge.isClaimableNative(nextNonce));
 
-        String withdrawRootBefore = bridge.nativeWithdrawRoot();
+        String withdrawRootBefore = bridge.nativeWithdrawalRoot();
         String d1 = createDepositHash(nextNonce, to, amount);
         String root = concatAndKeccak256(withdrawRootBefore, d1);
-        List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
+        List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nextNonce), hash160(to), integer(amount)));
         // fund the contract if this test is executed alone
-        bridge.withdrawNative(root, signMsg(validators, root), withdrawal);
-        DepositHelper.depositNative(alice, to, amount);
+        bridge.withdrawNative(root, signMsg(validators, root), withdrawal).withSigners(calledByEntry(relayer))
+                .signSendAndAwait();
+        bridge.depositNative(alice, to, amount);
 
         assertTrue(bridge.isClaimableNative(nextNonce));
 
-        Hash256 txHash = bridge.claimNative(alice, nextNonce);
-        List<TestHelper.ClaimEvent> claimEvents = getClaimEvents(txHash, neow3j, bridge.getScriptHash());
+        Hash256 txHash = bridge.claimNative(nextNonce).withSigners(calledByEntry(alice)).signSendAndAwait();
+        List<TokenBridgeEventHelper.ClaimEvent> claimEvents = getClaimEvents(txHash, neow3j, bridge.getScriptHash());
         assertThat(claimEvents, hasSize(1));
-        TestHelper.ClaimEvent claimEvent = claimEvents.get(0);
+        TokenBridgeEventHelper.ClaimEvent claimEvent = claimEvents.get(0);
         assertThat(claimEvent.nonce, is(nextNonce));
         assertThat(claimEvent.to, is(to));
         assertThat(claimEvent.amount, is(amount));
@@ -789,12 +757,12 @@ public class BridgeTest {
     public void testSetDepositFee() throws Throwable {
         BigInteger newFee = new BigInteger("20000000");
         assertThat(bridge.nativeDepositFee(), is(not(newFee)));
-        Hash256 txHash = setDepositFee(bridge, neow3j, newFee);
+        Hash256 txHash = bridge.setNativeDepositFee(governor, newFee);
         BigInteger actualDepositFee = bridge.nativeDepositFee();
         assertThat(actualDepositFee, is(newFee));
         assertTrue(hasFiredEvent(neow3j, txHash, bridge.getScriptHash(), "NativeDepositFeeChange",
                 new ArrayStackItem(asList(new IntegerStackItem(newFee)))));
-        setDepositFee(bridge, neow3j, DEFAULT_DEPOSIT_FEE);
+        bridge.setNativeDepositFee(governor, DEFAULT_DEPOSIT_FEE);
     }
 
     @Test
@@ -802,20 +770,18 @@ public class BridgeTest {
     public void testSetDepositFee_FeeisZero() throws Throwable {
         BigInteger newFee = new BigInteger("0");
         assertThat(bridge.nativeDepositFee(), is(not(newFee)));
-        setDepositFee(bridge, neow3j, newFee);
+        bridge.setNativeDepositFee(governor, newFee);
         BigInteger actualDepositFee = bridge.nativeDepositFee();
         assertThat(actualDepositFee, is(newFee));
-        setDepositFee(bridge, neow3j, DEFAULT_DEPOSIT_FEE);
+        bridge.setNativeDepositFee(governor, DEFAULT_DEPOSIT_FEE);
     }
 
     @Test
     @Order(0)
     public void testSetDepositFee_abortIfFeeLowerThanZero() {
         BigInteger newFee = new BigInteger("-1");
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () ->
-                        setDepositFee(bridge, neow3j, newFee)
-                );
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setNativeDepositFee(governor, newFee));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: New deposit fee must be nonnegative."));
     }
@@ -824,13 +790,8 @@ public class BridgeTest {
     @Order(0)
     public void testSetDepositFee_abortGovernorNotSigner() {
         BigInteger newFee = new BigInteger("200000000");
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () ->
-                        bridge.invokeFunction("setNativeDepositFee", integer(newFee))
-                                .signers(AccountSigner.calledByEntry(alice))
-                                .sign()
-                                .send()
-                );
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setNativeDepositFee(alice, newFee));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
     }
@@ -840,12 +801,12 @@ public class BridgeTest {
     public void testSetMinDeposit() throws Throwable {
         BigInteger newMinDeposit = new BigInteger("200000000");
         assertThat(bridge.minNativeDeposit(), is(not(newMinDeposit)));
-        Hash256 txHash = setMinDeposit(bridge, neow3j, newMinDeposit);
+        Hash256 txHash = bridge.setMinNativeDeposit(governor, newMinDeposit);
         BigInteger actualMinDeposit = bridge.minNativeDeposit();
         assertThat(actualMinDeposit, is(newMinDeposit));
         assertTrue(hasFiredEvent(neow3j, txHash, bridge.getScriptHash(), "MinNativeDepositChange",
                 new ArrayStackItem(asList(new IntegerStackItem(newMinDeposit)))));
-        setMinDeposit(bridge, neow3j, DEFAULT_MIN_DEPOSIT);
+        bridge.setMinNativeDeposit(governor, DEFAULT_MIN_DEPOSIT_GAS);
     }
 
     @Test
@@ -855,16 +816,16 @@ public class BridgeTest {
         assertThat(bridge.minNativeDeposit(), is(not(newMinDeposit)));
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> setMinDeposit(bridge, neow3j, newMinDeposit));
+                () -> bridge.setMinNativeDeposit(governor, newMinDeposit));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Minimum deposit must be greater than the deposit fee."));
 
         BigInteger newValidMinDeposit = newMinDeposit.add(BigInteger.ONE);
-        setMinDeposit(bridge, neow3j, newValidMinDeposit);
+        bridge.setMinNativeDeposit(governor, newValidMinDeposit);
 
         BigInteger actualMinDeposit = bridge.minNativeDeposit();
         assertThat(actualMinDeposit, is(newValidMinDeposit));
-        setMinDeposit(bridge, neow3j, DEFAULT_MIN_DEPOSIT);
+        bridge.setMinNativeDeposit(governor, DEFAULT_MIN_DEPOSIT_GAS);
     }
 
     @Test
@@ -873,7 +834,7 @@ public class BridgeTest {
         BigInteger newMinDeposit = bridge.maxNativeDeposit().add(BigInteger.ONE);
         assertThat(bridge.minNativeDeposit(), is(not(newMinDeposit)));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> setMinDeposit(bridge, neow3j, newMinDeposit));
+                () -> bridge.setMinNativeDeposit(governor, newMinDeposit));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Minimum must be less than the maximum amount."));
     }
@@ -883,11 +844,8 @@ public class BridgeTest {
     public void testSetMinNativeDeposit_abortGovernorNotSigner() throws Throwable {
         BigInteger newMinDeposit = new BigInteger("200000000");
         assertThat(bridge.minNativeDeposit(), is(not(newMinDeposit)));
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () ->
-                        bridge.invokeFunction("setMinNativeDeposit", integer(newMinDeposit))
-                                .signers(AccountSigner.calledByEntry(alice))
-                                .sign());
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMinNativeDeposit(alice, newMinDeposit));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
     }
@@ -897,12 +855,12 @@ public class BridgeTest {
     public void testSetMaxNativeDeposit() throws Throwable {
         BigInteger newMaxDeposit = new BigInteger("20000000000");
         assertThat(bridge.maxNativeDeposit(), is(not(newMaxDeposit)));
-        Hash256 txHash = setMaxNativeDeposit(bridge, neow3j, newMaxDeposit);
+        Hash256 txHash = bridge.setMaxNativeDeposit(governor, newMaxDeposit);
         BigInteger actualMaxDeposit = bridge.maxNativeDeposit();
         assertThat(actualMaxDeposit, is(newMaxDeposit));
         assertTrue(hasFiredEvent(neow3j, txHash, bridge.getScriptHash(), "MaxNativeDepositChange",
                 new ArrayStackItem(asList(new IntegerStackItem(newMaxDeposit)))));
-        setMaxNativeDeposit(bridge, neow3j, DEFAULT_MAX_DEPOSIT);
+        bridge.setMaxNativeDeposit(governor, DEFAULT_MAX_DEPOSIT_GAS);
     }
 
     @Test
@@ -910,9 +868,8 @@ public class BridgeTest {
     public void testSetMaxNativeDeposit_lessThanMinNativeDeposit() throws Throwable {
         BigInteger newMaxDeposit = bridge.minNativeDeposit().subtract(BigInteger.ONE);
         assertThat(bridge.maxNativeDeposit(), is(not(newMaxDeposit)));
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> setMaxNativeDeposit(bridge, neow3j,
-                        newMaxDeposit));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMaxNativeDeposit(governor, newMaxDeposit));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: Maximum must be greater than the minimum amount."));
     }
@@ -924,21 +881,20 @@ public class BridgeTest {
         BigInteger maxTotalDepositedNative = bridge.maxTotalDepositedNative();
         assertThat(initialMaxNativeDeposit, lessThan(maxTotalDepositedNative));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> setMaxNativeDeposit(bridge, neow3j, maxTotalDepositedNative));
-        assertThat(thrown.getMessage(),
-                containsString("Value must be less than the maximum total deposited amount."));
+                () -> bridge.setMaxNativeDeposit(governor, maxTotalDepositedNative));
+        assertThat(thrown.getMessage(), containsString("Value must be less than the maximum total deposited amount."));
 
         thrown = assertThrows(TransactionConfigurationException.class,
-                () -> setMaxNativeDeposit(bridge, neow3j, maxTotalDepositedNative.add(BigInteger.ONE)));
-        assertThat(thrown.getMessage(),
-                containsString("Value must be less than the maximum total deposited amount."));
+                () -> bridge.setMaxNativeDeposit(governor, maxTotalDepositedNative.add(BigInteger.ONE)));
+        assertThat(thrown.getMessage(), containsString("Value must be less than the maximum total deposited amount."));
 
         BigInteger maxTotalDepositedNative_minusOne = bridge.maxTotalDepositedNative().subtract(BigInteger.ONE);
-        bridge.setMaxNativeDeposit(maxTotalDepositedNative_minusOne);
+        bridge.setMaxNativeDeposit(maxTotalDepositedNative_minusOne).withSigners(calledByEntry(governor))
+                .signSendAndAwait();
         assertThat(bridge.maxNativeDeposit(), is(maxTotalDepositedNative_minusOne));
 
         // Reset the max native deposit to the initial value.
-        bridge.setMaxNativeDeposit(initialMaxNativeDeposit);
+        bridge.setMaxNativeDeposit(governor, initialMaxNativeDeposit);
     }
 
     @Test
@@ -946,11 +902,8 @@ public class BridgeTest {
     public void testSetMaxNativeDeposit_abortGovernorNotSigner() throws Throwable {
         BigInteger newMaxDeposit = new BigInteger("20000000000");
         assertThat(bridge.maxNativeDeposit(), is(not(newMaxDeposit)));
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () ->
-                        bridge.invokeFunction("setMaxNativeDeposit", integer(newMaxDeposit))
-                                .signers(AccountSigner.calledByEntry(alice))
-                                .sign());
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.setMaxNativeDeposit(alice, newMaxDeposit));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
     }
@@ -965,18 +918,10 @@ public class BridgeTest {
         NefFile nefFile = NefFile.readFromFile(contractNefFile);
 
         File manifestFile = Paths.get("src", "test", "resources", "DummyBridge.manifest.json").toFile();
-        ContractManifest manifest;
-        try (FileInputStream s = new FileInputStream(manifestFile)) {
-            manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
-        }
-        byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
-        bridge.pauseBridge();
-        NeoSendRawTransaction response =
-                bridge.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes), any(null))
-                        .signers(AccountSigner.calledByEntry(owner))
-                        .sign()
-                        .send();
-        waitUntilTransactionIsExecuted(response.getSendRawTransaction().getHash(), ext.getNeow3j());
+        FileInputStream s = new FileInputStream(manifestFile);
+        ContractManifest manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
+        bridge.pauseBridge(governor);
+        bridge.update(nefFile, manifest, null).withSigners(calledByEntry(owner)).signSendAndAwait();
 
         assertThat(bridge.getManifest().getAbi().getMethods(), hasSize(1));
         assertThat(bridge.callFunctionReturningString("sayHello", string("World")), is("Hello World!"));
@@ -985,14 +930,13 @@ public class BridgeTest {
     @Test
     @Order(0)
     public void testUpdateContract_notOwner() throws Throwable {
-        bridge.pauseBridge();
+        bridge.pauseBridge(governor);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.invokeFunction("update", byteArray(""), string(""), any(null))
-                        .signers(AccountSigner.calledByEntry(alice))
-                        .sign());
+                () -> bridge.invokeFunction("update", byteArray(new byte[]{}), string(""), any(null))
+                        .signers(calledByEntry(alice)).sign());
 
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
-        bridge.unpause();
+        bridge.unpauseBridge(governor);
     }
 
     @Test
@@ -1000,9 +944,8 @@ public class BridgeTest {
     public void testUpdate_not_paused() throws IOException {
         assertFalse(bridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.invokeFunction("update", byteArray(""), string(""), any(null))
-                        .signers(AccountSigner.calledByEntry(owner))
-                        .sign());
+                () -> bridge.invokeFunction("update", byteArray(new byte[]{}), string(""), any(null))
+                        .signers(calledByEntry(owner)).sign());
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract not paused"));
     }
 
@@ -1013,7 +956,7 @@ public class BridgeTest {
     @Order(0)
     public void testPauseBridge_notAuthorized() {
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.invokeFunction("pauseBridge").signers(calledByEntry(relayer)).sign());
+                () -> bridge.pauseBridge(relayer));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor or security guard"));
     }
 
@@ -1023,71 +966,70 @@ public class BridgeTest {
         assertFalse(bridge.isPaused());
         bridge.pauseBridge(governor);
         assertTrue(bridge.isPaused());
-        bridge.unpause(governor);
+        bridge.unpauseBridge(governor);
     }
 
     @Test
     @Order(0)
     public void testPauseBridge_securityGuardAllowed() throws Throwable {
         assertFalse(bridge.isPaused());
-        bridge.pauseBridge(securityGuard);
+        bridge.pauseBridge(governor);
         assertTrue(bridge.isPaused());
-        bridge.unpause(governor);
+        bridge.unpauseBridge(governor);
     }
 
     @Test
     @Order(0)
     public void testUnpause_onlyGovernor() throws Throwable {
-        bridge.pauseBridge();
+        bridge.pauseBridge(governor);
         assertTrue(bridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.invokeFunction("unpauseBridge").signers(calledByEntry(relayer)).sign());
+                () -> bridge.unpauseBridge(relayer));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
-        bridge.unpause();
+        bridge.unpauseBridge(governor);
     }
 
     @Test
     @Order(0)
     public void testPauseBridge() throws Throwable {
-        bridge.pauseBridge();
+        bridge.pauseBridge(governor);
         assertTrue(bridge.isPaused());
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.depositNative(relayer, recipient0, BigInteger.TEN, DEFAULT_MIN_DEPOSIT));
+                () -> bridge.depositNative(relayer, recipient0, BigInteger.TEN));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract paused"));
 
         thrown = assertThrows(TransactionConfigurationException.class,
                 () -> bridge.claimNative(relayer, BigInteger.TEN));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract paused"));
 
-        thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.pauseBridge(securityGuard));
+        thrown = assertThrows(TransactionConfigurationException.class, () -> bridge.pauseBridge(securityGuard));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract paused"));
-        bridge.unpause();
+        bridge.unpauseBridge(governor);
     }
 
     @Test
     @Order(0)
     public void testUnpause_alreadyUnpaused() throws IOException {
         assertFalse(bridge.isPaused());
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> bridge.unpause());
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.unpauseBridge(governor));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract not paused"));
     }
 
     @Test
     @Order(0)
     public void testPauseBridge_withdrawal() throws Throwable {
-        bridge.pauseBridge();
-        HashMap<ContractParameter, ContractParameter> map = new HashMap<>();
+        bridge.pauseBridge(governor);
+        HashMap<ECKeyPair.ECPublicKey, Sign.SignatureData> map = new HashMap<>();
         // Map content doesn't matter for this test, just required to have at least one entry.
-        map.put(integer(0), integer(0));
+        map.put(alice.getECKeyPair().getPublicKey(), Sign.signHexMessage("", alice.getECKeyPair()));
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.withdrawNative("", map, array("")));
+                () -> bridge.withdrawNative(relayer, "", map, array("")));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Contract paused"));
-        bridge.unpause();
+        bridge.unpauseBridge(governor);
     }
 
     // endregion

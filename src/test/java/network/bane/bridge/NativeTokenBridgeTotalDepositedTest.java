@@ -1,8 +1,6 @@
 package network.bane.bridge;
 
 import io.neow3j.contract.ContractManagement;
-import io.neow3j.contract.FungibleToken;
-import io.neow3j.contract.GasToken;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
@@ -16,10 +14,10 @@ import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.types.NeoVMStateType;
 import io.neow3j.wallet.Account;
+import network.bane.dto.bridge.NativeBridge;
+import network.bane.dto.State;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
-import network.bane.util.structs.NativeBridge;
-import network.bane.util.structs.State;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -31,33 +29,35 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
 
+import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.integer;
 import static java.util.Arrays.asList;
-import static network.bane.util.TestHelper.concatAndKeccak256;
-import static network.bane.util.TestHelper.createDepositHash;
-import static network.bane.util.TestHelper.governor;
-import static network.bane.util.TestHelper.owner;
-import static network.bane.util.TestHelper.recipient0;
-import static network.bane.util.TestHelper.signMsg;
-import static network.bane.util.TestHelper.validator1;
-import static network.bane.util.TestHelper.validator2;
-import static network.bane.util.TestHelper.validator3;
-import static network.bane.util.TestHelper.validator4;
-import static network.bane.util.TestHelper.validator5;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_LINKED_CHAIN_ID;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_DEPOSIT_FEE;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MAX_WITHDRAWALS;
-import static network.bane.util.helper.DefaultTestValues.DEFAULT_MIN_DEPOSIT;
-import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
-import static network.bane.util.helper.TestHelper.alice;
-import static network.bane.util.helper.TestHelper.bridge;
-import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
-import static network.bane.util.helper.TestHelper.gasToken;
-import static network.bane.util.helper.TestHelper.neow3j;
-import static network.bane.util.helper.TestHelper.prepareBridgeDeployParameter;
-import static network.bane.util.helper.TestHelper.setup;
-import static network.bane.util.helper.TestHelper.setupBridge;
+import static network.bane.support.hash.HashChainHelper.concatAndKeccak256;
+import static network.bane.support.hash.TokenBridgeHashChainHelper.createDepositHash;
+import static network.bane.support.crypto.SignHelper.signMsg;
+import static network.bane.support.TestConstants.governor;
+import static network.bane.support.TestConstants.owner;
+import static network.bane.support.TestConstants.recipient0;
+import static network.bane.support.TestConstants.relayer;
+import static network.bane.support.TestConstants.validator1;
+import static network.bane.support.TestConstants.validator2;
+import static network.bane.support.TestConstants.validator3;
+import static network.bane.support.TestConstants.validator4;
+import static network.bane.support.TestConstants.validator5;
+import static network.bane.support.TestConstants.DEFAULT_LINKED_CHAIN_ID;
+import static network.bane.support.TestConstants.DEFAULT_DEPOSIT_FEE;
+import static network.bane.support.TestConstants.DEFAULT_MAX_WITHDRAWALS;
+import static network.bane.support.TestConstants.DEFAULT_MIN_DEPOSIT_GAS;
+import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
+import static network.bane.support.TestEnvironment.alice;
+import static network.bane.support.TestEnvironment.bridge;
+import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
+import static network.bane.support.TestEnvironment.gasToken;
+import static network.bane.support.TestEnvironment.neow3j;
+import static network.bane.support.TestEnvironment.prepareBridgeDeployParameter;
+import static network.bane.support.TestEnvironment.setup;
+import static network.bane.support.TestEnvironment.setupBridge;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -79,12 +79,12 @@ public class NativeTokenBridgeTotalDepositedTest {
         setup(ext);
         setupBridge(ext);
 
-        bridge.setNativeBridge(governor, GasToken.SCRIPT_HASH, 18, DEFAULT_DEPOSIT_FEE,
-                        DEFAULT_MIN_DEPOSIT,
-                        FungibleToken.toFractions(new BigDecimal("500"), 8),
-                        DEFAULT_MAX_WITHDRAWALS,
-                        FungibleToken.toFractions(new BigDecimal("1000"), 8));
-        bridge.unpauseNativeBridge();
+        bridge.setNativeBridge(gasToken.getScriptHash(), 18, DEFAULT_DEPOSIT_FEE, DEFAULT_MIN_DEPOSIT_GAS,
+                        gasToken.toFractions(new BigDecimal("500")), DEFAULT_MAX_WITHDRAWALS,
+                        gasToken.toFractions(new BigDecimal("1000")))
+                .withSigners(calledByEntry(governor))
+                .signSendAndAwait();
+        bridge.unpauseNativeBridge(governor);
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -117,7 +117,6 @@ public class NativeTokenBridgeTotalDepositedTest {
     @Test
     public void testTotalDepositedNative() throws Throwable {
         NativeBridge initialNativeBridgeState = bridge.getNativeBridge();
-        BigInteger fee = initialNativeBridgeState.config.fee;
         assertThat(initialNativeBridgeState.totalDeposited, is(BigInteger.ZERO));
 
         // Deposit 100 Gas, then 200. Total should be 300 after both deposits.
@@ -139,7 +138,7 @@ public class NativeTokenBridgeTotalDepositedTest {
         );
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
 
-        bridge.withdrawNative(
+        bridge.withdrawNative(relayer,
                 newWithdrawalRoot,
                 signMsg(validators, newWithdrawalRoot),
                 array(
@@ -163,10 +162,10 @@ public class NativeTokenBridgeTotalDepositedTest {
         NativeBridge initialNativeBridgeState = bridge.getNativeBridge();
         assertThat(initialNativeBridgeState.totalDeposited, is(gasToken.toFractions(new BigDecimal("370"))));
 
-        bridge.setMaxTotalDepositedNative(newMaxTotalDepositedNative);
+        bridge.setMaxTotalDepositedNative(governor, newMaxTotalDepositedNative);
         // Update max gas deposit as well to allow greater amounts in single deposits.
-        bridge.setMaxNativeDeposit(gasToken.toFractions(new BigDecimal("4900")));
-        assertThat(bridge.getNativeBridge().config.maxTotalDeposit, is(newMaxTotalDepositedNative));
+        bridge.setMaxNativeDeposit(governor, gasToken.toFractions(new BigDecimal("4900")));
+        assertThat(bridge.getNativeBridge().config.maxTotalDeposited, is(newMaxTotalDepositedNative));
 
         // The max amount that can still be deposited is 5000 - 370 = 4630.
         // Depositing > 4630 should fail.
@@ -186,8 +185,8 @@ public class NativeTokenBridgeTotalDepositedTest {
                 containsString("Max total deposited native tokens exceeded. Wait for governor to increase."));
 
         // Increasing the max total deposited gas should enable a gas deposit of 1 to work again.
-        bridge.setMaxTotalDepositedNative(gasToken.toFractions(new BigDecimal("5001")));
-        assertThat(bridge.getNativeBridge().config.maxTotalDeposit, is(gasToken.toFractions(new BigDecimal("5001"))));
+        bridge.setMaxTotalDepositedNative(governor, gasToken.toFractions(new BigDecimal("5001")));
+        assertThat(bridge.getNativeBridge().config.maxTotalDeposited, is(gasToken.toFractions(new BigDecimal("5001"))));
         assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("5000"))));
 
         // Depositing 1 should not fail.
@@ -204,7 +203,7 @@ public class NativeTokenBridgeTotalDepositedTest {
     public void testTotalDepositedNativeToken_LessThanAlreadyDeposited() throws Throwable {
         assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("5001"))));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMaxTotalDepositedNative(gasToken.toFractions(new BigDecimal("4000"))));
+                () -> bridge.setMaxTotalDepositedNative(governor, gasToken.toFractions(new BigDecimal("4000"))));
         assertThat(thrown.getMessage(),
                 containsString(("New value must be greater or equal to the total amount deposited.")));
     }

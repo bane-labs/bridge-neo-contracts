@@ -16,17 +16,18 @@ import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.types.StackItemType;
 import io.neow3j.wallet.Account;
+import network.bane.dto.message.MessageEnvelope;
+import network.bane.dto.message.interfaces.IMetadataSerializer;
 import network.bane.management.BridgeManagementContract;
 import network.bane.messageexecution.ExecutionManagerContract;
 import network.bane.testhelper.TestContract;
 import network.bane.testhelper.TestMessageSenderContract;
-import network.bane.util.MessageHelper;
-import network.bane.util.structs.ExecutableStateDto;
-import network.bane.util.structs.N3MessageDto;
-import network.bane.util.structs.N3MessageMetadataDto;
-import network.bane.util.structs.N3MessageMetadataExecDto;
-import network.bane.util.structs.N3MessageMetadataResultDto;
-import network.bane.util.structs.N3MessageMetadataStoreOnlyDto;
+import network.bane.support.event.MessageBridgeEventHelper;
+import network.bane.dto.message.N3Message;
+import network.bane.dto.message.N3MessageMetadata;
+import network.bane.dto.message.N3MessageMetadataExec;
+import network.bane.dto.message.N3MessageMetadataResult;
+import network.bane.dto.message.N3MessageMetadataStoreOnly;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -39,50 +40,50 @@ import java.math.BigInteger;
 import java.util.List;
 
 import static io.neow3j.transaction.AccountSigner.global;
-import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.types.ContractParameter.string;
+import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.toBytesPadded;
 import static io.neow3j.utils.Numeric.toHexString;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static network.bane.util.MessageHelper.concatenateOp;
-import static network.bane.util.MessageHelper.createN3MessageHash;
-import static network.bane.util.MessageHelper.getMessageStorEvents;
-import static network.bane.util.TestHelper.concatAndKeccak256;
-import static network.bane.util.TestHelper.keccak256Hex;
-import static network.bane.util.TestHelper.signMsg;
-import static network.bane.util.TestHelper.validator1;
-import static network.bane.util.TestHelper.validator2;
-import static network.bane.util.TestHelper.validator3;
-import static network.bane.util.TestHelper.validator4;
-import static network.bane.util.TestHelper.validator5;
-import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
-import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
-import static network.bane.util.helper.DefaultTestValues.MESSAGE_BRIDGE_CONTRACT_HASH;
-import static network.bane.util.helper.PrintHelper.printTransactionFee;
-import static network.bane.util.helper.TestHelper.alice;
-import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
-import static network.bane.util.helper.TestHelper.createExecutionManagerDeployConfig;
-import static network.bane.util.helper.TestHelper.createMessageBridgeDeployConfig;
-import static network.bane.util.helper.TestHelper.executionManager;
-import static network.bane.util.helper.TestHelper.gasToken;
-import static network.bane.util.helper.TestHelper.getNextEvmNonce;
-import static network.bane.util.helper.TestHelper.management;
-import static network.bane.util.helper.TestHelper.messageBridge;
-import static network.bane.util.helper.TestHelper.messageTestStorer;
-import static network.bane.util.helper.TestHelper.neow3j;
-import static network.bane.util.helper.TestHelper.setup;
-import static network.bane.util.helper.TestHelper.setupExecutionManager;
-import static network.bane.util.helper.TestHelper.setupMessageBridge;
-import static network.bane.util.helper.TestHelper.setupTestContract;
-import static network.bane.util.helper.TestHelper.setupTestMessageSender;
-import static network.bane.util.helper.TestHelper.testContract;
-import static network.bane.util.helper.TestHelper.testMessageSender;
+import static network.bane.support.hash.HashChainHelper.concatAndKeccak256;
+import static network.bane.support.hash.HashChainHelper.keccak256Hex;
+import static network.bane.support.event.MessageBridgeEventHelper.getMessageStorEvents;
+import static network.bane.support.hash.MessageBridgeHashChainHelper.concatenateOp;
+import static network.bane.support.hash.MessageBridgeHashChainHelper.createN3MessageHash;
+import static network.bane.support.crypto.SignHelper.signMsg;
+import static network.bane.support.TestConstants.governor;
+import static network.bane.support.TestConstants.relayer;
+import static network.bane.support.TestConstants.validator1;
+import static network.bane.support.TestConstants.validator2;
+import static network.bane.support.TestConstants.validator3;
+import static network.bane.support.TestConstants.validator4;
+import static network.bane.support.TestConstants.validator5;
+import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
+import static network.bane.support.TestConstants.MESSAGE_BRIDGE_CONTRACT_HASH;
+import static network.bane.support.io.PrintHelper.printTransactionFee;
+import static network.bane.support.TestEnvironment.alice;
+import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
+import static network.bane.support.TestEnvironment.createExecutionManagerDeployConfig;
+import static network.bane.support.TestEnvironment.createMessageBridgeDeployConfig;
+import static network.bane.support.TestEnvironment.executionManager;
+import static network.bane.support.TestEnvironment.gasToken;
+import static network.bane.support.TestEnvironment.management;
+import static network.bane.support.TestEnvironment.messageBridge;
+import static network.bane.support.TestEnvironment.messageTestStorer;
+import static network.bane.support.TestEnvironment.neow3j;
+import static network.bane.support.TestEnvironment.setup;
+import static network.bane.support.TestEnvironment.setupExecutionManager;
+import static network.bane.support.TestEnvironment.setupMessageBridge;
+import static network.bane.support.TestEnvironment.setupTestContract;
+import static network.bane.support.TestEnvironment.setupTestMessageSender;
+import static network.bane.support.TestEnvironment.testContract;
+import static network.bane.support.TestEnvironment.testMessageSender;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
@@ -132,8 +133,8 @@ public class MessageSyncTest {
                     "hash to 0x%s.", management.getScriptHash()));
         }
 
-        messageBridge.setExecutionManager(executionManager.getScriptHash());
-        messageBridge.unpause();
+        messageBridge.setExecutionManager(governor, executionManager.getScriptHash());
+        messageBridge.unpause(governor);
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -171,10 +172,10 @@ public class MessageSyncTest {
         assertThat(toHexStringNoPrefix(msgBytes),
                 is("400428141418e358c565207768eae8d237241e85d3e9f1cb280573746f72652101024002210101210440a87c68"));
 
-        N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
+        N3MessageMetadataExec metadata = new N3MessageMetadataExec(timestamp, sender, true);
 
         byte[] concatenatedBytes = concatenateOp(nonce, metadata, msgBytes);
-        String offChainConcatenatedHex = toHexStringNoPrefix(concatenatedBytes);
+        String offChainConcatenatedHex = toHexString(concatenatedBytes);
 
         // The concatenated message bytes should look like this: (from EVM side)
         // 0000000000000000000000000000000000000000000000000000000000000001 nonce
@@ -186,7 +187,7 @@ public class MessageSyncTest {
 
         // Asserting the concatenated hex string. This is not required, but helps to understand the concatenation.
         assertThat(offChainConcatenatedHex,
-                is("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000687ca84069ecca587293047be4c59159bf8bc399985c160d01400428141418e358c565207768eae8d237241e85d3e9f1cb280573746f72652101024002210101210440a87c68"));
+                is("0x00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000687ca84069ecca587293047be4c59159bf8bc399985c160d01400428141418e358c565207768eae8d237241e85d3e9f1cb280573746f72652101024002210101210440a87c68"));
 
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
         assertThat(msgHash1, is(keccak256Hex(concatenatedBytes)));
@@ -197,34 +198,34 @@ public class MessageSyncTest {
         // In the following, the message is stored on-chain to validate that the root will be calculated equally in the
         // contract.
 
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+        N3Message n3Message = new N3Message(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
 
         // Validating the root.
         assertThat(root, is("0x2701caa1bdd24a0ec6908676b944925bc9cf117b961d644edcf3d7e20ddfe8ad"));
 
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
+        MessageEnvelope messageEnvelope = new MessageEnvelope(nonce, n3Message);
         String concatenation = messageBridge.concatenateOperation(messageEnvelope);
         assertThat(concatenation, is(offChainConcatenatedHex));
 
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
-        Hash256 txHash = messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope));
+        Hash256 txHash = messageBridge.storeMessages(relayer, root, signMsg(validators, root), asList(messageEnvelope));
 
         printTransactionFee(neow3j, "tx with 1 message", txHash);
-        List<MessageHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
+        List<MessageBridgeEventHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
                 messageBridge.getScriptHash());
         assertThat(n3MessageStoreEvents, hasSize(1));
-        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent = n3MessageStoreEvents.get(0);
+        MessageBridgeEventHelper.N3MessageStoreEvent n3MessageStoreEvent = n3MessageStoreEvents.get(0);
         assertThat(n3MessageStoreEvent.nonce, is(nonce));
-        N3MessageMetadataDto expectedMetadata = metadata;
+        N3MessageMetadata expectedMetadata = metadata;
         assertThat(n3MessageStoreEvent.metadataSerializedHex,
-                is(toHexStringNoPrefix(expectedMetadata.serialize(messageBridge))));
+                is(toHexStringNoPrefix(expectedMetadata.serialize((IMetadataSerializer) messageBridge))));
 
-        N3MessageDto message = messageBridge.getMessage(nonce);
-        assertThat(message, is(n3MessageDto));
+        N3Message message = messageBridge.getMessage(nonce);
+        assertThat(message, is(n3Message));
 
-        ExecutableStateDto execState = messageBridge.getExecutableState(nonce);
+        network.bane.dto.message.ExecutableState execState = messageBridge.getExecutableState(nonce);
         assertFalse(execState.executed);
         assertThat(execState.expirationTimestamp, greaterThan(getBestBlockTime()));
     }
@@ -240,10 +241,10 @@ public class MessageSyncTest {
         String msg = "There’s nowhere I can’t go. There’s nowhere I won’t find you.";
         byte[] msgBytes = msg.getBytes();
 
-        N3MessageMetadataStoreOnlyDto metadata = new N3MessageMetadataStoreOnlyDto(timestamp, sender);
+        N3MessageMetadataStoreOnly metadata = new N3MessageMetadataStoreOnly(timestamp, sender);
 
         byte[] concatenatedBytes = concatenateOp(nonce, metadata, msgBytes);
-        String offChainConcatenatedHex = toHexStringNoPrefix(concatenatedBytes);
+        String offChainConcatenatedHex = toHexString(concatenatedBytes);
 
         // The concatenated message bytes should look like this: (from EVM side)
         // 0000000000000000000000000000000000000000000000000000000000000002 nonce
@@ -254,7 +255,7 @@ public class MessageSyncTest {
 
         // Asserting the concatenated hex string. This is not required, but helps to understand the concatenation.
         assertThat(offChainConcatenatedHex,
-                is("00000000000000000000000000000000000000000000000000000000000000020100000000000000000000000000000000000000000000000000000000687e2ee582d53419cdb80a84a1a9c699c6cc333236169b985468657265e2809973206e6f776865726520492063616ee280997420676f2e205468657265e2809973206e6f7768657265204920776f6ee28099742066696e6420796f752e"));
+                is("0x00000000000000000000000000000000000000000000000000000000000000020100000000000000000000000000000000000000000000000000000000687e2ee582d53419cdb80a84a1a9c699c6cc333236169b985468657265e2809973206e6f776865726520492063616ee280997420676f2e205468657265e2809973206e6f7768657265204920776f6ee28099742066696e6420796f752e"));
 
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
         assertThat(msgHash1, is(keccak256Hex(concatenatedBytes)));
@@ -265,31 +266,30 @@ public class MessageSyncTest {
         // In the following, the message is stored on-chain to validate that the root will be calculated equally in the
         // contract.
 
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+        N3Message n3Message = new N3Message(metadata, msgBytes);
 
         // Validating the root.
-        String root = concatAndKeccak256(messageBridge.getMessageBridge().evmToN3MessageState.root.toString(),
-                msgHash1);
+        String root = concatAndKeccak256(messageBridge.getMessageBridge().evmToNeoState.root.toString(), msgHash1);
         assertThat(root, is("0x0e13e3d88133f283e6592bb48f1405fb941fab340106cf74445aea07743ca91e"));
 
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
+        MessageEnvelope messageEnvelope = new MessageEnvelope(nonce, n3Message);
         String concatenation = messageBridge.concatenateOperation(messageEnvelope);
         assertThat(concatenation, is(offChainConcatenatedHex));
 
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
-        Hash256 txHash = messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope));
+        Hash256 txHash = messageBridge.storeMessages(relayer, root, signMsg(validators, root), asList(messageEnvelope));
         printTransactionFee(neow3j, "tx with 1 message", txHash);
-        List<MessageHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
+        List<MessageBridgeEventHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
                 messageBridge.getScriptHash());
         assertThat(n3MessageStoreEvents, hasSize(1));
-        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent = n3MessageStoreEvents.get(0);
+        MessageBridgeEventHelper.N3MessageStoreEvent n3MessageStoreEvent = n3MessageStoreEvents.get(0);
         assertThat(n3MessageStoreEvent.nonce, is(nonce));
-        N3MessageMetadataDto expectedMetadata = metadata;
+        N3MessageMetadata expectedMetadata = metadata;
         assertThat(n3MessageStoreEvent.metadataSerializedHex,
-                is(toHexStringNoPrefix(expectedMetadata.serialize(messageBridge))));
+                is(toHexStringNoPrefix(expectedMetadata.serialize((IMetadataSerializer) messageBridge))));
 
-        N3MessageDto message = messageBridge.getMessage(nonce);
-        assertThat(message, is(n3MessageDto));
+        N3Message message = messageBridge.getMessage(nonce);
+        assertThat(message, is(n3Message));
 
         IllegalStateException thrown = assertThrows(IllegalStateException.class,
                 () -> messageBridge.getExecutableState(nonce));
@@ -307,10 +307,10 @@ public class MessageSyncTest {
         byte[] msgBytes = new BigInteger("1000").toByteArray();
         assertThat(toHexString(msgBytes), is("0x03e8"));
 
-        N3MessageMetadataResultDto metadata = new N3MessageMetadataResultDto(timestamp, sender, BigInteger.ONE);
+        N3MessageMetadataResult metadata = new N3MessageMetadataResult(timestamp, sender, BigInteger.ONE);
 
         byte[] concatenatedBytes = concatenateOp(nonce, metadata, msgBytes);
-        String offChainConcatenatedHex = toHexStringNoPrefix(concatenatedBytes);
+        String offChainConcatenatedHex = toHexString(concatenatedBytes);
 
         // The concatenated message bytes should look like this: (from EVM side)
         // 000000000000000000000000000000000000000000000000000000000073d865 nonce
@@ -322,7 +322,7 @@ public class MessageSyncTest {
 
         // Asserting the concatenated hex string. This is not required, but helps to understand the concatenation.
         assertThat(offChainConcatenatedHex,
-                is("000000000000000000000000000000000000000000000000000000000073d8650200000000000000000000000000000000000000000000000000000000687ca8a1fadd389577eae0af6e59f8476f9d808f120407c2000000000000000000000000000000000000000000000000000000000000000103e8"));
+                is("0x000000000000000000000000000000000000000000000000000000000073d8650200000000000000000000000000000000000000000000000000000000687ca8a1fadd389577eae0af6e59f8476f9d808f120407c2000000000000000000000000000000000000000000000000000000000000000103e8"));
 
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
         assertThat(msgHash1, is(keccak256Hex(concatenatedBytes)));
@@ -330,8 +330,8 @@ public class MessageSyncTest {
         // Validating the message hash.
         assertThat(msgHash1, is("0x80d26468c8c67d4bfccc3d2ac6276ab98ccbdf1a43d3f0e18b91a6461d75ac22"));
 
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
+        N3Message n3Message = new N3Message(metadata, msgBytes);
+        MessageEnvelope messageEnvelope = new MessageEnvelope(nonce, n3Message);
         String onChainConcat = messageBridge.concatenateOperation(messageEnvelope);
         assertThat(onChainConcat, is(offChainConcatenatedHex));
     }
@@ -342,7 +342,7 @@ public class MessageSyncTest {
     @Test
     @Order(1)
     public void test_sendMessage_1_executable() throws Throwable {
-        BigInteger nextEvmNonce = getNextEvmNonce();
+        BigInteger nextEvmNonce = messageBridge.getNextNeoToEvmNonce();
         // a raw valid encoded evm call:
         byte[] rawMessage = hexStringToByteArray(
                 "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff2110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000044cadc7a78000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000c800000000000000000000000000000000000000000000000000000000");
@@ -377,8 +377,8 @@ public class MessageSyncTest {
         BigInteger timestamp = metadataItems.get(1).getInteger();
         Hash160 sender = Hash160.fromAddress(metadataItems.get(2).getAddress());
         boolean storeResult = metadataItems.get(3).getBoolean();
-        N3MessageMetadataExecDto metadataDto = new N3MessageMetadataExecDto(timestamp, sender, storeResult);
-        byte[] concatBytes = concatenateOp(nextEvmNonce, metadataDto, rawMessage);
+        N3MessageMetadataExec metadata = new N3MessageMetadataExec(timestamp, sender, storeResult);
+        byte[] concatBytes = concatenateOp(nextEvmNonce, metadata, rawMessage);
 
         assertThat(sender, is(testMessageSender.getScriptHash()));
         assertTrue(storeResult);
@@ -391,7 +391,7 @@ public class MessageSyncTest {
         // 01                                                               // store result boolean
         // 00000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff2110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000044cadc7a78000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000c800000000000000000000000000000000000000000000000000000000
 
-        String concatenationHex = toHexStringNoPrefix(concatBytes);
+        String concatenationHex = toHexString(concatBytes);
         // nonce (uint256) + msgType (uint8) + timestamp (uint256) + sender (address) + storeResult (bool) +
         // rawMessage (arbitrary bytes)
         assertThat(concatBytes.length, is(32 + 1 + 32 + 20 + 1 + rawMessage.length));
@@ -399,10 +399,10 @@ public class MessageSyncTest {
         assertThat(concatenationHex, endsWith(toHexStringNoPrefix(rawMessage)));
         // The beginning of the concatenation should be the nonce padded to 32 bytes and the message type (1 byte).
         assertThat(concatenationHex, startsWith(
-                toHexStringNoPrefix(toBytesPadded(nextEvmNonce, 32)) + toHexStringNoPrefix(msgType.toByteArray())
+                "0x" + toHexStringNoPrefix(toBytesPadded(nextEvmNonce, 32)) + toHexStringNoPrefix(msgType.toByteArray())
         ));
-        assertThat(new Hash160(concatenationHex.substring(130, 130 + 40)), is(testMessageSender.getScriptHash()));
-        assertThat(concatenationHex.substring(170, 172), is("01"));
+        assertThat(new Hash160(concatenationHex.substring(132, 132 + 40)), is(testMessageSender.getScriptHash()));
+        assertThat(concatenationHex.substring(172, 174), is("01"));
 
         // msg hash: c5e8122e5466b9c10e150d08df380a10771467d5f6e21c5234a167f690b8934f
         // with nonce: 1
@@ -420,7 +420,7 @@ public class MessageSyncTest {
     @Test
     @Order(2)
     public void test_sendMessage_2_storeOnly() throws Throwable {
-        BigInteger nextEvmNonce = getNextEvmNonce();
+        BigInteger nextEvmNonce = messageBridge.getNextNeoToEvmNonce();
         // a raw message:
         String msg = "There's nowhere I can't go. There's nowhere I won't find you.";
         byte[] rawMessage = msg.getBytes();
@@ -453,7 +453,7 @@ public class MessageSyncTest {
         assertThat(msgType.intValue(), is(1)); // 1: STORE_ONLY
         BigInteger timestamp = metadataItems.get(1).getInteger();
         Hash160 sender = Hash160.fromAddress(metadataItems.get(2).getAddress());
-        N3MessageMetadataStoreOnlyDto metadataDto = new N3MessageMetadataStoreOnlyDto(timestamp, sender);
+        N3MessageMetadataStoreOnly metadataDto = new N3MessageMetadataStoreOnly(timestamp, sender);
         byte[] concatBytes = concatenateOp(nextEvmNonce, metadataDto, rawMessage);
 
         assertThat(sender, is(testMessageSender.getScriptHash()));
@@ -489,7 +489,7 @@ public class MessageSyncTest {
     }
 
     private BigInteger storeDefaultMessageForTestStoring(String key, ContractParameter value) throws Throwable {
-        return messageBridge.storeMessage(getSerializedN3MethodForTestStoring(key, value));
+        return messageBridge.storeMessageAndGetNonce(relayer, getSerializedN3MethodForTestStoring(key, value));
     }
 
     private byte[] getSerializedN3MethodForTestStoring(String key, ContractParameter value) throws IOException {
@@ -503,22 +503,25 @@ public class MessageSyncTest {
         BigInteger sponsorAmount = BigInteger.valueOf(1000000);
         NeoSendRawTransaction sponsorRawTx = gasToken.transfer(alice, messageBridge.getScriptHash(), sponsorAmount)
                 .signers(global(alice)).sign().send();
-        waitUntilTransactionIsExecuted(sponsorRawTx, neow3j);
+
+        assertFalse(sponsorRawTx.hasError());
+        waitUntilTransactionIsExecuted(sponsorRawTx.getSendRawTransaction().getHash(), neow3j);
 
         BigInteger messageBridgeGasBalance = gasToken.getBalanceOf(messageBridge.getScriptHash());
         // Create a function to fetch the current balance of the message bridge contract. Then, return it.
         byte[] getMessageBridgeGasBalance = messageBridge.serializeCall(gasToken.getScriptHash(),
                 "balanceOf", CallFlags.ALL, asList(hash160(messageBridge.getScriptHash())));
-        BigInteger executableMessageNonce = messageBridge.storeMessage(getMessageBridgeGasBalance);
+        BigInteger executableMessageNonce = messageBridge.storeMessageAndGetNonce(relayer, getMessageBridgeGasBalance);
 
         byte[] resultBytesBefore = messageBridge.getSerializedNeoExecutionResult(executableMessageNonce);
         assertThat(resultBytesBefore, is(new byte[0]));
 
-        ExecutableStateDto execStateBeforeExec = messageBridge.getExecutableState(executableMessageNonce);
+        network.bane.dto.message.ExecutableState execStateBeforeExec = messageBridge.getExecutableState(
+                executableMessageNonce);
         assertFalse(execStateBeforeExec.executed);
         assertThat(execStateBeforeExec.expirationTimestamp, greaterThan(getBestBlockTime()));
 
-        Hash256 tx = messageBridge.executeMessage(global(alice), executableMessageNonce);
+        Hash256 tx = messageBridge.executeMessage(executableMessageNonce).withSigners(global(alice)).signSendAndAwait();
         NeoApplicationLog.Execution firstExec = neow3j.getApplicationLog(tx).send().getApplicationLog()
                 .getFirstExecution();
 
@@ -531,10 +534,11 @@ public class MessageSyncTest {
         assertThat(event2State.getList().get(2).getInteger(), is(BigInteger.ZERO));
         assertThat(event2State.getList().get(3).getInteger(), is(messageBridgeGasBalance));
 
-        ExecutableStateDto execStateAfterExec = messageBridge.getExecutableState(executableMessageNonce);
+        network.bane.dto.message.ExecutableState execStateAfterExec = messageBridge.getExecutableState(
+                executableMessageNonce);
         assertTrue(execStateAfterExec.executed);
 
-        BigInteger nextEvmNonce = getNextEvmNonce();
+        BigInteger nextEvmNonce = messageBridge.getNextNeoToEvmNonce();
 
         Hash256 resultSendTx = testMessageSender.sendResultMessage(global(alice), executableMessageNonce);
         NeoApplicationLog.Execution resultExec = neow3j.getApplicationLog(resultSendTx).send().getApplicationLog()
@@ -567,7 +571,7 @@ public class MessageSyncTest {
         BigInteger timestamp = metadataItems.get(1).getInteger();
         Hash160 sender = Hash160.fromAddress(metadataItems.get(2).getAddress());
         BigInteger relatedMessageNonce = metadataItems.get(3).getInteger();
-        N3MessageMetadataResultDto metadataDto = new N3MessageMetadataResultDto(timestamp, sender, relatedMessageNonce);
+        N3MessageMetadataResult metadataDto = new N3MessageMetadataResult(timestamp, sender, relatedMessageNonce);
         byte[] resultBytes = messageBridge.getSerializedNeoExecutionResult(executableMessageNonce);
         byte[] concatBytes = concatenateOp(nextEvmNonce, metadataDto, resultBytes);
 

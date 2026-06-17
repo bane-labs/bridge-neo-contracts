@@ -11,8 +11,7 @@ import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
-import network.bane.util.helper.DepositHelper;
-import network.bane.util.structs.State;
+import network.bane.dto.State;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -21,31 +20,32 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 
+import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
-import static network.bane.util.TestHelper.computeNewTokenRootNoPrefix;
-import static network.bane.util.TestHelper.governor;
-import static network.bane.util.TestHelper.securityGuard;
-import static network.bane.util.TestHelper.concatAndKeccak256;
-import static network.bane.util.TestHelper.createDepositHash;
-import static network.bane.util.TestHelper.recipient0;
-import static network.bane.util.TestHelper.relayer;
-import static network.bane.util.TestHelper.signMsg;
-import static network.bane.util.TestHelper.validator1;
-import static network.bane.util.TestHelper.validator2;
-import static network.bane.util.TestHelper.validator3;
-import static network.bane.util.TestHelper.validator4;
-import static network.bane.util.TestHelper.validator5;
-import static network.bane.util.helper.TestHelper.alice;
-import static network.bane.util.helper.TestHelper.bridge;
-import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
-import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
-import static network.bane.util.helper.TestHelper.neoN3NeoTokenHash;
-import static network.bane.util.helper.TestHelper.neoXNeoTokenHash;
-import static network.bane.util.helper.TestHelper.registerNeoTokenBridge;
-import static network.bane.util.helper.TestHelper.setup;
-import static network.bane.util.helper.TestHelper.setupBridge;
+import static network.bane.support.hash.HashChainHelper.concatAndKeccak256;
+import static network.bane.support.hash.TokenBridgeHashChainHelper.computeNewTokenRootNoPrefix;
+import static network.bane.support.hash.TokenBridgeHashChainHelper.createDepositHash;
+import static network.bane.support.crypto.SignHelper.signMsg;
+import static network.bane.support.TestConstants.governor;
+import static network.bane.support.TestConstants.securityGuard;
+import static network.bane.support.TestConstants.recipient0;
+import static network.bane.support.TestConstants.relayer;
+import static network.bane.support.TestConstants.validator1;
+import static network.bane.support.TestConstants.validator2;
+import static network.bane.support.TestConstants.validator3;
+import static network.bane.support.TestConstants.validator4;
+import static network.bane.support.TestConstants.validator5;
+import static network.bane.support.TestEnvironment.alice;
+import static network.bane.support.TestEnvironment.bridge;
+import static network.bane.support.TestEnvironment.createBridgeDeployConfig;
+import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
+import static network.bane.support.TestEnvironment.neoN3NeoTokenHash;
+import static network.bane.support.TestEnvironment.neoXNeoTokenHash;
+import static network.bane.support.TestEnvironment.registerNeoTokenBridge;
+import static network.bane.support.TestEnvironment.setup;
+import static network.bane.support.TestEnvironment.setupBridge;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -68,8 +68,8 @@ public class PauseDepositsTest {
         setup(ext);
         setupBridge(ext);
 
-        bridge.setDefaultNativeBridge();
-        bridge.unpauseNativeBridge();
+        bridge.setDefaultNativeBridge().withSigners(calledByEntry(governor)).signSendAndAwait();
+        bridge.unpauseNativeBridge(governor);
 
         registerNeoTokenBridge();
     }
@@ -89,8 +89,8 @@ public class PauseDepositsTest {
 
     @Test
     public void testPauseDeposits_onlyGovernor() {
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> bridge.pauseDeposits(relayer));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.pauseDeposits(relayer));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
     }
@@ -98,13 +98,13 @@ public class PauseDepositsTest {
     @Test
     public void testUnpauseDeposits_onlyGovernor() throws Throwable {
         assertFalse(bridge.depositsArePaused());
-        bridge.pauseDeposits();
+        bridge.pauseDeposits(governor);
         assertTrue(bridge.depositsArePaused());
-        TransactionConfigurationException thrown =
-                assertThrows(TransactionConfigurationException.class, () -> bridge.unpauseDeposits(securityGuard));
+        TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
+                () -> bridge.unpauseDeposits(securityGuard));
         assertThat(thrown.getMessage(),
                 containsString("ABORTMSG is executed. Reason: No authorization - only governor"));
-        bridge.unpauseDeposits();
+        bridge.unpauseDeposits(governor);
     }
 
     @Test
@@ -120,7 +120,7 @@ public class PauseDepositsTest {
     public void testUnpauseDeposits_alreadyUnpaused() throws Throwable {
         assertFalse(bridge.depositsArePaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.unpauseDeposits());
+                () -> bridge.unpauseDeposits(governor));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: Deposits not paused"));
     }
 
@@ -130,13 +130,13 @@ public class PauseDepositsTest {
     @Test
     public void testPausedDeposit_rejectDepositNative() throws Throwable {
         assertFalse(bridge.depositsArePaused());
-        bridge.pauseDeposits();
+        bridge.pauseDeposits(governor);
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> DepositHelper.depositNative(alice, recipient0, BigInteger.ONE));
+                () -> bridge.depositNative(alice, recipient0, BigInteger.ONE));
         assertThat(thrown.getMessage(), containsString("Deposits paused"));
 
-        bridge.unpauseDeposits();
+        bridge.unpauseDeposits(governor);
     }
 
     // endregion
@@ -145,7 +145,7 @@ public class PauseDepositsTest {
     @Test
     public void testPauseDeposits_withdrawNative() throws Throwable {
         assertFalse(bridge.depositsArePaused());
-        bridge.pauseDeposits();
+        bridge.pauseDeposits(governor);
         assertThat(bridge.getNativeBridge().withdrawalState.nonce, is(BigInteger.ZERO));
 
         BigInteger nonce = BigInteger.ONE;
@@ -156,16 +156,16 @@ public class PauseDepositsTest {
         String root = concatAndKeccak256(Hash256.ZERO.toString(), d1);
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
-        bridge.withdrawNative(root, signMsg(validators, root), withdrawal);
+        bridge.withdrawNative(relayer, root, signMsg(validators, root), withdrawal);
 
         assertThat(bridge.getNativeBridge().withdrawalState.nonce, is(BigInteger.ONE));
-        bridge.unpauseDeposits();
+        bridge.unpauseDeposits(governor);
     }
 
     @Test
     public void testPauseDeposits_withdrawToken() throws Throwable {
         assertFalse(bridge.depositsArePaused());
-        bridge.pauseDeposits();
+        bridge.pauseDeposits(governor);
         assertThat(bridge.getTokenBridge(neoN3NeoTokenHash).withdrawalState.nonce, is(BigInteger.ZERO));
 
         BigInteger nonce = BigInteger.ONE;
@@ -174,14 +174,14 @@ public class PauseDepositsTest {
 
         State withdrawalState_before = bridge.getTokenBridge(neoN3NeoTokenHash).withdrawalState;
         String root = computeNewTokenRootNoPrefix(withdrawalState_before.root.toString(), neoN3NeoTokenHash,
-                        neoXNeoTokenHash, BigInteger.ONE, to, amount);
+                neoXNeoTokenHash, BigInteger.ONE, to, amount);
 
         List<Account> validators = Arrays.asList(validator1, validator2, validator3, validator4, validator5);
         ContractParameter withdrawal = array(array(integer(nonce), hash160(to), integer(amount)));
-        bridge.withdrawToken(neoN3NeoTokenHash, root, signMsg(validators, root), withdrawal);
+        bridge.withdrawToken(relayer, neoN3NeoTokenHash, root, signMsg(validators, root), withdrawal);
 
         assertThat(bridge.getTokenBridge(neoN3NeoTokenHash).withdrawalState.nonce, is(nonce));
-        bridge.unpauseDeposits();
+        bridge.unpauseDeposits(governor);
     }
 
     // endregion

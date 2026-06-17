@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 
-import static network.bane.util.TestHelper.createWithdrawalMessageToSign;
+import static network.bane.support.hash.TokenBridgeHashChainHelper.createWithdrawalMessageToSign;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 

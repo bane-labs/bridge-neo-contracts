@@ -13,10 +13,10 @@ import io.neow3j.types.Hash256;
 import io.neow3j.types.NeoVMStateType;
 import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
+import network.bane.dto.State;
 import network.bane.management.BridgeManagementContract;
 import network.bane.testhelper.TestContract;
 import network.bane.testhelper.TokenTestContract;
-import network.bane.util.structs.State;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -35,26 +35,27 @@ import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.prependHexPrefix;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.util.Arrays.asList;
-import static network.bane.util.TestHelper.computeNewTokenRootNoPrefix;
-import static network.bane.util.TestHelper.keccak256HexNoPrefix;
-import static network.bane.util.TestHelper.signMsg;
-import static network.bane.util.TestHelper.validator1;
-import static network.bane.util.TestHelper.validator3;
-import static network.bane.util.TestHelper.validator4;
-import static network.bane.util.TestHelper.validator5;
-import static network.bane.util.TestHelper.validator7;
-import static network.bane.util.helper.TestHelper.alice;
-import static network.bane.util.helper.TestHelper.bridge;
-import static network.bane.util.helper.TestHelper.createBridgeDeployConfig;
-import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
-import static network.bane.util.helper.TestHelper.gasToken;
-import static network.bane.util.helper.TestHelper.neoN3NeoTokenHash;
-import static network.bane.util.helper.TestHelper.neoToken;
-import static network.bane.util.helper.TestHelper.neoXNeoTokenHash;
-import static network.bane.util.helper.TestHelper.neow3j;
-import static network.bane.util.helper.TestHelper.registerNeoTokenBridge;
-import static network.bane.util.helper.TestHelper.setup;
-import static network.bane.util.helper.TestHelper.setupBridge;
+import static network.bane.support.hash.HashChainHelper.keccak256HexNoPrefix;
+import static network.bane.support.hash.TokenBridgeHashChainHelper.computeNewTokenRootNoPrefix;
+import static network.bane.support.crypto.SignHelper.signMsg;
+import static network.bane.support.TestConstants.relayer;
+import static network.bane.support.TestConstants.validator1;
+import static network.bane.support.TestConstants.validator3;
+import static network.bane.support.TestConstants.validator4;
+import static network.bane.support.TestConstants.validator5;
+import static network.bane.support.TestConstants.validator7;
+import static network.bane.support.TestEnvironment.alice;
+import static network.bane.support.TestEnvironment.bridge;
+import static network.bane.support.TestEnvironment.createBridgeDeployConfig;
+import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
+import static network.bane.support.TestEnvironment.gasToken;
+import static network.bane.support.TestEnvironment.neoN3NeoTokenHash;
+import static network.bane.support.TestEnvironment.neoToken;
+import static network.bane.support.TestEnvironment.neoXNeoTokenHash;
+import static network.bane.support.TestEnvironment.neow3j;
+import static network.bane.support.TestEnvironment.registerNeoTokenBridge;
+import static network.bane.support.TestEnvironment.setup;
+import static network.bane.support.TestEnvironment.setupBridge;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
@@ -235,7 +236,7 @@ public class TokenBridgeSyncTest {
                 is("0xe7bcedec3503f013e96c2656b3ea841f62787a06afd3a3df004635ec9a1432e7"));
 
         List<Account> signingValidators = asList(validator1, validator3, validator4, validator5, validator7);
-        Hash256 withdrawalTxHash = bridge.withdrawToken(neoN3NeoTokenHash, newRoot_3,
+        Hash256 withdrawalTxHash = bridge.withdrawToken(relayer, neoN3NeoTokenHash, newRoot_3,
                 signMsg(signingValidators, newRoot_3),
                 array(
                         array(integer(BigInteger.ONE), hash160(recipientOnNeoN3_1), integer(amount_1)),
@@ -244,7 +245,6 @@ public class TokenBridgeSyncTest {
                         )
                 )
         );
-        Await.waitUntilTransactionIsExecuted(withdrawalTxHash, neow3j);
 
         NeoApplicationLog.Execution exec_3 = neow3j.getApplicationLog(withdrawalTxHash).send()
                 .getApplicationLog().getFirstExecution();

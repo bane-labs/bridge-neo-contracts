@@ -2,6 +2,8 @@ package network.bane.message;
 
 import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.GasToken;
+import io.neow3j.crypto.ECKeyPair;
+import io.neow3j.crypto.Sign;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.StackItem;
@@ -12,21 +14,21 @@ import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.CallFlags;
-import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.types.StackItemType;
 import io.neow3j.wallet.Account;
+import network.bane.dto.message.MessageEnvelope;
+import network.bane.dto.message.interfaces.IMetadataSerializer;
 import network.bane.management.BridgeManagementContract;
 import network.bane.messageexecution.ExecutionManagerContract;
 import network.bane.testhelper.TestContract;
-import network.bane.util.MessageHelper;
-import network.bane.util.structs.ExecutableStateDto;
-import network.bane.util.structs.N3MessageDto;
-import network.bane.util.structs.N3MessageMetadataDto;
-import network.bane.util.structs.N3MessageMetadataExecDto;
-import network.bane.util.structs.N3MessageMetadataResultDto;
-import network.bane.util.structs.N3MessageMetadataStoreOnlyDto;
+import network.bane.support.event.MessageBridgeEventHelper;
+import network.bane.dto.message.N3Message;
+import network.bane.dto.message.N3MessageMetadata;
+import network.bane.dto.message.N3MessageMetadataExec;
+import network.bane.dto.message.N3MessageMetadataResult;
+import network.bane.dto.message.N3MessageMetadataStoreOnly;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -42,45 +44,42 @@ import java.util.Map;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.global;
 import static io.neow3j.types.ContractParameter.any;
-import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
-import static io.neow3j.types.ContractParameter.integer;
 import static io.neow3j.utils.Numeric.cleanHexPrefix;
 import static io.neow3j.utils.Numeric.hexStringToByteArray;
 import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static network.bane.util.MessageHelper.createN3MessageHash;
-import static network.bane.util.MessageHelper.getMessageStorEvents;
-import static network.bane.util.TestHelper.concatAndKeccak256;
-import static network.bane.util.TestHelper.governor;
-import static network.bane.util.TestHelper.securityGuard;
-import static network.bane.util.TestHelper.signMsg;
-import static network.bane.util.TestHelper.validator1;
-import static network.bane.util.TestHelper.validator2;
-import static network.bane.util.TestHelper.validator3;
-import static network.bane.util.TestHelper.validator4;
-import static network.bane.util.TestHelper.validator5;
-import static network.bane.util.helper.DefaultTestValues.MANAGEMENT_CONTRACT_HASH;
-import static network.bane.util.helper.DefaultTestValues.MESSAGE_BRIDGE_CONTRACT_HASH;
-import static network.bane.util.helper.PrintHelper.printTransactionFee;
-import static network.bane.util.helper.TestHelper.alice;
-import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
-import static network.bane.util.helper.TestHelper.createExecutionManagerDeployConfig;
-import static network.bane.util.helper.TestHelper.createMessageBridgeDeployConfig;
-import static network.bane.util.helper.TestHelper.executionManager;
-import static network.bane.util.helper.TestHelper.gasToken;
-import static network.bane.util.helper.TestHelper.getNextEvmNonce;
-import static network.bane.util.helper.TestHelper.getNextN3Nonce;
-import static network.bane.util.helper.TestHelper.management;
-import static network.bane.util.helper.TestHelper.messageBridge;
-import static network.bane.util.helper.TestHelper.neow3j;
-import static network.bane.util.helper.TestHelper.setup;
-import static network.bane.util.helper.TestHelper.setupExecutionManager;
-import static network.bane.util.helper.TestHelper.setupMessageBridge;
-import static network.bane.util.helper.TestHelper.setupTestContract;
-import static network.bane.util.helper.TestHelper.testContract;
+import static network.bane.support.hash.HashChainHelper.concatAndKeccak256;
+import static network.bane.support.event.MessageBridgeEventHelper.getMessageStorEvents;
+import static network.bane.support.hash.MessageBridgeHashChainHelper.createN3MessageHash;
+import static network.bane.support.crypto.SignHelper.signMsg;
+import static network.bane.support.TestConstants.governor;
+import static network.bane.support.TestConstants.relayer;
+import static network.bane.support.TestConstants.securityGuard;
+import static network.bane.support.TestConstants.validator1;
+import static network.bane.support.TestConstants.validator2;
+import static network.bane.support.TestConstants.validator3;
+import static network.bane.support.TestConstants.validator4;
+import static network.bane.support.TestConstants.validator5;
+import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
+import static network.bane.support.TestConstants.MESSAGE_BRIDGE_CONTRACT_HASH;
+import static network.bane.support.io.PrintHelper.printTransactionFee;
+import static network.bane.support.TestEnvironment.alice;
+import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
+import static network.bane.support.TestEnvironment.createExecutionManagerDeployConfig;
+import static network.bane.support.TestEnvironment.createMessageBridgeDeployConfig;
+import static network.bane.support.TestEnvironment.executionManager;
+import static network.bane.support.TestEnvironment.gasToken;
+import static network.bane.support.TestEnvironment.management;
+import static network.bane.support.TestEnvironment.messageBridge;
+import static network.bane.support.TestEnvironment.neow3j;
+import static network.bane.support.TestEnvironment.setup;
+import static network.bane.support.TestEnvironment.setupExecutionManager;
+import static network.bane.support.TestEnvironment.setupMessageBridge;
+import static network.bane.support.TestEnvironment.setupTestContract;
+import static network.bane.support.TestEnvironment.testContract;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
@@ -128,9 +127,8 @@ public class MessageBridgeTest {
                     "hash to 0x%s.", management.getScriptHash()));
         }
 
-        messageBridge.setExecutionManager(executionManager.getScriptHash());
-
-        messageBridge.unpause();
+        messageBridge.setExecutionManager(governor, executionManager.getScriptHash());
+        messageBridge.unpause(governor);
     }
 
     @DeployConfig(BridgeManagementContract.class)
@@ -176,7 +174,7 @@ public class MessageBridgeTest {
         assertThat(firstEventInPausingTx.getEventName(), is("Pause"));
 
         // revert the state for further tests
-        tx = messageBridge.unpause();
+        tx = messageBridge.unpause(governor);
         assertFalse(messageBridge.isPaused());
         Notification firstEventInUnpausingTx = neow3j.getApplicationLog(tx).send().getApplicationLog()
                 .getFirstExecution().getFirstNotification();
@@ -192,7 +190,7 @@ public class MessageBridgeTest {
         assertTrue(messageBridge.isPaused());
 
         // revert the state for further tests
-        messageBridge.unpause();
+        messageBridge.unpause(governor);
     }
 
     @Test
@@ -207,14 +205,14 @@ public class MessageBridgeTest {
     @Test
     @Order(0)
     public void test_unpause_notGovernor() throws Throwable {
-        messageBridge.pause();
+        messageBridge.pause(governor);
         assertTrue(messageBridge.isPaused());
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.unpause(alice));
         assertThat(thrown.getMessage(), containsString("No authorization - only governor"));
 
         // revert the state for further tests
-        messageBridge.unpause();
+        messageBridge.unpause(governor);
     }
 
     // endregion
@@ -223,14 +221,14 @@ public class MessageBridgeTest {
     @Test
     @Order(1)
     public void testSending_storeOnly() throws Throwable {
-        BigInteger expectedNextEvmNonce = getNextEvmNonce();
+        BigInteger expectedNextEvmNonce = messageBridge.getNextNeoToEvmNonce();
 
         BigInteger initialBalance = gasToken.getBalanceOf(messageBridge.getScriptHash());
         BigInteger initialUnclaimedFees = messageBridge.unclaimedFees();
         BigInteger sendingFee = messageBridge.sendingFee();
 
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
-        Hash256 tx = messageBridge.sendStoreOnlyMessage(global(alice), rawMessage);
+        Hash256 tx = messageBridge.sendStoreOnlyMessage(alice, rawMessage);
 
         BigInteger gasBalanceAfter = gasToken.getBalanceOf(messageBridge.getScriptHash());
         assertThat(gasBalanceAfter, is(initialBalance.add(sendingFee)));
@@ -263,14 +261,14 @@ public class MessageBridgeTest {
     @Test
     @Order(2)
     public void testSending_executable() throws Throwable {
-        BigInteger expectedNextEvmNonce = getNextEvmNonce();
+        BigInteger expectedNextEvmNonce = messageBridge.getNextNeoToEvmNonce();
 
         BigInteger initialBalance = gasToken.getBalanceOf(messageBridge.getScriptHash());
         BigInteger initialUnclaimedFees = messageBridge.unclaimedFees();
         BigInteger sendingFee = messageBridge.sendingFee();
 
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
-        Hash256 tx = messageBridge.sendExecutableMessage(rawMessage, false);
+        Hash256 tx = messageBridge.sendExecutableMessage(alice, rawMessage, false);
 
         BigInteger gasBalanceAfter = gasToken.getBalanceOf(messageBridge.getScriptHash());
         assertThat(gasBalanceAfter, is(initialBalance.add(sendingFee)));
@@ -304,55 +302,53 @@ public class MessageBridgeTest {
     @Order(0)
     public void testSending_storeOnly_fail_exceedMaxSize() throws Throwable {
         BigInteger previousMaxMsgSize = messageBridge.maxMessageSize();
-        messageBridge.setMaxMessageSize(BigInteger.TEN);
+        messageBridge.setMaxMessageSize(governor, BigInteger.TEN);
 
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef010203");
         assertThat(rawMessage.length, greaterThan(messageBridge.maxMessageSize().intValue()));
-        BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.sendStoreOnlyMessage(global(alice), rawMessage, alice, sendingFee));
+                () -> messageBridge.sendStoreOnlyMessage(alice, rawMessage));
         assertThat(thrown.getMessage(), containsString("Message too large"));
 
         // Revert the state for further tests
-        messageBridge.setMaxMessageSize(previousMaxMsgSize);
+        messageBridge.setMaxMessageSize(governor, previousMaxMsgSize);
     }
 
     @Test
     @Order(0)
     public void testSending_executable_fail_exceedMaxSize() throws Throwable {
         BigInteger previousMaxMsgSize = messageBridge.maxMessageSize();
-        messageBridge.setMaxMessageSize(BigInteger.TEN);
+        messageBridge.setMaxMessageSize(governor, BigInteger.TEN);
 
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef010203");
         assertThat(rawMessage.length, greaterThan(messageBridge.maxMessageSize().intValue()));
-        BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.sendExecutableMessage(global(alice), rawMessage, false, alice, sendingFee));
+                () -> messageBridge.sendExecutableMessage(alice, rawMessage, false));
         assertThat(thrown.getMessage(), containsString("Message too large"));
 
         // Revert the state for further tests
-        messageBridge.setMaxMessageSize(previousMaxMsgSize);
+        messageBridge.setMaxMessageSize(governor, previousMaxMsgSize);
     }
 
     @Test
     @Order(0)
-    public void testSending_storeOnly_fail_exceedMaxFee() throws Throwable {
+    public void testSending_storeOnly_fail_exceedMaxFee() {
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
-        BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.sendStoreOnlyMessage(global(alice), rawMessage, alice,
-                        sendingFee.subtract(BigInteger.ONE)));
+                () -> messageBridge.sendStoreOnlyMessage(rawMessage, alice.getScriptHash(),
+                                messageBridge.sendingFee().subtract(BigInteger.ONE))
+                        .withSigners(global(alice)).signSendAndAwait());
         assertThat(thrown.getMessage(), containsString("Max fee exceeded"));
     }
 
     @Test
     @Order(0)
-    public void testSending_executable_fail_exceedMaxFee() throws Throwable {
+    public void testSending_executable_fail_exceedMaxFee() {
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
-        BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.sendExecutableMessage(global(alice), rawMessage, false, alice,
-                        sendingFee.subtract(BigInteger.ONE)));
+                () -> messageBridge.sendExecutableMessage(rawMessage, false, alice.getScriptHash(),
+                                messageBridge.sendingFee().subtract(BigInteger.ONE))
+                        .withSigners(global(alice)).signSendAndAwait());
         assertThat(thrown.getMessage(), containsString("Max fee exceeded"));
     }
 
@@ -362,8 +358,8 @@ public class MessageBridgeTest {
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
         BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.sendStoreOnlyMessage(global(alice), rawMessage, messageBridge.getScriptHash(),
-                        sendingFee));
+                () -> messageBridge.sendStoreOnlyMessage(rawMessage, messageBridge.getScriptHash(), sendingFee)
+                        .withSigners(calledByEntry(alice)).signSendAndAwait());
         assertThat(thrown.getMessage(), containsString("Prohibited 'feeSponsor'"));
     }
 
@@ -373,8 +369,8 @@ public class MessageBridgeTest {
         byte[] rawMessage = hexStringToByteArray("0x1234567890abcdef");
         BigInteger sendingFee = messageBridge.sendingFee();
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.sendExecutableMessage(global(alice), rawMessage, false,
-                        messageBridge.getScriptHash(), sendingFee));
+                () -> messageBridge.sendExecutableMessage(rawMessage, false, messageBridge.getScriptHash(), sendingFee)
+                        .withSigners(calledByEntry(alice)).signSendAndAwait());
         assertThat(thrown.getMessage(), containsString("Prohibited 'feeSponsor'"));
     }
 
@@ -386,75 +382,78 @@ public class MessageBridgeTest {
     public void test_storeMessages_1_notRelayer() throws IOException {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = messageBridge.getNextEvmToNeoNonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
 
-        N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
+        N3MessageMetadataExec metadata = new N3MessageMetadataExec(timestamp, sender, true);
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+        N3Message n3Message = new N3Message(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
+        MessageEnvelope messageEnvelope = new MessageEnvelope(nonce, n3Message);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.storeMessages(governor, root, signMsg(validators, root), array(messageEnvelope)));
+                () -> messageBridge.storeMessages(governor, root, signMsg(validators, root), asList(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("No authorization - only relayer"));
+
+        //TBD
     }
 
     @Test
     @Order(0)
     public void test_storeMessages_1_bridgePaused() throws Throwable {
-        messageBridge.pause();
+        messageBridge.pause(governor);
         assertTrue(messageBridge.isPaused());
 
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = messageBridge.getNextEvmToNeoNonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
 
-        N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
+        N3MessageMetadataExec metadata = new N3MessageMetadataExec(timestamp, sender, true);
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+        N3Message n3Message = new N3Message(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
+        MessageEnvelope messageEnvelope = new MessageEnvelope(nonce, n3Message);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
+                () -> messageBridge.storeMessages(relayer, root, signMsg(validators, root), asList(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("Contract paused"));
 
-        messageBridge.unpause();
+        messageBridge.unpause(governor);
     }
 
     @Test
     @Order(0)
     public void test_storeMessages_1_messageBridgePaused() throws Throwable {
-        messageBridge.pause();
+        messageBridge.pause(governor);
         assertTrue(messageBridge.isPaused());
 
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = messageBridge.getNextEvmToNeoNonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
 
-        N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
+        N3MessageMetadataExec metadata = new N3MessageMetadataExec(timestamp, sender, true);
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+        N3Message n3Message = new N3Message(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
+        MessageEnvelope messageEnvelope = new MessageEnvelope(nonce, n3Message);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
+                () -> messageBridge.storeMessages(relayer, root, signMsg(validators, root), asList(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("Contract paused"));
 
-        messageBridge.unpause();
+        messageBridge.unpause(governor);
+        //TBD
     }
 
     @Test
@@ -462,11 +461,10 @@ public class MessageBridgeTest {
     public void test_storeMessages_1_noMessages() throws Throwable {
         String dummyRoot = "";
         List<Account> validators = asList(validator1);
-        Map<ContractParameter, ContractParameter> dummyValidatorSigMap = signMsg(validators, dummyRoot);
-        ContractParameter emptyN3MsgEnvelopeArray = array();
+        Map<ECKeyPair.ECPublicKey, Sign.SignatureData> dummyValidatorSigMap = signMsg(validators, dummyRoot);
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.storeMessages(dummyRoot, dummyValidatorSigMap, emptyN3MsgEnvelopeArray));
+                () -> messageBridge.storeMessages(relayer, dummyRoot, dummyValidatorSigMap, asList()));
         assertThat(thrown.getMessage(), containsString("At least one message required"));
     }
 
@@ -475,20 +473,21 @@ public class MessageBridgeTest {
     public void test_storeMessage_1_incorrectNextNonce() throws IOException {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = getNextN3Nonce().add(BigInteger.ONE);
+        BigInteger nonce = messageBridge.getNextEvmToNeoNonce().add(BigInteger.ONE);
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
 
-        N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
+        N3MessageMetadataExec metadata = new N3MessageMetadataExec(timestamp, sender, true);
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+        N3Message n3Message = new N3Message(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
+        MessageEnvelope messageEnvelope = new MessageEnvelope(nonce, n3Message);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.storeMessages(root, signMsg(validators, root), messageEnvelope));
+                () -> messageBridge.storeMessages(relayer, root, signMsg(validators, root), asList(messageEnvelope)));
+        //TBD
         assertThat(thrown.getMessage(), containsString("Provided messages are not subsequent"));
     }
 
@@ -497,22 +496,22 @@ public class MessageBridgeTest {
     public void test_storeMessage_1_invalidRoot() throws IOException {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = messageBridge.getNextEvmToNeoNonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
 
-        N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
+        N3MessageMetadataExec metadata = new N3MessageMetadataExec(timestamp, sender, true);
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+        N3Message n3Message = new N3Message(metadata, msgBytes);
 
         String invalidRoot = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1) + "01"; // Invalid root
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
+        MessageEnvelope messageEnvelope = new MessageEnvelope(nonce, n3Message);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 // Root signed by validators, but not matching the messages.
-                () -> messageBridge.storeMessages(invalidRoot, signMsg(validators, invalidRoot),
-                        array(messageEnvelope)));
+                () -> messageBridge.storeMessages(relayer, invalidRoot, signMsg(validators, invalidRoot),
+                        asList(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("Invalid root"));
     }
 
@@ -521,21 +520,21 @@ public class MessageBridgeTest {
     public void test_storeMessage_1_insufficientNrSigs() throws IOException {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = messageBridge.getNextEvmToNeoNonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
         boolean storeResult = false;
 
-        N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, storeResult);
+        N3MessageMetadataExec metadata = new N3MessageMetadataExec(timestamp, sender, storeResult);
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+        N3Message n3Message = new N3Message(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4);
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
+        MessageEnvelope messageEnvelope = new MessageEnvelope(nonce, n3Message);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
+                () -> messageBridge.storeMessages(relayer, root, signMsg(validators, root), asList(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("Insufficient signatures"));
     }
 
@@ -544,20 +543,20 @@ public class MessageBridgeTest {
     public void test_storeMessage_1_failingSigVerification() throws IOException {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = messageBridge.getNextEvmToNeoNonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
 
-        N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
+        N3MessageMetadataExec metadata = new N3MessageMetadataExec(timestamp, sender, true);
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+        N3Message n3Message = new N3Message(metadata, msgBytes);
 
         String root = concatAndKeccak256(Hash256.ZERO.toString(), msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, alice); // Non-validator sig
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
+        MessageEnvelope messageEnvelope = new MessageEnvelope(nonce, n3Message);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope)));
+                () -> messageBridge.storeMessages(relayer, root, signMsg(validators, root), asList(messageEnvelope)));
         assertThat(thrown.getMessage(), containsString("Invalid validator signatures"));
     }
 
@@ -566,7 +565,7 @@ public class MessageBridgeTest {
     public void test_storeMessage_1() throws Throwable {
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = messageBridge.getNextEvmToNeoNonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
@@ -576,29 +575,29 @@ public class MessageBridgeTest {
         // 69ecca587293047be4c59159bf8bc399985c160d alice
         // efcdab9078563412 executable code reversed
 
-        N3MessageMetadataExecDto metadata = new N3MessageMetadataExecDto(timestamp, sender, true);
+        N3MessageMetadataExec metadata = new N3MessageMetadataExec(timestamp, sender, true);
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+        N3Message n3Message = new N3Message(metadata, msgBytes);
 
-        String currentN3Root = messageBridge.messageEvmToN3Root();
+        String currentN3Root = messageBridge.evmToNeoRoot();
         String root = concatAndKeccak256(currentN3Root, msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
-        Hash256 txHash = messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope));
+        MessageEnvelope messageEnvelope = new MessageEnvelope(nonce, n3Message);
+        Hash256 txHash = messageBridge.storeMessages(relayer, root, signMsg(validators, root), asList(messageEnvelope));
         printTransactionFee(neow3j, "tx with 1 message", txHash);
-        List<MessageHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
+        List<MessageBridgeEventHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
                 messageBridge.getScriptHash());
         assertThat(n3MessageStoreEvents, hasSize(1));
-        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent = n3MessageStoreEvents.get(0);
+        MessageBridgeEventHelper.N3MessageStoreEvent n3MessageStoreEvent = n3MessageStoreEvents.get(0);
         assertThat(n3MessageStoreEvent.nonce, is(nonce));
-        N3MessageMetadataDto expectedMetadata = metadata;
+        N3MessageMetadata expectedMetadata = metadata;
         assertThat(n3MessageStoreEvent.metadataSerializedHex,
-                is(toHexStringNoPrefix(expectedMetadata.serialize(messageBridge))));
+                is(toHexStringNoPrefix(expectedMetadata.serialize((IMetadataSerializer) messageBridge))));
 
-        N3MessageDto message = messageBridge.getMessage(nonce);
-        assertThat(message, is(n3MessageDto));
+        N3Message message = messageBridge.getMessage(nonce);
+        assertThat(message, is(n3Message));
 
-        ExecutableStateDto execState = messageBridge.getExecutableState(nonce);
+        network.bane.dto.message.ExecutableState execState = messageBridge.getExecutableState(nonce);
         assertFalse(execState.executed);
         assertThat(execState.expirationTimestamp, greaterThan(getBestBlockTime()));
     }
@@ -610,25 +609,25 @@ public class MessageBridgeTest {
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x1234567890abcdef";
 
-        N3MessageMetadataExecDto metadata1 = new N3MessageMetadataExecDto(timestamp, sender, true);
-        N3MessageMetadataStoreOnlyDto metadata2 = new N3MessageMetadataStoreOnlyDto(timestamp, sender);
-        N3MessageMetadataResultDto metadata3 = new N3MessageMetadataResultDto(timestamp, sender, BigInteger.ONE);
-        N3MessageMetadataExecDto metadata4 = metadata1;
-        BigInteger nonce1 = getNextN3Nonce();
+        N3MessageMetadataExec metadata1 = new N3MessageMetadataExec(timestamp, sender, true);
+        N3MessageMetadataStoreOnly metadata2 = new N3MessageMetadataStoreOnly(timestamp, sender);
+        N3MessageMetadataResult metadata3 = new N3MessageMetadataResult(timestamp, sender, BigInteger.ONE);
+        N3MessageMetadataExec metadata4 = metadata1;
+        BigInteger nonce1 = messageBridge.getNextEvmToNeoNonce();
         BigInteger nonce2 = nonce1.add(BigInteger.ONE);
         BigInteger nonce3 = nonce2.add(BigInteger.ONE);
         BigInteger nonce4 = nonce3.add(BigInteger.ONE);
 
-        N3MessageDto n3MessageDto1 = new N3MessageDto(metadata1, msgBytes);
-        N3MessageDto n3MessageDto2 = new N3MessageDto(metadata2, msgBytes);
-        N3MessageDto n3MessageDto3 = new N3MessageDto(metadata3, msgBytes);
-        N3MessageDto n3MessageDto4 = new N3MessageDto(metadata1, msgBytes);
+        N3Message n3Message1 = new N3Message(metadata1, msgBytes);
+        N3Message n3Message2 = new N3Message(metadata2, msgBytes);
+        N3Message n3Message3 = new N3Message(metadata3, msgBytes);
+        N3Message n3Message4 = new N3Message(metadata1, msgBytes);
         String msgHash1 = createN3MessageHash(nonce1, metadata1, msgBytes);
         String msgHash2 = createN3MessageHash(nonce2, metadata2, msgBytes);
         String msgHash3 = createN3MessageHash(nonce3, metadata3, msgBytes);
         String msgHash4 = createN3MessageHash(nonce4, metadata4, msgBytes);
 
-        Hash256 currentRoot = messageBridge.getMessageBridge().evmToN3MessageState.root;
+        Hash256 currentRoot = messageBridge.getMessageBridge().evmToNeoState.root;
 
         String root1 = concatAndKeccak256(currentRoot.toString(), msgHash1);
         String root2 = concatAndKeccak256(root1, msgHash2);
@@ -636,35 +635,35 @@ public class MessageBridgeTest {
         String root4 = concatAndKeccak256(root3, msgHash4);
 
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter messageEnvelope1 = array(integer(nonce1), n3MessageDto1.toContractParameter(messageBridge));
-        ContractParameter messageEnvelope2 = array(integer(nonce2), n3MessageDto2.toContractParameter(messageBridge));
-        ContractParameter messageEnvelope3 = array(integer(nonce3), n3MessageDto3.toContractParameter(messageBridge));
-        ContractParameter messageEnvelope4 = array(integer(nonce4), n3MessageDto4.toContractParameter(messageBridge));
-        Hash256 txHash = messageBridge.storeMessages(root4, signMsg(validators, root4), array(messageEnvelope1,
-                messageEnvelope2, messageEnvelope3, messageEnvelope4));
+        MessageEnvelope messageEnvelope1 = new MessageEnvelope(nonce1, n3Message1);
+        MessageEnvelope messageEnvelope2 = new MessageEnvelope(nonce2, n3Message2);
+        MessageEnvelope messageEnvelope3 = new MessageEnvelope(nonce3, n3Message3);
+        MessageEnvelope messageEnvelope4 = new MessageEnvelope(nonce4, n3Message4);
+        Hash256 txHash = messageBridge.storeMessages(relayer, root4, signMsg(validators, root4),
+                asList(messageEnvelope1, messageEnvelope2, messageEnvelope3, messageEnvelope4));
         printTransactionFee(neow3j, "tx with 3 messages", txHash);
-        List<MessageHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
+        List<MessageBridgeEventHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
                 messageBridge.getScriptHash());
         assertThat(n3MessageStoreEvents, hasSize(4));
-        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent1 = n3MessageStoreEvents.get(0);
+        MessageBridgeEventHelper.N3MessageStoreEvent n3MessageStoreEvent1 = n3MessageStoreEvents.get(0);
         assertThat(n3MessageStoreEvent1.nonce, is(nonce1));
-        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent2 = n3MessageStoreEvents.get(1);
+        MessageBridgeEventHelper.N3MessageStoreEvent n3MessageStoreEvent2 = n3MessageStoreEvents.get(1);
         assertThat(n3MessageStoreEvent2.nonce, is(nonce2));
-        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent3 = n3MessageStoreEvents.get(2);
+        MessageBridgeEventHelper.N3MessageStoreEvent n3MessageStoreEvent3 = n3MessageStoreEvents.get(2);
         assertThat(n3MessageStoreEvent3.nonce, is(nonce3));
-        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent4 = n3MessageStoreEvents.get(3);
+        MessageBridgeEventHelper.N3MessageStoreEvent n3MessageStoreEvent4 = n3MessageStoreEvents.get(3);
         assertThat(n3MessageStoreEvent4.nonce, is(nonce4));
 
-        N3MessageDto message1 = messageBridge.getMessage(nonce1);
-        assertThat(message1, is(n3MessageDto1));
-        N3MessageDto message2 = messageBridge.getMessage(nonce2);
-        assertThat(message2, is(n3MessageDto2));
-        N3MessageDto message3 = messageBridge.getMessage(nonce3);
-        assertThat(message3, is(n3MessageDto3));
-        N3MessageDto message4 = messageBridge.getMessage(nonce4);
-        assertThat(message4, is(n3MessageDto4));
+        N3Message message1 = messageBridge.getMessage(nonce1);
+        assertThat(message1, is(n3Message1));
+        N3Message message2 = messageBridge.getMessage(nonce2);
+        assertThat(message2, is(n3Message2));
+        N3Message message3 = messageBridge.getMessage(nonce3);
+        assertThat(message3, is(n3Message3));
+        N3Message message4 = messageBridge.getMessage(nonce4);
+        assertThat(message4, is(n3Message4));
 
-        ExecutableStateDto executableState1 = messageBridge.getExecutableState(nonce1);
+        network.bane.dto.message.ExecutableState executableState1 = messageBridge.getExecutableState(nonce1);
         assertFalse(executableState1.executed);
         assertThat(executableState1.expirationTimestamp, greaterThan(getBestBlockTime()));
 
@@ -675,7 +674,7 @@ public class MessageBridgeTest {
                 () -> messageBridge.getExecutableState(nonce3));
         assertThat(thrown3.getMessage(), containsString("Executable state not found"));
 
-        ExecutableStateDto executableState4 = messageBridge.getExecutableState(nonce4);
+        network.bane.dto.message.ExecutableState executableState4 = messageBridge.getExecutableState(nonce4);
         assertFalse(executableState4.executed);
         assertThat(executableState4.expirationTimestamp, greaterThan(getBestBlockTime()));
     }
@@ -684,38 +683,38 @@ public class MessageBridgeTest {
     @Order(1)
     public void test_storeMessage_checkEvmResult() throws Throwable {
         // Send dummy message to EVM to use as related nonce for checking its dummy result.
-        Hash256 tx = messageBridge.sendExecutableMessage(hexStringToByteArray("0x0a"), true);
+        Hash256 tx = messageBridge.sendExecutableMessage(alice, hexStringToByteArray("0x0a"), true);
         BigInteger nonceOfMsgSentToEvm = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
                 .getFirstStackItem().getInteger();
 
         // This test only works if it is the first test in the order of storing messages, due to the use of raw data for
         // the nonce, to and amount.
-        BigInteger nonce = getNextN3Nonce(); // Necessary if other tests are run besides this one.
+        BigInteger nonce = messageBridge.getNextEvmToNeoNonce(); // Necessary if other tests are run besides this one.
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = alice.getScriptHash();
         String msgBytes = "0x12123434";
 
-        N3MessageMetadataResultDto metadata = new N3MessageMetadataResultDto(timestamp, sender, nonceOfMsgSentToEvm);
+        N3MessageMetadataResult metadata = new N3MessageMetadataResult(timestamp, sender, nonceOfMsgSentToEvm);
 
         String msgHash1 = createN3MessageHash(nonce, metadata, msgBytes);
-        N3MessageDto n3MessageDto = new N3MessageDto(metadata, msgBytes);
+        N3Message n3Message = new N3Message(metadata, msgBytes);
 
-        String currentN3Root = messageBridge.messageEvmToN3Root();
+        String currentN3Root = messageBridge.evmToNeoRoot();
         String root = concatAndKeccak256(currentN3Root, msgHash1);
         List<Account> validators = asList(validator1, validator2, validator3, validator4, validator5);
-        ContractParameter messageEnvelope = array(integer(nonce), n3MessageDto.toContractParameter(messageBridge));
-        Hash256 txHash = messageBridge.storeMessages(root, signMsg(validators, root), array(messageEnvelope));
-        List<MessageHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
+        MessageEnvelope messageEnvelope = new MessageEnvelope(nonce, n3Message);
+        Hash256 txHash = messageBridge.storeMessages(relayer, root, signMsg(validators, root), asList(messageEnvelope));
+        List<MessageBridgeEventHelper.N3MessageStoreEvent> n3MessageStoreEvents = getMessageStorEvents(txHash, neow3j,
                 messageBridge.getScriptHash());
         assertThat(n3MessageStoreEvents, hasSize(1));
-        MessageHelper.N3MessageStoreEvent n3MessageStoreEvent = n3MessageStoreEvents.get(0);
+        MessageBridgeEventHelper.N3MessageStoreEvent n3MessageStoreEvent = n3MessageStoreEvents.get(0);
         assertThat(n3MessageStoreEvent.nonce, is(nonce));
-        N3MessageMetadataDto expectedMetadata = metadata;
+        N3MessageMetadata expectedMetadata = metadata;
         assertThat(n3MessageStoreEvent.metadataSerializedHex,
-                is(toHexStringNoPrefix(expectedMetadata.serialize(messageBridge))));
+                is(toHexStringNoPrefix(expectedMetadata.serialize((IMetadataSerializer) messageBridge))));
 
-        N3MessageDto message = messageBridge.getMessage(nonce);
-        assertThat(message, is(n3MessageDto));
+        N3Message message = messageBridge.getMessage(nonce);
+        assertThat(message, is(n3Message));
 
         IllegalStateException thrown = assertThrows(IllegalStateException.class,
                 () -> messageBridge.getExecutableState(nonce));
@@ -771,16 +770,16 @@ public class MessageBridgeTest {
     public void test_execute_failWhenContractPaused() throws Throwable {
         byte[] n3FuncCall = messageBridge.serializeCall(GasToken.SCRIPT_HASH, "symbol", CallFlags.ALL,
                 asList());
-        BigInteger nonce = messageBridge.storeMessage(n3FuncCall);
+        BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer, n3FuncCall);
 
-        messageBridge.pause();
+        messageBridge.pause(governor);
         assertTrue(messageBridge.isPaused());
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.executeMessage(global(alice), nonce));
+                () -> messageBridge.executeMessage(alice, nonce));
         assertThat(thrown.getMessage(), containsString("Contract paused"));
 
-        messageBridge.unpause();
+        messageBridge.unpause(governor);
     }
 
     @Test
@@ -788,9 +787,9 @@ public class MessageBridgeTest {
     public void test_execute_failWhenExecutingPaused() throws Throwable {
         byte[] n3FuncCall = messageBridge.serializeCall(GasToken.SCRIPT_HASH, "symbol", CallFlags.ALL,
                 asList());
-        BigInteger nonce = messageBridge.storeMessage(n3FuncCall);
+        BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer, n3FuncCall);
 
-        Hash256 tx = messageBridge.pauseExecuting();
+        Hash256 tx = messageBridge.pauseExecuting(governor);
         assertTrue(messageBridge.executingIsPaused());
         Notification firstEventInPausingTx = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
                 .getFirstNotification();
@@ -798,10 +797,10 @@ public class MessageBridgeTest {
         assertThat(firstEventInPausingTx.getEventName(), is("ExecutingPause"));
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.executeMessage(global(alice), nonce));
+                () -> messageBridge.executeMessage(alice, nonce));
         assertThat(thrown.getMessage(), containsString("Executing paused"));
 
-        tx = messageBridge.unpauseExecuting();
+        tx = messageBridge.unpauseExecuting(governor);
         Notification firstEventInUnpausingTx = neow3j.getApplicationLog(tx).send().getApplicationLog()
                 .getFirstExecution()
                 .getFirstNotification();
@@ -819,7 +818,7 @@ public class MessageBridgeTest {
         BigInteger newSendingFee = new BigInteger("200");
         assertThat(newSendingFee, is(not(sendingFeeBefore)));
 
-        Hash256 tx = messageBridge.setSendingFee(newSendingFee);
+        Hash256 tx = messageBridge.setSendingFee(governor, newSendingFee);
         assertThat(messageBridge.sendingFee(), is(newSendingFee));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
@@ -830,7 +829,7 @@ public class MessageBridgeTest {
         assertThat(notification.getState().getList().get(0).getInteger(), is(newSendingFee));
 
         // revert the state for further tests
-        messageBridge.setSendingFee(sendingFeeBefore);
+        messageBridge.setSendingFee(governor, sendingFeeBefore);
     }
 
     @Test
@@ -838,7 +837,7 @@ public class MessageBridgeTest {
     public void test_setSendingFee_invalidValue() {
         BigInteger invalidSendingFee = new BigInteger("-1");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setSendingFee(invalidSendingFee));
+                () -> messageBridge.setSendingFee(governor, invalidSendingFee));
         assertThat(thrown.getMessage(), containsString("Sending fee must be nonnegative"));
     }
 
@@ -858,7 +857,7 @@ public class MessageBridgeTest {
         BigInteger newMaxBytes = new BigInteger("200");
         assertThat(newMaxBytes, is(not(maxBytesBefore)));
 
-        Hash256 tx = messageBridge.setMaxMessageSize(newMaxBytes);
+        Hash256 tx = messageBridge.setMaxMessageSize(governor, newMaxBytes);
         assertThat(messageBridge.maxMessageSize(), is(newMaxBytes));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
@@ -869,7 +868,7 @@ public class MessageBridgeTest {
         assertThat(notification.getState().getList().get(0).getInteger(), is(newMaxBytes));
 
         // revert the state for further tests
-        messageBridge.setMaxMessageSize(maxBytesBefore);
+        messageBridge.setMaxMessageSize(governor, maxBytesBefore);
     }
 
     @Test
@@ -877,10 +876,10 @@ public class MessageBridgeTest {
     public void test_setMaxMessageSize_maxValue() throws Throwable {
         BigInteger previousMaxMsgSize = messageBridge.maxMessageSize();
 
-        messageBridge.setMaxMessageSize(UPPER_LIMIT_MAX_MESSAGE_SIZE);
+        messageBridge.setMaxMessageSize(governor, UPPER_LIMIT_MAX_MESSAGE_SIZE);
         assertThat(messageBridge.maxMessageSize(), is(UPPER_LIMIT_MAX_MESSAGE_SIZE));
 
-        messageBridge.setMaxMessageSize(previousMaxMsgSize);
+        messageBridge.setMaxMessageSize(governor, previousMaxMsgSize);
     }
 
     @Test
@@ -888,7 +887,7 @@ public class MessageBridgeTest {
     public void test_setMaxMessageSize_valueTooLarge() {
         BigInteger invalidMaxMsgSize = UPPER_LIMIT_MAX_MESSAGE_SIZE.add(BigInteger.ONE);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setMaxMessageSize(invalidMaxMsgSize));
+                () -> messageBridge.setMaxMessageSize(governor, invalidMaxMsgSize));
         assertThat(thrown.getMessage(), containsString("Max message size too large"));
     }
 
@@ -897,7 +896,7 @@ public class MessageBridgeTest {
     public void test_setMaxMessageSize_invalidValue() {
         BigInteger invalidMaxMsgSize = BigInteger.ZERO;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setMaxMessageSize(invalidMaxMsgSize));
+                () -> messageBridge.setMaxMessageSize(governor, invalidMaxMsgSize));
         assertThat(thrown.getMessage(), containsString("Max message size must be positive"));
     }
 
@@ -917,7 +916,7 @@ public class MessageBridgeTest {
         BigInteger newMaxNrMessages = new BigInteger("20");
         assertThat(newMaxNrMessages, is(not(maxNrMessagesBefore)));
 
-        Hash256 tx = messageBridge.setMaxNrMessages(newMaxNrMessages);
+        Hash256 tx = messageBridge.setMaxNrMessages(governor, newMaxNrMessages);
         assertThat(messageBridge.maxNrMessages(), is(newMaxNrMessages));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
@@ -928,7 +927,7 @@ public class MessageBridgeTest {
         assertThat(notification.getState().getList().get(0).getInteger(), is(newMaxNrMessages));
 
         // revert the state for further tests
-        messageBridge.setMaxNrMessages(maxNrMessagesBefore);
+        messageBridge.setMaxNrMessages(governor, maxNrMessagesBefore);
     }
 
     @Test
@@ -936,10 +935,10 @@ public class MessageBridgeTest {
     public void test_setMaxNrMessages_maxValue() throws Throwable {
         BigInteger previousMaxNrMessages = messageBridge.maxNrMessages();
 
-        messageBridge.setMaxNrMessages(UPPER_LIMIT_MAX_NR_MESSAGES);
+        messageBridge.setMaxNrMessages(governor, UPPER_LIMIT_MAX_NR_MESSAGES);
         assertThat(messageBridge.maxNrMessages(), is(UPPER_LIMIT_MAX_NR_MESSAGES));
 
-        messageBridge.setMaxNrMessages(previousMaxNrMessages);
+        messageBridge.setMaxNrMessages(governor, previousMaxNrMessages);
     }
 
     @Test
@@ -947,7 +946,7 @@ public class MessageBridgeTest {
     public void test_setMaxNrMessages_valueTooLarge() {
         BigInteger invalidMaxNrMessages = UPPER_LIMIT_MAX_NR_MESSAGES.add(BigInteger.ONE);
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setMaxNrMessages(invalidMaxNrMessages));
+                () -> messageBridge.setMaxNrMessages(governor, invalidMaxNrMessages));
         assertThat(thrown.getMessage(), containsString("Max number of messages too large"));
     }
 
@@ -956,7 +955,7 @@ public class MessageBridgeTest {
     public void test_setMaxNrMessages_invalidValue() {
         BigInteger invalidMaxNrMessages = BigInteger.ZERO;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setMaxNrMessages(invalidMaxNrMessages));
+                () -> messageBridge.setMaxNrMessages(governor, invalidMaxNrMessages));
         assertThat(thrown.getMessage(), containsString("Max number of messages must be positive"));
     }
 
@@ -976,7 +975,7 @@ public class MessageBridgeTest {
         BigInteger newExecWindowMillis = new BigInteger("3600").multiply(BigInteger.valueOf(1000)); // 1 hour in ms
         assertThat(newExecWindowMillis, is(not(execWindowMillisBefore)));
 
-        Hash256 tx = messageBridge.setExecutionWindowMilliseconds(newExecWindowMillis);
+        Hash256 tx = messageBridge.setExecutionWindowMilliseconds(governor, newExecWindowMillis);
         assertThat(messageBridge.executionWindowMilliseconds(), is(newExecWindowMillis));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
@@ -987,7 +986,7 @@ public class MessageBridgeTest {
         assertThat(notification.getState().getList().get(0).getInteger(), is(newExecWindowMillis));
 
         // revert the state for further tests
-        messageBridge.setExecutionWindowMilliseconds(execWindowMillisBefore);
+        messageBridge.setExecutionWindowMilliseconds(governor, execWindowMillisBefore);
     }
 
     @Test
@@ -995,10 +994,10 @@ public class MessageBridgeTest {
     public void test_setExecutionWindowMilliseconds_maxValue() throws Throwable {
         BigInteger previousExecWindowMillis = messageBridge.executionWindowMilliseconds();
 
-        messageBridge.setExecutionWindowMilliseconds(UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS);
+        messageBridge.setExecutionWindowMilliseconds(governor, UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS);
         assertThat(messageBridge.executionWindowMilliseconds(), is(UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS));
 
-        messageBridge.setExecutionWindowMilliseconds(previousExecWindowMillis);
+        messageBridge.setExecutionWindowMilliseconds(governor, previousExecWindowMillis);
     }
 
     @Test
@@ -1007,7 +1006,7 @@ public class MessageBridgeTest {
         BigInteger invalidExecWindowSeconds = UPPER_LIMIT_MAX_EXECUTION_WINDOW_MILLIS.add(
                 BigInteger.ONE); // 1ms too large
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setExecutionWindowMilliseconds(invalidExecWindowSeconds));
+                () -> messageBridge.setExecutionWindowMilliseconds(governor, invalidExecWindowSeconds));
         assertThat(thrown.getMessage(), containsString("Execution window too large"));
     }
 
@@ -1016,7 +1015,7 @@ public class MessageBridgeTest {
     public void test_setExecutionWindowMilliseconds_invalidValue() {
         BigInteger invalidExecWindowSeconds = BigInteger.ZERO;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setExecutionWindowMilliseconds(invalidExecWindowSeconds));
+                () -> messageBridge.setExecutionWindowMilliseconds(governor, invalidExecWindowSeconds));
         assertThat(thrown.getMessage(), containsString("Execution window must be positive"));
     }
 
@@ -1036,7 +1035,7 @@ public class MessageBridgeTest {
         Hash160 newExecutionManager = testContract;
         assertThat(executionManagerBefore, is(not(newExecutionManager)));
 
-        Hash256 tx = messageBridge.setExecutionManager(newExecutionManager);
+        Hash256 tx = messageBridge.setExecutionManager(governor, newExecutionManager);
         assertThat(messageBridge.executionManager(), is(newExecutionManager));
 
         Notification notification = neow3j.getApplicationLog(tx).send().getApplicationLog().getFirstExecution()
@@ -1047,7 +1046,7 @@ public class MessageBridgeTest {
         assertThat(Hash160.fromAddress(notification.getState().getList().get(0).getAddress()), is(newExecutionManager));
 
         // revert the state for further tests
-        messageBridge.setExecutionManager(executionManagerBefore);
+        messageBridge.setExecutionManager(governor, executionManagerBefore);
     }
 
     @Test
@@ -1055,7 +1054,7 @@ public class MessageBridgeTest {
     public void test_setExecutionManager_notContract() {
         Hash160 newExecutionManager = new Hash160("0x1253c2c30b51514e805ddae9ff34df1dc67871b8");
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setExecutionManager(newExecutionManager));
+                () -> messageBridge.setExecutionManager(governor, newExecutionManager));
         assertThat(thrown.getMessage(), containsString("Execution manager must be a contract"));
     }
 
@@ -1083,7 +1082,7 @@ public class MessageBridgeTest {
     public void test_setExecutionManager_zero() {
         Hash160 newExecutionManager = Hash160.ZERO;
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> messageBridge.setExecutionManager(newExecutionManager));
+                () -> messageBridge.setExecutionManager(governor, newExecutionManager));
         assertThat(thrown.getMessage(), containsString("Invalid execution manager"));
     }
 
