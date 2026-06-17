@@ -1,17 +1,14 @@
 package network.bane.client;
 
-import io.neow3j.contract.GasToken;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
-import io.neow3j.types.Hash256;
-import io.neow3j.wallet.Account;
+import network.bane.client.interfaces.WriteCaller;
 import network.bane.dto.bridge.NativeBridge;
 
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Map;
 
-import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
@@ -26,68 +23,60 @@ class BridgeNativeModule implements BridgeNativeOps {
     }
 
     @Override
-    public Hash256 setNativeBridge(Account sender, Hash160 tokenForNativeBridge, int decimalsOnLinkedChain,
-            BigInteger depositFee, BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals,
-            BigInteger maxTotalDeposited) throws Throwable {
-        return base.invokeWrite(sender, "setNativeBridge",
+    public WriteCaller setNativeBridge(Hash160 tokenForNativeBridge, int decimalsOnLinkedChain, BigInteger depositFee,
+            BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals, BigInteger maxTotalDeposited) {
+        return base.invokeWrite("setNativeBridge",
                 hash160(tokenForNativeBridge),
                 integer(decimalsOnLinkedChain),
                 integer(depositFee),
                 integer(minAmount),
                 integer(maxAmount),
                 integer(maxWithdrawals),
-                integer(maxTotalDeposited));
+                integer(maxTotalDeposited)
+        );
     }
 
     @Override
-    public Hash256 pauseNativeBridge(Account sender) throws Throwable {
-        return base.invokeWrite(sender, "pauseNativeBridge");
+    public WriteCaller pauseNativeBridge() {
+        return base.invokeWrite( "pauseNativeBridge");
     }
 
     @Override
-    public Hash256 unpauseNativeBridge(Account sender) throws Throwable {
-        return base.invokeWrite(sender, "unpauseNativeBridge");
+    public WriteCaller unpauseNativeBridge() {
+        return base.invokeWrite("unpauseNativeBridge");
     }
 
     @Override
-    public Hash256 depositNative(Account sender, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee)
-            throws Throwable {
-        return base.invokeWriteWithSigners("depositNative",
-                new ContractParameter[]{
-                        hash160(from),
-                        hash160(to),
-                        integer(amount),
-                        integer(maxFee)
-                },
-                none(sender).setAllowedContracts(GasToken.SCRIPT_HASH));
+    public WriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee) {
+        return base.invokeWrite("depositNative",
+                hash160(from),
+                hash160(to),
+                integer(amount),
+                integer(maxFee)
+        );
     }
 
     @Override
-    public Hash256 depositNative(Account sender, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
-            Hash160 feeSponsor) throws Throwable {
-        return base.invokeWriteWithSigners("depositNative",
-                new ContractParameter[]{
+    public WriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
+            Hash160 feeSponsor) {
+        return base.invokeWrite("depositNative",
                         hash160(from),
                         hash160(to),
                         integer(amount),
                         integer(maxFee),
                         hash160(feeSponsor)
-                },
-                none(sender).setAllowedContracts(GasToken.SCRIPT_HASH));
+        );
     }
 
     @Override
-    public Hash256 withdrawNative(Account sender, String withdrawalRoot,
-            Map<ContractParameter, ContractParameter> signatures,
-            ContractParameter withdrawals) throws Throwable {
-        return base.invokeWrite(sender, "withdrawNative", byteArray(withdrawalRoot), map(signatures), withdrawals);
+    public WriteCaller withdrawNative(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
+            ContractParameter withdrawals) {
+        return base.invokeWrite("withdrawNative", byteArray(withdrawalRoot), map(signatures), withdrawals);
     }
 
     @Override
-    public Hash256 claimNative(Account sender, BigInteger nonce) throws Throwable {
-        return base.invokeWriteWithSigners("claimNative",
-                new ContractParameter[]{integer(nonce)},
-                none(sender).setAllowedContracts(GasToken.SCRIPT_HASH));
+    public WriteCaller claimNative(BigInteger nonce) {
+        return base.invokeWrite("claimNative", integer(nonce));
     }
 
     @Override
@@ -116,8 +105,8 @@ class BridgeNativeModule implements BridgeNativeOps {
     }
 
     @Override
-    public Hash256 setNativeDepositFee(Account sender, BigInteger newFee) throws Throwable {
-        return base.invokeWrite(sender, "setNativeDepositFee", integer(newFee));
+    public WriteCaller setNativeDepositFee(BigInteger newFee) {
+        return base.invokeWrite( "setNativeDepositFee", integer(newFee));
     }
 
     @Override
@@ -126,8 +115,8 @@ class BridgeNativeModule implements BridgeNativeOps {
     }
 
     @Override
-    public Hash256 setMinNativeDeposit(Account sender, BigInteger newMinAmount) throws Throwable {
-        return base.invokeWrite(sender, "setMinNativeDeposit", integer(newMinAmount));
+    public WriteCaller setMinNativeDeposit( BigInteger newMinAmount) {
+        return base.invokeWrite("setMinNativeDeposit", integer(newMinAmount));
     }
 
     @Override
@@ -136,8 +125,8 @@ class BridgeNativeModule implements BridgeNativeOps {
     }
 
     @Override
-    public Hash256 setMaxNativeDeposit(Account sender, BigInteger newMaxAmount) throws Throwable {
-        return base.invokeWrite(sender, "setMaxNativeDeposit", integer(newMaxAmount));
+    public WriteCaller setMaxNativeDeposit(BigInteger newMaxAmount) {
+        return base.invokeWrite( "setMaxNativeDeposit", integer(newMaxAmount));
     }
 
     @Override
@@ -146,8 +135,8 @@ class BridgeNativeModule implements BridgeNativeOps {
     }
 
     @Override
-    public Hash256 setMaxTotalDepositedNative(Account sender, BigInteger newMaxTotalDeposited) throws Throwable {
-        return base.invokeWrite(sender, "setMaxTotalDepositedNative", integer(newMaxTotalDeposited));
+    public WriteCaller setMaxTotalDepositedNative( BigInteger newMaxTotalDeposited) {
+        return base.invokeWrite( "setMaxTotalDepositedNative", integer(newMaxTotalDeposited));
     }
 
     @Override

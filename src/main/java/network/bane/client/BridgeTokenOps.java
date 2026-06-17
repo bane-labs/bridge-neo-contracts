@@ -3,8 +3,7 @@ package network.bane.client;
 import io.neow3j.contract.Iterator;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
-import io.neow3j.types.Hash256;
-import io.neow3j.wallet.Account;
+import network.bane.client.interfaces.WriteCaller;
 import network.bane.dto.bridge.TokenBridge;
 
 import java.io.IOException;
@@ -15,7 +14,6 @@ import java.util.Map;
 /**
  * Token bridge operations exposed by the on-chain bridge contract.
  * <p>
- * Signer model: write methods in this interface use {@code calledByEntry(sender)}.
  * If your script needs stricter scopes (e.g., allowed-contract restrictions), construct the
  * invocation manually.
  */
@@ -44,36 +42,32 @@ public interface BridgeTokenOps {
     /**
      * Registers a token bridge.
      *
-     * @param sender      account used as {@code calledByEntry(sender)} signer.
      * @param token       N3 token script hash.
      * @param tokenConfig destination token and bridge config.
      * @return transaction hash.
      */
-    Hash256 registerToken(Account sender, Hash160 token, TokenBridge.TokenConfig tokenConfig) throws Throwable;
+    WriteCaller registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) ;
 
     /**
      * Pauses a token bridge.
      *
-     * @param sender     account used as {@code calledByEntry(sender)} signer.
      * @param neoN3Token token bridge to pause.
      * @return transaction hash.
      */
-    Hash256 pauseTokenBridge(Account sender, Hash160 neoN3Token) throws Throwable;
+    WriteCaller pauseTokenBridge(Hash160 neoN3Token) ;
 
     /**
      * Unpauses a token bridge.
      *
-     * @param sender     account used as {@code calledByEntry(sender)} signer.
      * @param neoN3Token token bridge to unpause.
      * @return transaction hash.
      */
-    Hash256 unpauseTokenBridge(Account sender, Hash160 neoN3Token) throws Throwable;
+    WriteCaller unpauseTokenBridge(Hash160 neoN3Token);
 
     /**
      * Deposits a token to be bridged to the linked chain.
      * Mirrors {@code BridgeContract.depositToken(token, from, to, amount, maxFee)}.
      *
-     * @param sender account used as {@code calledByEntry(sender)} signer.
      * @param token  N3 token script hash.
      * @param from   source account script hash on N3.
      * @param to     recipient address on linked chain encoded as {@code Hash160}.
@@ -81,14 +75,12 @@ public interface BridgeTokenOps {
      * @param maxFee max GAS fee accepted for this deposit.
      * @return transaction hash.
      */
-    Hash256 depositToken(Account sender, Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee)
-            throws Throwable;
+    WriteCaller depositToken(Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee);
 
     /**
      * Deposits a token with an explicit fee sponsor.
      * Mirrors {@code BridgeContract.depositToken(token, from, to, amount, maxFee, feeSponsor)}.
      *
-     * @param sender     account used as {@code calledByEntry(sender)} signer.
      * @param token      N3 token script hash.
      * @param from       source account script hash on N3.
      * @param to         recipient address on linked chain encoded as {@code Hash160}.
@@ -97,32 +89,30 @@ public interface BridgeTokenOps {
      * @param feeSponsor account script hash that pays the deposit fee.
      * @return transaction hash.
      */
-    Hash256 depositToken(Account sender, Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
-            Hash160 feeSponsor) throws Throwable;
+    WriteCaller depositToken(Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
+            Hash160 feeSponsor);
 
     /**
      * Executes token withdrawals proven by validator signatures.
      * Mirrors {@code BridgeContract.withdrawToken(token, withdrawalRoot, signatures, withdrawals)}.
      *
-     * @param sender         account used as {@code calledByEntry(sender)} signer; typically relayer.
      * @param token          token bridge for the withdrawal operation.
      * @param withdrawalRoot new root that must match contract-side verification.
      * @param signatures     validator signatures over {@code withdrawalRoot}.
      * @param withdrawals    serialized list parameter of withdrawals to execute.
      * @return transaction hash.
      */
-    Hash256 withdrawToken(Account sender, Hash160 token, String withdrawalRoot,
-            Map<ContractParameter, ContractParameter> signatures, ContractParameter withdrawals) throws Throwable;
+    WriteCaller withdrawToken(Hash160 token, String withdrawalRoot,
+            Map<ContractParameter, ContractParameter> signatures, ContractParameter withdrawals);
 
     /**
      * Claims a previously marked claimable token withdrawal.
      *
-     * @param sender account used as {@code calledByEntry(sender)} signer.
      * @param token  token bridge containing the claimable withdrawal.
      * @param nonce  nonce of the claimable withdrawal.
      * @return transaction hash.
      */
-    Hash256 claimToken(Account sender, Hash160 token, BigInteger nonce) throws Throwable;
+    WriteCaller claimToken(Hash160 token, BigInteger nonce);
 
     /**
      * @return true if the token withdrawal nonce is claimable.
@@ -137,11 +127,10 @@ public interface BridgeTokenOps {
     /**
      * Updates token deposit fees.
      *
-     * @param sender         account used as {@code calledByEntry(sender)} signer.
      * @param newDepositFees map of token hash to new fee.
      * @return transaction hash.
      */
-    Hash256 setTokenDepositFee(Account sender, Map<Hash160, BigInteger> newDepositFees) throws Throwable;
+    WriteCaller setTokenDepositFee(Map<Hash160, BigInteger> newDepositFees);
 
     /**
      * @return minimum token deposit.
@@ -151,11 +140,10 @@ public interface BridgeTokenOps {
     /**
      * Updates minimum token deposits.
      *
-     * @param sender         account used as {@code calledByEntry(sender)} signer.
      * @param newMinDeposits map of token hash to new minimum.
      * @return transaction hash.
      */
-    Hash256 setMinTokenDeposit(Account sender, Map<Hash160, BigInteger> newMinDeposits) throws Throwable;
+    WriteCaller setMinTokenDeposit(Map<Hash160, BigInteger> newMinDeposits);
 
     /**
      * @return maximum token deposit.
@@ -165,11 +153,10 @@ public interface BridgeTokenOps {
     /**
      * Updates maximum token deposits.
      *
-     * @param sender         account used as {@code calledByEntry(sender)} signer.
      * @param newMaxDeposits map of token hash to new maximum.
      * @return transaction hash.
      */
-    Hash256 setMaxTokenDeposit(Account sender, Map<Hash160, BigInteger> newMaxDeposits) throws Throwable;
+    WriteCaller setMaxTokenDeposit(Map<Hash160, BigInteger> newMaxDeposits);
 
     /**
      * @return maximum number of token withdrawals processed in one operation.
@@ -179,11 +166,10 @@ public interface BridgeTokenOps {
     /**
      * Updates maximum token withdrawals per operation.
      *
-     * @param sender            account used as {@code calledByEntry(sender)} signer.
      * @param newMaxWithdrawals map of token hash to new max withdrawals.
      * @return transaction hash.
      */
-    Hash256 setMaxTokenWithdrawals(Account sender, Map<Hash160, Integer> newMaxWithdrawals) throws Throwable;
+    WriteCaller setMaxTokenWithdrawals(Map<Hash160, Integer> newMaxWithdrawals);
 
     /**
      * @return current token deposit nonce.

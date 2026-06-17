@@ -1,10 +1,10 @@
 package network.bane.client;
 
-import io.neow3j.contract.Iterator;import io.neow3j.protocol.Neow3j;
+import io.neow3j.contract.Iterator;
+import io.neow3j.protocol.Neow3j;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
-import io.neow3j.types.Hash256;
-import io.neow3j.wallet.Account;
+import network.bane.client.interfaces.WriteCaller;
 import network.bane.dto.bridge.NativeBridge;
 import network.bane.dto.bridge.TokenBridge;
 
@@ -33,18 +33,18 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public Hash256 update(Account sender, byte[] nefBytes, String manifestJson, Object data) throws Throwable {
-        return general.update(sender, nefBytes, manifestJson, data);
+    public WriteCaller update(byte[] nefBytes, String manifestJson, Object data) {
+        return general.update(nefBytes, manifestJson, data);
     }
 
     @Override
-    public Hash256 pauseBridge(Account sender) throws Throwable {
-        return general.pauseBridge(sender);
+    public WriteCaller pauseBridge() {
+        return general.pauseBridge();
     }
 
     @Override
-    public Hash256 unpauseBridge(Account sender) throws Throwable {
-        return general.unpauseBridge(sender);
+    public WriteCaller unpauseBridge() {
+        return general.unpauseBridge();
     }
 
     @Override
@@ -53,13 +53,13 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public Hash256 pauseDeposits(Account sender) throws Throwable {
-        return general.pauseDeposits(sender);
+    public WriteCaller pauseDeposits() {
+        return general.pauseDeposits();
     }
 
     @Override
-    public Hash256 unpauseDeposits(Account sender) throws Throwable {
-        return general.unpauseDeposits(sender);
+    public WriteCaller unpauseDeposits() {
+        return general.unpauseDeposits();
     }
 
     @Override
@@ -88,44 +88,42 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public Hash256 setNativeBridge(Account sender, Hash160 tokenForNativeBridge, int decimalsOnLinkedChain,
-            BigInteger depositFee, BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals,
-            BigInteger maxTotalDeposited) throws Throwable {
-        return nativeBridge.setNativeBridge(sender, tokenForNativeBridge, decimalsOnLinkedChain, depositFee, minAmount,
+    public WriteCaller setNativeBridge(Hash160 tokenForNativeBridge, int decimalsOnLinkedChain, BigInteger depositFee,
+            BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals, BigInteger maxTotalDeposited) {
+        return nativeBridge.setNativeBridge(tokenForNativeBridge, decimalsOnLinkedChain, depositFee, minAmount,
                 maxAmount, maxWithdrawals, maxTotalDeposited);
     }
 
     @Override
-    public Hash256 pauseNativeBridge(Account sender) throws Throwable {
-        return nativeBridge.pauseNativeBridge(sender);
+    public WriteCaller pauseNativeBridge() {
+        return nativeBridge.pauseNativeBridge();
     }
 
     @Override
-    public Hash256 unpauseNativeBridge(Account sender) throws Throwable {
-        return nativeBridge.unpauseNativeBridge(sender);
+    public WriteCaller unpauseNativeBridge() {
+        return nativeBridge.unpauseNativeBridge();
     }
 
     @Override
-    public Hash256 depositNative(Account sender, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee)
-            throws Throwable {
-        return nativeBridge.depositNative(sender, from, to, amount, maxFee);
+    public WriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee) {
+        return nativeBridge.depositNative(from, to, amount, maxFee);
     }
 
     @Override
-    public Hash256 depositNative(Account sender, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
-            Hash160 feeSponsor) throws Throwable {
-        return nativeBridge.depositNative(sender, from, to, amount, maxFee, feeSponsor);
+    public WriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
+            Hash160 feeSponsor) {
+        return nativeBridge.depositNative(from, to, amount, maxFee, feeSponsor);
     }
 
     @Override
-    public Hash256 withdrawNative(Account sender, String withdrawalRoot,
-            Map<ContractParameter, ContractParameter> signatures, ContractParameter withdrawals) throws Throwable {
-        return nativeBridge.withdrawNative(sender, withdrawalRoot, signatures, withdrawals);
+    public WriteCaller withdrawNative(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
+            ContractParameter withdrawals) {
+        return nativeBridge.withdrawNative(withdrawalRoot, signatures, withdrawals);
     }
 
     @Override
-    public Hash256 claimNative(Account sender, BigInteger nonce) throws Throwable {
-        return nativeBridge.claimNative(sender, nonce);
+    public WriteCaller claimNative(BigInteger nonce) {
+        return nativeBridge.claimNative(nonce);
     }
 
     @Override
@@ -154,8 +152,8 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public Hash256 setNativeDepositFee(Account sender, BigInteger newFee) throws Throwable {
-        return nativeBridge.setNativeDepositFee(sender, newFee);
+    public WriteCaller setNativeDepositFee(BigInteger newFee) {
+        return nativeBridge.setNativeDepositFee(newFee);
     }
 
     @Override
@@ -164,8 +162,8 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public Hash256 setMinNativeDeposit(Account sender, BigInteger newMinAmount) throws Throwable {
-        return nativeBridge.setMinNativeDeposit(sender, newMinAmount);
+    public WriteCaller setMinNativeDeposit(BigInteger newMinAmount) {
+        return nativeBridge.setMinNativeDeposit(newMinAmount);
     }
 
     @Override
@@ -174,8 +172,8 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public Hash256 setMaxNativeDeposit(Account sender, BigInteger newMaxAmount) throws Throwable {
-        return nativeBridge.setMaxNativeDeposit(sender, newMaxAmount);
+    public WriteCaller setMaxNativeDeposit(BigInteger newMaxAmount) {
+        return nativeBridge.setMaxNativeDeposit(newMaxAmount);
     }
 
     @Override
@@ -184,8 +182,8 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public Hash256 setMaxTotalDepositedNative(Account sender, BigInteger newMaxTotalDeposited) throws Throwable {
-        return nativeBridge.setMaxTotalDepositedNative(sender, newMaxTotalDeposited);
+    public WriteCaller setMaxTotalDepositedNative(BigInteger newMaxTotalDeposited) {
+        return nativeBridge.setMaxTotalDepositedNative(newMaxTotalDeposited);
     }
 
     @Override
@@ -229,41 +227,40 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public Hash256 registerToken(Account sender, Hash160 token, TokenBridge.TokenConfig tokenConfig) throws Throwable {
-        return this.token.registerToken(sender, token, tokenConfig);
+    public WriteCaller registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
+        return this.token.registerToken(token, tokenConfig);
     }
 
     @Override
-    public Hash256 pauseTokenBridge(Account sender, Hash160 neoN3Token) throws Throwable {
-        return this.token.pauseTokenBridge(sender, neoN3Token);
+    public WriteCaller pauseTokenBridge(Hash160 neoN3Token) {
+        return this.token.pauseTokenBridge(neoN3Token);
     }
 
     @Override
-    public Hash256 unpauseTokenBridge(Account sender, Hash160 neoN3Token) throws Throwable {
-        return this.token.unpauseTokenBridge(sender, neoN3Token);
+    public WriteCaller unpauseTokenBridge(Hash160 neoN3Token) {
+        return this.token.unpauseTokenBridge(neoN3Token);
     }
 
     @Override
-    public Hash256 depositToken(Account sender, Hash160 token, Hash160 from, Hash160 to, BigInteger amount,
-            BigInteger maxFee) throws Throwable {
-        return this.token.depositToken(sender, token, from, to, amount, maxFee);
+    public WriteCaller depositToken(Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee) {
+        return this.token.depositToken(token, from, to, amount, maxFee);
     }
 
     @Override
-    public Hash256 depositToken(Account sender, Hash160 token, Hash160 from, Hash160 to, BigInteger amount,
-            BigInteger maxFee, Hash160 feeSponsor) throws Throwable {
-        return this.token.depositToken(sender, token, from, to, amount, maxFee, feeSponsor);
+    public WriteCaller depositToken(Hash160 token, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
+            Hash160 feeSponsor) {
+        return this.token.depositToken(token, from, to, amount, maxFee, feeSponsor);
     }
 
     @Override
-    public Hash256 withdrawToken(Account sender, Hash160 token, String withdrawalRoot,
-            Map<ContractParameter, ContractParameter> signatures, ContractParameter withdrawals) throws Throwable {
-        return this.token.withdrawToken(sender, token, withdrawalRoot, signatures, withdrawals);
+    public WriteCaller withdrawToken(Hash160 token, String withdrawalRoot,
+            Map<ContractParameter, ContractParameter> signatures, ContractParameter withdrawals) {
+        return this.token.withdrawToken(token, withdrawalRoot, signatures, withdrawals);
     }
 
     @Override
-    public Hash256 claimToken(Account sender, Hash160 token, BigInteger nonce) throws Throwable {
-        return this.token.claimToken(sender, token, nonce);
+    public WriteCaller claimToken(Hash160 token, BigInteger nonce) {
+        return this.token.claimToken(token, nonce);
     }
 
     @Override
@@ -277,8 +274,8 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public Hash256 setTokenDepositFee(Account sender, Map<Hash160, BigInteger> newDepositFees) throws Throwable {
-        return this.token.setTokenDepositFee(sender, newDepositFees);
+    public WriteCaller setTokenDepositFee(Map<Hash160, BigInteger> newDepositFees) {
+        return this.token.setTokenDepositFee(newDepositFees);
     }
 
     @Override
@@ -287,8 +284,8 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public Hash256 setMinTokenDeposit(Account sender, Map<Hash160, BigInteger> newMinDeposits) throws Throwable {
-        return this.token.setMinTokenDeposit(sender, newMinDeposits);
+    public WriteCaller setMinTokenDeposit(Map<Hash160, BigInteger> newMinDeposits) {
+        return this.token.setMinTokenDeposit(newMinDeposits);
     }
 
     @Override
@@ -297,8 +294,8 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public Hash256 setMaxTokenDeposit(Account sender, Map<Hash160, BigInteger> newMaxDeposits) throws Throwable {
-        return this.token.setMaxTokenDeposit(sender, newMaxDeposits);
+    public WriteCaller setMaxTokenDeposit(Map<Hash160, BigInteger> newMaxDeposits) {
+        return this.token.setMaxTokenDeposit(newMaxDeposits);
     }
 
     @Override
@@ -307,8 +304,8 @@ public class BridgeClient implements BridgeGeneralOps, BridgeNativeOps, BridgeTo
     }
 
     @Override
-    public Hash256 setMaxTokenWithdrawals(Account sender, Map<Hash160, Integer> newMaxWithdrawals) throws Throwable {
-        return this.token.setMaxTokenWithdrawals(sender, newMaxWithdrawals);
+    public WriteCaller setMaxTokenWithdrawals(Map<Hash160, Integer> newMaxWithdrawals) {
+        return this.token.setMaxTokenWithdrawals(newMaxWithdrawals);
     }
 
     @Override

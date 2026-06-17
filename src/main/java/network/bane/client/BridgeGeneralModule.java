@@ -1,11 +1,14 @@
 package network.bane.client;
 
 import io.neow3j.types.Hash160;
-import io.neow3j.types.Hash256;
-import io.neow3j.wallet.Account;
+import network.bane.client.interfaces.WriteCaller;
 
 import java.io.IOException;
 import java.math.BigInteger;
+
+import static io.neow3j.types.ContractParameter.any;
+import static io.neow3j.types.ContractParameter.byteArray;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 class BridgeGeneralModule implements BridgeGeneralOps {
 
@@ -16,18 +19,18 @@ class BridgeGeneralModule implements BridgeGeneralOps {
     }
 
     @Override
-    public Hash256 update(Account sender, byte[] nefBytes, String manifestJson, Object data) throws Throwable {
-        return base.update(sender, nefBytes, manifestJson, data);
+    public WriteCaller update(byte[] nefBytes, String manifestJson, Object data) {
+        return base.invokeWrite("update", byteArray(nefBytes), byteArray(manifestJson.getBytes(UTF_8)), any(data));
     }
 
     @Override
-    public Hash256 pauseBridge(Account sender) throws Throwable {
-        return base.invokeWrite(sender, "pauseBridge");
+    public WriteCaller pauseBridge() {
+        return base.invokeWrite("pauseBridge");
     }
 
     @Override
-    public Hash256 unpauseBridge(Account sender) throws Throwable {
-        return base.invokeWrite(sender, "unpauseBridge");
+    public WriteCaller unpauseBridge() {
+        return base.invokeWrite("unpauseBridge");
     }
 
     @Override
@@ -36,13 +39,13 @@ class BridgeGeneralModule implements BridgeGeneralOps {
     }
 
     @Override
-    public Hash256 pauseDeposits(Account sender) throws Throwable {
-        return base.invokeWrite(sender, "pauseDeposits");
+    public WriteCaller pauseDeposits() {
+        return base.invokeWrite("pauseDeposits");
     }
 
     @Override
-    public Hash256 unpauseDeposits(Account sender) throws Throwable {
-        return base.invokeWrite(sender, "unpauseDeposits");
+    public WriteCaller unpauseDeposits() {
+        return base.invokeWrite("unpauseDeposits");
     }
 
     @Override

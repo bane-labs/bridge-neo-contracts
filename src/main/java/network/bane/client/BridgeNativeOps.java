@@ -2,8 +2,7 @@ package network.bane.client;
 
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
-import io.neow3j.types.Hash256;
-import io.neow3j.wallet.Account;
+import network.bane.client.interfaces.WriteCaller;
 import network.bane.dto.bridge.NativeBridge;
 
 import java.io.IOException;
@@ -15,7 +14,6 @@ import java.util.Map;
  * <p>
  * Signer model:
  * <ul>
- *   <li>Most write methods use {@code calledByEntry(sender)}.</li>
  *   <li>{@code depositNative(...)} and {@code claimNative(...)} use restricted signers and limit
  *   allowed contracts to GAS ({@code GasToken.SCRIPT_HASH}).</li>
  * </ul>
@@ -25,7 +23,6 @@ public interface BridgeNativeOps {
     /**
      * Sets native bridge configuration.
      *
-     * @param sender                account used as {@code calledByEntry(sender)} signer.
      * @param tokenForNativeBridge  native token representative on N3.
      * @param decimalsOnLinkedChain decimals of the linked-chain token representation.
      * @param depositFee            fee charged in GAS for each deposit.
@@ -35,47 +32,39 @@ public interface BridgeNativeOps {
      * @param maxTotalDeposited     cap for cumulative deposited amount in native bridge state.
      * @return transaction hash.
      */
-    Hash256 setNativeBridge(Account sender, Hash160 tokenForNativeBridge, int decimalsOnLinkedChain,
-            BigInteger depositFee, BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals,
-            BigInteger maxTotalDeposited) throws Throwable;
+    WriteCaller setNativeBridge(Hash160 tokenForNativeBridge, int decimalsOnLinkedChain, BigInteger depositFee,
+            BigInteger minAmount, BigInteger maxAmount, int maxWithdrawals, BigInteger maxTotalDeposited);
 
     /**
      * Pauses native bridge operations.
      *
-     * @param sender account used as {@code calledByEntry(sender)} signer.
      * @return transaction hash.
      */
-    Hash256 pauseNativeBridge(Account sender) throws Throwable;
+    WriteCaller pauseNativeBridge();
 
     /**
      * Unpauses native bridge operations.
      *
-     * @param sender account used as {@code calledByEntry(sender)} signer.
      * @return transaction hash.
      */
-    Hash256 unpauseNativeBridge(Account sender) throws Throwable;
+    WriteCaller unpauseNativeBridge();
 
     /**
      * Deposits native token to be bridged to the linked chain.
      * Mirrors {@code BridgeContract.depositNative(from, to, amount, maxFee)}.
      *
-     * @param sender signer account; submitted with a restricted signer scope that only allows GAS
-     *               transfers required for paying bridge fees.
      * @param from   source account script hash on N3.
      * @param to     recipient address on the linked chain encoded as {@code Hash160}.
      * @param amount native token amount to deposit.
      * @param maxFee max GAS fee the depositor is willing to pay.
      * @return transaction hash.
      */
-    Hash256 depositNative(Account sender, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee)
-            throws Throwable;
+    WriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee);
 
     /**
      * Deposits native token with an explicit fee sponsor.
      * Mirrors {@code BridgeContract.depositNative(from, to, amount, maxFee, feeSponsor)}.
      *
-     * @param sender     signer account; submitted with a restricted signer scope that only allows GAS
-     *                   transfers required for paying bridge fees.
      * @param from       source account script hash on N3.
      * @param to         recipient address on the linked chain encoded as {@code Hash160}.
      * @param amount     native token amount to deposit.
@@ -84,31 +73,27 @@ public interface BridgeNativeOps {
      *                   as fee payer.
      * @return transaction hash.
      */
-    Hash256 depositNative(Account sender, Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee,
-            Hash160 feeSponsor) throws Throwable;
+    WriteCaller depositNative(Hash160 from, Hash160 to, BigInteger amount, BigInteger maxFee, Hash160 feeSponsor);
 
     /**
      * Executes native withdrawals proven by validator signatures.
      * Mirrors {@code BridgeContract.withdrawNative(withdrawalRoot, signatures, withdrawals)}.
      *
-     * @param sender         account used as {@code calledByEntry(sender)} signer; typically relayer.
      * @param withdrawalRoot new withdrawal root that must match contract-side verification.
      * @param signatures     validator signatures over {@code withdrawalRoot}.
      * @param withdrawals    serialized list parameter of withdrawals to execute.
      * @return transaction hash.
      */
-    Hash256 withdrawNative(Account sender, String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
-            ContractParameter withdrawals) throws Throwable;
+    WriteCaller withdrawNative(String withdrawalRoot, Map<ContractParameter, ContractParameter> signatures,
+            ContractParameter withdrawals);
 
     /**
      * Claims a previously marked claimable native withdrawal.
      *
-     * @param sender signer account; submitted with a restricted signer scope that only allows GAS
-     *               transfer to the claim recipient.
-     * @param nonce  nonce of the claimable withdrawal.
+     * @param nonce nonce of the claimable withdrawal.
      * @return transaction hash.
      */
-    Hash256 claimNative(Account sender, BigInteger nonce) throws Throwable;
+    WriteCaller claimNative(BigInteger nonce);
 
     /**
      * @return true if the native withdrawal nonce is claimable.
@@ -138,11 +123,10 @@ public interface BridgeNativeOps {
     /**
      * Updates native deposit fee.
      *
-     * @param sender account used as {@code calledByEntry(sender)} signer.
      * @param newFee new deposit fee.
      * @return transaction hash.
      */
-    Hash256 setNativeDepositFee(Account sender, BigInteger newFee) throws Throwable;
+    WriteCaller setNativeDepositFee(BigInteger newFee);
 
     /**
      * @return minimum accepted native deposit.
@@ -152,11 +136,10 @@ public interface BridgeNativeOps {
     /**
      * Updates minimum accepted native deposit.
      *
-     * @param sender       account used as {@code calledByEntry(sender)} signer.
      * @param newMinAmount new minimum deposit value.
      * @return transaction hash.
      */
-    Hash256 setMinNativeDeposit(Account sender, BigInteger newMinAmount) throws Throwable;
+    WriteCaller setMinNativeDeposit(BigInteger newMinAmount);
 
     /**
      * @return maximum accepted native deposit.
@@ -166,11 +149,10 @@ public interface BridgeNativeOps {
     /**
      * Updates maximum accepted native deposit.
      *
-     * @param sender       account used as {@code calledByEntry(sender)} signer.
      * @param newMaxAmount new maximum deposit value.
      * @return transaction hash.
      */
-    Hash256 setMaxNativeDeposit(Account sender, BigInteger newMaxAmount) throws Throwable;
+    WriteCaller setMaxNativeDeposit(BigInteger newMaxAmount);
 
     /**
      * @return cap for total native amount deposited through the bridge.
@@ -180,11 +162,10 @@ public interface BridgeNativeOps {
     /**
      * Updates cap for total native amount deposited through the bridge.
      *
-     * @param sender               account used as {@code calledByEntry(sender)} signer.
      * @param newMaxTotalDeposited new cap for cumulative deposits.
      * @return transaction hash.
      */
-    Hash256 setMaxTotalDepositedNative(Account sender, BigInteger newMaxTotalDeposited) throws Throwable;
+    WriteCaller setMaxTotalDepositedNative(BigInteger newMaxTotalDeposited);
 
     /**
      * @return current native deposit nonce.
