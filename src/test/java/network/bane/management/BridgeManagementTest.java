@@ -8,7 +8,6 @@ import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.ContractStorageEntry;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.ArrayStackItem;
 import io.neow3j.protocol.core.stackitem.ByteStringStackItem;
@@ -17,13 +16,11 @@ import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
-import io.neow3j.transaction.AccountSigner;
-import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
+import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
-import io.neow3j.utils.Await;
 import io.neow3j.wallet.Account;
-import network.bane.util.Management;
+import network.bane.client.ManagementTestClient;
 import network.bane.util.TestHelper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
@@ -43,9 +40,7 @@ import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.any;
 import static io.neow3j.types.ContractParameter.bool;
-import static io.neow3j.types.ContractParameter.byteArray;
 import static io.neow3j.types.ContractParameter.byteArrayFromString;
-import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.publicKey;
 import static io.neow3j.types.ContractParameter.string;
 import static io.neow3j.utils.Numeric.prependHexPrefix;
@@ -67,7 +62,6 @@ import static network.bane.util.TestHelper.validator5PubKey;
 import static network.bane.util.TestHelper.validator6;
 import static network.bane.util.TestHelper.validator6PubKey;
 import static network.bane.util.TestHelper.validator7PubKey;
-import static network.bane.util.TestHelper.waitUntilTransactionIsExecuted;
 import static network.bane.util.helper.TestHelper.createBridgeManagementDeployConfig;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -82,7 +76,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class BridgeManagementTest {
 
-    private static Management management;
+    private static ManagementTestClient management;
     private static Neow3j neow3j;
 
     private static Account alice;
@@ -111,7 +105,8 @@ public class BridgeManagementTest {
     public static void setUp() throws Exception {
         neow3j = ext.getNeow3j();
 
-        management = new Management(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
+        Hash160 managementHash = ext.getDeployedContract(BridgeManagementContract.class).getScriptHash();
+        management = new ManagementTestClient(managementHash, neow3j);
 
         alice = ext.getAccount(TestHelper.ALICE);
         bob = ext.getAccount(TestHelper.BOB);
@@ -192,38 +187,33 @@ public class BridgeManagementTest {
     public void testSetOwner() throws Throwable {
         assertThat(management.owner(), is(ownerScriptHash));
 
-        Transaction tx = management.invokeFunction("setOwner", hash160(alice))
-                .signers(calledByEntry(owner), none(alice).setAllowedContracts(management.getScriptHash()))
-                .sign();
-        NeoSendRawTransaction response = tx.send();
-        assertFalse(response.hasError());
-        waitUntilTransactionIsExecuted(response, neow3j);
+        Hash256 txHash = management.setOwner(alice.getScriptHash())
+                .withSigners(
+                        none(owner).setAllowedContracts(management.getScriptHash()),
+                        none(alice).setAllowedContracts(management.getScriptHash())
+                ).signSendAndAwait();
 
         Notification expected = new Notification(
                 management.getScriptHash(),
                 "OwnerChange",
                 new ArrayStackItem(asList(new ByteStringStackItem(alice.getScriptHash().toLittleEndianArray())))
         );
-        assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
-        assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
+        NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution();
+        assertThat(exec.getNotifications(), hasSize(1));
+        assertThat(exec.getFirstNotification(), is(expected));
 
         assertThat(management.owner(), is(alice.getScriptHash()));
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setOwner", hash160(bob))
-                        .signers(calledByEntry(owner))
-                        .sign()
-        );
+                () -> management.setOwner(bob.getScriptHash()).withSigners(calledByEntry(owner)).signSendAndAwait());
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
 
         // reverse set owner
-        response = management.invokeFunction("setOwner", hash160(ownerScriptHash))
-                .signers(calledByEntry(alice), none(owner).setAllowedContracts(management.getScriptHash()))
-                .sign()
-                .send();
-        assertFalse(response.hasError());
-        waitUntilTransactionIsExecuted(response, neow3j);
-
+        management.setOwner(ownerScriptHash).withSigners(
+                none(owner).setAllowedContracts(management.getScriptHash()),
+                none(alice).setAllowedContracts(management.getScriptHash())
+        ).signSendAndAwait();
         assertThat(management.owner(), is(ownerScriptHash));
     }
 
@@ -250,10 +240,7 @@ public class BridgeManagementTest {
     public void testSetOwner_unauthorized() throws IOException {
         assertThat(management.owner(), is(ownerScriptHash));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setOwner", hash160(ownerScriptHash))
-                        .signers(calledByEntry(alice))
-                        .sign()
-        );
+                () -> management.setOwner(ownerScriptHash).withSigners(calledByEntry(alice)).signSendAndAwait());
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
@@ -265,31 +252,21 @@ public class BridgeManagementTest {
     public void testSetRelayer() throws Throwable {
         assertThat(management.relayer(), is(relayerScriptHash));
 
-        Transaction tx = management.invokeFunction("setRelayer", hash160(bob))
-                .signers(calledByEntry(owner))
-                .sign();
-        NeoSendRawTransaction response = tx.send();
-        assertFalse(response.hasError());
-        waitUntilTransactionIsExecuted(response, neow3j);
-
+        Hash256 txHash = management.setRelayer(owner, bob.getScriptHash());
         Notification expected = new Notification(
                 management.getScriptHash(),
                 "RelayerChange",
                 new ArrayStackItem(asList(new ByteStringStackItem(bob.getScriptHash().toLittleEndianArray())))
         );
-        assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
-        assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
+        NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution();
+        assertThat(exec.getNotifications(), hasSize(1));
+        assertThat(exec.getFirstNotification(), is(expected));
 
         assertThat(management.relayer(), is(bob.getScriptHash()));
 
         // reverse set owner
-        response = management.invokeFunction("setRelayer", hash160(relayerScriptHash))
-                .signers(calledByEntry(owner))
-                .sign()
-                .send();
-        assertFalse(response.hasError());
-        waitUntilTransactionIsExecuted(response, neow3j);
-
+        management.setRelayer(owner, relayerScriptHash);
         assertThat(management.relayer(), is(relayerScriptHash));
     }
 
@@ -298,10 +275,7 @@ public class BridgeManagementTest {
     public void testSetRelayer_unauthorized() throws IOException {
         assertThat(management.relayer(), is(relayerScriptHash));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setRelayer", hash160(charlie))
-                        .signers(calledByEntry(alice))
-                        .sign()
-        );
+                () -> management.setRelayer(alice, charlie.getScriptHash()));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
@@ -381,8 +355,8 @@ public class BridgeManagementTest {
         assertFalse(management.isValidator(florianPubKey));
         assertThat(management.validatorThreshold(), is(5));
         management.addValidator(owner, florianPubKey, false);
-        assertTrue(management.callFunctionReturningBool("isValidator", publicKey(florianPubKey)));
-        assertThat(management.callFunctionReturningInt("validatorThreshold").intValue(), is(5));
+        assertTrue(management.isValidator(florianPubKey));
+        assertThat(management.validatorThreshold(), is(5));
 
         // reverse validator addition
         management.removeValidator(owner, florianPubKey, false);
@@ -713,31 +687,21 @@ public class BridgeManagementTest {
     public void testSetGovernor() throws Throwable {
         assertThat(management.governor(), is(governorScriptHash));
 
-        Transaction tx = management.invokeFunction("setGovernor", hash160(bob))
-                .signers(calledByEntry(owner))
-                .sign();
-        NeoSendRawTransaction response = tx.send();
-        assertFalse(response.hasError());
-        waitUntilTransactionIsExecuted(response, neow3j);
-
+        Hash256 txHash = management.setGovernor(owner, bob.getScriptHash());
         Notification expected = new Notification(
                 management.getScriptHash(),
                 "GovernorChange",
                 new ArrayStackItem(asList(new ByteStringStackItem(bob.getScriptHash().toLittleEndianArray())))
         );
-        assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
-        assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
+        NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution();
+        assertThat(exec.getNotifications(), hasSize(1));
+        assertThat(exec.getFirstNotification(), is(expected));
 
         assertThat(management.governor(), is(bob.getScriptHash()));
 
-        // reverse set owner
-        response = management.invokeFunction("setGovernor", hash160(governorScriptHash))
-                .signers(calledByEntry(owner))
-                .sign()
-                .send();
-        assertFalse(response.hasError());
-        waitUntilTransactionIsExecuted(response, neow3j);
-
+        // reverse set governor
+        management.setGovernor(owner, governorScriptHash);
         assertThat(management.governor(), is(governorScriptHash));
     }
 
@@ -746,10 +710,7 @@ public class BridgeManagementTest {
     public void testSetGovernor_unauthorized() throws IOException {
         assertThat(management.governor(), is(governorScriptHash));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setGovernor", publicKey(charliePubKey))
-                        .signers(calledByEntry(alice))
-                        .sign()
-        );
+                () -> management.setGovernor(alice, charlie.getScriptHash()));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
@@ -761,31 +722,21 @@ public class BridgeManagementTest {
     public void testSetSecurityGuard() throws Throwable {
         assertThat(management.securityGuard(), is(securityGuardScriptHash));
 
-        Transaction tx = management.invokeFunction("setSecurityGuard", hash160(florian))
-                .signers(calledByEntry(owner))
-                .sign();
-        NeoSendRawTransaction response = tx.send();
-        assertFalse(response.hasError());
-        waitUntilTransactionIsExecuted(response, neow3j);
-
+        Hash256 txHash = management.setSecurityGuard(owner, florian.getScriptHash());
         Notification expected = new Notification(
                 management.getScriptHash(),
                 "SecurityGuardChange",
                 new ArrayStackItem(asList(new ByteStringStackItem(florian.getScriptHash().toLittleEndianArray())))
         );
-        assertThat(tx.getApplicationLog().getFirstExecution().getNotifications(), hasSize(1));
-        assertThat(tx.getApplicationLog().getFirstExecution().getFirstNotification(), is(expected));
+        NeoApplicationLog.Execution exec = neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                .getFirstExecution();
+        assertThat(exec.getNotifications(), hasSize(1));
+        assertThat(exec.getFirstNotification(), is(expected));
 
         assertThat(management.securityGuard(), is(florian.getScriptHash()));
 
-        // reverse set owner
-        response = management.invokeFunction("setSecurityGuard", hash160(securityGuardScriptHash))
-                .signers(calledByEntry(owner))
-                .sign()
-                .send();
-        assertFalse(response.hasError());
-        waitUntilTransactionIsExecuted(response, neow3j);
-
+        // reverse set security guard
+        management.setSecurityGuard(owner, securityGuardScriptHash);
         assertThat(management.securityGuard(), is(securityGuardScriptHash));
     }
 
@@ -794,10 +745,7 @@ public class BridgeManagementTest {
     public void testSetSecurityGuard_unauthorized() throws IOException {
         assertThat(management.securityGuard(), is(securityGuardScriptHash));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> management.invokeFunction("setSecurityGuard", publicKey(charliePubKey))
-                        .signers(calledByEntry(alice))
-                        .sign()
-        );
+                () -> management.setSecurityGuard(alice, charlie.getScriptHash()));
         assertThat(thrown.getMessage(), containsString("ABORTMSG is executed. Reason: No authorization - only owner"));
     }
 
@@ -811,19 +759,10 @@ public class BridgeManagementTest {
         NefFile nefFile = NefFile.readFromFile(contractNefFile);
 
         File manifestFile = Paths.get("src", "test", "resources", "DummyBridgeManagement.manifest.json").toFile();
-        ContractManifest manifest;
-        try (FileInputStream s = new FileInputStream(manifestFile)) {
-            manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
-        }
-        byte[] manifestBytes = ObjectMapperFactory.getObjectMapper().writeValueAsBytes(manifest);
+        FileInputStream s = new FileInputStream(manifestFile);
+        ContractManifest        manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
 
-        NeoSendRawTransaction response =
-                management.invokeFunction("update", byteArray(nefFile.toArray()), byteArray(manifestBytes), any(null))
-                        .signers(AccountSigner.calledByEntry(owner))
-                        .sign()
-                        .send();
-        Await.waitUntilTransactionIsExecuted(response.getSendRawTransaction().getHash(), ext.getNeow3j());
-
+        management.update(owner, nefFile, manifest, null);
         assertThat(management.getManifest().getAbi().getMethods(), hasSize(1));
         assertThat(management.callFunctionReturningString("sayHello", string("World")), is("Hello World!"));
     }

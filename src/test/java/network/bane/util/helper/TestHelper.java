@@ -21,9 +21,9 @@ import network.bane.messageexecution.ExecutionManagerContract;
 import network.bane.testhelper.MessageTestStoreContract;
 import network.bane.testhelper.TestContract;
 import network.bane.testhelper.TestMessageSenderContract;
-import network.bane.util.BridgeTestClient;
+import network.bane.client.BridgeTestClient;
 import network.bane.util.ExecutionManager;
-import network.bane.util.Management;
+import network.bane.client.ManagementTestClient;
 import network.bane.util.MessageBridgeClient;
 import network.bane.util.MessageTestStorer;
 import network.bane.util.TestMessageSender;
@@ -67,7 +67,7 @@ public class TestHelper {
     public static final BigInteger maxTotalNativeDepositAmount = new BigInteger("10000000000000");
 
     public static BridgeTestClient bridge;
-    public static Management management;
+    public static ManagementTestClient management;
     public static MessageBridgeClient messageBridgeClient;
     public static ExecutionManager executionManager;
     public static MessageTestStorer messageTestStorer;
@@ -121,7 +121,7 @@ public class TestHelper {
     }
 
     public static void setupManagement(ContractTestExtension ext) {
-        management = new Management(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
+        management = new ManagementTestClient(ext.getDeployedContract(BridgeManagementContract.class).getScriptHash(), neow3j);
     }
 
     public static void setupBridge(ContractTestExtension ext) {

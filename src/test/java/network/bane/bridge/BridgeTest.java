@@ -168,7 +168,7 @@ public class BridgeTest {
         assertThat(managementEntry.getKeyHex(), is("0x0a01"));
         assertArrayEquals(managementEntry.getValue(), MANAGEMENT_CONTRACT_HASH.toLittleEndianArray());
         assertThat(pauseEntry.getKeyHex(), is("0x0a02"));
-        assertArrayEquals(pauseEntry.getValue(), new byte[]{});
+        assertArrayEquals(new byte[]{}, pauseEntry.getValue());
         assertThat(nativeBridgeEntry.getKeyHex(), is("0x0a03"));
         String expectedStorageValue = "0x4005" + // array size 5
                 "2100" + // integer - pause

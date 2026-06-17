@@ -1,4 +1,4 @@
-package network.bane.util;
+package network.bane.client;
 
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
@@ -10,7 +10,6 @@ import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
-import network.bane.client.BridgeClient;
 import network.bane.client.interfaces.IWriteCaller;
 import network.bane.dto.bridge.TokenBridge;
 
