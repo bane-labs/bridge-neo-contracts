@@ -11,24 +11,22 @@ import java.math.BigInteger;
 import java.util.List;
 
 import static java.util.stream.Collectors.toList;
-import static network.bane.support.TestEnvironment.messageBridge;
 
 public class MessageBridgeEventHelper {
 
     // region message events
 
-    public static List<N3MessageStoreEvent> getMessageStorEvents(
-            Hash256 txHash, Neow3j neow3j, Hash160 bridge)
+    public static List<N3MessageStoreEvent> getMessageStorEvents(Hash256 txHash, Neow3j neow3j, Hash160 contract)
             throws IOException {
         return neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getNotifications()
                 .stream()
-                .filter(n -> n.getContract().equals(messageBridge.getScriptHash()) && n.getEventName().equals("Store"))
-                .map(MessageBridgeEventHelper::getN3MessageStoreEventFromNotification).collect(toList());
+                .filter(n -> n.getContract().equals(contract) && n.getEventName().equals("Store"))
+                .map(n -> getN3MessageStoreEventFromNotification(n, contract)).collect(toList());
     }
 
-    private static N3MessageStoreEvent getN3MessageStoreEventFromNotification(
-            Notification n3MessageStoreEvent) {
-        return N3MessageStoreEvent.fromNotification(n3MessageStoreEvent);
+    private static N3MessageStoreEvent getN3MessageStoreEventFromNotification(Notification n3MessageStoreEvent,
+            Hash160 contract) {
+        return N3MessageStoreEvent.fromNotification(n3MessageStoreEvent, contract);
     }
 
     // endregion
@@ -43,8 +41,8 @@ public class MessageBridgeEventHelper {
             this.metadataSerializedHex = metadataSerializedHex;
         }
 
-        public static N3MessageStoreEvent fromNotification(Notification n3MessageStoreEvent) {
-            if (!n3MessageStoreEvent.getContract().equals(messageBridge.getScriptHash()) ||
+        public static N3MessageStoreEvent fromNotification(Notification n3MessageStoreEvent, Hash160 contract) {
+            if (!n3MessageStoreEvent.getContract().equals(contract) ||
                     !n3MessageStoreEvent.getEventName().equals("Store")) {
                 throw new IllegalArgumentException("Notification is not a Store event.");
             }

@@ -228,7 +228,8 @@ public class MessageBridgeClient extends SmartContract implements IMessageBridge
     @Override
     public String concatenateOperation(MessageEnvelope messageEnvelope) throws IOException {
         return prependHexPrefix(base.invokeReadFirstStackItem("concatenateOperation",
-                array(messageEnvelope.getNonce(),
+                array(
+                        integer(messageEnvelope.getNonce()),
                         array(
                                 messageEnvelope.getMessage().metadata.serializeToContractParameter(this),
                                 byteArray(messageEnvelope.getMessage().messageBytes)
@@ -247,9 +248,11 @@ public class MessageBridgeClient extends SmartContract implements IMessageBridge
         for (MessageEnvelope message : messages) {
             msgEnvelopeParams.add(
                     array(
-                            message.getNonce(),
-                            asList(message.getMessage().metadata.serializeToContractParameter(this),
-                                    byteArray(message.getMessage().messageBytes))
+                            integer(message.getNonce()),
+                            array(
+                                    message.getMessage().metadata.serializeToContractParameter(this),
+                                    byteArray(message.getMessage().messageBytes)
+                            )
                     )
             );
         }

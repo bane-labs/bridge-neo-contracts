@@ -9,6 +9,7 @@ import io.neow3j.types.Hash256;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static io.neow3j.utils.Numeric.prependHexPrefix;
@@ -52,7 +53,7 @@ public class TokenBridgeEventHelper {
         Hash160 to = Hash160.fromAddress(state.get(1).getAddress());
         BigInteger amount = state.get(2).getInteger();
         Hash160 from = Hash160.fromAddress(state.get(3).getAddress());
-        if (state.size() > 4) {
+        if (state.size() >= 6) {
             String depositHash = prependHexPrefix(state.get(4).getHexString());
             String rootHash = prependHexPrefix(state.get(5).getHexString());
             return new DepositEvent(nonce, to, amount, from, depositHash, rootHash);
@@ -115,8 +116,8 @@ public class TokenBridgeEventHelper {
             if (!(o instanceof DepositEvent)) return false;
             DepositEvent that = (DepositEvent) o;
             return nonce.equals(that.nonce) && to.equals(that.to) && amount.equals(that.amount) &&
-                    from.equals(that.from) && depositHashHex.equals(that.depositHashHex) &&
-                    rootHashHex.equals(that.rootHashHex);
+                    from.equals(that.from) && Objects.equals(depositHashHex, that.depositHashHex) &&
+                    Objects.equals(rootHashHex, that.rootHashHex);
         }
 
         @Override
