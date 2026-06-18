@@ -2,27 +2,23 @@ package network.bane.scripts.token;
 
 import io.neow3j.contract.FungibleToken;
 import io.neow3j.contract.GasToken;
-import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
-import io.neow3j.transaction.Transaction;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
+import network.bane.client.BridgeClient;
 
 import java.math.BigInteger;
 
 import static io.neow3j.transaction.AccountSigner.global;
-import static io.neow3j.types.ContractParameter.hash160;
-import static io.neow3j.types.ContractParameter.integer;
-import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static network.bane.utils.PrintHelper.printNetwork;
 import static network.bane.utils.PrintHelper.printSender;
-import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
+import static network.bane.utils.TransactionHelper.validateTransactionHalted;
 import static network.bane.utils.env.EnvVariables.TOKEN_DEPOSIT_AMOUNT;
 import static network.bane.utils.env.EnvVariables.TOKEN_DEPOSIT_RECIPIENT_ON_EVM;
 import static network.bane.utils.env.EnvVariables.TOKEN_DEPOSIT_TOKEN_HASH;
 import static network.bane.utils.env.EnvVariables.getBigIntegerFromEnvVar;
+import static network.bane.utils.env.EnvVariables.getBridgeClientFromEnv;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 import static network.bane.utils.env.EnvWallets.getPersonalAccountFromEnv;
@@ -45,43 +41,31 @@ public class DepositToken {
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
-        SmartContract bridge = new SmartContract(getHash160FromEnvVar(BRIDGE_HASH), neow3j);
+        BridgeClient bridge = getBridgeClientFromEnv(neow3j);
         Hash160 tokenHash = getHash160FromEnvVar(TOKEN_DEPOSIT_TOKEN_HASH);
-        FungibleToken token = new FungibleToken(tokenHash, neow3j);
         Hash160 to = getHash160FromEnvVar(TOKEN_DEPOSIT_RECIPIENT_ON_EVM);
         BigInteger amount = getBigIntegerFromEnvVar(TOKEN_DEPOSIT_AMOUNT);
+        Account personalAccount = getPersonalAccountFromEnv();
 
-        Account from = getPersonalAccountFromEnv();
-        BigInteger maxFee = bridge.callFunctionReturningInt("tokenDepositFee", hash160(tokenHash));
         GasToken gasToken = new GasToken(neow3j);
+        FungibleToken token = new FungibleToken(tokenHash, neow3j);
+
+        Hash160 from = personalAccount.getScriptHash();
+        BigInteger maxFee = bridge.tokenDepositFee(tokenHash);
 
         System.out.println("Deposit tokens...");
         printNetwork(neow3j);
-        printSender(from.getScriptHash());
-        System.out.println("From:        " + from.getAddress());
+        printSender(personalAccount.getScriptHash());
+        System.out.println("From:        " + from.toAddress());
         System.out.println("To (on EVM): " + to);
         System.out.printf("Amount:      %s (%s %s)%n", amount, token.toDecimals(amount), token.getSymbol());
         System.out.printf("MaxFee:      %s (%s %s)%n", maxFee, gasToken.toDecimals(maxFee), gasToken.getSymbol());
 
-        Transaction tx = bridge.invokeFunction("depositToken",
-                        hash160(tokenHash),
-                        hash160(from),
-                        hash160(to),
-                        integer(amount),
-                        integer(maxFee)
-                )
-                .signers(global(from))
-                .sign();
+        Hash256 txHash = bridge.depositToken(tokenHash, from, to, amount, maxFee).withSigners(global(personalAccount))
+                .signSendAndAwait();
 
-        NeoSendRawTransaction rawTxResponse = tx.send();
-        if (rawTxResponse.hasError()) {
-            throw new Exception("Error registering token: " + rawTxResponse.getError().getMessage());
-        }
-
-        Hash256 txHash = rawTxResponse.getSendRawTransaction().getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
-        System.out.println("Token registered successfully.");
-        System.out.println("Transaction hash: " + txHash);
+        validateTransactionHalted(neow3j, txHash);
+        System.out.println("Token sent successfully.");
     }
 
 }

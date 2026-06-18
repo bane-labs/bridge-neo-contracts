@@ -2,23 +2,18 @@ package network.bane.scripts.token;
 
 import io.neow3j.contract.FungibleToken;
 import io.neow3j.contract.GasToken;
-import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
-import io.neow3j.transaction.Transaction;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
+import network.bane.client.BridgeClient;
 
 import java.math.BigInteger;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
-import static io.neow3j.types.ContractParameter.hash160;
-import static io.neow3j.types.ContractParameter.integer;
-import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static network.bane.utils.PrintHelper.printNetwork;
 import static network.bane.utils.PrintHelper.printSender;
-import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
+import static network.bane.utils.TransactionHelper.validateTransactionHalted;
 import static network.bane.utils.env.EnvVariables.NATIVE_SET_DECIMALS_ON_LINKED_CHAIN;
 import static network.bane.utils.env.EnvVariables.NATIVE_SET_DEPOSIT_FEE;
 import static network.bane.utils.env.EnvVariables.NATIVE_SET_MAX_AMOUNT;
@@ -27,6 +22,7 @@ import static network.bane.utils.env.EnvVariables.NATIVE_SET_MAX_WITHDRAWALS;
 import static network.bane.utils.env.EnvVariables.NATIVE_SET_MIN_AMOUNT;
 import static network.bane.utils.env.EnvVariables.NATIVE_SET_TOKEN_FOR_NATIVE_BRIDGE;
 import static network.bane.utils.env.EnvVariables.getBigIntegerFromEnvVar;
+import static network.bane.utils.env.EnvVariables.getBridgeClientFromEnv;
 import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
@@ -53,22 +49,22 @@ public class SetNativeBridge {
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
-        SmartContract bridge = new SmartContract(getHash160FromEnvVar(BRIDGE_HASH), neow3j);
+        BridgeClient bridge = getBridgeClientFromEnv(neow3j);
         Hash160 tokenForNativeBridge = getHash160FromEnvVar(NATIVE_SET_TOKEN_FOR_NATIVE_BRIDGE);
-        BigInteger decimalsOnLinkedChain = getBigIntegerFromEnvVar(NATIVE_SET_DECIMALS_ON_LINKED_CHAIN);
+        int decimalsOnLinkedChain = getBigIntegerFromEnvVar(NATIVE_SET_DECIMALS_ON_LINKED_CHAIN).intValue();
         BigInteger depositFee = getBigIntegerFromEnvVar(NATIVE_SET_DEPOSIT_FEE);
         BigInteger minAmount = getBigIntegerFromEnvVar(NATIVE_SET_MIN_AMOUNT);
         BigInteger maxAmount = getBigIntegerFromEnvVar(NATIVE_SET_MAX_AMOUNT);
-        BigInteger maxWithdrawals = getBigIntegerFromEnvVar(NATIVE_SET_MAX_WITHDRAWALS);
+        int maxWithdrawals = getBigIntegerFromEnvVar(NATIVE_SET_MAX_WITHDRAWALS).intValue();
         BigInteger maxTotalDeposited = getBigIntegerFromEnvVar(NATIVE_SET_MAX_TOTAL_DEPOSITED);
+        Account governor = getGovernorAccountFromEnv();
 
         GasToken gasToken = new GasToken(neow3j);
         FungibleToken token = new FungibleToken(tokenForNativeBridge, neow3j);
 
-        Account governorAcc = getGovernorAccountFromEnv();
         System.out.println("Set native bridge...");
         printNetwork(neow3j);
-        printSender(governorAcc.getScriptHash());
+        printSender(governor.getScriptHash());
         System.out.println("Token:               " + tokenForNativeBridge);
         System.out.println("Decimals on EVM:     " + decimalsOnLinkedChain);
         System.out.printf("Deposit fee:         %s (%s %s)%n", depositFee, gasToken.toDecimals(depositFee),
@@ -81,27 +77,13 @@ public class SetNativeBridge {
         System.out.printf("Max total deposited: %s (%s %s)%n", maxTotalDeposited, token.toDecimals(maxTotalDeposited),
                 token.getSymbol());
 
-        Transaction tx = bridge.invokeFunction("setNativeBridge",
-                        hash160(tokenForNativeBridge),
-                        integer(decimalsOnLinkedChain),
-                        integer(depositFee),
-                        integer(minAmount),
-                        integer(maxAmount),
-                        integer(maxWithdrawals),
-                        integer(maxTotalDeposited)
-                )
-                .signers(calledByEntry(governorAcc))
-                .sign();
+        Hash256 txHash = bridge.setNativeBridge(tokenForNativeBridge, decimalsOnLinkedChain, depositFee, minAmount,
+                        maxAmount, maxWithdrawals, maxTotalDeposited)
+                .withSigners(calledByEntry(governor))
+                .signSendAndAwait();
 
-        NeoSendRawTransaction response = tx.send();
-        if (response.hasError()) {
-            throw new Exception(response.getError().getMessage());
-        }
-
-        Hash256 txHash = response.getSendRawTransaction().getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
+        validateTransactionHalted(neow3j, txHash);
         System.out.println("Native bridge set successfully");
-        System.out.println("Transaction hash: " + txHash);
     }
 
 }

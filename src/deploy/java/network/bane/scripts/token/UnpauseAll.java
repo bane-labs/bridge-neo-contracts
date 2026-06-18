@@ -1,27 +1,19 @@
 package network.bane.scripts.token;
 
-import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
-import io.neow3j.transaction.Transaction;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
+import network.bane.client.BridgeClient;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
-import static io.neow3j.types.ContractParameter.hash160;
-import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static java.lang.String.format;
-import static java.util.Arrays.asList;
 import static network.bane.utils.PrintHelper.printNetwork;
 import static network.bane.utils.PrintHelper.printSender;
-import static network.bane.utils.env.EnvVariables.BRIDGE_HASH;
-import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
+import static network.bane.utils.env.EnvVariables.getBridgeClientFromEnv;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
 
@@ -49,12 +41,12 @@ public class UnpauseAll {
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
-        SmartContract bridge = new SmartContract(getHash160FromEnvVar(BRIDGE_HASH), neow3j);
+        BridgeClient bridge = getBridgeClientFromEnv(neow3j);
+        Account governor = getGovernorAccountFromEnv();
 
-        Account governorAcc = getGovernorAccountFromEnv();
         System.out.println("Unpause all components of the bridge...");
         printNetwork(neow3j);
-        printSender(governorAcc.getScriptHash());
+        printSender(governor.getScriptHash());
 
         String overallPauseState;
         String nativePauseState;
@@ -62,26 +54,19 @@ public class UnpauseAll {
 
         System.out.println("Unpause BridgeContract");
         System.out.println("Unpause BridgeContract at address: " + bridge.getScriptHash());
-        System.out.println("Governor address: " + governorAcc.getScriptHash());
+        System.out.println("Governor address: " + governor.getScriptHash());
 
         System.out.println("\nAttempt unpause operations...");
         System.out.println("Note: Operations will be skipped automatically if components are already unpaused.");
 
         System.out.println("\nOverall bridge pausing");
-        if (!bridge.callFunctionReturningBool("isPaused")) {
+        if (!bridge.isPaused()) {
             overallPauseState = ALREADY_UNPAUSED;
             System.out.println("Bridge is not paused - no action needed");
         } else {
             System.out.println("Bridge is paused - unpausing...");
-            Transaction tx = bridge.invokeFunction("unpauseBridge").signers(calledByEntry(governorAcc)).sign();
-            NeoSendRawTransaction response = tx.send();
-            if (response.hasError()) {
-                throw new Exception("Error unpausing bridge: " + response.getError().getMessage());
-            }
-            Hash256 txHash = response.getSendRawTransaction().getHash();
-            System.out.println("Transaction sent: " + txHash);
-            waitUntilTransactionIsExecuted(txHash, neow3j);
-            if (bridge.callFunctionReturningBool("isPaused")) {
+            Hash256 txHash = bridge.unpauseBridge().withSigners(calledByEntry(governor)).signSendAndAwait();
+            if (bridge.isPaused()) {
                 throw new Exception("Unpausing the bridge contract failed in transaction: " + txHash);
             }
             overallPauseState = SUCCESS;
@@ -91,25 +76,17 @@ public class UnpauseAll {
 
         // Unpause native bridge
         System.out.println("\nNative bridge pause status");
-        if (!bridge.callFunctionReturningBool("nativeBridgeIsSet")) {
+        if (!bridge.nativeBridgeIsSet()) {
             nativePauseState = NOT_SET;
             System.out.println("Native bridge not set - no need to unpause it");
         } else {
-            if (!nativeBridgeIsPaused(bridge)) {
+            if (!bridge.getNativeBridge().paused) {
                 nativePauseState = ALREADY_UNPAUSED;
                 System.out.println("Native bridge is not paused - no action needed");
             } else {
                 System.out.println("Native bridge is paused - unpausing...");
-                Transaction tx = bridge.invokeFunction("unpauseNativeBridge").signers(calledByEntry(governorAcc))
-                        .sign();
-                NeoSendRawTransaction response = tx.send();
-                if (response.hasError()) {
-                    throw new Exception("Error unpausing native bridge: " + response.getError().getMessage());
-                }
-                Hash256 txHash = response.getSendRawTransaction().getHash();
-                System.out.println("Transaction sent: " + txHash);
-                waitUntilTransactionIsExecuted(txHash, neow3j);
-                if (nativeBridgeIsPaused(bridge)) {
+                Hash256 txHash = bridge.unpauseNativeBridge().withSigners(calledByEntry(governor)).signSendAndAwait();
+                if (bridge.getNativeBridge().paused) {
                     throw new Exception("Unpausing native bridge failed in transaction " + txHash);
                 }
                 nativePauseState = SUCCESS;
@@ -120,24 +97,18 @@ public class UnpauseAll {
 
         // Unpause all token bridges
         System.out.println("\nToken bridges pause status");
-        List<Hash160> registeredTokens = bridge.callInvokeFunction("getRegisteredTokens").getInvocationResult()
-                .getFirstStackItem().getList().stream().map(s -> Hash160.fromAddress(s.getAddress()))
-                .collect(Collectors.toList());
+        List<Hash160> registeredTokens = bridge.getRegisteredTokens();
         System.out.println("Found " + registeredTokens.size() + " registered tokens");
         HashMap<Hash160, String> stateMap = new HashMap<>();
         for (Hash160 tokenHash : registeredTokens) {
-            boolean paused = tokenBridgeIsPaused(bridge, tokenHash);
-            if (!paused) {
+            if (!bridge.getTokenBridge(tokenHash).paused) {
                 stateMap.put(tokenHash, ALREADY_UNPAUSED);
                 System.out.println("Token bridge for token " + tokenHash + " is not paused - no action needed");
                 continue;
             } else {
                 System.out.println("Token bridge for token " + tokenHash + " is paused - unpausing...");
-                NeoSendRawTransaction response = bridge.invokeFunction("unpauseTokenBridge", hash160(tokenHash))
-                        .signers(calledByEntry(governorAcc)).sign().send();
-                Hash256 txHash = response.getSendRawTransaction().getHash();
-                waitUntilTransactionIsExecuted(txHash, neow3j);
-                if (tokenBridgeIsPaused(bridge, tokenHash)) {
+                Hash256 txHash = bridge.unpauseTokenBridge(tokenHash).withSigners(calledByEntry(governor)).signSendAndAwait();
+                if (bridge.getTokenBridge(tokenHash).paused) {
                     throw new Exception(format("Unpausing token bridge for token %s failed in transaction %s",
                             tokenHash, txHash));
                 }
@@ -152,17 +123,13 @@ public class UnpauseAll {
 
         // Unpause deposits
         System.out.println("\nDeposits pause status");
-        if (!bridge.callFunctionReturningBool("depositsArePaused")) {
+        if (!bridge.depositsArePaused()) {
             depositsPauseState = ALREADY_UNPAUSED;
             System.out.println("Deposits are not paused - no action needed");
         } else {
             System.out.println("Deposits are paused - unpausing...");
-            NeoSendRawTransaction response = bridge.invokeFunction("unpauseDeposits")
-                    .signers(calledByEntry(governorAcc)).sign().send();
-            Hash256 txHash = response.getSendRawTransaction().getHash();
-            System.out.println("Transaction sent: " + txHash);
-            waitUntilTransactionIsExecuted(txHash, neow3j);
-            if (bridge.callFunctionReturningBool("depositsArePaused")) {
+            Hash256 txHash = bridge.unpauseDeposits().withSigners(calledByEntry(governor)).signSendAndAwait();
+            if (bridge.depositsArePaused()) {
                 throw new Exception(format("Unpausing deposits failed in transaction %s", txHash));
             }
             depositsPauseState = SUCCESS;
@@ -184,16 +151,6 @@ public class UnpauseAll {
             System.out.printf(" - %s/%s %s: %s\n", i + 1, registeredTokens.size(), stateMap.get(token), token);
         }
         System.out.println("Deposits unpause state: " + depositsPauseState);
-    }
-
-    static boolean nativeBridgeIsPaused(SmartContract bridge) throws IOException {
-        return bridge.callInvokeFunction("getNativeBridge", asList()).getInvocationResult().getFirstStackItem()
-                .getList().get(0).getBoolean();
-    }
-
-    static boolean tokenBridgeIsPaused(SmartContract bridge, Hash160 tokenHash) throws IOException {
-        return bridge.callInvokeFunction("getTokenBridge", asList(hash160(tokenHash))).getInvocationResult()
-                .getFirstStackItem().getList().get(0).getBoolean();
     }
 
 }
