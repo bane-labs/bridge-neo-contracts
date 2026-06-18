@@ -1,4 +1,4 @@
-package network.bane.scripts.message;
+package network.bane.scripts.message.unpause;
 
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.types.Hash256;
@@ -25,7 +25,7 @@ import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
  * - WALLET_FILEPATH_GOVERNOR: the filepath to the governor wallet.
  * - WALLET_PASSWORD_GOVERNOR: the password for the governor wallet
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.message.UnpauseAll
+ * Run with: gradle run -PmainClass=network.bane.scripts.message.unpause.UnpauseAll
  */
 public class UnpauseAll {
 

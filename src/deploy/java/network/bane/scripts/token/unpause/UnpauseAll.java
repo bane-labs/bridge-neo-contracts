@@ -1,4 +1,4 @@
-package network.bane.scripts.token;
+package network.bane.scripts.token.unpause;
 
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.types.Hash160;
@@ -31,7 +31,7 @@ import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
  * - WALLET_FILEPATH_GOVERNOR: the filepath to the governor wallet
  * - WALLET_PASSWORD_GOVERNOR: the password for the governor wallet
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.token.UnpauseAll
+ * Run with: gradle run -PmainClass=network.bane.scripts.token.unpause.UnpauseAll
  */
 public class UnpauseAll {
 
