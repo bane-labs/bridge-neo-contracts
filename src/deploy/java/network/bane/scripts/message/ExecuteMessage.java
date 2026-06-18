@@ -1,27 +1,23 @@
 package network.bane.scripts.message;
 
-import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.stackitem.StackItem;
-import io.neow3j.transaction.Transaction;
 import io.neow3j.wallet.Account;
+import network.bane.client.MessageBridgeClient;
 
 import java.math.BigInteger;
 import java.util.List;
 
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.integer;
-import static java.util.Collections.singletonList;
+import static java.util.Arrays.asList;
 import static network.bane.scripts.message.MessageSendHelper.checkExecutionResult;
 import static network.bane.scripts.message.MessageSendHelper.checkThatMessageExists;
-import static network.bane.scripts.message.MessageSendHelper.printStateRoot;
-import static network.bane.scripts.message.MessageSendHelper.sendTransaction;
 import static network.bane.utils.PrintHelper.printNetwork;
 import static network.bane.utils.PrintHelper.printSender;
-import static network.bane.utils.env.EnvVariables.MESSAGE_BRIDGE_HASH;
 import static network.bane.utils.env.EnvVariables.MESSAGE_NONCE;
 import static network.bane.utils.env.EnvVariables.getEnvVariable;
-import static network.bane.utils.env.EnvVariables.getHash160FromEnvVar;
+import static network.bane.utils.env.EnvVariables.getMessageBridgeClientFromEnv;
 import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
 import static network.bane.utils.env.EnvWallets.getPersonalAccountFromEnv;
 
@@ -41,23 +37,19 @@ public class ExecuteMessage {
 
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
-        SmartContract messageBridge = new SmartContract(getHash160FromEnvVar(MESSAGE_BRIDGE_HASH), neow3j);
-        String nonceStr = getEnvVariable(MESSAGE_NONCE);
-
-        Account executorAcc = getPersonalAccountFromEnv();
+        MessageBridgeClient messageBridge = getMessageBridgeClientFromEnv(neow3j);
+        BigInteger nonce = new BigInteger(getEnvVariable(MESSAGE_NONCE));
+        Account personalAccount = getPersonalAccountFromEnv();
 
         System.out.println("=== Message Bridge - Execute Message ===");
         printNetwork(neow3j);
-        printSender(executorAcc.getScriptHash());
+        printSender(personalAccount.getScriptHash());
         System.out.println("Using Message Bridge Contract: " + messageBridge.getScriptHash());
-
-        BigInteger nonce = new BigInteger(nonceStr);
-
-        System.out.println("Executor Account: " + executorAcc.getAddress());
+        System.out.println("Executor Account: " + personalAccount.getAddress());
         System.out.println("Message Nonce to Execute: " + nonce);
 
         // Get and print the EVM to NeoN3 root before execution
-        printStateRoot(messageBridge, "evmToNeoRoot");
+        System.out.println("EvmToNeoRoot: " + messageBridge.evmToNeoRoot());
 
         try {
             if (checkThatMessageExists(messageBridge, nonce)) return;
@@ -68,10 +60,8 @@ public class ExecuteMessage {
 
         // Check executable state before execution
         try {
-            List<StackItem> execStateResult = messageBridge.callInvokeFunction(
-                    "getExecutableState",
-                    singletonList(integer(nonce))
-            ).getInvocationResult().getStack();
+            List<StackItem> execStateResult = messageBridge.callInvokeFunction("getExecutableState",
+                    asList(integer(nonce))).getInvocationResult().getStack();
             if (!execStateResult.isEmpty()) {
                 System.out.println("Executable state retrieved for nonce: " + nonce);
             }
@@ -81,11 +71,7 @@ public class ExecuteMessage {
 
         // Execute the message
         System.out.println("\n--- Executing Message ---");
-        Transaction tx = messageBridge.invokeFunction("executeMessage", integer(nonce))
-                .signers(none(executorAcc))
-                .sign();
-
-       sendTransaction(neow3j, tx);
+        messageBridge.executeMessage(nonce).withSigners(none(personalAccount)).signSendAndAwait();
 
         // Check for execution result after execution
         try {
@@ -93,7 +79,6 @@ public class ExecuteMessage {
         } catch (Exception e) {
             System.err.println("Could not retrieve execution result: " + e.getMessage());
         }
-
         System.out.println("\n=== Message Execution Complete ===");
     }
 }
