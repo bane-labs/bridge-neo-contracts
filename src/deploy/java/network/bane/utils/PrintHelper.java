@@ -14,11 +14,11 @@ public class PrintHelper {
     public static void printNetwork(Neow3j neow3j) throws IOException {
         NeoGetVersion.NeoVersion.Protocol protocol = neow3j.getVersion().send().getVersion().getProtocol();
         if (protocol.getNetwork().equals(MAINNET_MAGIC)) {
-            System.out.printf("Connected to Neo Mainnet (%s)%n", MAINNET_MAGIC);
+            System.out.printf("Connected to N3 Mainnet (%s)%n", MAINNET_MAGIC);
         } else if (protocol.getNetwork().equals(TESTNET_MAGIC)) {
-            System.out.printf("Connected to Neo Testnet (%s)%n", TESTNET_MAGIC);
+            System.out.printf("Connected to N3 Testnet (%s)%n", TESTNET_MAGIC);
         } else {
-            System.out.printf("Connected to private network (%s)", protocol.getNetwork());
+            System.out.printf("Connected to private N3 network (%s)", protocol.getNetwork());
         }
     }
 

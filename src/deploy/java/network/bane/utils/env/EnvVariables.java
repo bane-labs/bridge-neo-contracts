@@ -4,6 +4,8 @@ import io.neow3j.crypto.ECKeyPair;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.http.HttpService;
 import io.neow3j.types.Hash160;
+import network.bane.client.BridgeClient;
+import network.bane.client.MessageBridgeClient;
 
 import java.math.BigInteger;
 
@@ -14,6 +16,14 @@ public class EnvVariables {
 
     public static Neow3j getNeow3jFromEnv() {
         return Neow3j.build(new HttpService(getEnvVariable(N3_JSON_RPC), true));
+    }
+
+    public static BridgeClient getBridgeClientFromEnv(Neow3j neow3j) {
+        return new BridgeClient(getHash160FromEnvVar(BRIDGE_HASH), neow3j);
+    }
+
+    public static MessageBridgeClient getMessageBridgeClientFromEnv(Neow3j neow3j) {
+        return new MessageBridgeClient(getHash160FromEnvVar(MESSAGE_BRIDGE_HASH), neow3j);
     }
 
     public static Hash160 getHash160FromEnvVar(String variableName) {

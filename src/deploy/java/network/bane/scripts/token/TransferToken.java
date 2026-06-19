@@ -40,12 +40,12 @@ public class TransferToken {
     public static void main(String[] args) throws Throwable {
         Neow3j neow3j = getNeow3jFromEnv();
         Hash160 tokenHash = getHash160FromEnvVar(TOKEN_TRANSFER_TOKEN_HASH);
-        FungibleToken token = new FungibleToken(tokenHash, neow3j);
         Hash160 to = getHash160FromEnvVar(TOKEN_DEPOSIT_RECIPIENT_ON_EVM);
         BigInteger amount = getBigIntegerFromEnvVar(TOKEN_DEPOSIT_AMOUNT);
+        Account personalAccount = getPersonalAccountFromEnv();
 
-        Account fromAcc = getPersonalAccountFromEnv();
-        Hash160 from = fromAcc.getScriptHash();
+        FungibleToken token = new FungibleToken(tokenHash, neow3j);
+        Hash160 from = personalAccount.getScriptHash();
 
         System.out.println("Transfer tokens...");
         printNetwork(neow3j);
@@ -55,7 +55,7 @@ public class TransferToken {
         System.out.printf("Amount: %s (%s %s)%n", amount, token.toDecimals(amount), token.getSymbol());
 
         Transaction tx = token.transfer(from, to, amount)
-                .signers(calledByEntry(fromAcc))
+                .signers(calledByEntry(personalAccount))
                 .sign();
 
         NeoSendRawTransaction rawTx = tx.send();

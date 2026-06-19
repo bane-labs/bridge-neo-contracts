@@ -8,6 +8,8 @@ import io.neow3j.transaction.TransactionBuilder;
 import io.neow3j.types.Hash256;
 import network.bane.client.interfaces.IWriteCaller;
 
+import java.io.PrintStream;
+
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 
 /**
@@ -26,7 +28,8 @@ public class WriteCall implements IWriteCaller {
      * <p>
      * The builder is expected to already contain the target contract invocation and its contract parameters.
      *
-     * @param neow3j the {@link Neow3j} instance to use for sending the transaction and waiting for its execution.
+     * @param neow3j             the {@link Neow3j} instance to use for sending the transaction and waiting for its
+     *                           execution.
      * @param transactionBuilder the transaction builder representing the prepared contract invocation.
      */
     public WriteCall(Neow3j neow3j, TransactionBuilder transactionBuilder) {
@@ -37,7 +40,8 @@ public class WriteCall implements IWriteCaller {
     /**
      * Factory method for creating a prepared write call.
      *
-     * @param neow3j the {@link Neow3j} instance to use for sending the transaction and waiting for its execution.
+     * @param neow3j             the {@link Neow3j} instance to use for sending the transaction and waiting for its
+     *                           execution.
      * @param transactionBuilder the transaction builder representing the prepared contract invocation.
      * @return a write call wrapping the given transaction builder.
      */
@@ -67,13 +71,27 @@ public class WriteCall implements IWriteCaller {
      */
     @Override
     public Hash256 signSendAndAwait() throws Throwable {
+        return signSendAndAwait(null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Hash256 signSendAndAwait(PrintStream out) throws Throwable {
         Transaction tx = transactionBuilder.sign();
         NeoSendRawTransaction response = tx.send();
         if (response.hasError()) {
             throw new RuntimeException("Error sending transaction: " + response.getError().getMessage());
         }
         Hash256 txHash = response.getSendRawTransaction().getHash();
+        if (out != null) {
+            out.println("Transaction sent: " + txHash);
+        }
         waitUntilTransactionIsExecuted(txHash, neow3j);
+        if (out != null) {
+            out.println("Transaction confirmed in block: " + neow3j.getTransactionHeight(txHash).send().getHeight());
+        }
         return txHash;
     }
 }
