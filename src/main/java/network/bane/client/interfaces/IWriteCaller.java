@@ -4,6 +4,8 @@ import io.neow3j.transaction.Signer;
 import io.neow3j.transaction.TransactionBuilder;
 import io.neow3j.types.Hash256;
 
+import java.io.PrintStream;
+
 /**
  * Prepared write-call abstraction for an on-chain contract invocation.
  * <p>
@@ -45,4 +47,19 @@ public interface IWriteCaller {
      * @throws Throwable if signing, sending, send-error handling, or awaiting execution fails.
      */
     Hash256 signSendAndAwait() throws Throwable;
+
+    /**
+     * Signs and sends the prepared transaction, prints progress to the given stream, waits until it is executed, and
+     * returns the transaction hash.
+     * <p>
+     * This is intended for CLI/deploy scripts that want immediate feedback after the transaction was accepted by the
+     * RPC node and another message after block confirmation. Reusable client and test code should prefer the silent
+     * {@link #signSendAndAwait()} overload unless it explicitly wants output.
+     *
+     * @param out stream to print transaction progress to.
+     * @return the transaction hash.
+     * @throws Throwable if signing, sending, send-error handling, printing confirmation details, or awaiting execution
+     *                   fails.
+     */
+    Hash256 signSendAndAwait(PrintStream out) throws Throwable;
 }

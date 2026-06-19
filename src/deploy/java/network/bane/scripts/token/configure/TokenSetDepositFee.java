@@ -41,7 +41,7 @@ public class TokenSetDepositFee {
         HashMap<Hash160, BigInteger> feeMap = new HashMap<>();
         feeMap.put(tokenHash, depositFee);
 
-        bridge.setTokenDepositFee(feeMap).withSigners(calledByEntry(governor)).signSendAndAwait();
+        bridge.setTokenDepositFee(feeMap).withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         System.out.println("Token deposit fee set successfully");
         System.out.printf("New token deposit fee of token %s: %s $GAS%n", tokenHash,

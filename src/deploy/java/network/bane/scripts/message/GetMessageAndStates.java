@@ -40,8 +40,8 @@ public class GetMessageAndStates {
 
         checkExecutionResult(messageBridge, nonce);
 
-        // Get and print the EVM to NeoN3 root
-        System.out.println("NeoToEvmRoot: " + messageBridge.evmToNeoRoot());
+        // Get and print the message bridge state roots
+        System.out.println("NeoToEvmRoot: " + messageBridge.neoToEvmRoot());
         System.out.println("EvmToNeoRoot: " + messageBridge.evmToNeoRoot());
     }
 }

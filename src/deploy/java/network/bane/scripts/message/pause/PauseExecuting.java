@@ -27,7 +27,7 @@ public class PauseExecuting {
             return;
         }
 
-        messageBridge.pauseExecuting().withSigners(calledByEntry(governor)).signSendAndAwait();
+        messageBridge.pauseExecuting().withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         if (!messageBridge.executingIsPaused()) {
             throw new Exception("Message Executing is still not paused");

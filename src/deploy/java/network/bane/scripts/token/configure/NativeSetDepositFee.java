@@ -33,11 +33,12 @@ public class NativeSetDepositFee {
         printSender(governor.getScriptHash());
         System.out.printf("New fee: %s (%s $%s)%n", depositFee, gasToken.toDecimals(depositFee), gasToken.getSymbol());
 
-        bridge.setNativeDepositFee(depositFee).withSigners(calledByEntry(governor)).signSendAndAwait();
+        bridge.setNativeDepositFee(depositFee).withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         BigInteger actualDepositFee = bridge.nativeDepositFee();
         System.out.println("Native deposit fee set successfully");
-        System.out.printf("New native deposit fee: %s $%s%n", nativeToken.toDecimals(actualDepositFee), nativeToken.getSymbol());
+        System.out.printf("New native deposit fee: %s $%s%n", nativeToken.toDecimals(actualDepositFee),
+                nativeToken.getSymbol());
     }
 
 }

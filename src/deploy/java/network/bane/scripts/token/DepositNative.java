@@ -62,7 +62,7 @@ public class DepositNative {
 
         Hash256 txHash = bridge.depositNative(from, to, amount, maxFee)
                 .withSigners(none(personalAccount).setAllowedContracts(gasToken.getScriptHash()))
-                .signSendAndAwait();
+                .signSendAndAwait(System.out);
 
         validateTransactionHalted(neow3j, txHash);
         System.out.println("Native deposit sent");

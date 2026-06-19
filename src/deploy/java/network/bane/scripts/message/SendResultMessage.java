@@ -5,6 +5,7 @@ import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.transaction.Transaction;
+import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
 import network.bane.client.MessageBridgeClient;
@@ -44,10 +45,11 @@ public class SendResultMessage {
         MessageBridgeClient messageBridge = getMessageBridgeClientFromEnv(neow3j);
         BigInteger nonce = new BigInteger(getEnvVariable(MESSAGE_NONCE));
         Account personalAccount = getPersonalAccountFromEnv();
+        Hash160 personalScriptHash = personalAccount.getScriptHash();
 
         System.out.println("=== Message Bridge - Send Result Message ===");
         printNetwork(neow3j);
-        printSender(personalAccount.getScriptHash());
+        printSender(personalScriptHash);
         System.out.println("Using Message Bridge Contract: " + messageBridge.getScriptHash());
         System.out.println("Related nonce: " + nonce);
 
@@ -56,9 +58,9 @@ public class SendResultMessage {
         System.out.printf("Sending Fee: %s GAS%n", GasToken.toDecimals(sendingFee, 8));
 
         // Invoking: sendResultMessage(nonce, feeSponsor, sendingFee)
-        Hash256 txHash = messageBridge.sendResultMessage(nonce, personalAccount.getScriptHash(), sendingFee)
+        Hash256 txHash = messageBridge.sendResultMessage(nonce, personalScriptHash, sendingFee)
                 .withSigners(none(personalAccount).setAllowedContracts(GasToken.SCRIPT_HASH))
-                .signSendAndAwait();
+                .signSendAndAwait(System.out);
 
         NeoApplicationLog appLog = neow3j.getApplicationLog(txHash).send().getApplicationLog();
         getMessageSendEvents(appLog, messageBridge.getScriptHash());

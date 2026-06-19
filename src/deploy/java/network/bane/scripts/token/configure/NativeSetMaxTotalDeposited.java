@@ -32,7 +32,8 @@ public class NativeSetMaxTotalDeposited {
         printNetwork(neow3j);
         printSender(governor.getScriptHash());
 
-        bridge.setMaxTotalDepositedNative(maxTotalDeposited).withSigners(calledByEntry(governor)).signSendAndAwait();
+        bridge.setMaxTotalDepositedNative(maxTotalDeposited).withSigners(calledByEntry(governor))
+                .signSendAndAwait(System.out);
 
         System.out.println("Native max total deposited set successfully");
         System.out.printf("New native max total deposited: %s $%s%n",

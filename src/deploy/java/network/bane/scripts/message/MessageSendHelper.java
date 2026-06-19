@@ -8,8 +8,6 @@ import io.neow3j.types.Hash160;
 import io.neow3j.types.NeoVMStateType;
 import io.neow3j.wallet.Account;
 import network.bane.client.MessageBridgeClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -21,8 +19,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 
 class MessageSendHelper {
-
-    private static final Logger log = LoggerFactory.getLogger(MessageSendHelper.class);
 
     static void getMessageSendEvents(NeoApplicationLog log, Hash160 messageBridgeHash) {
         NeoApplicationLog.Execution exec = log.getFirstExecution();
@@ -56,15 +52,15 @@ class MessageSendHelper {
     static void checkExecutionResult(MessageBridgeClient messageBridge, BigInteger nonce) throws IOException {
         StackItem neoExecutionResult = messageBridge.getNeoExecutionResult(nonce);
         System.out.println("Execution result for nonce " + nonce + ":" + neoExecutionResult);
-        try {
-            byte[] resultBytes = messageBridge.getSerializedNeoExecutionResult(nonce);
-            System.out.println("\n--- Execution Result for nonce " + nonce + " ---");
-            System.out.println("Result bytes length: " + resultBytes.length);
-            System.out.println("Result as hex: " + toHexString(resultBytes));
-            System.out.println("Result as UTF-8: " + new String(resultBytes, UTF_8));
-        } catch (IndexOutOfBoundsException e) {
+        byte[] resultBytes = messageBridge.getSerializedNeoExecutionResult(nonce);
+        if (resultBytes.length == 0) {
             System.out.println("No execution result stored.");
+            return;
         }
+        System.out.println("\n--- Execution Result for nonce " + nonce + " ---");
+        System.out.println("Result bytes length: " + resultBytes.length);
+        System.out.println("Result as hex: " + toHexString(resultBytes));
+        System.out.println("Result as UTF-8: " + new String(resultBytes, UTF_8));
     }
 
     static boolean checkThatMessageExists(MessageBridgeClient messageBridge, BigInteger nonce) throws IOException {

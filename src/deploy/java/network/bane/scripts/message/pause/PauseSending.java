@@ -28,7 +28,7 @@ public class PauseSending {
         }
         System.out.println("\nMessage Sending is not paused, proceeding to pause...");
 
-        messageBridge.pauseSending().withSigners(calledByEntry(governor)).signSendAndAwait();
+        messageBridge.pauseSending().withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         if (!messageBridge.sendingIsPaused()) {
             throw new Exception("Message Sending is still not paused");

@@ -47,7 +47,7 @@ public class TokenSetMinAmount {
         HashMap<Hash160, BigInteger> minAmountMap = new HashMap<>();
         minAmountMap.put(tokenHash, minDepositAmount);
 
-        bridge.setMinTokenDeposit(minAmountMap).withSigners(calledByEntry(governor)).signSendAndAwait();
+        bridge.setMinTokenDeposit(minAmountMap).withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         System.out.printf("\nMin token deposit set successfully for token %s (%s)\n", token.getSymbol(), tokenHash);
         System.out.printf("New min deposit: %s $%s%n", token.toDecimals(bridge.minTokenDeposit(tokenHash)),

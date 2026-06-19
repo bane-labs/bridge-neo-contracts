@@ -57,12 +57,11 @@ public class UnpauseAll {
             System.out.println("MessageBridge is not paused - no action needed");
         } else {
             System.out.println("MessageBridge is paused - unpausing...");
-            Hash256 txHash = messageBridge.unpause().withSigners(calledByEntry(governor)).signSendAndAwait();
+            Hash256 txHash = messageBridge.unpause().withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
             if (messageBridge.isPaused()) {
                 throw new Exception("Unpausing the message bridge contract failed in transaction: " + txHash);
             }
             overallPauseState = SUCCESS;
-            System.out.println("Transaction confirmed");
             System.out.println("MessageBridge unpaused successfully");
         }
 
@@ -73,12 +72,12 @@ public class UnpauseAll {
             System.out.println("Sending is not paused - no action needed");
         } else {
             System.out.println("Sending is paused - unpausing...");
-            Hash256 txHash = messageBridge.unpauseSending().withSigners(calledByEntry(governor)).signSendAndAwait();
+            Hash256 txHash = messageBridge.unpauseSending().withSigners(calledByEntry(governor))
+                    .signSendAndAwait(System.out);
             if (messageBridge.sendingIsPaused()) {
                 throw new Exception("Unpausing sending failed in transaction: " + txHash);
             }
             sendingPauseState = SUCCESS;
-            System.out.println("Transaction confirmed");
             System.out.println("Sending unpaused successfully");
         }
 
@@ -89,12 +88,12 @@ public class UnpauseAll {
             System.out.println("Executing is not paused - no action needed");
         } else {
             System.out.println("Executing is paused - unpausing...");
-            Hash256 txHash = messageBridge.unpauseExecuting().withSigners(calledByEntry(governor)).signSendAndAwait();
-            if (!messageBridge.executingIsPaused()) {
+            Hash256 txHash = messageBridge.unpauseExecuting().withSigners(calledByEntry(governor))
+                    .signSendAndAwait(System.out);
+            if (messageBridge.executingIsPaused()) {
                 throw new Exception("Unpausing executing failed in transaction: " + txHash);
             }
             executingPauseState = SUCCESS;
-            System.out.println("Transaction confirmed");
             System.out.println("Executing unpaused successfully");
         }
 

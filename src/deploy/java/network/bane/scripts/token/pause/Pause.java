@@ -28,7 +28,7 @@ public class Pause {
         }
         System.out.println("\nBridge is not paused, proceeding to pause...");
 
-        bridge.pauseBridge().withSigners(calledByEntry(governor)).signSendAndAwait();
+        bridge.pauseBridge().withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         if (!bridge.isPaused()) {
             throw new Exception("Bridge is still not paused");

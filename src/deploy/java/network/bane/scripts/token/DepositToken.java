@@ -62,7 +62,7 @@ public class DepositToken {
         System.out.printf("MaxFee:      %s (%s %s)%n", maxFee, gasToken.toDecimals(maxFee), gasToken.getSymbol());
 
         Hash256 txHash = bridge.depositToken(tokenHash, from, to, amount, maxFee).withSigners(global(personalAccount))
-                .signSendAndAwait();
+                .signSendAndAwait(System.out);
 
         validateTransactionHalted(neow3j, txHash);
         System.out.println("Token sent successfully.");

@@ -65,12 +65,11 @@ public class UnpauseAll {
             System.out.println("Bridge is not paused - no action needed");
         } else {
             System.out.println("Bridge is paused - unpausing...");
-            Hash256 txHash = bridge.unpauseBridge().withSigners(calledByEntry(governor)).signSendAndAwait();
+            Hash256 txHash = bridge.unpauseBridge().withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
             if (bridge.isPaused()) {
                 throw new Exception("Unpausing the bridge contract failed in transaction: " + txHash);
             }
             overallPauseState = SUCCESS;
-            System.out.println("Transaction confirmed");
             System.out.println("Bridge unpaused successfully");
         }
 
@@ -85,12 +84,12 @@ public class UnpauseAll {
                 System.out.println("Native bridge is not paused - no action needed");
             } else {
                 System.out.println("Native bridge is paused - unpausing...");
-                Hash256 txHash = bridge.unpauseNativeBridge().withSigners(calledByEntry(governor)).signSendAndAwait();
+                Hash256 txHash = bridge.unpauseNativeBridge().withSigners(calledByEntry(governor))
+                        .signSendAndAwait(System.out);
                 if (bridge.getNativeBridge().paused) {
                     throw new Exception("Unpausing native bridge failed in transaction " + txHash);
                 }
                 nativePauseState = SUCCESS;
-                System.out.println("Transaction confirmed");
                 System.out.println("Native bridge unpaused successfully");
             }
         }
@@ -107,13 +106,13 @@ public class UnpauseAll {
                 continue;
             } else {
                 System.out.println("Token bridge for token " + tokenHash + " is paused - unpausing...");
-                Hash256 txHash = bridge.unpauseTokenBridge(tokenHash).withSigners(calledByEntry(governor)).signSendAndAwait();
+                Hash256 txHash = bridge.unpauseTokenBridge(tokenHash).withSigners(calledByEntry(governor))
+                        .signSendAndAwait(System.out);
                 if (bridge.getTokenBridge(tokenHash).paused) {
                     throw new Exception(format("Unpausing token bridge for token %s failed in transaction %s",
                             tokenHash, txHash));
                 }
                 stateMap.put(tokenHash, SUCCESS);
-                System.out.println("Transaction confirmed");
                 System.out.println("Token bridge for token " + tokenHash + " unpaused successfully");
             }
         }
@@ -128,12 +127,11 @@ public class UnpauseAll {
             System.out.println("Deposits are not paused - no action needed");
         } else {
             System.out.println("Deposits are paused - unpausing...");
-            Hash256 txHash = bridge.unpauseDeposits().withSigners(calledByEntry(governor)).signSendAndAwait();
+            Hash256 txHash = bridge.unpauseDeposits().withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
             if (bridge.depositsArePaused()) {
                 throw new Exception(format("Unpausing deposits failed in transaction %s", txHash));
             }
             depositsPauseState = SUCCESS;
-            System.out.println("Transaction confirmed");
             System.out.println("Deposits unpaused successfully");
         }
         System.out.println("Complete unpausing process completed");

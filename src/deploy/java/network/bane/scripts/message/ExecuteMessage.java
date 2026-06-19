@@ -71,7 +71,7 @@ public class ExecuteMessage {
 
         // Execute the message
         System.out.println("\n--- Executing Message ---");
-        messageBridge.executeMessage(nonce).withSigners(none(personalAccount)).signSendAndAwait();
+        messageBridge.executeMessage(nonce).withSigners(none(personalAccount)).signSendAndAwait(System.out);
 
         // Check for execution result after execution
         try {

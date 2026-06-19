@@ -79,8 +79,7 @@ public class SetNativeBridge {
 
         Hash256 txHash = bridge.setNativeBridge(tokenForNativeBridge, decimalsOnLinkedChain, depositFee, minAmount,
                         maxAmount, maxWithdrawals, maxTotalDeposited)
-                .withSigners(calledByEntry(governor))
-                .signSendAndAwait();
+                .withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         validateTransactionHalted(neow3j, txHash);
         System.out.println("Native bridge set successfully");

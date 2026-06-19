@@ -38,7 +38,7 @@ public class NativeSetMinAmount {
         printNetwork(neow3j);
         printSender(governor.getScriptHash());
 
-        bridge.setMinNativeDeposit(minDepositAmount).withSigners(calledByEntry(governor)).signSendAndAwait();
+        bridge.setMinNativeDeposit(minDepositAmount).withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         System.out.println("Min native deposit set successfully");
         System.out.printf("New min deposit: %s $%s%n", nativeToken.toDecimals(bridge.minNativeDeposit()),

@@ -3,6 +3,7 @@ package network.bane.scripts.message;
 import io.neow3j.contract.GasToken;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
+import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
 import network.bane.client.MessageBridgeClient;
@@ -42,10 +43,11 @@ public class SendStoreOnlyMessage {
         MessageBridgeClient messageBridge = getMessageBridgeClientFromEnv(neow3j);
         String messageToSend = getEnvVariable(MESSAGE_SEND_STORE_ONLY_MESSAGE);
         Account personalAccount = getPersonalAccountFromEnv();
+        Hash160 personalScriptHash = personalAccount.getScriptHash();
 
         System.out.println("=== Message Bridge - Send Store-Only Message ===");
         printNetwork(neow3j);
-        printSender(personalAccount.getScriptHash());
+        printSender(personalScriptHash);
         System.out.println("Using Message Bridge Contract: " + messageBridge.getScriptHash());
 
         byte[] messageData = getMessageDataBytes(messageToSend);
@@ -55,9 +57,9 @@ public class SendStoreOnlyMessage {
         BigInteger sendingFee = messageBridge.sendingFee();
         System.out.printf("Sending Fee: %s GAS%n", GasToken.toDecimals(sendingFee, 8));
 
-        Hash256 txHash = messageBridge.sendStoreOnlyMessage(messageData, personalAccount.getScriptHash(), sendingFee)
+        Hash256 txHash = messageBridge.sendStoreOnlyMessage(messageData, personalScriptHash, sendingFee)
                 .withSigners(none(personalAccount).setAllowedContracts(GasToken.SCRIPT_HASH))
-                .signSendAndAwait();
+                .signSendAndAwait(System.out);
 
         NeoApplicationLog appLog = neow3j.getApplicationLog(txHash).send().getApplicationLog();
         getMessageSendEvents(appLog, messageBridge.getScriptHash());

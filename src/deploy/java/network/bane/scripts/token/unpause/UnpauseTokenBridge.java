@@ -38,7 +38,7 @@ public class UnpauseTokenBridge {
         }
         System.out.printf("\nToken bridge '%s' is paused, proceeding to unpause...\n", tokenHash);
 
-        bridge.unpauseTokenBridge(tokenHash).withSigners(calledByEntry(governor)).signSendAndAwait();
+        bridge.unpauseTokenBridge(tokenHash).withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         if (bridge.getTokenBridge(tokenHash).paused) {
             throw new Exception(format("Token bridge '%s' is still paused", tokenHash));

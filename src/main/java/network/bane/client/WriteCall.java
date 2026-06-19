@@ -8,6 +8,8 @@ import io.neow3j.transaction.TransactionBuilder;
 import io.neow3j.types.Hash256;
 import network.bane.client.interfaces.IWriteCaller;
 
+import java.io.PrintStream;
+
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 
 /**
@@ -69,15 +71,27 @@ public class WriteCall implements IWriteCaller {
      */
     @Override
     public Hash256 signSendAndAwait() throws Throwable {
+        return signSendAndAwait(null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Hash256 signSendAndAwait(PrintStream out) throws Throwable {
         Transaction tx = transactionBuilder.sign();
         NeoSendRawTransaction response = tx.send();
         if (response.hasError()) {
             throw new RuntimeException("Error sending transaction: " + response.getError().getMessage());
         }
         Hash256 txHash = response.getSendRawTransaction().getHash();
-        System.out.println("Transaction sent: " + txHash);
+        if (out != null) {
+            out.println("Transaction sent: " + txHash);
+        }
         waitUntilTransactionIsExecuted(txHash, neow3j);
-        System.out.println("Transaction confirmed in block: " + neow3j.getTransactionHeight(txHash).send().getHeight());
+        if (out != null) {
+            out.println("Transaction confirmed in block: " + neow3j.getTransactionHeight(txHash).send().getHeight());
+        }
         return txHash;
     }
 }

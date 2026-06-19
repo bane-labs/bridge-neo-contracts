@@ -32,7 +32,7 @@ public class UnpauseNativeBridge {
         }
         System.out.println("\nNative bridge is paused, proceeding to unpause...");
 
-        bridge.unpauseNativeBridge().withSigners(calledByEntry(governor)).signSendAndAwait();
+        bridge.unpauseNativeBridge().withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         if (bridge.getNativeBridge().paused) {
             throw new Exception("Native bridge is still paused");

@@ -3,6 +3,7 @@ package network.bane.scripts.message;
 import io.neow3j.contract.GasToken;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
+import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
 import network.bane.client.MessageBridgeClient;
@@ -44,10 +45,11 @@ public class SendExecutableMessage {
         String messageToSend = getEnvVariable(MESSAGE_SEND_EXECUTABLE_MESSAGE);
         boolean storeResult = getBooleanFromEnvVar(MESSAGE_SEND_EXECUTABLE_STORE_BOOL);
         Account personalAccount = getPersonalAccountFromEnv();
+        Hash160 personalScriptHash = personalAccount.getScriptHash();
 
         System.out.println("=== Message Bridge - Send Executable Message ===");
         printNetwork(neow3j);
-        printSender(personalAccount.getScriptHash());
+        printSender(personalScriptHash);
         System.out.println("Using Message Bridge Contract: " + messageBridge.getScriptHash());
 
         byte[] messageData = hexStringToByteArray(messageToSend);
@@ -58,10 +60,9 @@ public class SendExecutableMessage {
         System.out.printf("Sending Fee: %s GAS%n", GasToken.toDecimals(sendingFee, 8));
         BigInteger maxFee = sendingFee;
 
-        Hash256 txHash = messageBridge.sendExecutableMessage(messageData, storeResult, personalAccount.getScriptHash(),
-                        maxFee)
+        Hash256 txHash = messageBridge.sendExecutableMessage(messageData, storeResult, personalScriptHash, maxFee)
                 .withSigners(none(personalAccount).setAllowedContracts(GasToken.SCRIPT_HASH))
-                .signSendAndAwait();
+                .signSendAndAwait(System.out);
         NeoApplicationLog appLog = neow3j.getApplicationLog(txHash).send().getApplicationLog();
         getMessageSendEvents(appLog, messageBridge.getScriptHash());
     }

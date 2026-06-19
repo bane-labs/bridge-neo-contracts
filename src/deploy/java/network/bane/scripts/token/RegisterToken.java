@@ -87,7 +87,7 @@ public class RegisterToken {
         System.out.println("Decimal Scaling Factor: " + config.decimalScalingFactor);
 
         Hash256 txHash = bridge.registerToken(tokenHashOnN3, config).withSigners(calledByEntry(governor))
-                .signSendAndAwait();
+                .signSendAndAwait(System.out);
 
         validateTransactionHalted(neow3j, txHash);
         System.out.println("Token registered successfully");

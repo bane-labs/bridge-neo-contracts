@@ -4,6 +4,7 @@ import io.neow3j.contract.FungibleToken;
 import io.neow3j.contract.GasToken;
 import io.neow3j.protocol.Neow3j;
 import network.bane.client.BridgeClient;
+import network.bane.dto.bridge.NativeBridge;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -27,8 +28,9 @@ public class NativeGetState {
         BigDecimal feeDecimal = gasToken.toDecimals(fee);
 
         FungibleToken nativeToken = new FungibleToken(bridge.nativeToken(), neow3j);
+        NativeBridge nativeBridge = bridge.getNativeBridge();
         String tokenSymbol = nativeToken.getSymbol();
-        BigInteger totDeposited = bridge.getNativeBridge().totalDeposited;
+        BigInteger totDeposited = nativeBridge.totalDeposited;
         BigDecimal totDepositedDecimal = nativeToken.toDecimals(totDeposited);
         BigInteger min = bridge.minNativeDeposit();
         BigDecimal minDecimal = nativeToken.toDecimals(min);
@@ -36,11 +38,11 @@ public class NativeGetState {
         BigDecimal maxDecimal = nativeToken.toDecimals(max);
         BigInteger maxTotDeposited = bridge.maxTotalDepositedNative();
         BigDecimal maxTotDecimal = nativeToken.toDecimals(maxTotDeposited);
-        int maxWithdrawals = bridge.getNativeBridge().config.maxWithdrawals;
+        int maxWithdrawals = nativeBridge.config.maxWithdrawals;
 
         System.out.println();
         System.out.printf("Native Bridge: %s (%s)\n", tokenSymbol, nativeToken.getScriptHash());
-        System.out.printf(" paused: %s\n", bridge.isPaused());
+        System.out.printf(" paused: %s\n", nativeBridge.paused);
         System.out.printf(" total deposited: %s (%s)\n", totDeposited, totDepositedDecimal);
         System.out.printf(" deposit state:\n");
         System.out.printf("  nonce: %s\n", bridge.nativeDepositNonce());
@@ -54,8 +56,8 @@ public class NativeGetState {
         System.out.printf("  max amount:             %s (%s $%s)\n", max, maxDecimal, tokenSymbol);
         System.out.printf("  max withdrawals:        %s\n", maxWithdrawals);
         System.out.printf("  max total deposited:    %s (%s $%s)\n", maxTotDeposited, maxTotDecimal, tokenSymbol);
-        System.out.printf("  native token:           %s\n",  nativeToken);
-        System.out.printf("  decimal scaling factor: %s\n", bridge.getNativeBridge().config.decimalScalingFactor);
+        System.out.printf("  native token:           %s\n", nativeToken);
+        System.out.printf("  decimal scaling factor: %s\n", nativeBridge.config.decimalScalingFactor);
     }
 
 }

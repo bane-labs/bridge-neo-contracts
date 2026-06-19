@@ -27,7 +27,7 @@ public class Pause {
             return;
         }
 
-        messageBridge.pause().withSigners(calledByEntry(governor)).signSendAndAwait();
+        messageBridge.pause().withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         if (!messageBridge.isPaused()) {
             throw new Exception("MessageBridge is still not paused");

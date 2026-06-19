@@ -28,7 +28,7 @@ public class PauseDeposits {
         }
         System.out.println("\nDeposits are not paused, proceeding to pause...");
 
-        bridge.pauseDeposits().withSigners(calledByEntry(governor)).signSendAndAwait();
+        bridge.pauseDeposits().withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         if (!bridge.depositsArePaused()) {
             throw new Exception("Deposits are still not paused");

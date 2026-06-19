@@ -40,9 +40,7 @@ public class SetSendingFee {
                 gasToken.toDecimals(currentSendingFee));
         System.out.printf("\nSetting sending fee to: %s (%s $GAS)\n", sendingFee, gasToken.toDecimals(sendingFee));
 
-        messageBridge.setSendingFee(sendingFee)
-                .withSigners(calledByEntry(governorAcc))
-                .signSendAndAwait();
+        messageBridge.setSendingFee(sendingFee).withSigners(calledByEntry(governorAcc)).signSendAndAwait(System.out);
 
         if (!messageBridge.sendingFee().equals(sendingFee)) {
             throw new Exception("Sending fee is not set to the desired value");
