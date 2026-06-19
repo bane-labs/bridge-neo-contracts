@@ -51,11 +51,11 @@ public class SetNativeBridge {
         Neow3j neow3j = getNeow3jFromEnv();
         BridgeClient bridge = getBridgeClientFromEnv(neow3j);
         Hash160 tokenForNativeBridge = getHash160FromEnvVar(NATIVE_SET_TOKEN_FOR_NATIVE_BRIDGE);
-        int decimalsOnLinkedChain = getBigIntegerFromEnvVar(NATIVE_SET_DECIMALS_ON_LINKED_CHAIN).intValue();
+        int decimalsOnLinkedChain = getBigIntegerFromEnvVar(NATIVE_SET_DECIMALS_ON_LINKED_CHAIN).intValueExact();
         BigInteger depositFee = getBigIntegerFromEnvVar(NATIVE_SET_DEPOSIT_FEE);
         BigInteger minAmount = getBigIntegerFromEnvVar(NATIVE_SET_MIN_AMOUNT);
         BigInteger maxAmount = getBigIntegerFromEnvVar(NATIVE_SET_MAX_AMOUNT);
-        int maxWithdrawals = getBigIntegerFromEnvVar(NATIVE_SET_MAX_WITHDRAWALS).intValue();
+        int maxWithdrawals = getBigIntegerFromEnvVar(NATIVE_SET_MAX_WITHDRAWALS).intValueExact();
         BigInteger maxTotalDeposited = getBigIntegerFromEnvVar(NATIVE_SET_MAX_TOTAL_DEPOSITED);
         Account governor = getGovernorAccountFromEnv();
 

@@ -56,8 +56,8 @@ public class RegisterToken {
         BigInteger depositFee = getBigIntegerFromEnvVar(TOKEN_REGISTRATION_DEPOSIT_FEE);
         BigInteger minAmount = getBigIntegerFromEnvVar(TOKEN_REGISTRATION_MIN_AMOUNT);
         BigInteger maxAmount = getBigIntegerFromEnvVar(TOKEN_REGISTRATION_MAX_AMOUNT);
-        int maxWithdrawals = getBigIntegerFromEnvVar(TOKEN_REGISTRATION_MAX_WITHDRAWALS).intValue();
-        int decimalScalingFactor = getBigIntegerFromEnvVar(TOKEN_REGISTRATION_DECIMAL_SCALING_FACTOR).intValue();
+        int maxWithdrawals = getBigIntegerFromEnvVar(TOKEN_REGISTRATION_MAX_WITHDRAWALS).intValueExact();
+        int decimalScalingFactor = getBigIntegerFromEnvVar(TOKEN_REGISTRATION_DECIMAL_SCALING_FACTOR).intValueExact();
         Account governor = getGovernorAccountFromEnv();
 
         GasToken gasToken = new GasToken(neow3j);

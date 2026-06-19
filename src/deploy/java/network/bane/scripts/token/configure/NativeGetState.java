@@ -56,7 +56,7 @@ public class NativeGetState {
         System.out.printf("  max amount:             %s (%s $%s)\n", max, maxDecimal, tokenSymbol);
         System.out.printf("  max withdrawals:        %s\n", maxWithdrawals);
         System.out.printf("  max total deposited:    %s (%s $%s)\n", maxTotDeposited, maxTotDecimal, tokenSymbol);
-        System.out.printf("  native token:           %s\n", nativeToken);
+        System.out.printf("  native token:           %s\n", nativeToken.getScriptHash());
         System.out.printf("  decimal scaling factor: %s\n", nativeBridge.config.decimalScalingFactor);
     }
 

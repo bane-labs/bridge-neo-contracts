@@ -1,15 +1,12 @@
 package network.bane.scripts.message;
 
 import io.neow3j.contract.GasToken;
-import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
-import io.neow3j.transaction.Transaction;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
 import network.bane.client.MessageBridgeClient;
-import network.bane.client.interfaces.IWriteCaller;
 
 import java.math.BigInteger;
 
