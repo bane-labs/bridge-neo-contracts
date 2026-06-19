@@ -61,5 +61,7 @@ public interface IWriteCaller {
      * @throws Throwable if signing, sending, send-error handling, printing confirmation details, or awaiting execution
      *                   fails.
      */
-    Hash256 signSendAndAwait(PrintStream out) throws Throwable;
+    default Hash256 signSendAndAwait(PrintStream out) throws Throwable {
+        return signSendAndAwait();
+    }
 }
