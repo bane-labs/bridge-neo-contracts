@@ -33,7 +33,7 @@ import static network.bane.utils.env.EnvWallets.getPersonalAccountFromEnv;
  * - NATIVE_DEPOSIT_RECIPIENT_ON_EVM: The recipient address on the EVM chain as a Hash160 (e.g., 0x...)
  * - NATIVE_DEPOSIT_AMOUNT: The amount of native tokens to deposit as a BigInteger
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.token.DepositNative
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.token.DepositNative
  */
 public class DepositNative {
 

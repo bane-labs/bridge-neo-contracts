@@ -33,7 +33,7 @@ import static network.bane.utils.env.EnvWallets.getPersonalAccountFromEnv;
  * - TOKEN_DEPOSIT_AMOUNT: The amount of tokens to transfer
  * - TOKEN_DEPOSIT_RECIPIENT_ON_EVM: The recipient address on EVM to receive the tokens
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.token.TransferToken
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.token.TransferToken
  */
 public class TransferToken {
 

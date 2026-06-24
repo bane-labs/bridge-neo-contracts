@@ -40,7 +40,7 @@ public interface IWriteCaller {
     /**
      * Signs and sends the prepared transaction, waits until it is executed, and returns the transaction hash.
      * <p>
-     * Implementations should centralize send-error handling and block-awaiting logic so deploy and test scripts do not
+     * Implementations should centralize send-error handling and block-awaiting logic so ops and test code do not
      * need to repeat it for every write call.
      *
      * @return the transaction hash.
@@ -52,7 +52,7 @@ public interface IWriteCaller {
      * Signs and sends the prepared transaction, prints progress to the given stream, waits until it is executed, and
      * returns the transaction hash.
      * <p>
-     * This is intended for CLI/deploy scripts that want immediate feedback after the transaction was accepted by the
+     * This is intended for CLI/ops scripts that want immediate feedback after the transaction was accepted by the
      * RPC node and another message after block confirmation. Reusable client and test code should prefer the silent
      * {@link #signSendAndAwait()} overload unless it explicitly wants output.
      *

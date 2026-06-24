@@ -35,7 +35,7 @@ import static network.bane.utils.env.EnvWallets.getPersonalAccountFromEnv;
  * - MESSAGE_SEND_EXECUTABLE_MESSAGE: The message to send as a hex string.
  * - MESSAGE_SEND_EXECUTABLE_STORE_BOOL: Boolean indicating whether to store the result of the execution.
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.message.SendExecutableMessage
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.message.SendExecutableMessage
  */
 public class SendExecutableMessage {
 

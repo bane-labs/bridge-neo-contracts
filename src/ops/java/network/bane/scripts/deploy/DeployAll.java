@@ -45,7 +45,7 @@ import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
  * - BRIDGE_CONTRACT_NAME: The name of the Bridge contract
  * - MANAGEMENT_CONTRACT_NAME: The name of the Bridge Management contract
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.deploy.DeployAll
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.deploy.DeployAll
  */
 public class DeployAll {
 

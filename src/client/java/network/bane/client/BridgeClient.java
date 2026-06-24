@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Facade client for bridge contract interactions used by deploy scripts.
+ * Facade client for bridge contract interactions used by ops and test code.
  * <p>
  * This class composes general, native, and token operation modules while exposing one unified API.
  * Method names intentionally follow on-chain entry points in {@code BridgeContract}.

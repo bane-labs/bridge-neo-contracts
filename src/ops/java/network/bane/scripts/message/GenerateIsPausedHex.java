@@ -15,7 +15,7 @@ import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
  * This script generates the hex code that can be used as MESSAGE_SEND_EXECUTABLE_MESSAGE
  * to call the isPaused() method on the message bridge contract.
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.message.GenerateIsPausedHex
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.message.GenerateIsPausedHex
  */
 public class GenerateIsPausedHex {
 

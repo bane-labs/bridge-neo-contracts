@@ -43,7 +43,7 @@ import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
  * - NATIVE_SET_MAX_WITHDRAWALS: The maximum number of withdrawals allowed
  * - NATIVE_SET_MAX_TOTAL_DEPOSITED: The maximum total deposited amount allowed
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.token.SetNativeBridge
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.token.SetNativeBridge
  */
 public class SetNativeBridge {
 

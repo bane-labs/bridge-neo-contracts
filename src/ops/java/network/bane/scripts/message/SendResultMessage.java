@@ -33,7 +33,7 @@ import static network.bane.utils.env.EnvWallets.getPersonalAccountFromEnv;
  * - MESSAGE_BRIDGE_HASH: Hash of the deployed Message Bridge contract.
  * - MESSAGE_NONCE: The nonce of the message to send (as integer).
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.message.SendResultMessage
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.message.SendResultMessage
  */
 public class SendResultMessage {
 

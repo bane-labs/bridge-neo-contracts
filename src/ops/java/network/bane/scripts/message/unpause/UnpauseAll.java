@@ -25,7 +25,7 @@ import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
  * - WALLET_FILEPATH_GOVERNOR: the filepath to the governor wallet.
  * - WALLET_PASSWORD_GOVERNOR: the password for the governor wallet
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.message.unpause.UnpauseAll
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.message.unpause.UnpauseAll
  */
 public class UnpauseAll {
 

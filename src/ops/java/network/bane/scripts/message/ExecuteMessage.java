@@ -31,7 +31,7 @@ import static network.bane.utils.env.EnvWallets.getPersonalAccountFromEnv;
  * - MESSAGE_BRIDGE_HASH: Hash of the deployed message bridge contract
  * - MESSAGE_EXECUTE_NONCE: The nonce of the message to execute (as integer)
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.message.ExecuteMessage
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.message.ExecuteMessage
  */
 public class ExecuteMessage {
 

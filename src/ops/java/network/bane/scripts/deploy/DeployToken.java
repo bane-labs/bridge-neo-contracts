@@ -25,7 +25,7 @@ import static network.bane.utils.wallet.LoadWallet.getAccountFromWallet;
  * - TOKEN_DEPLOY_TOKEN_NAME: The name of the token to deploy
  * - TOKEN_DEPLOY_TOKEN_SYMBOL: The symbol of the token to deploy
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.deploy.DeployToken
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.deploy.DeployToken
  */
 public class DeployToken {
 

@@ -34,7 +34,7 @@ import static network.bane.utils.env.EnvWallets.getPersonalAccountFromEnv;
  * - MESSAGE_SEND_STORE_ONLY_MESSAGE: The message to send as a hex string or UTF-8 string. If the string is a valid
  * hex string, it will be interpreted as hex, otherwise as UTF-8.
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.message.SendStoreOnlyMessage
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.message.SendStoreOnlyMessage
  */
 public class SendStoreOnlyMessage {
 

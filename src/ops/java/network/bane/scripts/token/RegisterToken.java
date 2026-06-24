@@ -44,7 +44,7 @@ import static network.bane.utils.env.EnvWallets.getGovernorAccountFromEnv;
  * - TOKEN_REGISTRATION_MAX_WITHDRAWALS: The maximum number of withdrawals allowed
  * - TOKEN_REGISTRATION_DECIMAL_SCALING_FACTOR: The decimal scaling factor between N3 and EVM
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.token.RegisterToken
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.token.RegisterToken
  */
 public class RegisterToken {
 

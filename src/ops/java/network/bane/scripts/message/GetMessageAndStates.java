@@ -23,7 +23,7 @@ import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
  * - MESSAGE_BRIDGE_HASH: Hash of the deployed message bridge contract
  * - MESSAGE_NONCE: The nonce of the message to retrieve
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.message.GetMessageAndStates
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.message.GetMessageAndStates
  */
 
 public class GetMessageAndStates {

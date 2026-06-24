@@ -20,7 +20,7 @@ import static network.bane.utils.env.EnvVariables.getNeow3jFromEnv;
  * - N3_JSON_RPC: The RPC endpoint of the N3 node
  * - BRIDGE_HASH: Hash of the deployed bridge contract
  * <p>
- * Run with: gradle run -PmainClass=network.bane.scripts.token.GetRegisteredTokens
+ * Run with: ./gradlew runOps -PmainClass=network.bane.scripts.token.GetRegisteredTokens
  */
 public class GetRegisteredTokens {
 
