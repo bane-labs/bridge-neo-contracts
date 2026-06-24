@@ -124,6 +124,15 @@ tasks.withType(Test).configureEach {
     useJUnitPlatform()
 }
 
+/*
+ * `check` is provided by the Java plugin and already compiles/runs the standard main/test source sets.
+ * Explicitly include custom source sets so repository verification also catches client and ops compilation failures.
+ */
+tasks.named('check') {
+    dependsOn tasks.named('clientClasses')
+    dependsOn tasks.named('opsClasses')
+}
+
 neow3jCompiler {
     className = project.hasProperty('className') ? project.className : "network.bane.bridge.BridgeContract"
 }
@@ -131,7 +140,7 @@ neow3jCompiler {
 /*
  * Run an ops class:
  *
- * ./gradlew runOps -PmainClass=network.bane.ops.Deployment
+ * ./gradlew runOps -PmainClass=network.bane.scripts.deploy.DeployAll
  */
 tasks.register('runOps', JavaExec) {
     group = 'application'
