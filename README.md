@@ -22,7 +22,8 @@ This repository is used for the development of the Neo contracts for the bridge 
 
 ## Quickstart
 
-[Java 8](https://adoptium.net/) is required for compiling the smart contracts. The contracts are compiled as Java 8 class files and the neow3j compiler works from those class files. [Docker](https://www.docker.com/products/docker-desktop) is required for running smart contract tests.
+[Java 8](https://adoptium.net/) is required for compiling the smart contracts. The contracts are compiled as Java 8 class files and the neow3j compiler works from those class files.
+[Docker](https://www.docker.com/products/docker-desktop) is required for running smart contract tests.
 
 #### 1. **Clone this git repo:**
 
