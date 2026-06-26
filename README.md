@@ -22,7 +22,7 @@ This repository is used for the development of the Neo contracts for the bridge 
 
 ## Quickstart
 
-[Java 8](https://adoptium.net/) (or higher) is required.  
+[Java 8](https://adoptium.net/) is required for compiling the smart contracts. The contracts are compiled as Java 8 class files and the neow3j compiler works from those class files.
 [Docker](https://www.docker.com/products/docker-desktop) is required for running smart contract tests.
 
 #### 1. **Clone this git repo:**
@@ -83,12 +83,23 @@ drwxr-xr-x  7 user  wheel  224 23 Feb 17:40 ..
 
 - Run a local [Neo Express](https://github.com/neo-project/neo-express) instance. The project includes a Neo Express configuration file.
 - Fund Alice's account: `neoxp transfer 100 GAS genesis alice`
-- Go to the `network.bane.scripts.deploy.DeployAll` class and run it.
+- Run the deployment script:
+
+```bash
+./gradlew runOps -PmainClass=network.bane.scripts.deploy.DeployAll
+```
+
+## Project Layout
+
+- `src/contracts/java` contains smart contract code. Gradle wires this directory as the
+  `main` source set for compatibility with the neow3j Gradle plugin.
+- `src/client/java` contains off-chain client wrappers, DTOs, and helper code.
+- `src/ops/java` contains deployment, initialization, on-chain reads, transaction sending, and admin/governor scripts.
+- `src/test/java` contains tests. Tests can use the `client` source set.
 
 ## About
 
-Neow3j is a Java SDK and smart contract devpack that provides easy and reliable tools to build Neo dApps and Smart Contracts using the 
-Java platform (Java, Kotlin, Android).
+Neow3j is a Java SDK and smart contract devpack that provides easy and reliable tools to build Neo dApps and Smart Contracts using the Java platform (Java, Kotlin, Android).
 
 Check out [neow3j.io](https://neow3j.io) for more information on neow3j and the technical documentation.
 
