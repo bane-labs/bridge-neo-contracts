@@ -146,12 +146,9 @@ tasks.register('runOps', JavaExec) {
     group = 'application'
     description = 'Runs a class from the ops source set. Use -PmainClass=your.main.Class'
     classpath = sourceSets.ops.runtimeClasspath
-    doFirst {
-        if (!project.hasProperty('mainClass')) {
-            throw new GradleException(
-                    'The "mainClass" property is not specified. Please provide it using -PmainClass=your.main.Class'
-            )
-        }
-        mainClass = project.property('mainClass').toString()
+    if (project.hasProperty('mainClass')) {
+        mainClass.set(project.property('mainClass').toString())
+    } else {
+        throw new GradleException('The "mainClass" property is not specified. Please provide it using -PmainClass=your.main.Class')
     }
 }
