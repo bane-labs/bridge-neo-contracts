@@ -22,11 +22,9 @@ public class TestConstants {
 
     public static final BigInteger DEFAULT_LINKED_CHAIN_ID = BigInteger.valueOf(12345);
 
-    public static final Hash160 MANAGEMENT_CONTRACT_HASH = new Hash160("0x74eace325d73d7fa70c6b8772fabaac20a632706");
-    public static final Hash160 MESSAGE_BRIDGE_CONTRACT_HASH =
-            new Hash160("0xaa69a3d968239e8081e015680cdcbf7ef24326b5");
-    public static final Hash160 EXECUTION_MANAGER_CONTRACT_HASH =
-            new Hash160("0xd9af41a90950d2399dc2543b81368642ddd63761");
+    public static final Hash160 BRIDGE_MANAGEMENT_HASH = new Hash160("0x811b54303254b9fd558c783e692f7292d8749c84");
+    public static final Hash160 MESSAGE_BRIDGE_HASH = new Hash160("0xa3394936195c5910c04e26a16fea9d3ccbe03119");
+    public static final Hash160 EXECUTION_MANAGER_HASH = new Hash160("0x565429969f36311ed6a888e9231db4e8afa7d494");
     public static final Hash160 DUMMY_EXEC_MANAGER = new Hash160("0x5cd87a79046523454325a77827006ebfae27e05f");
 
     public static final BigInteger DEFAULT_DEPOSIT_FEE = new BigInteger("10000000");

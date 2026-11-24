@@ -4,12 +4,12 @@ import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.NefFile;
 import io.neow3j.protocol.ObjectMapperFactory;
 import io.neow3j.protocol.core.response.ContractManifest;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
 import io.neow3j.transaction.AccountSigner;
+import io.neow3j.transaction.TransactionSubmission;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.Hash160;
 import io.neow3j.wallet.Account;
@@ -107,12 +107,12 @@ public class TokenBridgeConfigTest {
         try (FileInputStream s = new FileInputStream(manifestFile)) {
             manifest = ObjectMapperFactory.getObjectMapper().readValue(s, ContractManifest.class);
         }
-        NeoSendRawTransaction response =
+        TransactionSubmission txSub =
                 new ContractManagement(ext.getNeow3j()).deploy(nefFile, manifest, hash160(owner))
                         .signers(AccountSigner.calledByEntry(owner))
                         .sign()
                         .send();
-        waitUntilTransactionIsExecuted(response.getSendRawTransaction().getHash(), ext.getNeow3j());
+        waitUntilTransactionIsExecuted(txSub.getSendRawTransaction().getHash(), ext.getNeow3j());
         return calcContractHash(owner.getScriptHash(), nefFile.getCheckSumAsInteger(), manifest.getName());
     }
 
@@ -125,7 +125,7 @@ public class TokenBridgeConfigTest {
         BigInteger initValueNeo = bridge.tokenDepositFee(neoN3NeoTokenHash);
         BigInteger initValueTestToken = bridge.tokenDepositFee(testTokenHash);
 
-        BigInteger newValueNeo = initValueNeo.add(gasToken.toFractions(new BigDecimal("0.1")));
+        BigInteger newValueNeo = initValueNeo.add(gasToken.toBaseUnits(new BigDecimal("0.1")));
 
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValueNeo);
@@ -143,8 +143,8 @@ public class TokenBridgeConfigTest {
         BigInteger initValueNeo = bridge.tokenDepositFee(neoN3NeoTokenHash);
         BigInteger initValueTestToken = bridge.tokenDepositFee(testTokenHash);
 
-        BigInteger newValueNeo = initValueNeo.add(gasToken.toFractions(new BigDecimal("0.005")));
-        BigInteger newValueTestToken = initValueTestToken.subtract(gasToken.toFractions(new BigDecimal("0.009")));
+        BigInteger newValueNeo = initValueNeo.add(gasToken.toBaseUnits(new BigDecimal("0.005")));
+        BigInteger newValueTestToken = initValueTestToken.subtract(gasToken.toBaseUnits(new BigDecimal("0.009")));
 
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValueNeo);
@@ -194,7 +194,7 @@ public class TokenBridgeConfigTest {
         BigInteger initValueNeo = bridge.minTokenDeposit(neoN3NeoTokenHash);
         BigInteger initValueTestToken = bridge.minTokenDeposit(testTokenHash);
 
-        BigInteger newValueNeo = initValueNeo.subtract(gasToken.toFractions(new BigDecimal("0.1")));
+        BigInteger newValueNeo = initValueNeo.subtract(gasToken.toBaseUnits(new BigDecimal("0.1")));
 
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValueNeo);
@@ -212,8 +212,8 @@ public class TokenBridgeConfigTest {
         BigInteger initValueNeo = bridge.minTokenDeposit(neoN3NeoTokenHash);
         BigInteger initValueTestToken = bridge.minTokenDeposit(testTokenHash);
 
-        BigInteger newValueNeo = initValueNeo.subtract(gasToken.toFractions(new BigDecimal("0.001")));
-        BigInteger newValueTestToken = initValueTestToken.subtract(gasToken.toFractions(new BigDecimal("0.002")));
+        BigInteger newValueNeo = initValueNeo.subtract(gasToken.toBaseUnits(new BigDecimal("0.001")));
+        BigInteger newValueTestToken = initValueTestToken.subtract(gasToken.toBaseUnits(new BigDecimal("0.002")));
 
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValueNeo);
@@ -283,7 +283,7 @@ public class TokenBridgeConfigTest {
         BigInteger initValueNeo = bridge.maxTokenDeposit(neoN3NeoTokenHash);
         BigInteger initValueTestToken = bridge.maxTokenDeposit(testTokenHash);
 
-        BigInteger newValueNeo = initValueNeo.add(gasToken.toFractions(new BigDecimal("0.1")));
+        BigInteger newValueNeo = initValueNeo.add(gasToken.toBaseUnits(new BigDecimal("0.1")));
 
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValueNeo);
@@ -301,8 +301,8 @@ public class TokenBridgeConfigTest {
         BigInteger initValueNeo = bridge.maxTokenDeposit(neoN3NeoTokenHash);
         BigInteger initValueTestToken = bridge.maxTokenDeposit(testTokenHash);
 
-        BigInteger newValueNeo = initValueNeo.add(gasToken.toFractions(new BigDecimal("0.001")));
-        BigInteger newValueTestToken = initValueTestToken.subtract(gasToken.toFractions(new BigDecimal("0.002")));
+        BigInteger newValueNeo = initValueNeo.add(gasToken.toBaseUnits(new BigDecimal("0.001")));
+        BigInteger newValueTestToken = initValueTestToken.subtract(gasToken.toBaseUnits(new BigDecimal("0.002")));
 
         HashMap<Hash160, BigInteger> newValues = new HashMap<>();
         newValues.put(neoN3NeoTokenHash, newValueNeo);

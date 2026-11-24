@@ -52,9 +52,9 @@ import static network.bane.support.TestConstants.validator5PubKey;
 import static network.bane.support.TestConstants.validator6PubKey;
 import static network.bane.support.TestConstants.validator7PubKey;
 import static network.bane.support.TestConstants.DEFAULT_LINKED_CHAIN_ID;
-import static network.bane.support.TestConstants.EXECUTION_MANAGER_CONTRACT_HASH;
-import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
-import static network.bane.support.TestConstants.MESSAGE_BRIDGE_CONTRACT_HASH;
+import static network.bane.support.TestConstants.EXECUTION_MANAGER_HASH;
+import static network.bane.support.TestConstants.BRIDGE_MANAGEMENT_HASH;
+import static network.bane.support.TestConstants.MESSAGE_BRIDGE_HASH;
 import static network.bane.support.NetworkSettingsHelper.updateNetworkSettings;
 
 public class TestEnvironment {
@@ -186,7 +186,7 @@ public class TestEnvironment {
         config.setDeployParam(
                 prepareBridgeDeployParameter(
                         DEFAULT_LINKED_CHAIN_ID,
-                        MANAGEMENT_CONTRACT_HASH
+                        BRIDGE_MANAGEMENT_HASH
                 )
         );
         AccountSigner deploySigner = AccountSigner.none(owner);
@@ -203,8 +203,8 @@ public class TestEnvironment {
         config.setDeployParam(
                 prepareMessageBridgeDeployParameter(
                         DEFAULT_LINKED_CHAIN_ID,
-                        MANAGEMENT_CONTRACT_HASH,
-                        EXECUTION_MANAGER_CONTRACT_HASH
+                        BRIDGE_MANAGEMENT_HASH,
+                        EXECUTION_MANAGER_HASH
                 )
         );
         config.setSigner(AccountSigner.none(owner));
@@ -224,8 +224,8 @@ public class TestEnvironment {
         DeployConfiguration config = new DeployConfiguration();
         config.setDeployParam(
                 prepareExecutionManagerDeployParameter(
-                        MANAGEMENT_CONTRACT_HASH,
-                        MESSAGE_BRIDGE_CONTRACT_HASH
+                        BRIDGE_MANAGEMENT_HASH,
+                        MESSAGE_BRIDGE_HASH
                 )
         );
         AccountSigner deploySigner = AccountSigner.none(owner);
@@ -250,7 +250,7 @@ public class TestEnvironment {
     }
 
     public static void registerNeoTokenBridge() throws Throwable {
-        BigInteger fee = gasToken.toFractions(new BigDecimal("0.1"));
+        BigInteger fee = gasToken.toBaseUnits(new BigDecimal("0.1"));
         BigInteger minAmount = BigInteger.ONE;
         BigInteger maxAmount = new BigInteger("1000");
         int maxWithdrawals = 100;

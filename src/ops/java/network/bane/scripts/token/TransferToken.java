@@ -2,8 +2,8 @@ package network.bane.scripts.token;
 
 import io.neow3j.contract.FungibleToken;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.transaction.Transaction;
+import io.neow3j.transaction.TransactionSubmission;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.wallet.Account;
@@ -52,18 +52,18 @@ public class TransferToken {
         printSender(from);
         System.out.println("From:   " + from.toAddress());
         System.out.println("To:     " + to);
-        System.out.printf("Amount: %s (%s %s)%n", amount, token.toDecimals(amount), token.getSymbol());
+        System.out.printf("Amount: %s (%s %s)%n", amount, token.fromBaseUnits(amount), token.getSymbol());
 
         Transaction tx = token.transfer(from, to, amount)
                 .signers(calledByEntry(personalAccount))
                 .sign();
 
-        NeoSendRawTransaction rawTx = tx.send();
-        if (rawTx.hasError()) {
-            throw new Exception("Error transferring token: " + rawTx.getError().getMessage());
+        TransactionSubmission txSubmission = tx.send();
+        if (txSubmission.hasError()) {
+            throw new Exception("Error transferring token: " + txSubmission.getError().getMessage());
         }
 
-        Hash256 txHash = rawTx.getSendRawTransaction().getHash();
+        Hash256 txHash = txSubmission.getSendRawTransaction().getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
         System.out.println("Token transferred successfully");
         System.out.println("Transaction hash: " + txHash);

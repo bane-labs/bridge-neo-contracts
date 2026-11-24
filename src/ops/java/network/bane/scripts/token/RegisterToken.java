@@ -77,12 +77,12 @@ public class RegisterToken {
         printSender(governor.getScriptHash());
         System.out.println("Token:                  " + tokenHashOnN3);
         System.out.println("Token on EVM:           " + config.tokenOnDestination);
-        System.out.printf("Deposit Fee:            %s (%s %s)%n", config.fee, gasToken.toDecimals(config.fee),
+        System.out.printf("Deposit Fee:            %s (%s %s)%n", config.fee, gasToken.fromBaseUnits(config.fee),
                 gasToken.getSymbol());
-        System.out.printf("Min Amount:             %s (%s %s)%n", config.minAmount, token.toDecimals(config.minAmount),
-                token.getSymbol());
-        System.out.printf("Max Amount:             %s (%s %s)%n", config.maxAmount, token.toDecimals(config.maxAmount),
-                token.getSymbol());
+        System.out.printf("Min Amount:             %s (%s %s)%n", config.minAmount,
+                token.fromBaseUnits(config.minAmount), token.getSymbol());
+        System.out.printf("Max Amount:             %s (%s %s)%n", config.maxAmount,
+                token.fromBaseUnits(config.maxAmount), token.getSymbol());
         System.out.println("Max Withdrawals:        " + config.maxWithdrawals);
         System.out.println("Decimal Scaling Factor: " + config.decimalScalingFactor);
 

@@ -3,13 +3,13 @@ package network.bane.message;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
+import io.neow3j.transaction.TransactionSubmission;
 import io.neow3j.types.CallFlags;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
@@ -20,7 +20,6 @@ import network.bane.dto.message.MessageEnvelope;
 import network.bane.dto.message.interfaces.IMetadataSerializer;
 import network.bane.management.BridgeManagementContract;
 import network.bane.messageexecution.ExecutionManagerContract;
-import network.bane.testhelper.TestContract;
 import network.bane.testhelper.TestMessageSenderContract;
 import network.bane.support.event.MessageBridgeEventHelper;
 import network.bane.dto.message.N3Message;
@@ -64,8 +63,8 @@ import static network.bane.support.TestConstants.validator2;
 import static network.bane.support.TestConstants.validator3;
 import static network.bane.support.TestConstants.validator4;
 import static network.bane.support.TestConstants.validator5;
-import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
-import static network.bane.support.TestConstants.MESSAGE_BRIDGE_CONTRACT_HASH;
+import static network.bane.support.TestConstants.BRIDGE_MANAGEMENT_HASH;
+import static network.bane.support.TestConstants.MESSAGE_BRIDGE_HASH;
 import static network.bane.support.io.PrintHelper.printTransactionFee;
 import static network.bane.support.TestEnvironment.alice;
 import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
@@ -80,9 +79,7 @@ import static network.bane.support.TestEnvironment.neow3j;
 import static network.bane.support.TestEnvironment.setup;
 import static network.bane.support.TestEnvironment.setupExecutionManager;
 import static network.bane.support.TestEnvironment.setupMessageBridge;
-import static network.bane.support.TestEnvironment.setupTestContract;
 import static network.bane.support.TestEnvironment.setupTestMessageSender;
-import static network.bane.support.TestEnvironment.testContract;
 import static network.bane.support.TestEnvironment.testMessageSender;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -97,8 +94,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ContractTest(
         blockTime = 1,
-        contracts = {BridgeManagementContract.class, MessageBridgeContract.class, TestContract.class,
-                TestMessageSenderContract.class, ExecutionManagerContract.class},
+        contracts = {BridgeManagementContract.class, MessageBridgeContract.class, TestMessageSenderContract.class,
+                ExecutionManagerContract.class},
         batchFile = "setup.batch"
 )
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -114,7 +111,6 @@ public class MessageSyncTest {
     public static void setUp() throws Throwable {
         setup(ext);
         setupMessageBridge(ext);
-        setupTestContract(ext);
         setupTestMessageSender(ext);
         setupExecutionManager(ext);
 
@@ -122,13 +118,13 @@ public class MessageSyncTest {
 
         // This test requires the constant MESSAGE_BRIDGE_CONTRACT_HASH to be set correctly. The execution manager
         // requires the contract address at deployment time, so we cannot change it later.
-        if (!messageBridge.getScriptHash().equals(MESSAGE_BRIDGE_CONTRACT_HASH)) {
+        if (!messageBridge.getScriptHash().equals(MESSAGE_BRIDGE_HASH)) {
             throw new RuntimeException(format("The message bridge contract hash is not set correctly. Update the " +
                     "script hash to 0x%s.", messageBridge.getScriptHash()));
         }
         // This test requires the constant MANAGEMENT_CONTRACT_HASH to be set correctly. The execution manager
         // requires the contract address at deployment time, so we cannot change it later.
-        if (!MANAGEMENT_CONTRACT_HASH.equals(management.getScriptHash())) {
+        if (!BRIDGE_MANAGEMENT_HASH.equals(management.getScriptHash())) {
             throw new RuntimeException(format("The management contract hash is not set correctly. Update the script " +
                     "hash to 0x%s.", management.getScriptHash()));
         }
@@ -167,6 +163,7 @@ public class MessageSyncTest {
         BigInteger nonce = BigInteger.ONE;
         BigInteger timestamp = new BigInteger("1753000000");
         Hash160 sender = new Hash160("0x69ecca587293047be4c59159bf8bc399985c160d");
+        Hash160 testContract = new Hash160("0xcbf1e9d3851e2437d2e8ea68772065c558e31814");
         byte[] msgBytes = messageBridge.serializeCall(testContract, "store", CallFlags.WRITE_STATES,
                 asList(integer(nonce), integer(timestamp)));
         assertThat(toHexStringNoPrefix(msgBytes),
@@ -501,11 +498,11 @@ public class MessageSyncTest {
     @Order(3)
     public void test_sendMessage_3_result() throws Throwable {
         BigInteger sponsorAmount = BigInteger.valueOf(1000000);
-        NeoSendRawTransaction sponsorRawTx = gasToken.transfer(alice, messageBridge.getScriptHash(), sponsorAmount)
+        TransactionSubmission sponsorTxSub = gasToken.transfer(alice, messageBridge.getScriptHash(), sponsorAmount)
                 .signers(global(alice)).sign().send();
 
-        assertFalse(sponsorRawTx.hasError());
-        waitUntilTransactionIsExecuted(sponsorRawTx.getSendRawTransaction().getHash(), neow3j);
+        assertFalse(sponsorTxSub.hasError());
+        waitUntilTransactionIsExecuted(sponsorTxSub.getSendRawTransaction().getHash(), neow3j);
 
         BigInteger messageBridgeGasBalance = gasToken.getBalanceOf(messageBridge.getScriptHash());
         // Create a function to fetch the current balance of the message bridge contract. Then, return it.

@@ -3,8 +3,8 @@ package network.bane.utils.deployment;
 import io.neow3j.compiler.CompilationUnit;
 import io.neow3j.contract.ContractManagement;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.transaction.Transaction;
+import io.neow3j.transaction.TransactionSubmission;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -22,17 +22,17 @@ public class TokenDeployment {
                 .deploy(compUnit.getNefFile(), compUnit.getManifest(), data)
                 .signers(none(deployerAccount))
                 .sign();
-        NeoSendRawTransaction rawTxResponse = tx.send();
-        if (rawTxResponse.hasError()) {
-            throw new Exception("Error deploying contract: " + rawTxResponse.getError().getMessage());
+        TransactionSubmission txSub = tx.send();
+        if (txSub.hasError()) {
+            throw new Exception("Error deploying contract: " + txSub.getError().getMessage());
         }
-        Hash256 txHash = rawTxResponse.getSendRawTransaction().getHash();
+        Hash256 txHash = txSub.getSendRawTransaction().getHash();
 
         waitUntilTransactionIsExecuted(txHash, neow3j);
         System.out.println("Contract deployed successfully.");
         System.out.println("Transaction hash: " + txHash);
 
-        Hash160 tokenHash = tx.getApplicationLog().getFirstExecution().getFirstNotification().getContract();
+        Hash160 tokenHash = txSub.getApplicationLog().getFirstExecution().getFirstNotification().getContract();
         System.out.println("Contract hash: " + tokenHash);
     }
 

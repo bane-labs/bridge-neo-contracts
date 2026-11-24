@@ -1,6 +1,7 @@
 package network.bane.scripts.message;
 
 import io.neow3j.contract.GasToken;
+import io.neow3j.contract.Token;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.types.Hash160;
@@ -55,7 +56,7 @@ public class SendStoreOnlyMessage {
 
         // Get the current sending fee
         BigInteger sendingFee = messageBridge.sendingFee();
-        System.out.printf("Sending Fee: %s GAS%n", GasToken.toDecimals(sendingFee, 8));
+        System.out.printf("Sending Fee: %s GAS%n", Token.fromBaseUnits(sendingFee, GasToken.DECIMALS));
 
         Hash256 txHash = messageBridge.sendStoreOnlyMessage(messageData, personalScriptHash, sendingFee)
                 .withSigners(none(personalAccount).setAllowedContracts(GasToken.SCRIPT_HASH))

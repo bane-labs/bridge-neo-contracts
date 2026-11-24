@@ -27,7 +27,7 @@ public class NativeSetMaxTotalDeposited {
         FungibleToken token = new FungibleToken(bridge.nativeToken(), neow3j);
 
         System.out.println("Setting native max total deposited...");
-        System.out.printf("New value: %s (%s $%s)%n", maxTotalDeposited, token.toDecimals(maxTotalDeposited),
+        System.out.printf("New value: %s (%s $%s)%n", maxTotalDeposited, token.fromBaseUnits(maxTotalDeposited),
                 token.getSymbol());
         printNetwork(neow3j);
         printSender(governor.getScriptHash());
@@ -37,7 +37,7 @@ public class NativeSetMaxTotalDeposited {
 
         System.out.println("Native max total deposited set successfully");
         System.out.printf("New native max total deposited: %s $%s%n",
-                token.toDecimals(bridge.maxTotalDepositedNative()), token.getSymbol());
+                token.fromBaseUnits(bridge.maxTotalDepositedNative()), token.getSymbol());
     }
 
 }

@@ -25,19 +25,19 @@ public class NativeGetState {
 
         GasToken gasToken = new GasToken(neow3j);
         BigInteger fee = bridge.nativeDepositFee();
-        BigDecimal feeDecimal = gasToken.toDecimals(fee);
+        BigDecimal feeDecimal = gasToken.fromBaseUnits(fee);
 
         FungibleToken nativeToken = new FungibleToken(bridge.nativeToken(), neow3j);
         NativeBridge nativeBridge = bridge.getNativeBridge();
         String tokenSymbol = nativeToken.getSymbol();
         BigInteger totDeposited = nativeBridge.totalDeposited;
-        BigDecimal totDepositedDecimal = nativeToken.toDecimals(totDeposited);
+        BigDecimal totDepositedDecimal = nativeToken.fromBaseUnits(totDeposited);
         BigInteger min = bridge.minNativeDeposit();
-        BigDecimal minDecimal = nativeToken.toDecimals(min);
+        BigDecimal minDecimal = nativeToken.fromBaseUnits(min);
         BigInteger max = bridge.maxNativeDeposit();
-        BigDecimal maxDecimal = nativeToken.toDecimals(max);
+        BigDecimal maxDecimal = nativeToken.fromBaseUnits(max);
         BigInteger maxTotDeposited = bridge.maxTotalDepositedNative();
-        BigDecimal maxTotDecimal = nativeToken.toDecimals(maxTotDeposited);
+        BigDecimal maxTotDecimal = nativeToken.fromBaseUnits(maxTotDeposited);
         int maxWithdrawals = nativeBridge.config.maxWithdrawals;
 
         System.out.println();

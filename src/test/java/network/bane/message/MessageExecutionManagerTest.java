@@ -53,8 +53,8 @@ import static network.bane.support.TestConstants.governor;
 import static network.bane.support.TestConstants.owner;
 import static network.bane.support.TestConstants.relayer;
 import static network.bane.support.TestConstants.securityGuard;
-import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
-import static network.bane.support.TestConstants.MESSAGE_BRIDGE_CONTRACT_HASH;
+import static network.bane.support.TestConstants.BRIDGE_MANAGEMENT_HASH;
+import static network.bane.support.TestConstants.MESSAGE_BRIDGE_HASH;
 import static network.bane.support.TestEnvironment.alice;
 import static network.bane.support.TestEnvironment.bob;
 import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
@@ -102,13 +102,13 @@ public class MessageExecutionManagerTest {
 
         // This test requires the constant MESSAGE_BRIDGE_CONTRACT_HASH to be set correctly. The execution manager
         // requires the contract address at deployment time, so we cannot change it later.
-        if (!messageBridge.getScriptHash().equals(MESSAGE_BRIDGE_CONTRACT_HASH)) {
+        if (!messageBridge.getScriptHash().equals(MESSAGE_BRIDGE_HASH)) {
             throw new RuntimeException(format("The message bridge contract hash is not set correctly. Update the " +
                     "script hash to 0x%s.", messageBridge.getScriptHash()));
         }
         // This test requires the constant MANAGEMENT_CONTRACT_HASH to be set correctly. The execution manager
         // requires the contract address at deployment time, so we cannot change it later.
-        if (!MANAGEMENT_CONTRACT_HASH.equals(management.getScriptHash())) {
+        if (!BRIDGE_MANAGEMENT_HASH.equals(management.getScriptHash())) {
             throw new RuntimeException(format("The management contract hash is not set correctly. Update the script " +
                     "hash to 0x%s.", management.getScriptHash()));
         }
@@ -267,7 +267,7 @@ public class MessageExecutionManagerTest {
         BigInteger nonce = messageBridge.storeMessageAndGetNonce(relayer, new byte[]{0x03, 0x04, 0x05});
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> messageBridge.executeMessage(alice, nonce));
-        assertThat(thrown.getMessage(), containsString("invalid format"));
+        assertThat(thrown.getMessage(), containsString("Invalid StackItemType"));
     }
 
     /**

@@ -41,7 +41,7 @@ public class TokenSetMinAmount {
         printNetwork(neow3j);
         printSender(governor.getScriptHash());
         System.out.println("Token:     " + tokenHash);
-        System.out.printf("New value: %s (%s $%s)%n", minDepositAmount, token.toDecimals(minDepositAmount),
+        System.out.printf("New value: %s (%s $%s)%n", minDepositAmount, token.fromBaseUnits(minDepositAmount),
                 token.getSymbol());
 
         HashMap<Hash160, BigInteger> minAmountMap = new HashMap<>();
@@ -50,7 +50,7 @@ public class TokenSetMinAmount {
         bridge.setMinTokenDeposit(minAmountMap).withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         System.out.printf("\nMin token deposit set successfully for token %s (%s)\n", token.getSymbol(), tokenHash);
-        System.out.printf("New min deposit: %s $%s%n", token.toDecimals(bridge.minTokenDeposit(tokenHash)),
+        System.out.printf("New min deposit: %s $%s%n", token.fromBaseUnits(bridge.minTokenDeposit(tokenHash)),
                 token.getSymbol());
     }
 

@@ -33,7 +33,7 @@ public class NativeSetMinAmount {
         FungibleToken nativeToken = new FungibleToken(bridge.nativeToken(), neow3j);
 
         System.out.println("Setting native min deposit amount...");
-        System.out.printf("New value: %s (%s $%s)%n", minDepositAmount, nativeToken.toDecimals(minDepositAmount),
+        System.out.printf("New value: %s (%s $%s)%n", minDepositAmount, nativeToken.fromBaseUnits(minDepositAmount),
                 nativeToken.getSymbol());
         printNetwork(neow3j);
         printSender(governor.getScriptHash());
@@ -41,7 +41,7 @@ public class NativeSetMinAmount {
         bridge.setMinNativeDeposit(minDepositAmount).withSigners(calledByEntry(governor)).signSendAndAwait(System.out);
 
         System.out.println("Min native deposit set successfully");
-        System.out.printf("New min deposit: %s $%s%n", nativeToken.toDecimals(bridge.minNativeDeposit()),
+        System.out.printf("New min deposit: %s $%s%n", nativeToken.fromBaseUnits(bridge.minNativeDeposit()),
                 nativeToken.getSymbol());
     }
 

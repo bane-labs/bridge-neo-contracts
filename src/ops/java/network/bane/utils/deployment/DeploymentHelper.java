@@ -7,10 +7,10 @@ import io.neow3j.contract.SmartContract;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.ContractState;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.response.Notification;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Transaction;
+import io.neow3j.transaction.TransactionSubmission;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -41,12 +41,12 @@ public class DeploymentHelper {
         BigDecimal totalFee = new BigDecimal(tx.getNetworkFee() + tx.getSystemFee());
         System.out.printf("💰 Fee of $GAS %s for deployment transaction of %s contract%n",
                 totalFee.divide(BigDecimal.valueOf(100_000_000)), manifest.getName());
-        NeoSendRawTransaction response = tx.send();
-        if (response.hasError()) {
-            throw new Exception("Sent transaction resulted in an error: " + response.getError().getMessage());
+        TransactionSubmission txSub = tx.send();
+        if (txSub.hasError()) {
+            throw new Exception("Sent transaction resulted in an error: " + txSub.getError().getMessage());
         }
         System.out.println("⏳ Deployment transaction sent - waiting for confirmation...");
-        Hash256 txHash = response.getSendRawTransaction().getHash();
+        Hash256 txHash = txSub.getSendRawTransaction().getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
         System.out.println("☑️ Transaction " + txHash + " executed");
         return txHash;

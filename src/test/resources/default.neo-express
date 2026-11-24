@@ -383,6 +383,9 @@
     "rpc.MaxGasInvoke": "100000",
     "rpc.MaxFee": "0.2",
     "rpc.BindAddress": "0.0.0.0",
-    "chain.SecondsPerBlock": "1"
+    "protocol.MillisecondsPerBlock": "1000",
+    "policy.NetworkFeePerByte": "20",
+    "policy.StorageFeeFactor": "1000",
+    "policy.ExecutionFeeFactor": "100000"
   }
 }
