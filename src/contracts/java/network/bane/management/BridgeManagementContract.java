@@ -8,8 +8,6 @@ import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
 import io.neow3j.devpack.Runtime;
-import io.neow3j.devpack.Storage;
-import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
 import io.neow3j.devpack.annotations.EventParameterNames;
@@ -39,12 +37,10 @@ import static io.neow3j.devpack.Runtime.checkWitness;
         @ManifestExtra(key = "Source", value = "https://github.com/bane-labs/bridge-neo-contracts")})
 public class BridgeManagementContract {
 
-    private static final StorageContext ctx = Storage.getStorageContext();
-
     private static final byte prefix_base = 0x0a;
-    static final StorageMap baseMap = new StorageMap(ctx, prefix_base);
+    static final StorageMap baseMap = new StorageMap(prefix_base);
     private static final byte prefix_validator = 0x0b;
-    static final StorageMap validatorMap = new StorageMap(ctx, prefix_validator);
+    static final StorageMap validatorMap = new StorageMap(prefix_validator);
 
     private static final int key_owner = 0x00;
     private static final int key_relayer = 0x01;

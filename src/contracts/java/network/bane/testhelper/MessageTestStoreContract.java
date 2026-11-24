@@ -3,8 +3,6 @@ package network.bane.testhelper;
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.Runtime;
-import io.neow3j.devpack.Storage;
-import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.CallFlags;
 import io.neow3j.devpack.annotations.DisplayName;
@@ -27,10 +25,9 @@ public class MessageTestStoreContract {
 
     private static final int KEY_MESSAGE_BRIDGE = 0x02;
 
-    private static final StorageContext ctx = Storage.getStorageContext();
-    private static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
-    private static final StorageMap storeMap = new StorageMap(ctx, PREFIX_STORING);
-    private static final StorageMap metadataMap = new StorageMap(ctx, PREFIX_METADATA);
+    private static final StorageMap baseMap = new StorageMap(PREFIX_BASE);
+    private static final StorageMap storeMap = new StorageMap(PREFIX_STORING);
+    private static final StorageMap metadataMap = new StorageMap(PREFIX_METADATA);
 
     public static void setMessageBridge(Hash160 messageBridgeHash) {
         baseMap.put(KEY_MESSAGE_BRIDGE, messageBridgeHash);

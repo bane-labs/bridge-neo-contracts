@@ -17,11 +17,11 @@ public class TestContract {
     }
 
     public static void store(int key, int value) {
-        Storage.put(Storage.getStorageContext(), key, value);
+        Storage.put(key, value);
     }
 
     public static ByteString get(int key) {
-        return Storage.get(Storage.getStorageContext(), key);
+        return Storage.get(key);
     }
 
 }

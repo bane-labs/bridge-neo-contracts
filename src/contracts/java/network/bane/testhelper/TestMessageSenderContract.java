@@ -13,11 +13,11 @@ public class TestMessageSenderContract {
     private static final byte KEY_MESSAGE_BRIDGE = 0x01;
 
     public static void setMessageBridge(Hash160 messageBridge) {
-        Storage.put(Storage.getStorageContext(), KEY_MESSAGE_BRIDGE, messageBridge);
+        Storage.put(KEY_MESSAGE_BRIDGE, messageBridge);
     }
 
     private static IMessageBridge getMessageBridge() {
-        return new IMessageBridge(Storage.getHash160(Storage.getStorageContext(), KEY_MESSAGE_BRIDGE));
+        return new IMessageBridge(Storage.getHash160(KEY_MESSAGE_BRIDGE));
     }
 
     public static int sendExecutableMessage(ByteString rawMessage, boolean storeResult, Hash160 feeSponsor,

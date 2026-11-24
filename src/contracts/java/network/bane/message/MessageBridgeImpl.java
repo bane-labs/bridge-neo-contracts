@@ -158,9 +158,9 @@ class MessageBridgeImpl {
     }
 
     private static void storeMessagesToContractStorage(List<NeoMessageEnvelope> messages, int expirationTime) {
-        StorageMap messageMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_MESSAGES);
-        StorageMap msgExecStateMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTABLE_STATE);
-        StorageMap resultEvmExecMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT_EVM_EXEC);
+        StorageMap messageMap = new StorageMap(PREFIX_MSG_MESSAGES);
+        StorageMap msgExecStateMap = new StorageMap(PREFIX_MSG_EXECUTABLE_STATE);
+        StorageMap resultEvmExecMap = new StorageMap(PREFIX_MSG_RESULT_EVM_EXEC);
         int nrMessages = messages.size();
         StdLib stdLib = new StdLib();
         ByteString execState = stdLib.serialize(new ExecutableState(false, expirationTime));
@@ -196,9 +196,7 @@ class MessageBridgeImpl {
     }
 
     static NeoMessage getMessage(int nonce) {
-        return (NeoMessage) new StdLib().deserialize(
-                new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_MESSAGES).get(nonce)
-        );
+        return (NeoMessage) new StdLib().deserialize(new StorageMap(PREFIX_MSG_MESSAGES).get(nonce));
     }
 
     static NeoMessage.NeoMetadata getMetadata(int nonce) {
@@ -210,8 +208,7 @@ class MessageBridgeImpl {
     }
 
     static ExecutableState getExecutableState(int nonce) throws Exception {
-        ByteString state = new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_EXECUTABLE_STATE)
-                .get(nonce);
+        ByteString state = new StorageMap(PREFIX_MSG_EXECUTABLE_STATE).get(nonce);
         if (state == null) {
             throw new Exception("Executable state not found");
         }
@@ -237,7 +234,7 @@ class MessageBridgeImpl {
         ByteString serializedResult = new StdLib().serialize(result);
 
         if (metadata.storeResult) {
-            new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_RESULT_NEO_EXEC).put(nonce, serializedResult);
+            new StorageMap(PREFIX_MSG_RESULT_NEO_EXEC).put(nonce, serializedResult);
         }
 
         // The max message size is used as the max byte size for results in a single event.
@@ -283,7 +280,7 @@ class MessageBridgeImpl {
     }
 
     private static void checkExecutableStateAndMarkExecuted(int nonce) {
-        StorageMap executableStateMap = new StorageMap(MessageBridgeContract.ctx, PREFIX_MSG_EXECUTABLE_STATE);
+        StorageMap executableStateMap = new StorageMap(PREFIX_MSG_EXECUTABLE_STATE);
         ByteString state = executableStateMap.get(nonce);
         if (state == null) {
             abort("Execution state not found");
@@ -357,13 +354,11 @@ class MessageBridgeImpl {
     }
 
     static ByteString getSerializedNeoExecutionResult(int relatedMessageNonce) {
-        return new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_RESULT_NEO_EXEC)
-                .get(relatedMessageNonce);
+        return new StorageMap(PREFIX_MSG_RESULT_NEO_EXEC).get(relatedMessageNonce);
     }
 
     static int getEvmExecutionResultNonce(int relatedMessageNonce) {
-        return new StorageMap(MessageBridgeContract.ctx.asReadOnly(), PREFIX_MSG_RESULT_EVM_EXEC)
-                .getIntOrZero(relatedMessageNonce);
+        return new StorageMap(PREFIX_MSG_RESULT_EVM_EXEC).getIntOrZero(relatedMessageNonce);
     }
 
     static ByteString getEvmExecutionResult(int relatedMessageNonce) {

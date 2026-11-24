@@ -7,8 +7,6 @@ import io.neow3j.devpack.Helper;
 import io.neow3j.devpack.Iterator;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
-import io.neow3j.devpack.Storage;
-import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
 import io.neow3j.devpack.annotations.EventParameterNames;
@@ -83,12 +81,11 @@ public class BridgeContract {
 
     // region static contract values
 
-    static final StorageContext ctx = Storage.getStorageContext();
     static final CryptoLib cryptoLib = new CryptoLib();
 
     // baseMap is used to store native-related state and general contract information, i.e., management contract and
     // pause status.
-    static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
+    static final StorageMap baseMap = new StorageMap(PREFIX_BASE);
 
     // endregion
     // region events
@@ -354,7 +351,7 @@ public class BridgeContract {
                 abort("No data accepted");
             }
             return;
-        } else if (new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(callingScriptHash) != null) {
+        } else if (new StorageMap(PREFIX_TOKEN_BRIDGES).get(callingScriptHash) != null) {
             if (data != null) {
                 abort("No data accepted");
             }
@@ -784,8 +781,8 @@ public class BridgeContract {
 
     /**
      * Checks if a withdrawal of the linked chain's token with the provided nonce is claimable, i.e., the recipient
-     * is a contract or the token transfer has failed (this should never happen as long as the deposited funds are
-     * held in this contract).
+     * is a contract or the token transfer has failed. (This should never happen as long as the deposited funds are
+     * held in this contract.)
      *
      * @param token the token.
      * @param nonce the nonce of the withdrawal.
@@ -808,7 +805,7 @@ public class BridgeContract {
     public static void setTokenDepositFee(Map<Hash160, Integer> newDepositFees) {
         onlyGovernor();
         Hash160[] tokens = newDepositFees.keys();
-        StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
+        StorageMap tokenBridgesMap = new StorageMap(PREFIX_TOKEN_BRIDGES);
         for (Hash160 token : tokens) {
             Integer newFee = newDepositFees.get(token);
             TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
@@ -826,7 +823,7 @@ public class BridgeContract {
     public static void setMinTokenDeposit(Map<Hash160, Integer> newMinDeposits) {
         onlyGovernor();
         Hash160[] tokens = newMinDeposits.keys();
-        StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
+        StorageMap tokenBridgesMap = new StorageMap(PREFIX_TOKEN_BRIDGES);
         for (Hash160 token : tokens) {
             Integer newMin = newMinDeposits.get(token);
             TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
@@ -847,7 +844,7 @@ public class BridgeContract {
     public static void setMaxTokenDeposit(Map<Hash160, Integer> newMaxDeposits) {
         onlyGovernor();
         Hash160[] tokens = newMaxDeposits.keys();
-        StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
+        StorageMap tokenBridgesMap = new StorageMap(PREFIX_TOKEN_BRIDGES);
         for (Hash160 token : tokens) {
             Integer newMax = newMaxDeposits.get(token);
             TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);
@@ -868,7 +865,7 @@ public class BridgeContract {
     public static void setMaxTokenWithdrawals(Map<Hash160, Integer> newMaxWithdrawals) {
         onlyGovernor();
         Hash160[] tokens = newMaxWithdrawals.keys();
-        StorageMap tokenBridgesMap = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
+        StorageMap tokenBridgesMap = new StorageMap(PREFIX_TOKEN_BRIDGES);
         for (Hash160 token : tokens) {
             Integer newMax = newMaxWithdrawals.get(token);
             TokenBridge tokenBridge = TokenBridgeImpl.checkRegisteredAndGetTokenBridge(token);

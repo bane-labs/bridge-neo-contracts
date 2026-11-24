@@ -33,7 +33,7 @@ public class TokenBridgeImpl {
     static void registerToken(Hash160 token, TokenBridge.TokenConfig tokenConfig) {
         if (token == null || !Hash160.isValid(token) || token.isZero()) abort("Invalid token");
         if (isRegisteredToken(token)) abort("Token already registered");
-        StorageMap tokenBridges = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
+        StorageMap tokenBridges = new StorageMap(PREFIX_TOKEN_BRIDGES);
         ByteString zeroHash = Hash256.zero().toByteString();
         State newDepositState = new State(0, zeroHash);
         State newWithdrawalState = new State(0, zeroHash);
@@ -48,12 +48,12 @@ public class TokenBridgeImpl {
     }
 
     static boolean isRegisteredToken(Hash160 token) {
-        StorageMap tokenBridges = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES);
+        StorageMap tokenBridges = new StorageMap(PREFIX_TOKEN_BRIDGES);
         return tokenBridges.get(token) != null;
     }
 
     static TokenBridge checkRegisteredAndGetTokenBridge(Hash160 token) {
-        ByteString serializedTokenBridge = new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).get(token);
+        ByteString serializedTokenBridge = new StorageMap(PREFIX_TOKEN_BRIDGES).get(token);
         if (serializedTokenBridge == null) abort("Token not registered");
         return (TokenBridge) new StdLib().deserialize(serializedTokenBridge);
     }
@@ -72,13 +72,13 @@ public class TokenBridgeImpl {
     static void pauseTokenBridge(Hash160 token) {
         TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(token);
         tokenBridge.paused = true;
-        new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
+        new StorageMap(PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
     }
 
     static void unpauseTokenBridge(Hash160 token) {
         TokenBridge tokenBridge = checkRegisteredAndGetTokenBridge(token);
         tokenBridge.paused = false;
-        new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
+        new StorageMap(PREFIX_TOKEN_BRIDGES).put(token, new StdLib().serialize(tokenBridge));
     }
 
     // endregion
@@ -122,7 +122,7 @@ public class TokenBridgeImpl {
                 BridgeLib.computeNewRoot(BridgeContract.cryptoLib, tokenBridge.depositState.root, depositHash);
         tokenBridge.depositState.root = newRoot;
         assert tokenBridge.depositState.root == newRoot : "Root not set correctly";
-        new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(neoN3Token, new StdLib().serialize(tokenBridge));
+        new StorageMap(PREFIX_TOKEN_BRIDGES).put(neoN3Token, new StdLib().serialize(tokenBridge));
         BridgeContract.onTokenDeposit.fire(neoN3Token, tokenBridge.config.neoXToken, tokenBridge.depositState.nonce,
                 to, amount, from, depositHash, newRoot);
     }
@@ -150,7 +150,7 @@ public class TokenBridgeImpl {
         tokenBridge.withdrawalState.nonce = withdrawals.get(withdrawalsSize - 1).nonce;
         tokenBridge.withdrawalState.root = withdrawalRoot;
         assert tokenBridge.withdrawalState.root == withdrawalRoot : "Root not set correctly";
-        new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES).put(neoN3Token, new StdLib().serialize(tokenBridge));
+        new StorageMap(PREFIX_TOKEN_BRIDGES).put(neoN3Token, new StdLib().serialize(tokenBridge));
         BridgeContract.onTokenWithdrawalRootUpdate.fire(neoN3Token, tokenBridge.config.neoXToken,
                 tokenBridge.withdrawalState.nonce, tokenBridge.withdrawalState.root);
         // Execute the token transfers
@@ -161,13 +161,13 @@ public class TokenBridgeImpl {
     // region claim
 
     private static void addTokenClaimable(Hash160 token, Withdrawal withdrawal) {
-        new StorageMap(BridgeContract.ctx, concat(BridgeContract.PREFIX_TOKEN_CLAIMABLES, token.toByteString()))
+        new StorageMap(concat(BridgeContract.PREFIX_TOKEN_CLAIMABLES, token.toByteString()))
                 .put(withdrawal.nonce, new StdLib().serialize(new Claimable(withdrawal.to, withdrawal.amount)));
     }
 
     static void claimToken(Hash160 token, int nonce) {
-        StorageMap tokenClaimableMap = new StorageMap(BridgeContract.ctx,
-                concat(BridgeContract.PREFIX_TOKEN_CLAIMABLES, token.toByteString()));
+        StorageMap tokenClaimableMap = new StorageMap(concat(BridgeContract.PREFIX_TOKEN_CLAIMABLES,
+                token.toByteString()));
         ByteString claimableEntry = tokenClaimableMap.get(nonce);
         if (claimableEntry == null) abort("No claim found");
         Claimable claimable = (Claimable) new StdLib().deserialize(claimableEntry);
@@ -184,8 +184,8 @@ public class TokenBridgeImpl {
     }
 
     public static boolean isClaimableToken(Hash160 token, int nonce) {
-        StorageMap tokenClaimableMap = new StorageMap(BridgeContract.ctx,
-                concat(BridgeContract.PREFIX_TOKEN_CLAIMABLES, token.toByteString()));
+        StorageMap tokenClaimableMap = new StorageMap(concat(BridgeContract.PREFIX_TOKEN_CLAIMABLES,
+                token.toByteString()));
         return tokenClaimableMap.get(nonce) != null;
     }
 
@@ -219,7 +219,7 @@ public class TokenBridgeImpl {
     }
 
     public static Iterator<Hash160> getTokenBridgeTokensIterator() {
-        return (Iterator<Hash160>) new StorageMap(BridgeContract.ctx, PREFIX_TOKEN_BRIDGES)
+        return (Iterator<Hash160>) new StorageMap(PREFIX_TOKEN_BRIDGES)
                 .find(FindOptions.KeysOnly | FindOptions.RemovePrefix);
     }
 

@@ -178,7 +178,7 @@ public class NativeBridgeImpl {
     // region claim
 
     static void claimNative(int nonce) {
-        StorageMap nativeClaimableMap = new StorageMap(BridgeContract.ctx, PREFIX_NATIVE_CLAIMABLES);
+        StorageMap nativeClaimableMap = new StorageMap(PREFIX_NATIVE_CLAIMABLES);
         ByteString claimableEntry = nativeClaimableMap.get(nonce);
         if (claimableEntry == null) abort("No claim found");
         Claimable claimable = (Claimable) new StdLib().deserialize(claimableEntry);
@@ -195,11 +195,11 @@ public class NativeBridgeImpl {
     }
 
     static boolean isClaimableNative(int nonce) {
-        return new StorageMap(BridgeContract.ctx, PREFIX_NATIVE_CLAIMABLES).get(nonce) != null;
+        return new StorageMap(PREFIX_NATIVE_CLAIMABLES).get(nonce) != null;
     }
 
     static void addNativeClaimable(Withdrawal withdrawal) {
-        new StorageMap(BridgeContract.ctx, PREFIX_NATIVE_CLAIMABLES).put(withdrawal.nonce,
+        new StorageMap(PREFIX_NATIVE_CLAIMABLES).put(withdrawal.nonce,
                 new StdLib().serialize(new Claimable(withdrawal.to, withdrawal.amount)));
     }
 

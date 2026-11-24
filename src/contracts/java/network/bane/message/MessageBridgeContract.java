@@ -5,8 +5,6 @@ import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
-import io.neow3j.devpack.Storage;
-import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
 import io.neow3j.devpack.annotations.EventParameterNames;
@@ -63,12 +61,11 @@ public class MessageBridgeContract {
 
     // region static contract values
 
-    static final StorageContext ctx = Storage.getStorageContext();
     static final CryptoLib cryptoLib = new CryptoLib();
 
     // baseMap is used to store native-related state and general contract information, i.e., management contract and
     // pause status.
-    static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
+    static final StorageMap baseMap = new StorageMap(PREFIX_BASE);
 
     // endregion
     // region events

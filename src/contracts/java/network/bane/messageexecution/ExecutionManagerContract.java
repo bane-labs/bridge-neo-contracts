@@ -3,8 +3,6 @@ package network.bane.messageexecution;
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.Contract;
 import io.neow3j.devpack.Hash160;
-import io.neow3j.devpack.Storage;
-import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
 import io.neow3j.devpack.annotations.ManifestExtra;
@@ -45,8 +43,7 @@ public class ExecutionManagerContract {
     // endregion
     // region storage
 
-    static final StorageContext ctx = Storage.getStorageContext();
-    static final StorageMap baseMap = new StorageMap(ctx, PREFIX_BASE);
+    static final StorageMap baseMap = new StorageMap(PREFIX_BASE);
 
     // endregion
     // region pause
