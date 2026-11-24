@@ -57,8 +57,8 @@ public class DepositNative {
         printSender(personalAccount.getScriptHash());
         System.out.println("From:        " + from.toAddress());
         System.out.println("To (on EVM): " + recipientOnEvm);
-        System.out.printf("Amount:        %s (%s %s)%n", amount, token.toDecimals(amount), token.getSymbol());
-        System.out.printf("MaxFee:        %s (%s %s)%n", maxFee, gasToken.toDecimals(maxFee), gasToken.getSymbol());
+        System.out.printf("Amount:        %s (%s %s)%n", amount, token.fromBaseUnits(amount), token.getSymbol());
+        System.out.printf("MaxFee:        %s (%s %s)%n", maxFee, gasToken.fromBaseUnits(maxFee), gasToken.getSymbol());
 
         Hash256 txHash = bridge.depositNative(from, to, amount, maxFee)
                 .withSigners(none(personalAccount).setAllowedContracts(gasToken.getScriptHash()))

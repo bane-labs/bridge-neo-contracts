@@ -67,15 +67,15 @@ public class SetNativeBridge {
         printSender(governor.getScriptHash());
         System.out.println("Token:               " + tokenForNativeBridge);
         System.out.println("Decimals on EVM:     " + decimalsOnLinkedChain);
-        System.out.printf("Deposit fee:         %s (%s %s)%n", depositFee, gasToken.toDecimals(depositFee),
+        System.out.printf("Deposit fee:         %s (%s %s)%n", depositFee, gasToken.fromBaseUnits(depositFee),
                 gasToken.getSymbol());
-        System.out.printf("Min amount:          %s (%s %s)%n", minAmount, token.toDecimals(minAmount),
+        System.out.printf("Min amount:          %s (%s %s)%n", minAmount, token.fromBaseUnits(minAmount),
                 token.getSymbol());
-        System.out.printf("Max amount:          %s (%s %s)%n", maxAmount, token.toDecimals(maxAmount),
+        System.out.printf("Max amount:          %s (%s %s)%n", maxAmount, token.fromBaseUnits(maxAmount),
                 token.getSymbol());
         System.out.println("Max withdrawals:     " + maxWithdrawals);
-        System.out.printf("Max total deposited: %s (%s %s)%n", maxTotalDeposited, token.toDecimals(maxTotalDeposited),
-                token.getSymbol());
+        System.out.printf("Max total deposited: %s (%s %s)%n", maxTotalDeposited,
+                token.fromBaseUnits(maxTotalDeposited), token.getSymbol());
 
         Hash256 txHash = bridge.setNativeBridge(tokenForNativeBridge, decimalsOnLinkedChain, depositFee, minAmount,
                         maxAmount, maxWithdrawals, maxTotalDeposited)

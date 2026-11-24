@@ -33,9 +33,9 @@ public class TokenGetState {
         FungibleToken token = new FungibleToken(tokenHash, neow3j);
         String tokenSymbol = token.getSymbol();
 
-        BigDecimal feeDecimal = gasToken.toDecimals(tokenBridge.config.fee);
-        BigDecimal minDecimal = token.toDecimals(tokenBridge.config.minAmount);
-        BigDecimal maxDecimal = token.toDecimals(tokenBridge.config.maxAmount);
+        BigDecimal feeDecimal = gasToken.fromBaseUnits(tokenBridge.config.fee);
+        BigDecimal minDecimal = token.fromBaseUnits(tokenBridge.config.minAmount);
+        BigDecimal maxDecimal = token.fromBaseUnits(tokenBridge.config.maxAmount);
 
         System.out.println();
         System.out.printf("Token Bridge: %s (%s)\n", tokenSymbol, tokenHash);

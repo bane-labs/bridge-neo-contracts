@@ -29,7 +29,7 @@ public class SetSendingFee {
         System.out.println("Setting sending fee in message bridge...");
         printNetwork(neow3j);
         printSender(governorAcc.getScriptHash());
-        System.out.printf("New fee: %s (%s %s)", sendingFee, gasToken.toDecimals(sendingFee), gasToken.getSymbol());
+        System.out.printf("New fee: %s (%s %s)", sendingFee, gasToken.fromBaseUnits(sendingFee), gasToken.getSymbol());
 
         BigInteger currentSendingFee = messageBridge.sendingFee();
         if (currentSendingFee.equals(sendingFee)) {
@@ -37,8 +37,8 @@ public class SetSendingFee {
             return;
         }
         System.out.printf("\nCurrent sending fee:    %s (%s $GAS)", currentSendingFee,
-                gasToken.toDecimals(currentSendingFee));
-        System.out.printf("\nSetting sending fee to: %s (%s $GAS)\n", sendingFee, gasToken.toDecimals(sendingFee));
+                gasToken.fromBaseUnits(currentSendingFee));
+        System.out.printf("\nSetting sending fee to: %s (%s $GAS)\n", sendingFee, gasToken.fromBaseUnits(sendingFee));
 
         messageBridge.setSendingFee(sendingFee).withSigners(calledByEntry(governorAcc)).signSendAndAwait(System.out);
 
@@ -46,7 +46,7 @@ public class SetSendingFee {
             throw new Exception("Sending fee is not set to the desired value");
         }
         System.out.printf("\nSending fee successfully set to: %s (%s $GAS)", sendingFee,
-                gasToken.toDecimals(sendingFee));
+                gasToken.fromBaseUnits(sendingFee));
     }
 
 }

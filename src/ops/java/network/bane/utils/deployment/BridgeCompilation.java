@@ -7,9 +7,9 @@ import io.neow3j.contract.SmartContract;
 import io.neow3j.crypto.ECKeyPair;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Transaction;
+import io.neow3j.transaction.TransactionSubmission;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -114,9 +114,9 @@ public class BridgeCompilation {
         Hash160 managementContractHash = SmartContract.calcContractHash(deployerAcc.getScriptHash(),
                 managementCompUnit.getNefFile().getCheckSumAsInteger(), managementCompUnit.getManifest().getName());
 
-        NeoSendRawTransaction managementDeploymentTxResponse = deployContractFromCompilationUnit(neow3j,
+        TransactionSubmission managementDeploymentTxSub = deployContractFromCompilationUnit(neow3j,
                 managementCompUnit, managementDeployParameter, managementContractHash);
-        Hash256 managementDeploymentTxHash = getHashIfExecutionSuccessful(neow3j, managementDeploymentTxResponse);
+        Hash256 managementDeploymentTxHash = getHashIfExecutionSuccessful(neow3j, managementDeploymentTxSub);
 
         ensureConsistentState(neow3j, managementContractHash, managementCompUnit, managementDeploymentTxHash);
 
@@ -141,16 +141,16 @@ public class BridgeCompilation {
         Hash160 bridgeContractHash = SmartContract.calcContractHash(deployerAcc.getScriptHash(),
                 bridgeCompUnit.getNefFile().getCheckSumAsInteger(), bridgeCompUnit.getManifest().getName());
 
-        NeoSendRawTransaction bridgeDeploymentTxResponse = deployContractFromCompilationUnit(neow3j, bridgeCompUnit,
+        TransactionSubmission bridgeDeploymentTxSub = deployContractFromCompilationUnit(neow3j, bridgeCompUnit,
                 bridgeDeploymentParameter, bridgeContractHash);
-        Hash256 bridgeDeploymentTxHash = getHashIfExecutionSuccessful(neow3j, bridgeDeploymentTxResponse);
+        Hash256 bridgeDeploymentTxHash = getHashIfExecutionSuccessful(neow3j, bridgeDeploymentTxSub);
 
         ensureConsistentState(neow3j, bridgeContractHash, bridgeCompUnit, bridgeDeploymentTxHash);
         return bridgeContractHash;
     }
 
     @NotNull
-    private static NeoSendRawTransaction deployContractFromCompilationUnit(Neow3j neow3j, CompilationUnit compUnit,
+    private static TransactionSubmission deployContractFromCompilationUnit(Neow3j neow3j, CompilationUnit compUnit,
             ContractParameter deployParameter, Hash160 allowedContractHash) throws Throwable {
         String ownerWalletPath = getEnvVariable(WALLET_FILEPATH_OWNER);
         String ownerWalletPassword = getEnvVariable(WALLET_PASSWORD_OWNER);
@@ -166,17 +166,17 @@ public class BridgeCompilation {
         BigDecimal totalFee = new BigDecimal(deploymentTx.getNetworkFee() + deploymentTx.getSystemFee());
         System.out.printf("💰 Fee of $GAS %s for deployment transaction of %s contract%n",
                 totalFee.divide(BigDecimal.valueOf(100_000_000)), compUnit.getManifest().getName());
-        NeoSendRawTransaction deploymentTxResponse = deploymentTx.send();
-        if (deploymentTxResponse.hasError()) {
+        TransactionSubmission deploymentTxSubmission = deploymentTx.send();
+        if (deploymentTxSubmission.hasError()) {
             throw new Exception(
-                    "Sent transaction resulted in an error: " + deploymentTxResponse.getError().getMessage());
+                    "Sent transaction resulted in an error: " + deploymentTxSubmission.getError().getMessage());
         }
-        return deploymentTxResponse;
+        return deploymentTxSubmission;
     }
 
-    private static Hash256 getHashIfExecutionSuccessful(Neow3j neow3j, NeoSendRawTransaction DeploymentTxResponse)
+    private static Hash256 getHashIfExecutionSuccessful(Neow3j neow3j, TransactionSubmission deploymentTxSub)
             throws Exception {
-        Hash256 deploymentTxHash = DeploymentTxResponse.getResult().getHash();
+        Hash256 deploymentTxHash = deploymentTxSub.getSendResponse().getSendRawTransaction().getHash();
         waitUntilTransactionIsExecuted(deploymentTxHash, neow3j);
         NeoApplicationLog deployLog = neow3j.getApplicationLog(deploymentTxHash).send().getApplicationLog();
         if (deployLog.getExecutions().get(0).getState().equals(NeoVMStateType.FAULT)) {

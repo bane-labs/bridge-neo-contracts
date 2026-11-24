@@ -22,7 +22,7 @@ public class GetStateMessage {
         printNetwork(neow3j);
 
         GasToken gasToken = new GasToken(neow3j);
-        BigDecimal feeDecimal = gasToken.toDecimals(messageBridge.sendingFee());
+        BigDecimal feeDecimal = gasToken.fromBaseUnits(messageBridge.sendingFee());
 
         System.out.printf("Message Bridge:\n");
         System.out.printf(" paused:           %s\n", messageBridge.isPaused());

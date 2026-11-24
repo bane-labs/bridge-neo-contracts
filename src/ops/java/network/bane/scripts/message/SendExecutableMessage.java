@@ -1,6 +1,7 @@
 package network.bane.scripts.message;
 
 import io.neow3j.contract.GasToken;
+import io.neow3j.contract.Token;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.types.Hash160;
@@ -57,7 +58,7 @@ public class SendExecutableMessage {
         System.out.println("Store Result: " + storeResult);
 
         BigInteger sendingFee = messageBridge.sendingFee();
-        System.out.printf("Sending Fee: %s GAS%n", GasToken.toDecimals(sendingFee, 8));
+        System.out.printf("Sending Fee: %s GAS%n", Token.fromBaseUnits(sendingFee, GasToken.DECIMALS));
         BigInteger maxFee = sendingFee;
 
         Hash256 txHash = messageBridge.sendExecutableMessage(messageData, storeResult, personalScriptHash, maxFee)
