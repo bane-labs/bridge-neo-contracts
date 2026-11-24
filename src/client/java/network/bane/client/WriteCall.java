@@ -1,10 +1,10 @@
 package network.bane.client;
 
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.transaction.Signer;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.TransactionBuilder;
+import io.neow3j.transaction.TransactionSubmission;
 import io.neow3j.types.Hash256;
 import network.bane.client.interfaces.IWriteCaller;
 
@@ -80,11 +80,11 @@ public class WriteCall implements IWriteCaller {
     @Override
     public Hash256 signSendAndAwait(PrintStream out) throws Throwable {
         Transaction tx = transactionBuilder.sign();
-        NeoSendRawTransaction response = tx.send();
-        if (response.hasError()) {
-            throw new RuntimeException("Error sending transaction: " + response.getError().getMessage());
+        TransactionSubmission txSub = tx.send();
+        if (txSub.hasError()) {
+            throw new RuntimeException("Error sending transaction: " + txSub.getError().getMessage());
         }
-        Hash256 txHash = response.getSendRawTransaction().getHash();
+        Hash256 txHash = txSub.getSendRawTransaction().getHash();
         if (out != null) {
             out.println("Transaction sent: " + txHash);
         }

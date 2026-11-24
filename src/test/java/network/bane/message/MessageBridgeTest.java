@@ -63,8 +63,8 @@ import static network.bane.support.TestConstants.validator2;
 import static network.bane.support.TestConstants.validator3;
 import static network.bane.support.TestConstants.validator4;
 import static network.bane.support.TestConstants.validator5;
-import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
-import static network.bane.support.TestConstants.MESSAGE_BRIDGE_CONTRACT_HASH;
+import static network.bane.support.TestConstants.BRIDGE_MANAGEMENT_HASH;
+import static network.bane.support.TestConstants.MESSAGE_BRIDGE_HASH;
 import static network.bane.support.io.PrintHelper.printTransactionFee;
 import static network.bane.support.TestEnvironment.alice;
 import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
@@ -115,14 +115,14 @@ public class MessageBridgeTest {
 
         // This test requires the constant MESSAGE_BRIDGE_CONTRACT_HASH to be set correctly. The execution manager
         // requires the contract address at deployment time, so we cannot change it later.
-        if (!messageBridge.getScriptHash().equals(MESSAGE_BRIDGE_CONTRACT_HASH)) {
+        if (!messageBridge.getScriptHash().equals(MESSAGE_BRIDGE_HASH)) {
             throw new RuntimeException(format("The message bridge contract hash is not set correctly. Update the " +
                     "script hash to 0x%s.", messageBridge.getScriptHash()));
         }
 
         // This test requires the constant MANAGEMENT_CONTRACT_HASH to be set correctly. The execution manager
         // requires the contract address at deployment time, so we cannot change it later.
-        if (!MANAGEMENT_CONTRACT_HASH.equals(management.getScriptHash())) {
+        if (!BRIDGE_MANAGEMENT_HASH.equals(management.getScriptHash())) {
             throw new RuntimeException(format("The management contract hash is not set correctly. Update the script " +
                     "hash to 0x%s.", management.getScriptHash()));
         }
@@ -750,7 +750,7 @@ public class MessageBridgeTest {
         byte[] malformedCall = hexStringToByteArray("0xab100c");
         InvocationFaultStateException thrown = assertThrows(InvocationFaultStateException.class,
                 () -> messageBridge.isValidCall(malformedCall));
-        assertThat(thrown.getMessage(), containsString("invalid format"));
+        assertThat(thrown.getMessage(), containsString("Invalid StackItemType"));
     }
 
     @Test

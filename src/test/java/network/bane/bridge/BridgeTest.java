@@ -69,7 +69,7 @@ import static network.bane.support.TestConstants.governor;
 import static network.bane.support.TestConstants.DEFAULT_DEPOSIT_FEE;
 import static network.bane.support.TestConstants.DEFAULT_DECIMAL_SCALING_FACTOR_GAS;
 import static network.bane.support.TestConstants.DEFAULT_TOTAL_MAX_DEPOSITED_GAS;
-import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
+import static network.bane.support.TestConstants.BRIDGE_MANAGEMENT_HASH;
 import static network.bane.support.TestConstants.DEFAULT_MAX_DEPOSIT_GAS;
 import static network.bane.support.TestConstants.DEFAULT_MAX_WITHDRAWALS;
 import static network.bane.support.TestConstants.DEFAULT_MIN_DEPOSIT_GAS;
@@ -167,7 +167,7 @@ public class BridgeTest {
         ContractStorageEntry versionEntry = bridge.findStorage("0x0a").get(8);
 
         assertThat(managementEntry.getKeyHex(), is("0x0a01"));
-        assertArrayEquals(managementEntry.getValue(), MANAGEMENT_CONTRACT_HASH.toLittleEndianArray());
+        assertArrayEquals(managementEntry.getValue(), BRIDGE_MANAGEMENT_HASH.toLittleEndianArray());
         assertThat(pauseEntry.getKeyHex(), is("0x0a02"));
         assertArrayEquals(new byte[]{}, pauseEntry.getValue());
         assertThat(nativeBridgeEntry.getKeyHex(), is("0x0a03"));
@@ -190,7 +190,7 @@ public class BridgeTest {
                 "2100"; // the decimal scaling factor
         assertThat(nativeBridgeEntry.getValueHex(), is(expectedStorageValue));
 
-        assertThat(bridge.management(), is(MANAGEMENT_CONTRACT_HASH));
+        assertThat(bridge.management(), is(BRIDGE_MANAGEMENT_HASH));
 
         NativeBridge expectedNativeBridge = new NativeBridge(false, BigInteger.ZERO, State.newState(), State.newState(),
                 new NativeBridge.NativeConfig(
@@ -285,7 +285,7 @@ public class BridgeTest {
         Account from = alice;
         BigInteger nextNonce = BigInteger.ONE;
         Hash160 to = new Hash160("0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
-        BigInteger amount = gasToken.toFractions(BigDecimal.ONE);
+        BigInteger amount = gasToken.toBaseUnits(BigDecimal.ONE);
 
         String depositRootBefore = bridge.nativeDepositRoot();
         Hash256 txHash = bridge.depositNative(from, to, amount);

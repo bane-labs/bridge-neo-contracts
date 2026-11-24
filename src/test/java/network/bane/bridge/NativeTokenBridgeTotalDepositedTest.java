@@ -49,7 +49,7 @@ import static network.bane.support.TestConstants.DEFAULT_LINKED_CHAIN_ID;
 import static network.bane.support.TestConstants.DEFAULT_DEPOSIT_FEE;
 import static network.bane.support.TestConstants.DEFAULT_MAX_WITHDRAWALS;
 import static network.bane.support.TestConstants.DEFAULT_MIN_DEPOSIT_GAS;
-import static network.bane.support.TestConstants.MANAGEMENT_CONTRACT_HASH;
+import static network.bane.support.TestConstants.BRIDGE_MANAGEMENT_HASH;
 import static network.bane.support.TestEnvironment.alice;
 import static network.bane.support.TestEnvironment.bridge;
 import static network.bane.support.TestEnvironment.createBridgeManagementDeployConfig;
@@ -80,8 +80,8 @@ public class NativeTokenBridgeTotalDepositedTest {
         setupBridge(ext);
 
         bridge.setNativeBridge(gasToken.getScriptHash(), 18, DEFAULT_DEPOSIT_FEE, DEFAULT_MIN_DEPOSIT_GAS,
-                        gasToken.toFractions(new BigDecimal("500")), DEFAULT_MAX_WITHDRAWALS,
-                        gasToken.toFractions(new BigDecimal("1000")))
+                        gasToken.toBaseUnits(new BigDecimal("500")), DEFAULT_MAX_WITHDRAWALS,
+                        gasToken.toBaseUnits(new BigDecimal("1000")))
                 .withSigners(calledByEntry(governor))
                 .signSendAndAwait();
         bridge.unpauseNativeBridge(governor);
@@ -98,7 +98,7 @@ public class NativeTokenBridgeTotalDepositedTest {
         config.setDeployParam(
                 prepareBridgeDeployParameter(
                         DEFAULT_LINKED_CHAIN_ID,
-                        MANAGEMENT_CONTRACT_HASH
+                        BRIDGE_MANAGEMENT_HASH
                 )
         );
         AccountSigner deploySigner = AccountSigner.none(owner);
@@ -120,17 +120,17 @@ public class NativeTokenBridgeTotalDepositedTest {
         assertThat(initialNativeBridgeState.totalDeposited, is(BigInteger.ZERO));
 
         // Deposit 100 Gas, then 200. Total should be 300 after both deposits.
-        bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("100")));
-        assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("100"))));
-        bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("200")));
-        assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("300"))));
+        bridge.depositNative(alice, recipient0, gasToken.toBaseUnits(new BigDecimal("100")));
+        assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toBaseUnits(new BigDecimal("100"))));
+        bridge.depositNative(alice, recipient0, gasToken.toBaseUnits(new BigDecimal("200")));
+        assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toBaseUnits(new BigDecimal("300"))));
 
         // Withdraw 50 gas.
         State currentWithdrawalState = bridge.getNativeBridge().withdrawalState;
         BigInteger nextNonce = currentWithdrawalState.nonce.add(BigInteger.ONE);
 
         Hash160 to = recipient0;
-        BigInteger amount = gasToken.toFractions(new BigDecimal("50"));
+        BigInteger amount = gasToken.toBaseUnits(new BigDecimal("50"));
         String currentWithdrawalRoot = currentWithdrawalState.root.toString();
         String newWithdrawalRoot = concatAndKeccak256(
                 currentWithdrawalRoot,
@@ -145,11 +145,11 @@ public class NativeTokenBridgeTotalDepositedTest {
                         array(integer(nextNonce), to, integer(amount))
                 )
         );
-        assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("250"))));
+        assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toBaseUnits(new BigDecimal("250"))));
 
         // Deposit 120 gas.
-        bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("120")));
-        assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("370"))));
+        bridge.depositNative(alice, recipient0, gasToken.toBaseUnits(new BigDecimal("120")));
+        assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toBaseUnits(new BigDecimal("370"))));
     }
 
     /**
@@ -158,39 +158,39 @@ public class NativeTokenBridgeTotalDepositedTest {
     @Order(1)
     @Test
     public void testTotalDepositedNativeToken_MaxReached() throws Throwable {
-        BigInteger newMaxTotalDepositedNative = gasToken.toFractions(new BigDecimal("5000"));
+        BigInteger newMaxTotalDepositedNative = gasToken.toBaseUnits(new BigDecimal("5000"));
         NativeBridge initialNativeBridgeState = bridge.getNativeBridge();
-        assertThat(initialNativeBridgeState.totalDeposited, is(gasToken.toFractions(new BigDecimal("370"))));
+        assertThat(initialNativeBridgeState.totalDeposited, is(gasToken.toBaseUnits(new BigDecimal("370"))));
 
         bridge.setMaxTotalDepositedNative(governor, newMaxTotalDepositedNative);
         // Update max gas deposit as well to allow greater amounts in single deposits.
-        bridge.setMaxNativeDeposit(governor, gasToken.toFractions(new BigDecimal("4900")));
+        bridge.setMaxNativeDeposit(governor, gasToken.toBaseUnits(new BigDecimal("4900")));
         assertThat(bridge.getNativeBridge().config.maxTotalDeposited, is(newMaxTotalDepositedNative));
 
         // The max amount that can still be deposited is 5000 - 370 = 4630.
         // Depositing > 4630 should fail.
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class, () ->
-                bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("4631"))));
+                bridge.depositNative(alice, recipient0, gasToken.toBaseUnits(new BigDecimal("4631"))));
         assertThat(thrown.getMessage(),
                 containsString("Max total deposited native tokens exceeded. Wait for governor to increase."));
 
         // Depositing 4630 should work.
-        bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("4630")));
+        bridge.depositNative(alice, recipient0, gasToken.toBaseUnits(new BigDecimal("4630")));
         assertThat(bridge.getNativeBridge().totalDeposited, is(newMaxTotalDepositedNative));
 
         // Depositing 1 should fail.
         thrown = assertThrows(TransactionConfigurationException.class, () ->
-                bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("1"))));
+                bridge.depositNative(alice, recipient0, gasToken.toBaseUnits(new BigDecimal("1"))));
         assertThat(thrown.getMessage(),
                 containsString("Max total deposited native tokens exceeded. Wait for governor to increase."));
 
         // Increasing the max total deposited gas should enable a gas deposit of 1 to work again.
-        bridge.setMaxTotalDepositedNative(governor, gasToken.toFractions(new BigDecimal("5001")));
-        assertThat(bridge.getNativeBridge().config.maxTotalDeposited, is(gasToken.toFractions(new BigDecimal("5001"))));
-        assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("5000"))));
+        bridge.setMaxTotalDepositedNative(governor, gasToken.toBaseUnits(new BigDecimal("5001")));
+        assertThat(bridge.getNativeBridge().config.maxTotalDeposited, is(gasToken.toBaseUnits(new BigDecimal("5001"))));
+        assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toBaseUnits(new BigDecimal("5000"))));
 
         // Depositing 1 should not fail.
-        Hash256 txHash = bridge.depositNative(alice, recipient0, gasToken.toFractions(new BigDecimal("1")));
+        Hash256 txHash = bridge.depositNative(alice, recipient0, gasToken.toBaseUnits(new BigDecimal("1")));
         assertThat(neow3j.getApplicationLog(txHash).send().getApplicationLog().getFirstExecution().getState(),
                 is(NeoVMStateType.HALT));
     }
@@ -201,9 +201,9 @@ public class NativeTokenBridgeTotalDepositedTest {
     @Order(2)
     @Test
     public void testTotalDepositedNativeToken_LessThanAlreadyDeposited() throws Throwable {
-        assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toFractions(new BigDecimal("5001"))));
+        assertThat(bridge.getNativeBridge().totalDeposited, is(gasToken.toBaseUnits(new BigDecimal("5001"))));
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
-                () -> bridge.setMaxTotalDepositedNative(governor, gasToken.toFractions(new BigDecimal("4000"))));
+                () -> bridge.setMaxTotalDepositedNative(governor, gasToken.toBaseUnits(new BigDecimal("4000"))));
         assertThat(thrown.getMessage(),
                 containsString(("New value must be greater or equal to the total amount deposited.")));
     }
